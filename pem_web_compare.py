@@ -2,9 +2,11 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd  # 新增：用於數據處理
+from datetime import datetime
 
-# 頁面配置：強制寬螢幕模式
-st.set_page_config(page_title="TAD-AGE Pro Diagnostic", layout="wide")
+# 頁面配置
+st.set_page_config(page_title="TAD-AGE Pro + Export", layout="wide")
 
 st.title("🔬 TAD-AGE: PEM Hydrogen Stack Professional Dashboard")
 st.markdown("---")
@@ -32,7 +34,7 @@ def get_data(t, v, h):
 c_a, v_a, s_a = get_data(temp_a, v1_a, hum_a)
 c_b, v_b, s_b = get_data(temp_b, v1_b, hum_b)
 
-# --- 繪圖函數 (確保專業視覺一致性) ---
+# --- 繪圖函數 ---
 def draw_plot(c, v, score, color, title):
     fig, ax = plt.subplots(figsize=(5, 3.5))
     fig.patch.set_facecolor('#0e1117')
@@ -46,7 +48,6 @@ def draw_plot(c, v, score, color, title):
 
 # --- UI 佈局：並列圖表 ---
 col1, col2 = st.columns(2)
-
 with col1:
     st.subheader("📍 Mode A Performance")
     st.pyplot(draw_plot(c_a, v_a, s_a, '#3498db', "Baseline Status"))
@@ -57,12 +58,27 @@ with col2:
     st.pyplot(draw_plot(c_b, v_b, s_b, '#e74c3c', "Testing Status"))
     st.metric("Health Index B", f"{s_b}%", delta=f"{s_b - s_a}%")
 
-# --- 下方對比摘要 ---
+# --- ✨ 新功能：數據導出區 ---
 st.markdown("---")
-st.subheader("📋 差異分析摘要 (Delta Analysis)")
-diff_v = round(np.mean(v_a - v_b), 3)
+st.subheader("📂 數據導出 (Data Export)")
 
-c1, c2, c3 = st.columns(3)
-c1.write(f"**電壓降差異:** {diff_v} V")
-c2.write(f"**健康度偏移:** {s_b - s_a}%")
-c3.write(f"**建議行動:** {'維持監控' if s_b > 70 else '建議檢查質子交換膜狀態'}")
+# 建立 DataFrame
+df_compare = pd.DataFrame({
+    'Current (A)': c_a,
+    'Voltage_A (V)': v_a,
+    'Voltage_B (V)': v_b,
+    'Difference (V)': v_a - v_b
+})
+
+# 下載按鈕邏輯
+csv = df_compare.to_csv(index=False).encode('utf-8-sig') # 加上 sig 確保 Excel 開啟中文不亂碼
+timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+
+st.download_button(
+    label="📥 下載對比數據 (CSV Format)",
+    data=csv,
+    file_name=f"PEM_Diagnostic_{timestamp}.csv",
+    mime="text/csv",
+)
+
+st.table(df_compare.head(5)) # 預覽前五筆數據
