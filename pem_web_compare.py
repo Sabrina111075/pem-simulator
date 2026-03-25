@@ -3,65 +3,55 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # 1. 頁面基礎配置
-st.set_page_config(page_title="TAD-AGE Pro Expert", layout="wide", page_icon="🔬")
+st.set_page_config(page_title="TAD-AGE Pro Diagnostic", layout="wide", page_icon="🔬")
 
-# 2. 自定義 CSS：深度強化指標區 (Metrics) 的清晰度
+# 2. 自定義 CSS：強化深色背景與雙語指標清晰度
 st.markdown("""
     <style>
-    /* 整體背景 */
     .main { background-color: #0e1117; }
-    
-    /* 指標方塊強化 */
     [data-testid="stMetric"] {
         background-color: #1a1a1a;
         padding: 20px;
         border-radius: 12px;
-        border: 2px solid #444; /* 加粗邊框 */
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        border: 2px solid #444;
     }
-    
-    /* 指標標籤 (Label) - 強制純白加粗 */
     [data-testid="stMetricLabel"] p {
         color: #FFFFFF !important;
-        font-size: 18px !important;
+        font-size: 16px !important;
         font-weight: bold !important;
     }
-    
-    /* 指標數值 (Value) - 亮青色 */
     [data-testid="stMetricValue"] div {
         color: #00d4ff !important;
-        font-size: 32px !important;
+        font-size: 28px !important;
         font-weight: 800 !important;
-    }
-    
-    /* Delta 變化值字體加大 */
-    [data-testid="stMetricDelta"] {
-        font-size: 18px !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🔬 TAD-AGE | PEM Hydrogen Diagnostic System")
-st.caption(f"系統狀態：運行中 | 目前時間：{datetime.now().strftime('%Y-%m-%d %H:%M')}")
+# 修正時間為台北時區 (UTC+8)
+tw_time = datetime.utcnow() + timedelta(hours=8)
+
+st.title("🔬 TAD-AGE | PEM Hydrogen Diagnostic System / 氫能診斷系統")
+st.caption(f"Status: Running (台北時間): {tw_time.strftime('%Y-%m-%d %H:%M:%S')}")
 st.markdown("---")
 
-# 3. 側邊欄控制台
-st.sidebar.header("🕹️ 控制台 / Control Panel")
+# 3. 側邊欄控制台 (雙語並陳)
+st.sidebar.header("🕹️ Control Panel / 參數設定")
 
-with st.sidebar.expander("📊 Mode A: Baseline (基準)", expanded=True):
-    temp_a = st.slider("溫度 A (C)", 20, 100, 60, key="ta")
-    v1_a = st.slider("歐姆係數 A", 5.0, 25.0, 13.5, key="va")
-    hum_a = st.slider("溼度 A (%)", 0, 100, 80, key="ha")
+with st.sidebar.expander("📊 Mode A: Baseline / 基準狀態", expanded=True):
+    temp_a = st.slider("Temperature / 溫度 A (°C)", 20, 100, 60, key="ta")
+    v1_a = st.slider("Ohmic Coeff / 歐姆係數 A", 5.0, 25.0, 13.5, key="va")
+    hum_a = st.slider("Humidity / 溼度 A (%)", 0, 100, 80, key="ha")
 
-with st.sidebar.expander("🧪 Mode B: Testing (測試)", expanded=True):
-    temp_b = st.slider("溫度 B (C)", 20, 100, 80, key="tb")
-    v1_b = st.slider("歐姆係數 B", 5.0, 25.0, 18.0, key="vb")
-    hum_b = st.slider("溼度 B (%)", 0, 100, 50, key="hb")
+with st.sidebar.expander("🧪 Mode B: Testing / 測試狀態", expanded=True):
+    temp_b = st.slider("Temperature / 溫度 B (°C)", 20, 100, 80, key="tb")
+    v1_b = st.slider("Ohmic Coeff / 歐姆係數 B", 5.0, 25.0, 18.0, key="vb")
+    hum_b = st.slider("Humidity / 溼度 B (%)", 0, 100, 50, key="hb")
 
-# 4. 核心計算引擎
+# 4. 核心計算
 def get_data(t, v, h):
     c = np.linspace(0.1, 2.2, 12)
     v_out = 2.6 - (v/10 * c) - (t/500) - ((100-h)/200.0)
@@ -71,74 +61,81 @@ def get_data(t, v, h):
 c_a, v_a, s_a = get_data(temp_a, v1_a, hum_a)
 c_b, v_b, s_b = get_data(temp_b, v1_b, hum_b)
 
-# 5. 繪圖區 (高對比強化)
-def draw_plot(c, v, score, color, title):
+# 5. 繪圖區 (雙語座標軸)
+def draw_plot(c, v, color, title):
     fig, ax = plt.subplots(figsize=(6, 4))
     fig.patch.set_facecolor('#0e1117') 
     ax.set_facecolor('#111111')
-    
     ax.plot(c, v, color=color, marker='o', markersize=6, linewidth=3)
     
-    # 圖表文字純白加粗
-    ax.set_title(title, color='#FFFFFF', fontsize=14, fontweight='bold', pad=15)
-    ax.set_xlabel("Current (A)", color='#FFFFFF', fontsize=11, fontweight='bold')
-    ax.set_ylabel("Voltage (V)", color='#FFFFFF', fontsize=11, fontweight='bold')
+    # 圖表標題與標籤 (採用雙語)
+    ax.set_title(title, color='#FFFFFF', fontsize=12, fontweight='bold', pad=15)
+    ax.set_xlabel("Current / 電流 (A)", color='#FFFFFF', fontsize=10, fontweight='bold')
+    ax.set_ylabel("Voltage / 電壓 (V)", color='#FFFFFF', fontsize=10, fontweight='bold')
     
-    ax.tick_params(colors='#F0F0F0', labelsize=10)
-    for label in ax.get_xticklabels() + ax.get_yticklabels():
-        label.set_fontweight('bold')
-
+    ax.tick_params(colors='#F0F0F0', labelsize=9)
     ax.set_ylim(0, 3)
     ax.grid(True, color='#444444', linestyle=':', alpha=0.7)
-    
     for spine in ax.spines.values():
         spine.set_color('#666666')
-        spine.set_linewidth(1.5)
-        
     return fig
 
 # 6. UI 佈局
 col1, col2 = st.columns(2)
-col1.pyplot(draw_plot(c_a, v_a, s_a, '#00d4ff', "📍 Baseline Performance"))
-col2.pyplot(draw_plot(c_b, v_b, s_b, '#ff4b4b', "🚀 Testing Performance"))
+with col1:
+    st.markdown("### 📍 Baseline / 基準曲線")
+    st.pyplot(draw_plot(c_a, v_a, '#00d4ff', "Baseline IV Curve"))
 
-# 數據指標區 (透過上方 CSS 強化清晰度)
+with col2:
+    st.markdown("### 🚀 Testing / 測試曲線")
+    st.pyplot(draw_plot(c_b, v_b, '#ff4b4b', "Testing IV Curve"))
+
+# 數據指標區 (雙語並陳)
 m1, m2, m3 = st.columns(3)
 with m1:
-    st.metric("Health Index A", f"{s_a}%")
+    st.metric("Health Index A / 健康指標 A", f"{s_a}%")
 with m2:
-    st.metric("Health Index B", f"{s_b}%", delta=f"{s_b - s_a}%")
+    st.metric("Health Index B / 健康指標 B", f"{s_b}%", delta=f"{s_b - s_a}%")
 with m3:
     v_diff = round(np.mean(v_a - v_b), 3)
-    st.metric("Avg. Voltage Drop", f"{v_diff} V")
+    st.metric("Avg. Volt Drop / 平均壓降", f"{v_diff} V")
 
-# 7. 專家診斷系統
+# 7. 專家診斷 (雙語)
 st.markdown("---")
 st.subheader("🤖 Expert Diagnostics / 專家診斷建議")
 
 if s_b < 50:
-    st.error(f"🔴 CRITICAL: 健康度極低 ({s_b}%)，檢測到電堆性能嚴重衰減。")
+    st.error(f"🔴 CRITICAL / 嚴重警告: Health Score too low ({s_b}%).")
 elif s_b < s_a - 15:
-    st.warning(f"🟡 WARNING: 性能顯著低於基準狀態 (落差: {s_a - s_b}%)。")
+    st.warning(f"🟡 WARNING / 注意: Performance degradation detected.")
 else:
-    st.success("🟢 NORMAL: 測試狀態穩定。")
+    st.success("🟢 NORMAL / 狀態良好: System operating within limits.")
 
 advice = []
 if temp_b > 85: 
-    advice.append("🌡️ **高溫預警**：操作溫度過高可能導致膜乾涸。")
+    advice.append(f"🌡️ **Overheat / 溫度過高**: {temp_b}°C may cause dehydration.")
 if hum_b < 40: 
-    advice.append("💧 **溼度不足**：建議調整進氣加濕。")
+    advice.append(f"💧 **Low Humidity / 溼度不足**: {hum_b}% may increase resistance.")
 if v1_b > v1_a + 3: 
-    advice.append("⚡ **電阻異常**：請檢查硬體物理連接。")
+    advice.append("⚡ **Resistance / 電阻異常**: Check stack compression force.")
 
 if advice:
-    for item in advice:
-        st.info(item)
+    for item in advice: st.info(item)
 else:
-    st.info("✨ 目前參數均處於理想區間。")
+    st.info("✨ All parameters within safe window / 目前參數均正常。")
 
-# 8. 數據導出
+# 8. 數據導出 (雙語表頭)
 st.sidebar.markdown("---")
-df_exp = pd.DataFrame({'Current': c_a, 'Volt_A': v_a, 'Volt_B': v_b, 'Diff': v_a - v_b})
+df_exp = pd.DataFrame({
+    'Current(A)/電流': c_a, 
+    'Volt_A(V)/基準': v_a, 
+    'Volt_B(V)/測試': v_b, 
+    'Diff(V)/壓降': v_a - v_b
+})
 csv = df_exp.to_csv(index=False).encode('utf-8-sig')
-st.sidebar.download_button("📥 下載診斷報表 (.csv)", csv, f"Report_{datetime.now().strftime('%m%d')}.csv", "text/csv")
+st.sidebar.download_button(
+    "📥 Download CSV Report / 導出報表", 
+    csv, 
+    f"PEM_Report_{tw_time.strftime('%m%d_%H%M')}.csv", 
+    "text/csv"
+)
