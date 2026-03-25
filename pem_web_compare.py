@@ -8,20 +8,19 @@ from datetime import datetime
 # 頁面配置
 st.set_page_config(page_title="TAD-AGE Pro Expert", layout="wide", page_icon="🔬")
 
-# 自定義 CSS 美化
+# 自定義 CSS 美化 (修正關鍵點：unsafe_allow_html)
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
     .stMetric { background-color: #1a1a1a; padding: 15px; border-radius: 10px; border: 1px solid #333; }
     </style>
-    """, unsafe_allow_stdio=True)
+    """, unsafe_allow_html=True)
 
 st.title("🔬 TAD-AGE | PEM Hydrogen Diagnostic System")
-st.caption(f"系統狀態：運行中 | 登錄時間：{datetime.now().strftime('%Y-%m-%d %H:%M')}")
+st.caption(f"系統狀態：運行中 | 目前時間：{datetime.now().strftime('%Y-%m-%d %H:%M')}")
 st.markdown("---")
 
 # --- 側邊欄 ---
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/1835/1835262.png", width=80) # 加入一個小圖示
 st.sidebar.header("🕹️ 控制台 / Control Panel")
 
 with st.sidebar.expander("📊 Mode A: Baseline (基準)", expanded=True):
@@ -49,12 +48,11 @@ def draw_plot(c, v, score, color, title):
     fig, ax = plt.subplots(figsize=(6, 4))
     fig.patch.set_facecolor('#0e1117')
     ax.set_facecolor('#111111')
-    ax.plot(c, v, color=color, marker='o', markersize=4, linewidth=2, label='Current Data')
+    ax.plot(c, v, color=color, marker='o', markersize=4, linewidth=2)
     ax.set_title(title, color='white', fontsize=12, pad=15)
     ax.set_ylim(0, 3)
     ax.grid(True, color='#222222', linestyle='--')
     ax.tick_params(colors='#888888', labelsize=9)
-    for spine in ax.spines.values(): spine.set_color('#333')
     return fig
 
 col1, col2 = st.columns(2)
