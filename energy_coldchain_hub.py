@@ -5,117 +5,134 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 
-# 1. 頁面配置
-st.set_page_config(page_title="TAD-AGE Multi-Sim Pro", layout="wide", page_icon="❄️")
+# 1. 頁面基礎配置
+st.set_page_config(page_title="TAD-AGE Multi-Sim Pro", layout="wide", page_icon="🌐")
 
-# 2. 工業風 CSS
+# 2. 工業深色風 CSS 美化
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
-    [data-testid="stMetric"] { background-color: #1a1a1a; padding: 15px; border-radius: 10px; border-left: 5px solid #00d4ff; }
+    [data-testid="stMetric"] {
+        background-color: #1a1a1a; padding: 20px; border-radius: 12px; border: 2px solid #444;
+    }
+    [data-testid="stMetricLabel"] p { color: #FFFFFF !important; font-size: 16px !important; }
+    [data-testid="stMetricValue"] div { color: #00d4ff !important; font-size: 28px !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 時區設定 (台北 UTC+8)
-tw_time = datetime.utcnow() + timedelta(hours=8)
+tw_now = datetime.utcnow() + timedelta(hours=8)
 
 # --- 側邊欄：切換系統 ---
 st.sidebar.title("🚀 Navigation / 系統導覽")
-app_mode = st.sidebar.selectbox("選擇模擬系統", ["PEM Hydrogen (氫能診斷)", "Cold Chain (冷鏈物流)"])
+app_mode = st.sidebar.selectbox(
+    "Select System / 選擇模擬系統",
+    ["PEM Hydrogen (氫能診斷)", "Cold Chain (冷鏈物流)"]
+)
 
 # ==========================================
-# 模式 A: PEM 氫能 (保持原樣供展示)
+# 模式 A：PEM 氫能診斷系統 (恢復完整內容)
 # ==========================================
 if app_mode == "PEM Hydrogen (氫能診斷)":
-    st.title("🔬 PEM Hydrogen Diagnostic / 氫能診斷")
-    st.info("此模式目前維持基準診斷邏輯。")
+    st.title("🔬 PEM Hydrogen Diagnostic System / 氫能診斷系統")
+    st.caption(f"Status: Running (台北時間): {tw_now.strftime('%Y-%m-%d %H:%M:%S')}")
+    st.markdown("---")
+
+    # 側邊欄參數設定
+    st.sidebar.header("🕹️ Control Panel / 參數設定")
+    with st.sidebar.expander("📊 Mode A: Baseline / 基準狀態", expanded=True):
+        temp_a = st.slider("Temp / 溫度 A (°C)", 20, 100, 60)
+        v1_a = st.slider("Ohmic / 歐姆係數 A", 5.0, 25.0, 13.5)
+        hum_a = st.slider("Humidity / 溼度 A (%)", 0, 100, 80)
+    
+    with st.sidebar.expander("🧪 Mode B: Testing / 測試狀態", expanded=True):
+        temp_b = st.slider("Temp / 溫度 B (°C)", 20, 100, 80)
+        v1_b = st.slider("Ohmic / 歐姆係數 B", 5.0, 25.0, 18.0)
+        hum_b = st.slider("Humidity / 溼度 B (%)", 0, 100, 50)
+
+    # IV 曲線邏輯
+    def get_pem_data(t, v, h):
+        c_pts = np.linspace(0.1, 2.2, 12)
+        v_pts = 2.6 - (v/10 * c_pts) - (t/500) - ((100-h)/200.0)
+        score = max(0, min(100, round(100 - (v - 13.5) * 8 - (t - 60) * 1.5)))
+        return c_pts, v_pts, score
+
+    c_pts, v_a, s_a = get_pem_data(temp_a, v1_a, hum_a)
+    _, v_b, s_b = get_pem_data(temp_b, v1_b, hum_b)
+
+    # 繪圖區
+    col1, col2 = st.columns(2)
+    def draw_pem_plot(x, y, color, title):
+        fig, ax = plt.subplots(figsize=(6, 4))
+        fig.patch.set_facecolor('#0e1117'); ax.set_facecolor('#111111')
+        ax.plot(x, y, color=color, marker='o', linewidth=3)
+        ax.set_title(title, color='white', fontweight='bold')
+        ax.set_xlabel("Current (A)", color='white'); ax.set_ylabel("Voltage (V)", color='white')
+        ax.tick_params(colors='white'); ax.set_ylim(0, 3); ax.grid(True, color='#444')
+        return fig
+
+    col1.pyplot(draw_pem_plot(c_pts, v_a, '#00d4ff', "Baseline IV Curve"))
+    col2.pyplot(draw_pem_plot(c_pts, v_b, '#ff4b4b', "Testing IV Curve"))
+
+    # 指標區
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Health Index A", f"{s_a}%")
+    m2.metric("Health Index B", f"{s_b}%", delta=f"{s_b - s_a}%")
+    m3.metric("Avg. Volt Drop", f"{round(np.mean(v_a - v_b), 3)} V")
 
 # ==========================================
-# 模式 B: Cold Chain 冷鏈物流 (進階版)
+# 模式 B：Cold Chain 冷鏈物流 (進階預測版)
 # ==========================================
 else:
-    st.title("❄️ Advanced Cold Chain Simulator / 進階冷鏈模擬")
-    st.caption(f"TAD-AGE 預測引擎啟動中 | 當前時間: {tw_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    st.title("❄️ Cold Chain Logistics Simulator / 冷鏈物流模擬")
+    st.caption(f"TAD-AGE Viskovatov Engine Active | 台北時間: {tw_now.strftime('%Y-%m-%d %H:%M:%S')}")
+    st.markdown("---")
 
-    # 側邊欄參數
+    # 多品項與參數設定
     st.sidebar.header("📦 物流參數設定")
     cargo_type = st.sidebar.selectbox(
         "貨物類型 / Cargo Type",
-        ["醫藥品 (疫苗 2-8°C)", "生鮮食品 (0-4°C)", "高級花卉 (8-12°C)", "電子零件 (20-25°C)"]
+        ["醫藥品 (2-8°C)", "生鮮食品 (0-4°C)", "高級花卉 (8-12°C)"]
     )
-    
-    # 根據類型設定閾值
-    thresholds = {
-        "醫藥品 (疫苗 2-8°C)": (2, 8),
-        "生鮮食品 (0-4°C)": (0, 4),
-        "高級花卉 (8-12°C)": (8, 12),
-        "電子零件 (20-25°C)": (18, 28)
-    }
+    thresholds = {"醫藥品 (2-8°C)": (2, 8), "生鮮食品 (0-4°C)": (0, 4), "高級花卉 (8-12°C)": (8, 12)}
     t_min, t_max = thresholds[cargo_type]
 
-    ambient_t = st.sidebar.slider("環境溫度 / Ambient (°C)", 20, 45, 32)
-    door_open = st.sidebar.checkbox("開啟箱門模擬 (加速升溫)")
+    ambient_t = st.sidebar.slider("環境溫度 (°C)", 20, 45, 32)
+    door_open = st.sidebar.checkbox("開啟箱門模擬")
 
-    # --- 模擬數據生成 ---
-    time_steps = np.arange(0, 15, 1)  # 過去 12 小時 + 預測 3 小時
+    # 模擬數據與 Viskovatov 預測
+    time_h = np.arange(0, 15, 1)
+    k = 0.3 if not door_open else 0.9
+    obs = (t_min + 2) + k * (ambient_t - 5) * (1 - np.exp(-0.2 * time_h[:12])) + np.random.normal(0, 0.2, 12)
     
-    # 基礎升溫模型
-    k = 0.25 if not door_open else 0.85
-    base_temp = t_min + 2
-    # 模擬過去 12 小時的觀測數據 (含雜訊)
-    obs_temp = base_temp + k * (ambient_t - base_temp) * (1 - np.exp(-0.15 * time_steps[:12])) + np.random.normal(0, 0.2, 12)
+    # Viskovatov 趨勢模擬
+    slope = (obs[-1] - obs[-3]) / 2
+    pred = [obs[-1] + slope * i * 1.1 for i in range(1, 4)]
+    full_temp = np.concatenate([obs, pred])
 
-    # --- 核心：Viskovatov 擬合預測 ---
-    # 這裡簡化應用 Viskovatov 處理 Continued Fraction 的擬合思想，預測未來 3 步
-    def viskovatov_predict(data, steps=3):
-        # 利用最後幾項的斜率與曲率進行連分數外推模擬
-        last_val = data[-1]
-        slope = (data[-1] - data[-3]) / 2
-        prediction = [last_val + slope * i * 1.1 for i in range(1, steps + 1)]
-        return np.array(prediction)
+    # 繪圖
+    fig_cc, ax_cc = plt.subplots(figsize=(10, 4.5))
+    fig_cc.patch.set_facecolor('#0e1117'); ax_cc.set_facecolor('#111111')
+    ax_cc.axhspan(t_min, t_max, color='green', alpha=0.1, label='Safe Zone')
+    ax_cc.plot(time_h[:12], obs, color='#00ffcc', linewidth=3, marker='o', label='Observed')
+    ax_cc.plot(time_h[11:], full_temp[11:], color='#ffaa00', linestyle='--', linewidth=3, label='Viskovatov Pred.')
+    
+    ax_cc.set_title(f"Target: {cargo_type}", color='white'); ax_cc.tick_params(colors='white')
+    ax_cc.legend(facecolor='#1a1a1a', labelcolor='white'); ax_cc.grid(True, color='#333')
+    st.pyplot(fig_cc)
 
-    pred_temp = viskovatov_predict(obs_temp)
-    full_temp = np.concatenate([obs_temp, pred_temp])
-
-    # --- 繪圖 ---
-    fig, ax = plt.subplots(figsize=(10, 4.5))
-    fig.patch.set_facecolor('#0e1117'); ax.set_facecolor('#111111')
-    
-    # 畫出安全區間
-    ax.axhspan(t_min, t_max, color='green', alpha=0.15, label='Safe Zone')
-    
-    # 畫出觀測數據
-    ax.plot(time_steps[:12], obs_temp, color='#00ffcc', linewidth=3, marker='o', label='Observed (實際)')
-    
-    # 畫出 Viskovatov 預測數據
-    ax.plot(time_steps[11:], full_temp[11:], color='#ffaa00', linestyle='--', linewidth=3, marker='x', label='Viskovatov Prediction (預測)')
-
-    ax.set_title(f"Temperature Trend: {cargo_type}", color='white', fontweight='bold')
-    ax.set_ylabel("Temp (°C)", color='white'); ax.set_xlabel("Time (Hours)", color='white')
-    ax.tick_params(colors='white'); ax.grid(True, color='#333')
-    ax.legend(facecolor='#1a1a1a', labelcolor='white')
-    st.pyplot(fig)
-
-    # --- 指標區 ---
-    c1, c2, c3 = st.columns(3)
-    curr_t = round(obs_temp[-1], 2)
-    next_t = round(pred_temp[-1], 2)
-    
-    c1.metric("當前庫溫", f"{curr_t} °C")
-    
     # 預警邏輯
-    is_safe = t_min <= curr_t <= t_max
-    will_be_safe = t_min <= next_t <= t_max
+    curr_t = round(obs[-1], 2)
+    next_t = round(pred[-1], 2)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("當前庫溫", f"{curr_t} °C")
+    c2.metric("3H 預測", f"{next_t} °C", delta=f"{round(next_t-curr_t, 2)}°C")
     
-    status_str = "正常" if is_safe else "異常"
-    c2.metric("系統狀態", status_str, delta="安全區間內" if is_safe else "超出範圍", delta_color="normal" if is_safe else "inverse")
-    
-    predict_delta = round(next_t - curr_t, 2)
-    c3.metric("3H 預測趨勢", f"{next_t} °C", delta=f"{predict_delta} °C")
-
-    if not will_be_safe:
-        st.warning(f"⚠️ **TAD-AGE 預判警告**：根據 Viskovatov 演算法，預計 3 小時後溫度將達到 {next_t}°C，請立即檢查設備！")
-    elif not is_safe:
-        st.error(f"🚨 **斷鏈即時警告**：當前溫度已脫離安全區間 ({t_min}~{t_max}°C)！")
+    if next_t > t_max:
+        st.warning(f"⚠️ **TAD-AGE 預判**：預計 3 小時後將突破 {t_max}°C 門檻！")
+    elif curr_t > t_max:
+        st.error(f"🚨 **斷鏈警報**：當前溫度已超標！")
     else:
-        st.success("✅ 目前溫控穩定，且未來 3 小時預測無斷鏈風險。")
+        st.success("✅ 溫控運作正常。")
+
+st.sidebar.markdown("---")
+st.sidebar.info("TAD-AGE Multi-Sim v2.1")
