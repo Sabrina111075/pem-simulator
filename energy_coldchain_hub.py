@@ -1,13 +1,14 @@
- # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 
-# 1. 頁面配置與深色美化
-st.set_page_config(page_title="TAD-AGE Dual-System Platform", layout="wide", page_icon="??")
+# 1. 頁面基礎配置
+st.set_page_config(page_title="TAD-AGE Multi-Sim Platform", layout="wide", page_icon="??")
 
+# 2. 深度美化 CSS (維持深色工業風)
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
@@ -19,10 +20,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 修正為台北時區 (UTC+8)
+# 修正時間為台北時區 (UTC+8)
 tw_now = datetime.utcnow() + timedelta(hours=8)
 
-# 2. 側邊欄：導覽切換
+# --- 3. 側邊欄：導覽與切換系統 (這是妳漏掉的關鍵步驟) ---
 st.sidebar.title("?? Navigation / 系統導覽")
 app_mode = st.sidebar.selectbox(
     "Select System / 選擇模擬系統",
@@ -37,38 +38,45 @@ if app_mode == "PEM Hydrogen (氫能診斷)":
     st.caption(f"Status: Running / 系統運行中 (台北時間): {tw_now.strftime('%Y-%m-%d %H:%M:%S')}")
     st.markdown("---")
 
-    # 參數設定
+    # 側邊欄參數設定
     st.sidebar.header("??? Control Panel / 參數設定")
     with st.sidebar.expander("?? Mode A: Baseline / 基準狀態", expanded=True):
         temp_a = st.slider("Temp / 溫度 A (°C)", 20, 100, 60)
         v1_a = st.slider("Ohmic / 歐姆係數 A", 5.0, 25.0, 13.5)
+        hum_a = st.sidebar.slider("Humidity / 溼度 A (%)", 0, 100, 80)
     
     with st.sidebar.expander("?? Mode B: Testing / 測試狀態", expanded=True):
         temp_b = st.slider("Temp / 溫度 B (°C)", 20, 100, 80)
         v1_b = st.slider("Ohmic / 歐姆係數 B", 5.0, 25.0, 18.0)
+        hum_b = st.sidebar.slider("Humidity / 溼度 B (%)", 0, 100, 50)
 
-    # 氫能計算邏輯
-    c = np.linspace(0.1, 2.2, 12)
-    v_a = 2.6 - (v1_a/10 * c) - (temp_a/500)
-    v_b = 2.6 - (v1_b/10 * c) - (temp_b/500)
-    s_a = max(0, min(100, round(100 - (v1_a - 13.5) * 8)))
-    s_b = max(0, min(100, round(100 - (v1_b - 13.5) * 8)))
+    # 氫能計算邏輯 (IV Curve 模擬)
+    def get_pem_data(t, v, h):
+        c_pts = np.linspace(0.1, 2.2, 12)
+        v_pts = 2.6 - (v/10 * c_pts) - (t/500) - ((100-h)/200.0)
+        score = max(0, min(100, round(100 - (v - 13.5) * 8 - (t - 60) * 1.5)))
+        return c_pts, v_pts, score
 
-    # 繪圖
+    c_a, v_a, s_a = get_pem_data(temp_a, v1_a, hum_a)
+    c_b, v_b, s_b = get_pem_data(temp_b, v1_b, hum_b)
+
+    # 繪圖區
     col1, col2 = st.columns(2)
-    def quick_plot(x, y, title, color):
-        fig, ax = plt.subplots(figsize=(6, 3.5))
+    def draw_pem_plot(x, y, color, title):
+        fig, ax = plt.subplots(figsize=(6, 4))
         fig.patch.set_facecolor('#0e1117'); ax.set_facecolor('#111111')
-        ax.plot(x, y, color=color, marker='o', linewidth=2)
+        ax.plot(x, y, color=color, marker='o', linewidth=3)
         ax.set_title(title, color='white', fontweight='bold')
         ax.set_xlabel("Current / 電流 (A)", color='white'); ax.set_ylabel("Voltage / 電壓 (V)", color='white')
-        ax.tick_params(colors='white'); ax.grid(True, color='#444', linestyle=':')
+        ax.tick_params(colors='white'); ax.set_ylim(0, 3); ax.grid(True, color='#444')
         return fig
 
-    col1.pyplot(quick_plot(c, v_a, "Baseline IV Curve", '#00d4ff'))
-    col2.pyplot(quick_plot(c, v_b, "Testing IV Curve", '#ff4b4b'))
+    col1.markdown("### ?? Baseline / 基準曲線")
+    col1.pyplot(draw_pem_plot(c_a, v_a, '#00d4ff', "Baseline IV Curve"))
+    col2.markdown("### ?? Testing / 測試曲線")
+    col2.pyplot(draw_pem_plot(c_b, v_b, '#ff4b4b', "Testing IV Curve"))
 
-    # 指標
+    # 指標區
     m1, m2, m3 = st.columns(3)
     m1.metric("Health Index A / 健康指標 A", f"{s_a}%")
     m2.metric("Health Index B / 健康指標 B", f"{s_b}%", delta=f"{s_b - s_a}%")
@@ -84,39 +92,45 @@ else:
 
     # 冷鏈專用參數
     st.sidebar.header("?? Cold Chain Params / 冷鏈參數")
-    ambient_t = st.sidebar.slider("Ambient Temp / 環境溫度 (°C)", 20, 45, 30)
+    ambient_t = st.sidebar.slider("Ambient Temp / 環境溫度 (°C)", 20, 45, 32)
     insulation = st.sidebar.select_slider("Insulation / 隔熱等級", options=["Low", "Medium", "High"], value="Medium")
-    door_open = st.sidebar.checkbox("Door Open / 開啟箱門模擬")
+    door_state = st.sidebar.checkbox("Door Open Simulator / 開啟箱門模擬")
 
-    # 模擬冷鏈熱動力學曲線
-    time_h = np.linspace(0, 10, 50)
-    k = {"Low": 0.5, "Medium": 0.3, "High": 0.1}[insulation]
-    heat_gain = k * (ambient_t - 5) 
-    if door_open: heat_gain *= 4  # 開門時熱交換率劇增
+    # 模擬冷鏈溫度變化 (熱力學簡化模型)
+    time_h = np.linspace(0, 12, 60)
+    k_val = {"Low": 0.6, "Medium": 0.3, "High": 0.1}[insulation]
+    heat_leak = k_val * (ambient_t - 5)
+    if door_state: heat_leak *= 5  # 開門熱損失倍增
     
-    # 溫度曲線模擬 (簡化模型)
-    temp_profile = 5 + heat_gain * (1 - np.exp(-0.2 * time_h)) + np.random.normal(0, 0.2, 50)
+    # 溫度曲線：5度起跳，隨時間趨近環境溫度
+    temp_profile = 5 + heat_leak * (1 - np.exp(-0.25 * time_h)) + np.random.normal(0, 0.15, 60)
 
-    # 繪製冷鏈趨勢圖
-    fig_cc, ax_cc = plt.subplots(figsize=(12, 4))
+    # 繪製趨勢圖
+    fig_cc, ax_cc = plt.subplots(figsize=(12, 5))
     fig_cc.patch.set_facecolor('#0e1117'); ax_cc.set_facecolor('#111111')
-    ax_cc.plot(time_h, temp_profile, color='#00ffcc', linewidth=3, label="Box Temp")
+    ax_cc.plot(time_h, temp_profile, color='#00ffcc', linewidth=3, label="Box Temperature")
     ax_cc.axhline(8, color='#ff4b4b', linestyle='--', label="Alert Limit (8°C)")
     ax_cc.fill_between(time_h, 2, 8, color='#00ffcc', alpha=0.1, label="Safe Zone (2-8°C)")
     
-    ax_cc.set_title("Temperature Trend / 溫度時序變動圖", color='white', fontweight='bold')
+    ax_cc.set_title("Temperature Trend / 溫度時序變動圖", color='white', fontweight='bold', fontsize=14)
     ax_cc.set_xlabel("Time / 運輸時間 (Hours)", color='white'); ax_cc.set_ylabel("Temp / 溫度 (°C)", color='white')
-    ax_cc.legend(); ax_cc.tick_params(colors='white'); ax_cc.grid(True, color='#333')
+    ax_cc.tick_params(colors='white'); ax_cc.grid(True, color='#333', linestyle=':')
+    ax_cc.legend(facecolor='#1a1a1a', labelcolor='white')
     st.pyplot(fig_cc)
 
-    # 冷鏈指標
+    # 冷鏈數據指標
     c1, c2, c3 = st.columns(3)
-    curr_t = round(temp_profile[-1], 2)
-    c1.metric("Current Temp / 當前庫溫", f"{curr_t} °C")
-    c2.metric("Stability / 穩定性評分", "Excellent" if curr_t < 7 else "Risk", delta="-12% Risk" if curr_t > 8 else "Stable")
-    c3.metric("Heat Leak / 熱損耗率", f"{round(heat_gain, 2)} °C/h")
+    curr_temp = round(temp_profile[-1], 2)
+    c1.metric("Current Temp / 當前庫溫", f"{curr_temp} °C")
+    status_label = "Stable" if curr_temp <= 8 else "CRITICAL"
+    c2.metric("System Status / 系統狀態", status_label, delta_color="inverse", delta=f"{round(curr_temp-5,1)}°C Dev.")
+    c3.metric("Heat Loss Rate / 熱損耗率", f"{round(heat_leak, 2)} °C/h")
 
-    if curr_t > 8:
-        st.error(f"?? ALERT / 斷鏈警告：當前溫度 ({curr_t}°C) 已超出疫苗安全範圍 (8°C)！")
+    if curr_temp > 8:
+        st.error(f"?? 警報：檢測到溫度異常 ({curr_temp}°C)，已超出安全紅線！請檢查密封性。")
     else:
-        st.success("?? NORMAL / 運作正常：溫度維持在安全區間。")
+        st.success("? 運作正常：冷鏈溫度維持在安全區間內。")
+
+# 共通頁尾：數據導出
+st.sidebar.markdown("---")
+st.sidebar.info(f"TAD-AGE Platform v2.0\nLast Sync: {tw_now.strftime('%H:%M:%S')}")
