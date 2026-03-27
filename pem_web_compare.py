@@ -6,7 +6,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 # 1. 頁面基礎配置
-st.set_page_config(page_title="TAD-AGE Pro Diagnostic", layout="wide", page_icon="🔬")
+st.set_page_config(page_title="PEM Diagnostic Pro", layout="wide", page_icon="🔬")
 
 # 2. 自定義 CSS：強化深色背景與雙語指標清晰度
 st.markdown("""
@@ -34,7 +34,8 @@ st.markdown("""
 # 修正時間為台北時區 (UTC+8)
 tw_time = datetime.utcnow() + timedelta(hours=8)
 
-st.title("🔬 TAD-AGE | PEM Hydrogen Diagnostic System / 氫能診斷系統")
+# 移除「泰德時代」，僅保留核心標題與時區
+st.title("🔬 PEM Hydrogen Diagnostic System / 氫能診斷系統")
 st.caption(f"Status: Running (台北時間): {tw_time.strftime('%Y-%m-%d %H:%M:%S')}")
 st.markdown("---")
 
