@@ -4,100 +4,64 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime, timedelta
 
-# 1. 頁面配置
-st.set_page_config(page_title="TAD-AGE Hydrogen Diagnostic", layout="wide", page_icon="🔋")
+# 1. 頁面基礎配置
+st.set_page_config(page_title="EV Performance Sim", layout="wide", page_icon="🛵")
 
-# 全局變數
+# 時間定義
 tw_now = datetime.utcnow() + timedelta(hours=8)
-title_style = {'color': '#00d4ff', 'weight': 'bold', 'size': 14}
-red_title_style = {'color': '#ff4b4b', 'weight': 'bold', 'size': 14}
 
-# CSS: 強化指標卡片
-st.markdown("""
-    <style>
-    .main { background-color: #0e1117; }
-    div[data-testid="stMetric"] {
-        background-color: #1c2128;
-        border: 1px solid #30363d;
-        padding: 20px;
-        border-radius: 12px;
-    }
-    label[data-testid="stMetricLabel"] { font-size: 18px !important; color: #adb5bd !important; }
-    div[data-testid="stMetricValue"] { font-size: 40px !important; color: #00d4ff !important; font-weight: 700 !important; }
-    </style>
-    """, unsafe_allow_html=True)
+# 2. 側邊欄：動力參數設定 (專注於電動機車)
+st.sidebar.title("⚙️ Vehicle Config / 車輛配置")
+bike_mass = st.sidebar.slider("Total Mass / 總重量 (kg)", 100, 400, 180, help="包含騎士與車重")
+motor_eff = st.sidebar.slider("Motor Efficiency / 馬達效率 (%)", 70, 100, 92)
+max_torque = st.sidebar.slider("Max Torque / 最大扭矩 (Nm)", 20, 100, 45)
 
-# 2. 側邊欄參數
-st.sidebar.title("🚀 Navigation")
-app_mode = st.sidebar.selectbox("Select System", ["PEM Hydrogen (氫能診斷)"])
+st.sidebar.markdown("---")
+st.sidebar.header("🕹️ Real-time Control")
+throttle = st.sidebar.slider("Throttle / 油門開度 (%)", 0, 100, 100)
 
-if app_mode == "PEM Hydrogen (氫能診斷)":
-    with st.sidebar:
-        st.markdown("---")
-        with st.expander("🟦 Baseline / 基準狀態", expanded=True):
-            temp_a = st.slider("Temp A", 40, 90, 60, key="ta")
-            ohmic_a = st.slider("Ohmic A", 10.0, 30.0, 13.5, key="oa")
-            hum_a = st.slider("Humidity A", 20, 100, 80, key="ha")
-        with st.expander("🟥 Testing / 測試狀態", expanded=True):
-            temp_b = st.slider("Temp B", 40, 90, 75, key="tb")
-            ohmic_b = st.slider("Ohmic B", 10.0, 30.0, 22.0, key="ob")
-            hum_b = st.slider("Humidity B", 20, 100, 60, key="hb")
+# 3. 主畫面標題
+st.title("⚡ Electric Motorcycle Performance Simulator")
+st.caption(f"TAD-AGE Propulsion Lab | Local Time: {tw_now.strftime('%H:%M:%S')}")
+st.markdown("---")
 
-    # 3. 主畫面
-    st.title("🔋 PEM Hydrogen Diagnostic System")
-    st.caption(f"Analysis Time: {tw_now.strftime('%Y-%m-%d %H:%M:%S')}")
-    st.markdown("---")
+# 4. 物理模型計算 (加速與扭矩曲線)
+speed_kmh = np.linspace(0.1, 100, 100)
+# 扭矩特性：低速恆扭矩，高速恆功率
+current_torque = max_torque * (throttle / 100) * (motor_eff / 100)
+torque_curve = [current_torque if v < 45 else current_torque * (45/v) for v in speed_kmh]
 
-    # 物理模型
-    current_density = np.linspace(0.01, 2.0, 50)
-    def calc_v(temp, ohmic, hum):
-        return 1.22 - (0.28 - temp/550) * np.log1p(current_density * 10) - (ohmic/1000 * current_density) * (1.2 - hum/100)
+# 加速度計算 (F=ma, F=Torque/Radius)
+wheel_radius = 0.28 # 假設 12 吋胎
+accel = [(t / wheel_radius / bike_mass) for t in torque_curve]
 
-    v_a = calc_v(temp_a, ohmic_a, hum_a)
-    v_b = calc_v(temp_b, ohmic_b, hum_b)
+# 5. 繪圖區 (左右對照)
+col1, col2 = st.columns(2)
 
-    # 4. 圖表區：刪除所有可能產生豆腐字的內部標籤
-    col_fig1, col_fig2 = st.columns(2)
-    
-    with col_fig1:
-        fig_a, ax_a = plt.subplots(dpi=130)
-        fig_a.patch.set_facecolor('#0e1117'); ax_a.set_facecolor('#111111')
-        ax_a.plot(current_density, v_a, color='#00d4ff', linewidth=4)
-        ax_a.set_title("Baseline IV Characteristic (基準)", fontdict=title_style, pad=20)
-        # 刪除標籤以去除豆腐字
-        ax_a.set_xlabel(""); ax_a.set_ylabel("") 
-        ax_a.tick_params(colors='white'); ax_a.grid(True, color='#333', alpha=0.5, linestyle='--')
-        st.pyplot(fig_a)
+with col1:
+    fig_t, ax_t = plt.subplots(dpi=120)
+    fig_t.patch.set_facecolor('#0e1117')
+    ax_t.set_facecolor('#111111')
+    ax_t.plot(speed_kmh, torque_curve, color='#00d4ff', linewidth=3)
+    ax_t.set_title("Torque vs Speed (Nm)", color='#00d4ff', weight='bold')
+    ax_t.tick_params(colors='white')
+    ax_t.grid(True, color='#333', alpha=0.5)
+    st.pyplot(fig_t)
 
-    with col_fig2:
-        fig_b, ax_b = plt.subplots(dpi=130)
-        fig_b.patch.set_facecolor('#0e1117'); ax_b.set_facecolor('#111111')
-        ax_b.plot(current_density, v_b, color='#ff4b4b', linewidth=4)
-        ax_b.set_title("Testing IV Characteristic (測試)", fontdict=red_title_style, pad=20)
-        # 刪除標籤以去除豆腐字
-        ax_b.set_xlabel(""); ax_b.set_ylabel("")
-        ax_b.tick_params(colors='white'); ax_b.grid(True, color='#333', alpha=0.5, linestyle='--')
-        st.pyplot(fig_b)
+with col2:
+    fig_a, ax_a = plt.subplots(dpi=120)
+    fig_a.patch.set_facecolor('#0e1117')
+    ax_a.set_facecolor('#111111')
+    ax_a.plot(speed_kmh, accel, color='#ff4b4b', linewidth=3)
+    ax_a.set_title("Acceleration Trend (m/s²)", color='#ff4b4b', weight='bold')
+    ax_a.tick_params(colors='white')
+    ax_a.grid(True, color='#333', alpha=0.5)
+    st.pyplot(fig_a)
 
-    # 5. 指標區：簡化指標 + 下降紅字警示
-    st.markdown("### 🔍 Diagnostic Metrics / 診斷指標")
-    m1, m2, m3 = st.columns(3)
-    
-    avg_a, avg_b = v_a.mean(), v_b.mean()
-    v_drop = avg_a - avg_b
-    hi_a = 100.0
-    hi_b = max(0, 100 - (v_drop / avg_a * 250)) 
+# 6. 下方性能摘要
+st.markdown("### 📊 Performance Summary / 性能摘要")
+m1, m2, m3 = st.columns(3)
 
-    # 指標 A
-    m1.metric("Health Index A / 健康指數 A", f"{round(hi_a, 1)}%")
-    
-    # 指標 B：delta_color="inverse" 會讓下降百分比顯示為紅字
-    m2.metric(
-        label="Health Index B / 健康指數 B", 
-        value=f"{round(hi_b, 1)}%", 
-        delta=f"-{round(100-hi_b, 1)}%", 
-        delta_color="inverse"
-    )
-    
-    # 指標 C
-    m3.metric("Avg. Volt Drop / 平均壓降", f"{round(v_drop, 3)} V")
+m1.metric("Top Acceleration", f"{round(max(accel), 2)} m/s²")
+m2.metric("Estimated 0-50 km/h", f"{round(50/3.6/max(accel), 2)} sec", delta="Estimated")
+m3.metric("Current Power Output", f"{round(current_torque * 45 / 9.548 / 1000, 2)} kW")
