@@ -1,62 +1,64 @@
-﻿# --- 在導覽列增加 EV 選項 ---
+﻿import streamlit as st
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from datetime import datetime
+
+# 設定頁面
+st.set_page_config(page_title="TAD-AGE EV Performance", layout="wide")
+
+# 側邊欄導覽
+st.sidebar.title("🚀 Navigation / 系統導覽")
 app_mode = st.sidebar.selectbox(
     "Select System / 選擇模擬系統",
-    ["PEM Hydrogen (氫能診斷)", "Cold Chain (冷鏈物流)", "EV Performance (加速與扭矩)"]
+    ["EV Performance (加速與扭矩)", "PEM Hydrogen (氫能診斷)", "Cold Chain (冷鏈物流)"]
 )
 
-# ... 保留 PEM 與 Cold Chain 的 if/elif 區塊 ...
-
-# ==========================================
-# Mode C: EV Performance / 電動車性能模擬
-# ==========================================
-elif app_mode == "EV Performance (加速與扭矩)":
-    st.title("? EV Performance Simulator / 電動車性能模擬")
-    st.caption(f"V3 Architecture: Layer 1-2 Focus | Time: {tw_now.strftime('%Y-%m-%d %H:%M:%S')}")
-    st.markdown("---")
-
-    # 側邊欄：根據 PDF 8EM 模型設定參數 [cite: 11]
-    st.sidebar.header("?? Vehicle Specs / 車輛參數 (#1, #5)")
-    bike_mass = st.sidebar.slider("Total Mass / 總重 (kg) [#1]", 100, 400, 180) [cite: 13]
-    motor_eff = st.sidebar.slider("Motor Efficiency / 馬達效率 (%) [#5]", 50, 100, 90) [cite: 17]
-    throttle = st.sidebar.slider("Throttle Opening / 油門開度 (%)", 0, 100, 80) [cite: 36]
+# --- 根據 PDF V3 架構實作的新模組 ---
+if app_mode == "EV Performance (加速與扭矩)":
+    st.title("⚡ EV Performance Simulator / 電動車性能模擬")
+    st.caption("基於 V3 控制架構 - Layer 1 & 2")
     
-    # 物理模擬邏輯 (簡化 FOC 與 扭矩生成) [cite: 25, 27]
-    # 模擬馬達特徵：低速恆扭矩，高速恆功率
-    speed_kmh = np.linspace(0, 100, 50)
-    base_torque = 45 * (throttle / 100) * (motor_eff / 100) # 假設最大扭矩 45Nm
+    # 側邊欄參數 (對應 PDF 8EM 模型)
+    st.sidebar.header("⚙️ Vehicle Specs (#1, #5)")
+    bike_mass = st.sidebar.slider("Total Mass / 總重 (kg) [#1]", 100, 400, 180)
+    motor_eff = st.sidebar.slider("Motor Efficiency / 馬達效率 (%) [#5]", 50, 100, 92)
+    throttle = st.sidebar.slider("Throttle Opening / 油門開度 (%)", 0, 100, 100)
+
+    # 模擬馬達扭矩特性 (Layer 1: 扭矩生成)
+    speed_kmh = np.linspace(0, 100, 100)
+    # 低速時維持恆扭矩，超過特定速度後功率受限
+    base_torque = 45 * (throttle / 100) * (motor_eff / 100)
+    torque_curve = [base_torque if v < 45 else base_torque * (45/v) for v in speed_kmh]
     
-    # 扭矩隨轉速下降模型 (Layer 1: 馬達特性) [cite: 23, 31]
-    torque_curve = [base_torque if v < 40 else base_torque * (40/v) for v in speed_kmh]
+    # 顯示圖表
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.plot(speed_kmh, torque_curve, color='#00d4ff', linewidth=3, label="Torque (Nm)")
+    ax.set_title("Torque vs Speed Curve (V3 L1 Motor Control)", color='white')
+    ax.set_xlabel("Speed (km/h)")
+    ax.set_ylabel("Torque (Nm)")
+    ax.grid(True, alpha=0.3)
     
-    # 計算加速度 (F=ma, 簡化版) [cite: 13]
-    # 加速度 a = (扭矩 * 傳動比 / 輪胎半徑 - 阻力) / 質量
-    accel = [(t * 5 / 0.3 / bike_mass) for t in torque_curve] # 假設傳動比 5, 半徑 0.3m
-
-    # 繪圖區
-    col1, col2 = st.columns(2)
+    # 設定圖表深色風格以符合現有網頁
+    fig.patch.set_facecolor('#0e1117')
+    ax.set_facecolor('#1e2130')
+    ax.tick_params(colors='white')
+    ax.xaxis.label.set_color('white')
+    ax.yaxis.label.set_color('white')
     
-    with col1:
-        fig_t, ax_t = plt.subplots()
-        fig_t.patch.set_facecolor('#0e1117'); ax_t.set_facecolor('#111111')
-        ax_t.plot(speed_kmh, torque_curve, color='#00d4ff', linewidth=3)
-        ax_t.set_title("Torque vs Speed / 扭矩-轉速曲線", color='white')
-        ax_t.set_xlabel("Speed (km/h)", color='white'); ax_t.set_ylabel("Torque (Nm)", color='white')
-        ax_t.tick_params(colors='white'); ax_t.grid(True, color='#444')
-        st.pyplot(fig_t)
+    st.pyplot(fig)
 
-    with col2:
-        fig_a, ax_a = plt.subplots()
-        fig_a.patch.set_facecolor('#0e1117'); ax_a.set_facecolor('#111111')
-        ax_a.plot(speed_kmh, accel, color='#ff4b4b', linewidth=3)
-        ax_a.set_title("Acceleration Propelling / 加速推力趨勢", color='white')
-        ax_a.set_xlabel("Speed (km/h)", color='white'); ax_a.set_ylabel("Accel (m/s2)", color='white')
-        ax_a.tick_params(colors='white'); ax_a.grid(True, color='#444')
-        st.pyplot(fig_a)
+    # 關鍵指標對應 AUTOSAR SWC
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Peak Torque", f"{round(max(torque_curve), 1)} Nm")
+    c2.metric("SWC Mapping", "TorqueControl")
+    c3.metric("8EM Ref", "#1, #5, #8")
 
-    # 指標顯示 [cite: 104]
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Peak Torque / 最大扭矩", f"{round(max(torque_curve), 1)} Nm")
-    m2.metric("Est. 0-50 km/h", "3.2 sec") # 預估值
-    m3.metric("SWC Mapping", "TorqueControl") [cite: 104]
+# --- 保留原本功能的佔位符 (妳之後可以把舊代碼貼過來) ---
+elif app_mode == "PEM Hydrogen (氫能診斷)":
+    st.title("🔋 PEM Hydrogen Diagnostic / 氫能診斷")
+    st.info("此處為原有功能，已在測試版中保留邏輯空間。")
 
-    st.success("? 目前對應 PDF 第 4 頁：L1 動力控制層之 Torque Controller 模組。") [cite: 104]
+elif app_mode == "Cold Chain (冷鏈物流)":
+    st.title("❄️ Cold Chain Logistics / 冷鏈物流")
+    st.info("此處為原有功能，已在測試版中保留邏輯空間。")
