@@ -9,9 +9,8 @@ st.set_page_config(page_title="TAD-AGE Hydrogen Diagnostic", layout="wide", page
 
 # 全局變數
 tw_now = datetime.utcnow() + timedelta(hours=8)
-# 強制使用系統內建英文字體，避免豆腐字
-font_style = {'color': '#ffffff', 'size': 11}
 title_style = {'color': '#00d4ff', 'weight': 'bold', 'size': 14}
+red_title_style = {'color': '#ff4b4b', 'weight': 'bold', 'size': 14}
 
 # CSS: 強化指標卡片
 st.markdown("""
@@ -36,13 +35,13 @@ if app_mode == "PEM Hydrogen (氫能診斷)":
     with st.sidebar:
         st.markdown("---")
         with st.expander("🟦 Baseline / 基準狀態", expanded=True):
-            temp_a = st.slider("Temp A (°C)", 40, 90, 60, key="ta")
+            temp_a = st.slider("Temp A", 40, 90, 60, key="ta")
             ohmic_a = st.slider("Ohmic A", 10.0, 30.0, 13.5, key="oa")
-            hum_a = st.slider("Humidity A (%)", 20, 100, 80, key="ha")
+            hum_a = st.slider("Humidity A", 20, 100, 80, key="ha")
         with st.expander("🟥 Testing / 測試狀態", expanded=True):
-            temp_b = st.slider("Temp B (°C)", 40, 90, 75, key="tb")
+            temp_b = st.slider("Temp B", 40, 90, 75, key="tb")
             ohmic_b = st.slider("Ohmic B", 10.0, 30.0, 22.0, key="ob")
-            hum_b = st.slider("Humidity B (%)", 20, 100, 60, key="hb")
+            hum_b = st.slider("Humidity B", 20, 100, 60, key="hb")
 
     # 3. 主畫面
     st.title("🔋 PEM Hydrogen Diagnostic System")
@@ -57,17 +56,16 @@ if app_mode == "PEM Hydrogen (氫能診斷)":
     v_a = calc_v(temp_a, ohmic_a, hum_a)
     v_b = calc_v(temp_b, ohmic_b, hum_b)
 
-    # 4. 圖表區：徹底修正豆腐字 (圖內標籤全英文)
+    # 4. 圖表區：刪除所有可能產生豆腐字的內部標籤
     col_fig1, col_fig2 = st.columns(2)
     
     with col_fig1:
         fig_a, ax_a = plt.subplots(dpi=130)
         fig_a.patch.set_facecolor('#0e1117'); ax_a.set_facecolor('#111111')
         ax_a.plot(current_density, v_a, color='#00d4ff', linewidth=4)
-        # 標題採中英雙語，內部標籤純英文
         ax_a.set_title("Baseline IV Characteristic (基準)", fontdict=title_style, pad=20)
-        ax_a.set_xlabel("Current Density (A/cm²)", fontdict=font_style)
-        ax_a.set_ylabel("Cell Voltage (V)", fontdict=font_style)
+        # 刪除標籤以去除豆腐字
+        ax_a.set_xlabel(""); ax_a.set_ylabel("") 
         ax_a.tick_params(colors='white'); ax_a.grid(True, color='#333', alpha=0.5, linestyle='--')
         st.pyplot(fig_a)
 
@@ -75,9 +73,9 @@ if app_mode == "PEM Hydrogen (氫能診斷)":
         fig_b, ax_b = plt.subplots(dpi=130)
         fig_b.patch.set_facecolor('#0e1117'); ax_b.set_facecolor('#111111')
         ax_b.plot(current_density, v_b, color='#ff4b4b', linewidth=4)
-        ax_b.set_title("Testing IV Characteristic (測試)", fontdict={'color': '#ff4b4b', 'weight': 'bold', 'size': 14}, pad=20)
-        ax_b.set_xlabel("Current Density (A/cm²)", fontdict=font_style)
-        ax_b.set_ylabel("Cell Voltage (V)", fontdict=font_style)
+        ax_b.set_title("Testing IV Characteristic (測試)", fontdict=red_title_style, pad=20)
+        # 刪除標籤以去除豆腐字
+        ax_b.set_xlabel(""); ax_b.set_ylabel("")
         ax_b.tick_params(colors='white'); ax_b.grid(True, color='#333', alpha=0.5, linestyle='--')
         st.pyplot(fig_b)
 
@@ -90,14 +88,16 @@ if app_mode == "PEM Hydrogen (氫能診斷)":
     hi_a = 100.0
     hi_b = max(0, 100 - (v_drop / avg_a * 250)) 
 
-    m1.metric("Health Index A / 指數 A", f"{round(hi_a, 1)}%")
+    # 指標 A
+    m1.metric("Health Index A / 健康指數 A", f"{round(hi_a, 1)}%")
     
-    # delta_color="inverse" 確保數值下降(負值)時顯示為紅字
+    # 指標 B：delta_color="inverse" 會讓下降百分比顯示為紅字
     m2.metric(
-        "Health Index B / 指數 B", 
-        f"{round(hi_b, 1)}%", 
+        label="Health Index B / 健康指數 B", 
+        value=f"{round(hi_b, 1)}%", 
         delta=f"-{round(100-hi_b, 1)}%", 
         delta_color="inverse"
     )
     
+    # 指標 C
     m3.metric("Avg. Volt Drop / 平均壓降", f"{round(v_drop, 3)} V")
