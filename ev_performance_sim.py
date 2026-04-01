@@ -2,12 +2,19 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta # 導入 timedelta 進行時區修正
 
 # 1. 頁面配置
 st.set_page_config(page_title="TAD-AGE EV Propulsion", layout="wide", page_icon="🛵")
 
-# CSS: 強化數據卡片視覺與字體
+# --- 時間修正邏輯 ---
+# 獲取 UTC 時間並轉換為台灣時間 (UTC+8)
+utc_now = datetime.utcnow()
+tw_now = utc_now + timedelta(hours=8)
+current_time_str = tw_now.strftime('%Y-%m-%d %H:%M:%S')
+# ------------------
+
+# CSS: 強化數據卡片視覺
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
@@ -48,29 +55,26 @@ throttle = st.sidebar.select_slider("Throttle / 油門控制 (%)", options=[0, 2
 # 3. 物理模型計算
 speed_kmh = np.linspace(0.1, 110, 100)
 speed_ms = speed_kmh / 3.6
-
-# 考慮電壓對轉折點的影響 (電壓越高，恆扭矩區越長)
 base_speed = 40 * (batt_voltage / 72) 
 effective_eff = (motor_eff / 100) * (1 - transmission_loss / 100)
 wheel_torque = max_torque * gear_ratio * (throttle / 100) * effective_eff
 current_torque_curve = [wheel_torque if v < base_speed else wheel_torque * (base_speed/v) for v in speed_kmh]
 
-# 阻力計算
 air_drag = 0.5 * 1.225 * (speed_ms**2) * cd_factor * 0.6 
 rolling_drag = bike_mass * 9.8 * rolling_res
 total_resistance = air_drag + rolling_drag
 
-# 加速度計算
 accel = [( (t / wheel_radius) - r ) / bike_mass for t, r in zip(current_torque_curve, total_resistance)]
 accel = [max(0, a) for a in accel]
 
-# 4. 主畫面標題 (中英對照)
+# 4. 主畫面標題 (使用正確的台灣時間)
 st.title("⚡ Electric Motorcycle Propulsion Simulator")
 st.subheader("電動機車動力模擬系統") 
-st.caption(f"TAD-AGE Propulsion Lab | V3.5 Professional | {datetime.now().strftime('%H:%M:%S')}")
+# 在這裡顯示修正後的正確時間
+st.caption(f"TAD-AGE Propulsion Lab | V3.6 Professional | Analysis Time: {current_time_str}")
 st.markdown("---")
 
-# 5. 繪圖區 (中英對照標題)
+# 5. 繪圖區
 col1, col2 = st.columns(2)
 
 with col1:
@@ -78,7 +82,6 @@ with col1:
     fig_t, ax_t = plt.subplots(dpi=130)
     fig_t.patch.set_facecolor('#0e1117'); ax_t.set_facecolor('#111111')
     ax_t.plot(speed_kmh, current_torque_curve, color='#00d4ff', linewidth=4)
-    # 圖表內部維持英文，避免豆腐字
     ax_t.set_xlabel("Speed (km/h)", color='gray')
     ax_t.set_ylabel("Torque (Nm)", color='gray')
     ax_t.tick_params(colors='white'); ax_t.grid(True, color='#333', alpha=0.3)
@@ -94,13 +97,12 @@ with col2:
     ax_a.tick_params(colors='white'); ax_a.grid(True, color='#333', alpha=0.3)
     st.pyplot(fig_a)
 
-# 6. 性能數據摘要 (中英對照)
+# 6. 性能數據摘要
 st.markdown("---")
 st.markdown("### 📊 Performance Summary / 性能數據摘要")
 m1, m2, m3, m4 = st.columns(4)
 
 top_accel = max(accel)
-# 修正功率估算，考慮電壓基礎
 est_power = (wheel_torque / gear_ratio * (base_speed * 100) / 9550) 
 wh_per_km = (est_power * 1000 / 45) if throttle > 0 else 0 
 
