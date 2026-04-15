@@ -1,13 +1,13 @@
 ﻿import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
-# 1. 頁面基本配置
+# 1. 頁面基本配置 (Set Page Config)
 st.set_page_config(page_title="PEM Digital Twin Pro", layout="wide")
 
-# 2. 自定義 CSS：強化視覺效果並解決標籤遮擋問題
+# 2. 自定義 CSS：強化看板視覺、解決標籤吃字與對齊問題
 st.markdown("""
     <style>
     .metric-container {
@@ -56,9 +56,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. 物理連動演算法 (根據 4/13 實測數據建模)
+# 3. 核心物理演算法 (基於 4/13 實測數據建模)
 def get_simulated_metrics(t_input, mode):
-    # 參考數據點：No.11 溫度對應之各項數值
+    # 原始實測數據點 (以電解槽 No.11 溫度為變量)
     ref_points = {
         'temp': [35.1, 37.1, 38.5, 39.4, 40.0, 41.1, 41.3],
         'press': [1.13, 2.01, 2.92, 3.98, 4.92, 7.88, 9.46],
@@ -67,17 +67,16 @@ def get_simulated_metrics(t_input, mode):
         'acc_kw': [111.2, 111.8, 112.5, 113.8, 114.3, 116.1, 117.0]
     }
     
-    # 進行線性插值
+    # 進行線性插值計算
     p_press = np.interp(t_input, ref_points['temp'], ref_points['press'])
     p_flow = np.interp(t_input, ref_points['temp'], ref_points['flow'])
     p_kw = np.interp(t_input, ref_points['temp'], ref_points['kw'])
     p_acc = np.interp(t_input, ref_points['temp'], ref_points['acc_kw'])
     
-    # 預測產氫量預估 (H2 Yield)
-    # 根據實測：單管 103s/kg, 雙管 98s/kg
-    efficiency = 103.0 if "Single" in mode else 98.0
-    # 基礎產量推算公式
-    p_yield = (p_acc - 110.0) / (efficiency / 3600 * 23.1)
+    # 預測總產氫量 (H2 Yield) 計算邏輯
+    # 單管平均耗時約 103s/kg, 雙管效率較高約 98s/kg
+    base_eff = 103.0 if "Single" in mode else 98.0
+    p_yield = (p_acc - 110.0) / (base_eff / 3600 * 23.1)
     
     # 雙管模式下的物理增量修正
     if "Dual" in mode:
@@ -86,7 +85,7 @@ def get_simulated_metrics(t_input, mode):
         
     return p_kw, p_acc, p_press, p_flow, p_yield
 
-# 4. 側邊欄：控制面板
+# 4. 側邊控制面板 (Sidebar)
 st.sidebar.header("Digital Twin Control / 數位孿生控制")
 
 # 操作模式選擇
@@ -104,49 +103,67 @@ sim_t11 = st.sidebar.slider(
     35.1, 41.3, 37.8, step=0.1
 )
 
-# 系統負荷百分比
+# 負荷百分比
 load_p = (sim_t11 - 35.1) / (41.3 - 35.1) * 100
 st.sidebar.metric("System Load / 系統負荷百分比", f"{load_p:.1f} %")
 
 st.sidebar.divider()
 st.sidebar.subheader("Data Export / 數據管理")
-t_range_all = np.linspace(35.1, 41.3, 50)
-full_sim = [get_simulated_metrics(x, op_mode) for x in t_range_all]
-df_export = pd.DataFrame(full_sim, columns=['Power(KW)', 'Acc_Energy(KW)', 'Pressure(kg/cm2)', 'Flow(Lt/min)', 'Yield(kg)'])
-st.sidebar.download_button("Export CSV Report", df_export.to_csv().encode('utf-8'), f"pem_sim_{op_mode}.csv", "text/csv")
 
-# 5. 主內容區：數據計算與時間獲取
+# --- 強化版 CSV 匯出邏輯：加入模擬時間與溫度 ---
+tz = pytz.timezone('Asia/Taipei')
+base_time = datetime.now(tz)
+t_range_all = np.linspace(35.1, 41.3, 50) # 模擬 50 個數據點
+
+export_rows = []
+for i, t_val in enumerate(t_range_all):
+    kw, acc, press, flow, hyield = get_simulated_metrics(t_val, op_mode)
+    # 模擬時間軸：每點間隔 10 秒
+    sim_ts = (base_time + timedelta(seconds=i*10)).strftime("%H:%M:%S")
+    
+    export_rows.append({
+        "Sim Time (模擬時間)": sim_ts,
+        "Temp No.11 (溫度 ℃)": round(t_val, 2),
+        "Mode (模式)": op_mode,
+        "Pressure (kg/cm2)": round(press, 2),
+        "Flow (Lt/min)": round(flow, 1),
+        "Power (KW)": round(kw, 2),
+        "Yield (kg)": round(hyield, 3)
+    })
+
+df_export = pd.DataFrame(export_rows)
+st.sidebar.download_button(
+    label="Export CSV Report",
+    data=df_export.to_csv(index=False).encode('utf-8-sig'), # 解決 Excel 中文亂碼
+    file_name=f"PEM_Report_{op_mode}_{base_time.strftime('%H%M')}.csv",
+    mime="text/csv"
+)
+
+# 5. 主內容區計算與時間獲取
 sim_kw, sim_acc, sim_press, sim_flow, sim_yield = get_simulated_metrics(sim_t11, op_mode)
 
-# 台北即時時間
-try:
-    tz = pytz.timezone('Asia/Taipei')
-    now = datetime.now(tz)
-except:
-    now = datetime.now()
-
-time_str = now.strftime("%H:%M:%S")
-date_str = now.strftime("%Y-%m-%d")
+time_str = base_time.strftime("%H:%M:%S")
+date_str = base_time.strftime("%Y-%m-%d")
 
 st.title("PEM Hydrogen Production Digital Twin")
 st.subheader("Real-time Predictive Dashboard / 即時模擬預測看板")
 
-# 時間橫幅
+# 時間顯示 Banner
 st.markdown(f'<div class="time-banner">🕒 System Sync Time / 系統同步時間：{date_str} {time_str} ({op_mode})</div>', unsafe_allow_html=True)
 
 # 6. Dashboard 看板 (5 欄配置)
 c1, c2, c3, c4, c5 = st.columns(5)
 
-config = [
+metrics_list = [
     ("Predicted Pressure / <br>預測出口壓力", f"{sim_press:.2f}", "kg/cm²", f"Δ {sim_press-1.13:.2f} vs Base"),
     ("Predicted Flow / <br>預測出口流量", f"{sim_flow:.1f}", "Lt/min", f"Δ {sim_flow-476.0:.1f}"),
-    ("Instant Power / <br>電表瞬時功率", f"{sim_kw:.2f}", "KW", "Status: Synchronized"),
+    ("Instant Power / <br>電表瞬時功率", f"{sim_kw:.2f}", "KW", "Status: Sync"),
     ("Accumulated Energy / <br>電表累積功耗", f"{sim_acc:.1f}", "KW", f"Load: {load_p:.1f}%"),
     ("Total H2 Yield / <br>預測總產氫量", f"{sim_yield:.2f}", "kg", "Ref: 4/13 Log")
 ]
 
 for i, col in enumerate([c1, c2, c3, c4, c5]):
-    label, val, unit, delta = config[i]
+    label, val, unit, delta = metrics_list[i]
     with col:
         st.markdown(f"""<div class="metric-container">
             <div class="metric-label">{label}</div>
@@ -154,21 +171,21 @@ for i, col in enumerate([c1, c2, c3, c4, c5]):
             <div class="metric-delta">{delta}</div>
         </div>""", unsafe_allow_html=True)
 
-# 7. 趨勢圖表區 (修正：使用 Line Chart 取代 Area Chart 消除藍色色塊)
+# 7. 視覺化圖表 (修正：使用 Line Chart 取代 Area Chart)
 st.divider()
-col_a, col_b = st.columns(2)
+col_left, col_right = st.columns(2)
 
 t_axis = np.linspace(35.1, 41.3, 30)
-sim_data = [get_simulated_metrics(t, op_mode) for t in t_axis]
-df_plot = pd.DataFrame(sim_data, columns=['KW', 'Acc', 'Press', 'Flow', 'Yield'], index=t_axis)
+sim_data_plot = [get_simulated_metrics(t, op_mode) for t in t_axis]
+df_plot = pd.DataFrame(sim_data_plot, columns=['KW', 'Acc', 'Press', 'Flow', 'Yield'], index=t_axis)
 
-with col_a:
+with col_left:
     st.write("### Pressure & Yield Correlation / 壓力與產產量趨勢")
     st.line_chart(df_plot[['Press', 'Yield']])
 
-with col_b:
+with col_right:
     st.write("### Power Characteristic (KW) / 功耗特性曲線")
-    # 此處已改為 line_chart，呈現清晰的折線
+    # 已改為折線圖，呈現清晰變動趨勢
     st.line_chart(df_plot['KW'])
 
 st.caption("Status: Active | TAD-AGE Agent Framework | Source: 4/13 Hydrogen Production Test Record")
