@@ -1,106 +1,171 @@
 ﻿import streamlit as st
 import pandas as pd
 import numpy as np
-import time
 from datetime import datetime
+import pytz
 
-# --- 頁面配置 ---
-st.set_page_config(page_title="PEM電解槽數據模擬系統", layout="wide")
+# 1. 頁面基本配置
+st.set_page_config(page_title="PEM Digital Twin Pro", layout="wide")
 
-# --- 自定義 CSS (解決吃字與卡片設計) ---
+# 2. 自定義 CSS：強化視覺效果並解決標籤吃字問題
 st.markdown("""
     <style>
-    .main { background-color: #f5f7f9; }
-    .stMetric {
+    .metric-container {
         background-color: #ffffff;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
-    /* 防止卡片標題吃字 */
-    div[data-testid="stMetricLabel"] > div {
-        overflow: visible !important;
-        white-space: normal !important;
-        font-weight: bold !important;
-        color: #333 !important;
+    .metric-label {
+        font-size: 15px;
+        color: #475569;
+        font-weight: 600;
+        margin-bottom: 10px;
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1.3;
     }
-    /* 右上角即時時間樣式 */
-    .time-container {
-        text-align: right;
-        font-family: 'Courier New', Courier, monospace;
-        color: #555;
+    .metric-value {
+        font-size: 30px;
+        color: #0f172a;
+        font-weight: 700;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .metric-delta {
+        font-size: 13px;
+        color: #10b981;
+        margin-top: 8px;
+        font-weight: 500;
+    }
+    .time-banner {
+        font-size: 18px;
+        color: #3b82f6;
+        margin-top: -12px;
+        margin-bottom: 25px;
+        font-weight: 600;
+        border-left: 5px solid #3b82f6;
+        padding-left: 15px;
+        background-color: #eff6ff;
+        padding-top: 10px;
         padding-bottom: 10px;
+        border-radius: 0 8px 8px 0;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 側邊欄：控制參數 ---
-with st.sidebar:
-    st.header("⚙️ 模擬參數設置")
-    temperature = st.slider("電解槽工作溫度 (°C)", min_value=20, max_value=90, value=60)
-    pressure = st.slider("工作壓力 (bar)", min_value=1.0, max_value=30.0, value=1.0)
-    current_density_max = st.number_input("最高電流密度 (A/cm²)", value=2.0)
-    st.info("調整上方參數以觀察極化曲線變化。")
+# 3. 物理連動演算法 (基於 4/13 實測數據)
+def get_simulated_metrics(t_input):
+    ref_points = {
+        'temp': [35.1, 37.1, 38.5, 39.4, 40.0, 41.1, 41.3],
+        'kw': [23.3, 23.1, 23.2, 23.2, 23.2, 23.2, 23.21],
+        'acc_kw': [111.2, 111.8, 112.5, 113.8, 114.3, 116.1, 117.0],
+        'press': [1.13, 2.01, 2.92, 3.98, 4.92, 7.88, 9.46],
+        'flow': [476.0, 402.7, 393.3, 399.7, 396.4, 408.8, 487.0]
+    }
+    p_kw = np.interp(t_input, ref_points['temp'], ref_points['kw'])
+    p_acc = np.interp(t_input, ref_points['temp'], ref_points['acc_kw'])
+    p_press = np.interp(t_input, ref_points['temp'], ref_points['press'])
+    p_flow = np.interp(t_input, ref_points['temp'], ref_points['flow'])
+    return p_kw, p_acc, p_press, p_flow
 
-# --- 標題區域與即時時間 ---
-col_title, col_time = st.columns([3, 1])
+# 4. 側邊欄：控制面板
+st.sidebar.header("Digital Twin Control / 數位孿生控制")
 
-with col_title:
-    st.title("🔋 PEM電解槽數據模擬系統")
+# 左側：電解槽溫度滑桿
+st.sidebar.subheader("Simulation Trigger / 模擬觸發器")
+sim_t11 = st.sidebar.slider(
+    "Electrolyzer Temp (°C) / 電解槽溫度 No.11", 
+    35.1, 41.3, 38.5, step=0.1
+)
 
-with col_time:
-    # 顯示目前系統時間
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    st.markdown(f'<div class="time-container">最後更新時間：<br><b>{now}</b></div>', unsafe_allow_html=True)
+# 同步顯示計算出的負荷百分比
+load_p = (sim_t11 - 35.1) / (41.3 - 35.1) * 100
+st.sidebar.metric("System Load / 系統負荷百分比", f"{load_p:.1f} %")
 
-# --- 核心邏輯：Butler-Volmer 電化學模型 ---
-def simulate_pem(temp, press, j_max):
-    # 簡單模擬參數
-    T_kelvin = temp + 273.15
-    j = np.linspace(0.01, j_max, 100)
-    
-    # 1. 可逆電壓 (Nernst)
-    E_rev = 1.229 - 0.0009 * (temp - 25)
-    
-    # 2. 活化過電位 (Activation Overpotential - Butler-Volmer 簡化版)
-    alpha = 0.5
-    R = 8.314
-    F = 96485
-    n = 2
-    i0 = 1e-3 * np.exp(0.01 * (temp - 25)) # 交換電流密度隨溫度變化
-    eta_act = (R * T_kelvin / (alpha * n * F)) * np.arcsinh(j / (2 * i0))
-    
-    # 3. 歐姆過電位 (Ohmic Overpotential)
-    R_ohm = 0.15 - 0.001 * (temp - 25) # 模擬膜電阻隨溫度下降
-    eta_ohm = j * R_ohm
-    
-    # 總電壓
-    V = E_rev + eta_act + eta_ohm
-    
-    return pd.DataFrame({'Current Density (A/cm²)': j, 'Voltage (V)': V})
+st.sidebar.divider()
+st.sidebar.subheader("Data Export / 數據管理")
+t_range_all = np.linspace(35.1, 41.3, 50)
+full_sim_data = [get_simulated_metrics(x) for x in t_range_all]
+df_export = pd.DataFrame(full_sim_data, columns=['Power(KW)', 'Acc_Energy(KW)', 'Pressure(kg/cm2)', 'Flow(Lt/min)'])
+st.sidebar.download_button("Export Simulation (CSV)", df_export.to_csv().encode('utf-8'), "pem_simulation.csv", "text/csv")
 
-# --- 執行模擬 ---
-df_sim = simulate_pem(temperature, pressure, current_density_max)
+# 5. 主要內容區
+sim_kw, sim_acc, sim_press, sim_flow = get_simulated_metrics(sim_t11)
 
-# --- 數據展示 UI ---
-st.divider()
+# 獲取台北即時時間
+try:
+    tz = pytz.timezone('Asia/Taipei')
+    now = datetime.now(tz)
+except:
+    now = datetime.now()
 
-# 第一列：KPI 卡片
+time_str = now.strftime("%H:%M:%S")
+date_str = now.strftime("%Y-%m-%d")
+
+st.title("PEM Hydrogen Production Digital Twin")
+
+# 6. Dashboard 標題與即時時間 (右側主要顯示區)
+st.subheader("Real-time Predictive Dashboard / 即時模擬預測看板")
+st.markdown(f'<div class="time-banner">🕒 System Sync Time / 系統同步時間：{date_str} {time_str}</div>', unsafe_allow_html=True)
+
+# 看板指標列
 c1, c2, c3, c4 = st.columns(4)
-latest_v = df_sim['Voltage (V)'].iloc[-1]
-c1.metric("當前設定溫度", f"{temperature} °C")
-c2.metric("預測最高電壓", f"{latest_v:.3f} V")
-c3.metric("電阻係數 (估算)", f"{0.15 - 0.001 * (temperature - 25):.3f} Ω·cm²")
-c4.metric("系統狀態", "穩定運行", delta="Normal")
 
-# 第二列：視覺化圖表
-st.subheader("📈 極化曲線 (Polarization Curve)")
-st.line_chart(df_sim.set_index('Current Density (A/cm²)'))
+with c1:
+    st.markdown(f"""<div class="metric-container">
+        <div class="metric-label">Predicted Pressure / <br>預測出口壓力</div>
+        <div class="metric-value">{sim_press:.2f} <small style="font-size:14px;">kg/cm²</small></div>
+        <div class="metric-delta">Δ {sim_press-1.13:.2f} vs Base</div>
+    </div>""", unsafe_allow_html=True)
 
-# 第三列：原始數據與導出
-with st.expander("查看原始模擬數據表"):
-    st.dataframe(df_sim, use_container_width=True)
-    csv = df_sim.to_csv(index=False).encode('utf-8')
-    st.download_button("下載模擬數據 (CSV)", csv, "pem_simulation.csv", "text/csv")
+with c2:
+    st.markdown(f"""<div class="metric-container">
+        <div class="metric-label">Predicted Flow / <br>預測出口流量</div>
+        <div class="metric-value">{sim_flow:.1f} <small style="font-size:14px;">Lt/min</small></div>
+        <div class="metric-delta">Δ {sim_flow-476.0:.1f} vs Base</div>
+    </div>""", unsafe_allow_html=True)
 
-st.caption("TAD-AGE Agent 系統自動生成 - 基於 Viskovatov 與 Butler-Volmer 模型建置")
+with c3:
+    st.markdown(f"""<div class="metric-container">
+        <div class="metric-label">Instant Power / <br>電表瞬時功率</div>
+        <div class="metric-value">{sim_kw:.2f} <small style="font-size:14px;">KW</small></div>
+        <div class="metric-delta">Status: Synchronized</div>
+    </div>""", unsafe_allow_html=True)
+
+with c4:
+    st.markdown(f"""<div class="metric-container">
+        <div class="metric-label">Accumulated Energy / <br>電表累積功耗</div>
+        <div class="metric-value">{sim_acc:.1f} <small style="font-size:14px;">KW</small></div>
+        <div class="metric-delta">System Load: {load_p:.1f} %</div>
+    </div>""", unsafe_allow_html=True)
+
+# 7. 視覺化圖表
+st.divider()
+col_a, col_b = st.columns(2)
+
+with col_a:
+    st.write(f"### Pressure & Flow Trend / 壓力與流量趨勢預測")
+    df_curve = pd.DataFrame(full_sim_data, columns=['KW', 'AccKW', 'Pressure', 'Flow'], index=t_range_all)
+    st.line_chart(df_curve[['Pressure', 'Flow']])
+
+with col_b:
+    st.write("### Power Characteristics (KW) / 功耗特性模擬")
+    st.line_chart(df_curve[['KW']])
+
+# 8. 原始數據表格
+with st.expander("Reference Data Table (4/13 Page 2)"):
+    st.dataframe(pd.DataFrame({
+        "Temp No.11": [35.1, 37.1, 38.5, 39.4, 40.0, 41.1, 41.3],
+        "Power (KW)": [23.3, 23.1, 23.2, 23.2, 23.2, 23.2, 23.21],
+        "Pressure (kg/cm²)": [1.13, 2.01, 2.92, 3.98, 4.92, 7.88, 9.46],
+        "Flow (Lt/min)": [476.0, 402.7, 393.3, 399.7, 396.4, 408.8, 487.0]
+    }), use_container_width=True)
+
+if sim_press > 9.0:
+    st.warning("🚨 [High Pressure Alert] System reaching safety limit!")
+
+st.caption(f"Status: Active Synchronized | Framework: TAD-AGE Agent")
