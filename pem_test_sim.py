@@ -57,8 +57,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. 物理連動演算法 (基於 4/13 實測數據)
-def get_simulated_metrics(t_input):
+# 3. 物理連動演算法 (整合單管與雙管數據)
+def get_simulated_metrics(t_input, mode):
+    # 基本參考點 (以單管數據為主進行線性擬合)
     ref_points = {
         'temp': [35.1, 37.1, 38.5, 39.4, 40.0, 41.1, 41.3],
         'kw': [23.3, 23.1, 23.2, 23.2, 23.2, 23.2, 23.21],
@@ -66,14 +67,29 @@ def get_simulated_metrics(t_input):
         'press': [1.13, 2.01, 2.92, 3.98, 4.92, 7.88, 9.46],
         'flow': [476.0, 402.7, 393.3, 399.7, 396.4, 408.8, 487.0]
     }
+    
     p_kw = np.interp(t_input, ref_points['temp'], ref_points['kw'])
     p_acc = np.interp(t_input, ref_points['temp'], ref_points['acc_kw'])
     p_press = np.interp(t_input, ref_points['temp'], ref_points['press'])
     p_flow = np.interp(t_input, ref_points['temp'], ref_points['flow'])
+    
+    # 若為雙管模式，根據實測倍率進行微調 (模擬產量加倍下的壓力與流量變化)
+    if mode == "Dual-Tube (雙管)":
+        p_flow = p_flow * 1.85  # 雙管流量增益模擬
+        p_press = p_press * 1.1 # 雙管壓力略微提升
+        
     return p_kw, p_acc, p_press, p_flow
 
 # 4. 側邊欄：控制面板
 st.sidebar.header("Digital Twin Control / 數位孿生控制")
+
+# 新增：操作模式選擇 (單管/雙管)
+op_mode = st.sidebar.selectbox(
+    "Operation Mode / 操作模式",
+    ["Single-Tube (單管)", "Dual-Tube (雙管)"]
+)
+
+st.sidebar.divider()
 
 # 左側：電解槽溫度滑桿
 st.sidebar.subheader("Simulation Trigger / 模擬觸發器")
@@ -89,12 +105,12 @@ st.sidebar.metric("System Load / 系統負荷百分比", f"{load_p:.1f} %")
 st.sidebar.divider()
 st.sidebar.subheader("Data Export / 數據管理")
 t_range_all = np.linspace(35.1, 41.3, 50)
-full_sim_data = [get_simulated_metrics(x) for x in t_range_all]
+full_sim_data = [get_simulated_metrics(x, op_mode) for x in t_range_all]
 df_export = pd.DataFrame(full_sim_data, columns=['Power(KW)', 'Acc_Energy(KW)', 'Pressure(kg/cm2)', 'Flow(Lt/min)'])
-st.sidebar.download_button("Export Simulation (CSV)", df_export.to_csv().encode('utf-8'), "pem_simulation.csv", "text/csv")
+st.sidebar.download_button("Export Simulation (CSV)", df_export.to_csv().encode('utf-8'), f"pem_sim_{op_mode}.csv", "text/csv")
 
 # 5. 主要內容區
-sim_kw, sim_acc, sim_press, sim_flow = get_simulated_metrics(sim_t11)
+sim_kw, sim_acc, sim_press, sim_flow = get_simulated_metrics(sim_t11, op_mode)
 
 # 獲取台北即時時間
 try:
@@ -108,9 +124,9 @@ date_str = now.strftime("%Y-%m-%d")
 
 st.title("PEM Hydrogen Production Digital Twin")
 
-# 6. Dashboard 標題與即時時間 (右側主要顯示區)
+# 6. Dashboard 標題與即時時間
 st.subheader("Real-time Predictive Dashboard / 即時模擬預測看板")
-st.markdown(f'<div class="time-banner">🕒 System Sync Time / 系統同步時間：{date_str} {time_str}</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="time-banner">🕒 System Sync Time / 系統同步時間：{date_str} {time_str} ({op_mode})</div>', unsafe_allow_html=True)
 
 # 看板指標列
 c1, c2, c3, c4 = st.columns(4)
@@ -165,7 +181,4 @@ with st.expander("Reference Data Table (4/13 Page 2)"):
         "Flow (Lt/min)": [476.0, 402.7, 393.3, 399.7, 396.4, 408.8, 487.0]
     }), use_container_width=True)
 
-if sim_press > 9.0:
-    st.warning("🚨 [High Pressure Alert] System reaching safety limit!")
-
-st.caption(f"Status: Active Synchronized | Framework: TAD-AGE Agent")
+st.caption(f"Status: Active Synchronized | Mode: {op_mode} | Framework: TAD-AGE Agent")
