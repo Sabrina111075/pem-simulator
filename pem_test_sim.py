@@ -13,5 +13,5 @@ if lang == "English":
     st.title("PEM Hydrogen Production Simulation (2026-04-13)")
     st.write(f"**Current Status:** Running | **Time:** {now}")
 else:
-    st.title("PEM 產氫測試模擬系統 (2026-04-13)")
+    st.title("PEM 產氫測試模擬系統")
     st.write(f"**目前狀態：** 運行中 | **台北時間：** {now}")
