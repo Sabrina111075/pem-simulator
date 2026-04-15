@@ -4,96 +4,87 @@ import numpy as np
 from datetime import datetime
 import pytz
 
-# 設定頁面配置 (Set page config)
-st.set_page_config(page_title="PEM Simulation System", layout="wide")
+# 設定頁面配置
+st.set_page_config(page_title="PEM Diagnostic Pro", layout="wide")
 
-# --- 側邊欄設定 (Sidebar Controls) ---
-st.sidebar.header("Simulation Control Panel / 模擬控制面板")
+# --- 側邊欄：控制面板 ---
+st.sidebar.header("Control Panel / 控制與預測面板")
 
-# 1. 產氫模式選擇 (Mode Selection)
-mode = st.sidebar.selectbox(
-    "Hydrogen Production Mode / 產氫模式",
-    ["Dual-Tube (雙管制氫)", "Single-Tube (單管制氫)"]
-)
+# 1. 模式選擇
+mode = st.sidebar.selectbox("Operation Mode / 運作模式", ["Dual-Tube (雙管)", "Single-Tube (單管)"])
 
-# 2. 物理參數調整 (Physical Parameters)
-st.sidebar.subheader("System Parameters / 系統參數")
-base_temp = st.sidebar.slider("Ambient Temperature (°C) / 環境基準溫度", 25.0, 45.0, 33.7)
-target_pressure = st.sidebar.slider("Target Back Pressure (kg/cm²) / 目標背壓", 1.0, 15.0, 9.46)
+# 2. 預測模擬觸發器 (基於 4/13 數據)
+st.sidebar.subheader("Predictive Simulator / 預測模擬")
+input_temp = st.sidebar.slider("Current Cell Temp (°C) / 當前電解槽溫度", 33.5, 42.0, 37.0, step=0.1)
 
-# 3. 設備健康診斷 (Health & Aging)
-st.sidebar.subheader("Health Monitoring / 健康監控模擬")
-aging_factor = st.sidebar.slider(
-    "Membrane Aging Factor / 質子交換膜老化係數", 
-    1.0, 2.0, 1.0
-)
+# 根據 4/13 數據表進行線性回歸近似預測 (Linear Approximation)
+# 溫度與各參數的對應關係 (以 No.11 槽位為基準)
+# 33.5C -> 1.13kg/cm2, 23.3KW, 476 Lt/min
+# 41.3C -> 9.46kg/cm2, 23.21KW, 487 Lt/min
+def predict_metrics(temp):
+    ratio = (temp - 33.5) / (41.3 - 33.5)
+    ratio = max(0, min(1, ratio)) # 限制在 0-1 之間
+    
+    pred_pressure = 1.13 + (9.46 - 1.13) * ratio
+    pred_kw = 23.3 - (23.3 - 23.21) * ratio # 隨溫度升高功耗微幅下降
+    pred_flow = 476.0 + (487.0 - 476.0) * ratio
+    pred_total_kw = 111.2 + (117.0 - 111.2) * ratio
+    
+    return pred_kw, pred_total_kw, pred_pressure, pred_flow
 
-# 4. 側邊欄實測數據表格 (Test Data Reference Table)
-st.sidebar.subheader("Test Data Ref / 實測數據參考")
-raw_data = {
-    "Stage/階段": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-    "Single (s/kg)": [95.0, 100.0, 102.7, 107.1, 103.8, 105.6, 108.4, None, None, None],
-    "Dual (s/kg)": [95.0, 82.0, 95.0, 99.0, 107.0, 110.0, 109.0, 108.0, 85.0, 174.0]
-}
-df_raw = pd.DataFrame(raw_data)
-st.sidebar.dataframe(df_raw, hide_index=True)
-st.sidebar.caption("Source: 2026-04-13 Testing Log")
+p_kw, p_total_kw, p_press, p_flow = predict_metrics(input_temp)
 
-# --- 主要內容區 (Main Display) ---
-# 獲取台北即時時間
+# 顯示預測結果於側邊欄
+st.sidebar.info(f"""
+**Predictive Results / 模擬預測結果:**
+* 電表總值: `{p_kw:.2f} KW`
+* 累積功耗: `{p_total_kw:.1f} KW`
+* 出口壓力: `{p_press:.2f} kg/cm²`
+* 出口流量: `{p_flow:.1f} Lt/min`
+""")
+
+# 3. 實測數據參考表 (4/13 原表)
+with st.sidebar.expander("View Raw Test Data / 查看 4/13 實測數據"):
+    raw_ref = {
+        "Temp(°C)": [33.5, 35.1, 37.1, 39.4, 40.0, 41.1, 41.3],
+        "Press(kg/cm2)": [1.13, 2.01, 2.92, 3.98, 4.92, 7.88, 9.46],
+        "Flow(Lt/min)": [476, 402, 393, 399, 396, 408, 487]
+    }
+    st.table(pd.DataFrame(raw_ref))
+
+# --- 主要內容區 ---
 try:
-    taipei_tz = pytz.timezone('Asia/Taipei')
-    now_str = datetime.now(taipei_tz).strftime("%Y-%m-%d %H:%M:%S")
+    tz = pytz.timezone('Asia/Taipei')
+    now = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
 except:
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-st.title("PEM Hydrogen Production Digital Twin / PEM 產氫數位孿生模擬")
-st.info(f"🕒 **Current System Time / 系統即時時間：** {now_str}")
+st.title("PEM Hydrogen Production Digital Twin")
+st.markdown(f"**Current System Time / 系統即時時間：** `{now}`")
 
-# 模擬計算邏輯 (Simulation Logic)
-time_steps = np.arange(0, 1020, 20)
+# 效能看板
+st.subheader("Real-time Prediction Dashboard / 即時預測看板")
+k1, k2, k3, k4 = st.columns(4)
+k1.metric("Predicted Pressure / 預測壓力", f"{p_press:.2f} kg/cm²")
+k2.metric("Predicted Flow / 預測流量", f"{p_flow:.1f} Lt/min")
+k3.metric("Inst. Power / 瞬時功耗", f"{p_kw:.2f} KW")
+k4.metric("Accumulated / 累積功耗", f"{p_total_kw:.1f} KW")
 
-def run_simulation(steps, mode_str, aging):
-    kg_list, temp_list, press_list = [], [], []
-    current_kg = 0
-    for t in steps:
-        if "Single" in mode_str:
-            eff = 108.4 * aging
-        else:
-            # 模擬 4/13 雙管數據：產量超過 9kg 後效率降至 174s/kg
-            eff = (95.0 if current_kg < 9.0 else 174.0) * aging
-        
-        step_prod = 20 / eff
-        current_kg += step_prod
-        sim_temp = base_temp + (t / 1000) * 7.4 
-        sim_press = 1.13 + (t / 1000) * (target_pressure - 1.13)
-        
-        kg_list.append(current_kg)
-        temp_list.append(sim_temp)
-        press_list.append(sim_press)
-    return kg_list, temp_list, press_list
+# 圖表展示：模擬壓力與流量趨勢
+st.divider()
+t_axis = np.linspace(33.5, 42.0, 20)
+press_curve = [predict_metrics(x)[2] for x in t_axis]
+flow_curve = [predict_metrics(x)[3] for x in t_axis]
 
-prod_data, temp_data, press_data = run_simulation(time_steps, mode, aging_factor)
-
-# --- 數據圖表呈現 ---
 c1, c2 = st.columns(2)
 with c1:
-    st.write("### Accumulated Hydrogen (kg) / 累積產氫量")
-    st.line_chart(pd.DataFrame({"Production(kg)": prod_data}, index=time_steps))
-
+    st.write("### Temperature vs Pressure / 溫度-壓力曲線")
+    st.line_chart(pd.DataFrame({"Pressure": press_curve}, index=t_axis))
 with c2:
-    st.write("### Temperature & Pressure / 溫度與壓力趨勢")
-    st.line_chart(pd.DataFrame({"Temp(°C)": temp_data, "Pressure(kg/cm²)": press_data}, index=time_steps))
+    st.write("### Temperature vs Flow / 溫度-流量曲線")
+    st.line_chart(pd.DataFrame({"Flow": flow_curve}, index=t_axis))
 
-# --- 效能指標與警告 ---
-st.divider()
-m1, m2, m3 = st.columns(3)
-final_kg = prod_data[-1]
-m1.metric("Final Production / 最終產量", f"{final_kg:.2f} kg")
-m2.metric("Avg Efficiency / 平均效率", f"{1000/final_kg:.1f} s/kg" if final_kg > 0 else "0")
-m3.metric("Peak Pressure / 峰值壓力", f"{max(press_data):.2f} kg/cm²")
+if p_press > 8.0:
+    st.warning("⚠️ High Pressure Warning: System nearing 9.46 kg/cm² limit. / 高壓警告：系統接近實測極限壓力。")
 
-if "Dual" in mode and final_kg > 9.0:
-    st.warning("⚠️ [Alert] Abnormal Production Latency at Stage 10 (174s/kg) / 偵測到第十階段高耗時異常")
-
-st.success("✅ System Initialized via TAD-AGE Framework / 系統已透過 TAD-AGE 框架完成初始化")
+st.caption("Based on 4/13 Testing Log | Powered by TAD-AGE Framework")
