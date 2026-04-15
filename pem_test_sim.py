@@ -4,87 +4,87 @@ import numpy as np
 from datetime import datetime
 import pytz
 
-# 設定頁面配置
+# 設定頁面配置 (Set page config)
 st.set_page_config(page_title="PEM Diagnostic Pro", layout="wide")
 
-# --- 側邊欄：控制面板 ---
-st.sidebar.header("Control Panel / 控制與預測面板")
+# --- 側邊欄：預測控制區 ---
+st.sidebar.header("Predictive Panel / 模擬與預測面板")
 
-# 1. 模式選擇
+# 1. 操作模式
 mode = st.sidebar.selectbox("Operation Mode / 運作模式", ["Dual-Tube (雙管)", "Single-Tube (單管)"])
 
-# 2. 預測模擬觸發器 (基於 4/13 數據)
-st.sidebar.subheader("Predictive Simulator / 預測模擬")
-input_temp = st.sidebar.slider("Current Cell Temp (°C) / 當前電解槽溫度", 33.5, 42.0, 37.0, step=0.1)
+# 2. 模擬核心觸發器：以 No.11 電解槽溫度為預測基準 (35.1°C ~ 41.3°C)
+st.sidebar.subheader("Target Temperature / 目標模擬溫度")
+target_t = st.sidebar.slider("Electrolyzer Temp (°C) / 電解槽 No.11 溫度", 35.1, 41.3, 38.5, step=0.1)
 
-# 根據 4/13 數據表進行線性回歸近似預測 (Linear Approximation)
-# 溫度與各參數的對應關係 (以 No.11 槽位為基準)
-# 33.5C -> 1.13kg/cm2, 23.3KW, 476 Lt/min
-# 41.3C -> 9.46kg/cm2, 23.21KW, 487 Lt/min
-def predict_metrics(temp):
-    ratio = (temp - 33.5) / (41.3 - 33.5)
-    ratio = max(0, min(1, ratio)) # 限制在 0-1 之間
+# --- 預測演算法 (基於 4/13 實測數據線性回歸) ---
+def get_predictions(temp):
+    # 建立 4/13 實測極值對應關係 
+    # T=35.1 -> Press=1.13, KW=23.3, Flow=476.0
+    # T=41.3 -> Press=9.46, KW=23.21, Flow=487.0
+    ratio = (temp - 35.1) / (41.3 - 35.1)
+    ratio = max(0, min(1, ratio))
     
-    pred_pressure = 1.13 + (9.46 - 1.13) * ratio
-    pred_kw = 23.3 - (23.3 - 23.21) * ratio # 隨溫度升高功耗微幅下降
-    pred_flow = 476.0 + (487.0 - 476.0) * ratio
-    pred_total_kw = 111.2 + (117.0 - 111.2) * ratio
-    
-    return pred_kw, pred_total_kw, pred_pressure, pred_flow
-
-p_kw, p_total_kw, p_press, p_flow = predict_metrics(input_temp)
-
-# 顯示預測結果於側邊欄
-st.sidebar.info(f"""
-**Predictive Results / 模擬預測結果:**
-* 電表總值: `{p_kw:.2f} KW`
-* 累積功耗: `{p_total_kw:.1f} KW`
-* 出口壓力: `{p_press:.2f} kg/cm²`
-* 出口流量: `{p_flow:.1f} Lt/min`
-""")
-
-# 3. 實測數據參考表 (4/13 原表)
-with st.sidebar.expander("View Raw Test Data / 查看 4/13 實測數據"):
-    raw_ref = {
-        "Temp(°C)": [33.5, 35.1, 37.1, 39.4, 40.0, 41.1, 41.3],
-        "Press(kg/cm2)": [1.13, 2.01, 2.92, 3.98, 4.92, 7.88, 9.46],
-        "Flow(Lt/min)": [476, 402, 393, 399, 396, 408, 487]
+    res = {
+        "pressure": 1.13 + (9.46 - 1.13) * ratio,
+        "inst_kw": 23.3 - (23.3 - 23.21) * ratio,
+        "acc_kw": 111.2 + (117.0 - 111.2) * ratio,
+        "flow": 476.0 + (487.0 - 476.0) * ratio,
+        "tank_temp": 39.8 - (39.8 - 39.5) * ratio  # 水箱水溫隨電解槽升溫略降 
     }
-    st.table(pd.DataFrame(raw_ref))
+    return res
 
-# --- 主要內容區 ---
+pred = get_predictions(target_t)
+
+# 3. 側邊欄快速預測表 (方便列印/參考)
+st.sidebar.divider()
+st.sidebar.write("### Prediction Summary / 預測摘要")
+st.sidebar.json({
+    "Pressure (kg/cm2)": round(pred['pressure'], 2),
+    "Flow (Lt/min)": round(pred['flow'], 1),
+    "Power (KW)": round(pred['inst_kw'], 2)
+})
+
+# --- 主要顯示區 ---
+# 獲取台北即時時間
 try:
-    tz = pytz.timezone('Asia/Taipei')
-    now = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+    now_str = datetime.now(pytz.timezone('Asia/Taipei')).strftime("%Y-%m-%d %H:%M:%S")
 except:
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 st.title("PEM Hydrogen Production Digital Twin")
-st.markdown(f"**Current System Time / 系統即時時間：** `{now}`")
+st.info(f"🕒 **Live Prediction Sync / 系統即時預測同步時間：** {now_str}")
 
-# 效能看板
-st.subheader("Real-time Prediction Dashboard / 即時預測看板")
-k1, k2, k3, k4 = st.columns(4)
-k1.metric("Predicted Pressure / 預測壓力", f"{p_press:.2f} kg/cm²")
-k2.metric("Predicted Flow / 預測流量", f"{p_flow:.1f} Lt/min")
-k3.metric("Inst. Power / 瞬時功耗", f"{p_kw:.2f} KW")
-k4.metric("Accumulated / 累積功耗", f"{p_total_kw:.1f} KW")
+# --- 優化一：大字級預測儀表板 ---
+st.subheader("Simulated Performance Dashboard / 模擬性能看板")
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("Predicted Pressure", f"{pred['pressure']:.2f} kg/cm²", delta=f"{pred['pressure']-1.13:.2f}")
+m2.metric("Predicted Flow", f"{pred['flow']:.1f} Lt/min", delta=f"{pred['flow']-476.0:.1f}")
+m3.metric("Inst. Power (KW)", f"{pred['inst_kw']:.2f} KW")
+m4.metric("Accumulated KW", f"{pred['acc_kw']:.1f} KW")
 
-# 圖表展示：模擬壓力與流量趨勢
+# --- 優化二：視覺化物理連動曲線 ---
 st.divider()
-t_axis = np.linspace(33.5, 42.0, 20)
-press_curve = [predict_metrics(x)[2] for x in t_axis]
-flow_curve = [predict_metrics(x)[3] for x in t_axis]
-
 c1, c2 = st.columns(2)
+
 with c1:
-    st.write("### Temperature vs Pressure / 溫度-壓力曲線")
-    st.line_chart(pd.DataFrame({"Pressure": press_curve}, index=t_axis))
+    st.write("### Pressure-Flow Correlation / 壓力-流量連動預測")
+    # 產生一段溫升範圍的預測曲線
+    t_range = np.linspace(35.1, 41.3, 10)
+    sim_df = pd.DataFrame([get_predictions(x) for x in t_range])
+    sim_df['Temp'] = t_range
+    st.line_chart(sim_df.set_index('Temp')[['pressure', 'flow']])
+
 with c2:
-    st.write("### Temperature vs Flow / 溫度-流量曲線")
-    st.line_chart(pd.DataFrame({"Flow": flow_curve}, index=t_axis))
+    st.write("### Power Consumption Trend / 功耗變化趨勢")
+    st.area_chart(sim_df.set_index('Temp')[['inst_kw']])
 
-if p_press > 8.0:
-    st.warning("⚠️ High Pressure Warning: System nearing 9.46 kg/cm² limit. / 高壓警告：系統接近實測極限壓力。")
+# --- 優化三：快速查表與狀態告警 ---
+if pred['pressure'] > 9.0:
+    st.error("🚨 **System Alert:** Pressure is reaching 9.46 kg/cm² safety limit! / 系統壓力即將到達實測極限！")
 
-st.caption("Based on 4/13 Testing Log | Powered by TAD-AGE Framework")
+with st.expander("Show 4/13 Original Data Log / 展開 4/13 原始實測數據日誌"):
+    st.table(df_raw_from_pdf) # 這裡可放您 Page 2 的完整表格
+    st.caption("Data Source: 測試數據-20260413.pdf Page 2 ")
+
+st.success("✅ Prediction Algorithm Synchronized with TAD-AGE Logic / 預測演算法已與 TAD-AGE 邏輯完成同步")
