@@ -99,7 +99,7 @@ st.sidebar.divider()
 # 模擬觸發：溫度滑桿
 st.sidebar.subheader("Simulation Trigger / 模擬觸發器")
 sim_t11 = st.sidebar.slider(
-    "Electrolyzer Temp (°C) / 電解槽溫度 No.11", 
+    "Electrolyzer Temp (°C) / 電解槽溫度", 
     35.1, 41.3, 37.8, step=0.1
 )
 
@@ -180,7 +180,7 @@ sim_data_plot = [get_simulated_metrics(t, op_mode) for t in t_axis]
 df_plot = pd.DataFrame(sim_data_plot, columns=['KW', 'Acc', 'Press', 'Flow', 'Yield'], index=t_axis)
 
 with col_left:
-    st.write("### Pressure & Yield Correlation / 壓力與產產量趨勢")
+    st.write("### Pressure & Yield Correlation / 壓力與產量趨勢")
     st.line_chart(df_plot[['Press', 'Yield']])
 
 with col_right:
