@@ -99,7 +99,7 @@ st.sidebar.divider()
 # 模擬觸發：溫度滑桿
 st.sidebar.subheader("Simulation Trigger / 模擬觸發器")
 sim_t11 = st.sidebar.slider(
-    "Electrolyzer Temp (°C) / 電解槽溫度", 
+    "Electrolyzer Temp (°C) / 電解槽溫度(溫度 ℃)", 
     35.1, 41.3, 37.8, step=0.1
 )
 
