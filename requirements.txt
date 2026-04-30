@@ -2,3 +2,4 @@ matplotlib
 streamlit
 numpy
 pandas
+pytz
