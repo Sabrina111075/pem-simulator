@@ -5,7 +5,7 @@ from motor_configs import MOTOR_PLATFORMS
 from simulation_engine import calculate_torque_curve, calculate_gradeability
 
 # 1. 頁面基礎設定
-st.set_page_config(page_title="TAD-AGE 電驅模擬器", layout="wide")
+st.set_page_config(page_title="TAD-AGE 電動車電機模擬器")
 
 # 2. 側邊欄控制
 st.sidebar.header("🚀 配置中心")
