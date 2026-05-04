@@ -15,7 +15,7 @@ PLATFORMS = {
 # --- 3. 側邊欄配置中心 ---
 st.sidebar.header("🚀 配置中心")
 
-# 馬達平台選型器[cite: 1]
+# 馬達平台選型器
 selected_platform = st.sidebar.selectbox("主要馬達平台", list(PLATFORMS.keys()), index=1) 
 spec = PLATFORMS[selected_platform]
 
@@ -26,7 +26,7 @@ weight = st.sidebar.slider("整車總重 (kg)", 100, 2000, 500)
 gear_ratio = st.sidebar.slider("齒輪比 (Gear Ratio)", 1.0, 15.0, 8.0)
 tire_radius = st.sidebar.slider("輪胎半徑 (m)", 0.1, 0.5, 0.25)
 
-# 控制器演算法與硬體配置區塊[cite: 1]
+# 控制器演算法與硬體配置區塊
 st.sidebar.markdown("---")
 with st.sidebar.expander("🛠️ 控制器演算法與硬體配置", expanded=True):
     st.subheader("核心演算法")
@@ -51,7 +51,7 @@ with st.sidebar.expander("🛠️ 控制器演算法與硬體配置", expanded=T
 st.title(f"📈 {selected_platform} 作業特性曲線 ( TN 曲線 )")
 
 if selected_platform == "OD220":
-    st.warning("⚠️ **高壓技術對接提醒**：此平台必須配置「預充電路 (Pre-charge)」與「高壓互鎖 (HVIL)」功能。")[cite: 1]
+    st.warning("⚠️ **高壓技術對接提醒**：此平台必須配置「預充電路 (Pre-charge)」與「高壓互鎖 (HVIL)」功能。")
 
 # 模擬計算邏輯
 rpms = np.linspace(0, spec["max_rpm"], 100)
@@ -80,13 +80,13 @@ st.pyplot(fig)
 st.info(f"💡 **目前配置總結**：\n"
         f"*   平台：{selected_platform} | 電壓：{spec['v']} | 冷卻：{spec['cooling']}\n"
         f"*   控制器：FOC {'+ 弱磁' if enable_fw else ''} | 感測器：{selected_sensor}\n"
-        f"*   通訊：{', '.join(selected_comm)}")[cite: 1]
+        f"*   通訊：{', '.join(selected_comm)}")
 
-# --- 6. 自動化商務對接：詢價郵件生成[cite: 1] ---
+# --- 6. 自動化商務對接：詢價郵件生成 ---
 st.markdown("---")
 st.header("✉️ 供應商開發對接工具")
 
-target_suppliers = "匯川技術、英威騰、精進電動" if selected_platform == "OD220" else "安乃達、天津松正"[cite: 1]
+target_suppliers = "匯川技術、英威騰、精進電動" if selected_platform == "OD220" else "安乃達、天津松正"
 
 with st.expander("📝 查看自動生成之標準詢價信 (RFI/RFQ Template)", expanded=False):
     st.write(f"建議發送對象：**{target_suppliers}**")
