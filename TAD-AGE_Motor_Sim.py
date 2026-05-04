@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 # --- 1. 頁面配置 (必須放在最前面) ---
 st.set_page_config(page_title="TAD-AGE 電車電機模擬器", layout="wide")
 
-# --- 2. 初始化資料與規格 (根據) ---
+# --- 2. 初始化資料與規格 (根據供應商規劃資料) ---
 PLATFORMS = {
     "OD120": {"v": "60/72/96V", "p_peak": 14.8, "t_peak": 43, "max_rpm": 9000, "cooling": "空冷"},
     "OD140": {"v": "72/96V", "p_peak": 30.0, "t_peak": 80, "max_rpm": 9000, "cooling": "空冷"},
@@ -15,7 +15,7 @@ PLATFORMS = {
 # --- 3. 側邊欄配置中心 ---
 st.sidebar.header("🚀 配置中心")
 
-# 馬達平台選型器
+# 馬達平台選型器[cite: 1]
 selected_platform = st.sidebar.selectbox("主要馬達平台", list(PLATFORMS.keys()), index=1) 
 spec = PLATFORMS[selected_platform]
 
@@ -30,22 +30,22 @@ tire_radius = st.sidebar.slider("輪胎半徑 (m)", 0.1, 0.5, 0.25)
 st.sidebar.markdown("---")
 with st.sidebar.expander("🛠️ 控制器演算法與硬體配置", expanded=True):
     st.subheader("核心演算法")
-    st.info("已預設啟用：FOC & SVPWM")[cite: 1]
+    st.info("已預設啟用：FOC & SVPWM")
     
-    enable_fw = st.toggle("弱磁控制 (Field Weakening)", value=True)[cite: 1]
-    enable_regen = st.toggle("回生煞車 (Regenerative Braking)", value=False)[cite: 1]
+    enable_fw = st.toggle("弱磁控制 (Field Weakening)", value=True)
+    enable_regen = st.toggle("回生煞車 (Regenerative Braking)", value=False)
 
     st.divider()
     
     st.subheader("硬體介面")
     sensor_options = ["Hall", "Encoder", "Resolver"]
     default_idx = 2 if selected_platform == "OD220" else 0
-    selected_sensor = st.selectbox("反饋感測器類型", options=sensor_options, index=default_idx)[cite: 1]
+    selected_sensor = st.selectbox("反饋感測器類型", options=sensor_options, index=default_idx)
     
     comm_protocols = ["CAN 2.0B", "UART"]
     if selected_platform == "OD220":
-        comm_protocols.append("J1939 (高壓推薦)")[cite: 1]
-    selected_comm = st.multiselect("支援通訊協議", options=comm_protocols, default=["CAN 2.0B"])[cite: 1]
+        comm_protocols.append("J1939 (高壓推薦)")
+    selected_comm = st.multiselect("支援通訊協議", options=comm_protocols, default=["CAN 2.0B"])
 
 # --- 4. 主畫面：TN 曲線圖表 ---
 st.title(f"📈 {selected_platform} 作業特性曲線 ( TN 曲線 )")
@@ -89,7 +89,7 @@ st.header("✉️ 供應商開發對接工具")
 target_suppliers = "匯川技術、英威騰、精進電動" if selected_platform == "OD220" else "安乃達、天津松正"[cite: 1]
 
 with st.expander("📝 查看自動生成之標準詢價信 (RFI/RFQ Template)", expanded=False):
-    st.write(f"建議發送對象：**{target_suppliers}**")[cite: 1]
+    st.write(f"建議發送對象：**{target_suppliers}**")
     
     email_subject = f"詢價：{selected_platform}平台_{spec['p_peak']}kW電機控制器開發需求"
     email_body = f"""您好，
