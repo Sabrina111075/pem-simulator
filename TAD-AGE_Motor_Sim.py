@@ -131,7 +131,7 @@ with tab3:
     st.progress(min(accel_ability/5.0, 1.0))
 
 with tab4:
-    st.subheader("✉️ 自動化供應商開發信")
+    st.subheader("✉️ 自動化供應開發需求")
     email_content = f"開發需求：{selected_platform} ({spec['p_peak']}kW) / 爬坡需求：{grade}% / 系統電壓：{battery_v}V"
     st.code(email_content, language="text")
 
