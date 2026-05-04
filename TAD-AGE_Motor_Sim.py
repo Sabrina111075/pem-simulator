@@ -125,4 +125,24 @@ with tab3:
     email_body = f"針對【{selected_platform}】開發需求，尋求 {spec['bom_mcu']} 及相關線束之 RFI 技術資料與報價。"
     st.code(email_body, language="text")
 
+with col_b:
+    st.success("🎯 **應用場景適配度**")
+    st.write(f"**推薦場景**：{spec['desc']}")
+    st.write(f"**系統適配度評分**：{'⭐⭐⭐⭐⭐' if top_speed > 40 else '⭐⭐⭐'}")
+
+# --- 7. 自動化商務對接 ---
+st.markdown("---")
+st.header("✉️ 供應商開發對接工具")
+target_suppliers = "匯川技術、英威騰、精進電動" if selected_platform == "OD220" else "安乃達、天津松正"
+
+with st.expander("📝 生成 RFI/RFQ 詢價信模板"):
+    email_body = f"""您好，
+我們目前正在進行【{selected_platform}】動力平台的開發，規格如下：
+1. 馬達規格：峰值功率 {spec['p_peak']}kW / 峰值扭矩 {spec['t_peak']}Nm
+2. 控制器要求：FOC + SVPWM {'+ 弱磁' if enable_fw else ''}
+3. 回饋與通訊：{selected_sensor} / {', '.join(selected_comm)}
+4. 預計應用：{spec['desc']}
+希望能獲取貴司相關控制器的產品手冊與報價。"""
+    st.code(email_body, language="text")
+
 st.caption("TAD-AGE Framework | 整合模擬、成本與合規之工程決策系統")
