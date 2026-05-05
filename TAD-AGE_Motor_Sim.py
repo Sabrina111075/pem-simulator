@@ -194,102 +194,76 @@ with tabs[0]: # 供應商自動推薦
     st.markdown("---")
     st.info(f"💡 **供應商開發策略：** 針對 **{platform}** 平台，優先尋找具備 **Hairpin (扁線)** 繞組與 **FOC** 算法能力的夥伴 。")
 
-with tabs[1]: # 系統 BOM 與 預算系統總成本整合版
-    st.markdown("### 🛠️ 系統 BOM 與預算成本參考")
+with tabs[1]: # 系統 BOM (純表格專業對齊版)
+    st.markdown("### 🛠️ 系統 BOM 與預算成本參考表")
     
-    # 定義各平台的 BOM 與 成本數據
-    bom_cost_data = {
+    # 根據圖片風格整理數據
+    bom_table_data = {
         "OD120": {
-            "title": "OD120 系統核心件與預算",
+            "title": "OD120 系統規格與成本矩陣",
             "items": [
-                {"part": "定子組件", "spec": "Hairpin 扁線 / 24槽", "cost": "¥1,200"},
-                {"part": "轉子組件", "spec": "8極永磁轉子", "cost": "¥850"},
-                {"part": "機殼結構", "spec": "自然空冷鋁殼", "cost": "¥450"},
-                {"part": "減速機構", "spec": "單速減速器", "cost": "¥900"},
-                {"part": "感測系統", "spec": "Hall 感測器", "cost": "¥150"}
+                ["定子組件", "Hairpin 扁線 / 24槽", "¥1,200"],
+                ["轉子組件", "8極永磁轉子", "¥850"],
+                ["機殼結構", "自然空冷鋁殼", "¥450"],
+                ["減速機構", "單速減速器", "¥900"],
+                ["感測系統", "Hall 感測器", "¥150"]
             ],
             "total": "¥3,550"
         },
         "OD140": {
-            "title": "OD140 系統核心件與預算",
+            "title": "OD140 系統規格與成本矩陣",
             "items": [
-                {"part": "定子組件", "spec": "強化型 Hairpin", "cost": "¥2,500"},
-                {"part": "轉子組件", "spec": "高剩磁永磁體", "cost": "¥1,800"},
-                {"part": "機殼結構", "spec": "強制風冷機殼", "cost": "¥750"},
-                {"part": "減速機構", "spec": "雙速潛力機構", "cost": "¥1,500"},
-                {"part": "感測系統", "spec": "Encoder 感測器", "cost": "¥450"}
+                ["定子組件", "強化型 Hairpin", "¥2,500"],
+                ["轉子組件", "高剩磁永磁體", "¥1,800"],
+                ["機殼結構", "強制風冷機殼", "¥750"],
+                ["減速機構", "雙速潛力機構", "¥1,500"],
+                ["感測系統", "Encoder 感測器", "¥450"]
             ],
             "total": "¥7,000"
         },
         "OD220": {
-            "title": "OD220 系統核心件與預算",
+            "title": "OD220 系統規格與成本矩陣",
             "items": [
-                {"part": "定子組件", "spec": "800V 高壓扁線", "cost": "¥8,500"},
-                {"part": "轉子組件", "spec": "IPM 內嵌永磁", "cost": "¥6,200"},
-                {"part": "冷卻系統", "spec": "循環水冷/噴油", "cost": "¥2,800"},
-                {"part": "接線模組", "spec": "HVIL 高壓互鎖", "cost": "¥1,200"},
-                {"part": "感測系統", "spec": "Resolver 旋變", "cost": "¥950"}
+                ["定子組件", "800V 高壓扁線", "¥8,500"],
+                ["轉子組件", "IPM 內嵌永磁", "¥6,200"],
+                ["冷卻系統", "循環水冷/噴油", "¥2,800"],
+                ["接線模組", "HVIL 高壓互鎖", "¥1,200"],
+                ["感測系統", "Resolver 旋變", "¥950"]
             ],
             "total": "¥19,650"
         }
     }
 
-    selected_data = bom_cost_data.get(platform)
+    selected = bom_table_data.get(platform)
     
-    # --- 整合 BOM 與 預算成本之視覺卡片 ---
+    # --- 採用 image_0f171d.png 的標準表格樣式 ---
     st.markdown(f"""
-        <div style="
-            background-color: #1a73e8; 
-            color: white; 
-            padding: 12px 25px; 
-            border-top-left-radius: 10px; 
-            border-top-right-radius: 10px;
-            font-size: 18px;
-            font-weight: bold;
-        ">
-            📦 {selected_data['title']}
-        </div>
-        <div style="
-            background-color: #ffffff; 
-            border: 1px solid #e0e0e0; 
-            padding: 5px 0px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        ">
-            <div style="display: flex; justify-content: space-between; padding: 10px 30px; background-color: #f8f9fa; font-weight: bold; color: #5f6368; border-bottom: 2px solid #dee2e6;">
-                <span style="flex: 2;">組件名稱</span>
-                <span style="flex: 3;">技術規格</span>
-                <span style="flex: 1; text-align: right;">預算參考</span>
-            </div>
-            {"".join([f'''
-            <div style="
-                display: flex; 
-                justify-content: space-between; 
-                padding: 12px 30px; 
-                border-bottom: 1px solid #f1f3f4;
-            ">
-                <span style="flex: 2; color: #5f6368; font-weight: 500;">{item['part']}</span>
-                <span style="flex: 3; color: #202124; font-weight: 500;">{item['spec']}</span>
-                <span style="flex: 1; color: #1a73e8; font-weight: bold; text-align: right;">{item['cost']}</span>
-            </div>
-            ''' for item in selected_data['items']])}
-        </div>
-        <div style="
-            background-color: #f1f3f4; 
-            border: 1px solid #e0e0e0; 
-            border-bottom-left-radius: 10px; 
-            border-bottom-right-radius: 10px;
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        ">
-            <span style="font-size: 18px; font-weight: bold; color: #202124;">預算系統總成本參考 (BOM Total)</span>
-            <span style="font-size: 22px; font-weight: 800; color: #d93025;">{selected_data['total']}</span>
-        </div>
+        <table style="width:100%; border-collapse: collapse; font-family: sans-serif; border: 1px solid #e0e0e0; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+            <thead>
+                <tr style="background-color: #1a73e8; color: white; text-align: left;">
+                    <th style="padding: 15px; border: 1px solid #1a73e8;">組件名稱</th>
+                    <th style="padding: 15px; border: 1px solid #1a73e8;">技術規格</th>
+                    <th style="padding: 15px; border: 1px solid #1a73e8; text-align: right;">預算參考</th>
+                </tr>
+            </thead>
+            <tbody>
+                {"".join([f'''
+                <tr style="background-color: {'#ffffff' if i % 2 == 0 else '#f8f9fa'}; border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px 15px; color: #5f6368; font-weight: 500; border: 1px solid #eee;">{row[0]}</td>
+                    <td style="padding: 12px 15px; color: #202124; border: 1px solid #eee;">{row[1]}</td>
+                    <td style="padding: 12px 15px; color: #1a73e8; font-weight: bold; text-align: right; border: 1px solid #eee;">{row[2]}</td>
+                </tr>
+                ''' for i, row in enumerate(selected['items'])])}
+                <tr style="background-color: #e8f0fe; font-weight: bold;">
+                    <td colspan="2" style="padding: 15px; color: #202124; font-size: 16px; border: 1px solid #d2e3fc;">預算系統總成本參考 (BOM Total)</td>
+                    <td style="padding: 15px; color: #d93025; font-size: 18px; text-align: right; border: 1px solid #d2e3fc;">{selected['total']}</td>
+                </tr>
+            </tbody>
+        </table>
     """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.caption("⚠️ 註：以上成本僅供初步開發預算參考，實際報價將依採購數量 (MOQ) 與供應商最終協議為準。")
+    st.caption("📝 數據更新於：2024年Q3 | 成本數據僅供 OD 系列平台初期規劃選型參考。")
 
 with tabs[2]: # 認證 [cite: 92]
     st.write(f"**冷卻策略：** {conf['thermal']}")
