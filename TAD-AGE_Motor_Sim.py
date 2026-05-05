@@ -36,11 +36,11 @@ PLATFORMS = {
     }
 }
 
-# --- 3. 供應商推薦邏輯函式 ---
+# --- 3. 供應商推薦邏輯 ---
 def get_recommended_suppliers(platform_name, sensor_type):
     return [s for s in SUPPLIER_DB if platform_name in s["target"] and sensor_type in s["sensors"]]
 
-# --- 4. 側邊欄配置 (補齊前版功能) ---
+# --- 4. 側邊欄配置 ---
 st.sidebar.header("🚀 TAD-AGE 配置中心")
 selected_platform = st.sidebar.selectbox("主要馬達平台 (Platform)", list(PLATFORMS.keys()), index=1) 
 spec = PLATFORMS[selected_platform]
@@ -61,7 +61,7 @@ with st.sidebar.expander("🛠️ 控制器演算法與硬體", expanded=True):
     selected_sensor = st.selectbox("反饋感測器", options=["Hall", "Encoder", "Resolver"], index=2 if selected_platform == "OD220" else 0)
     selected_comm = st.multiselect("通訊協議", options=["CAN 2.0B", "UART", "J1939"], default=["CAN 2.0B"])
 
-# --- 5. 主畫面：保留前版大圖面 UI ---
+# --- 5. 主畫面：性能儀表板 ---
 st.title(f"🏢 {selected_platform} 電車電機開發決策系統平台")
 
 # 物理計算
@@ -69,47 +69,54 @@ wheel_torque = spec['t_peak'] * gear_ratio
 top_speed = (spec['max_rpm'] * 2 * np.pi * tire_radius * 60) / (1000 * gear_ratio)
 climb_torque_req = (weight * 9.8 * np.sin(np.arctan(grade/100)) * tire_radius) / gear_ratio
 
-# 技術風險診斷警告
 if selected_platform == "OD220" and selected_sensor == "Hall":
     st.error("⚠️ **技術對接風險**：OD220 高壓平台不建議搭配 Hall 感測器，將導致 ASIL 認證失敗。")
 
-# 大圖面四指標
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("峰值功率", f"{spec['p_peak']} kW")
 col2.metric("輪端扭矩", f"{wheel_torque:.1f} Nm")
-col3.metric("理論極速", f"{top_speed:.1f} km/h", delta="高性能" if top_speed > 100 else None)
+col3.metric("理論極速", f"{top_speed:.1f} km/h")
 col4.metric("爬坡需求扭矩", f"{climb_torque_req:.1f} Nm", delta=f"{spec['t_peak'] - climb_torque_req:.1f} 餘裕")
 
-# --- 6. 專業 TN 曲線圖 ---
+# --- 6. 專業 TN 曲線圖 (修正圖例重疊問題) ---
 st.markdown("---")
 st.subheader("📈 系統效率區間與作業特性曲線")
 
 rpms = np.linspace(0, spec["max_rpm"], 150)
-torques = [spec["t_peak"] if r <= (spec["max_rpm"]*0.4) else spec["t_peak"]*(spec["max_rpm"]*0.4/r) for r in rpms]
+base_rpm = spec["max_rpm"] * 0.4
+torques = [spec["t_peak"] if r <= base_rpm else spec["t_peak"] * (base_rpm / r) if enable_fw else spec["t_peak"] * np.exp(-0.002 * (r - base_rpm)) for r in rpms]
 powers = [(t * r) / 9550 for t, r in zip(torques, rpms)]
 
-# 效率熱圖背景計算
-R, T = np.meshgrid(rpms, np.linspace(0, spec["t_peak"] + 50, 100))
-Z = 95 - ( (R - spec['max_rpm']*0.5)**2 / (spec['max_rpm']*200) + (T - spec['t_peak']*0.6)**2 / 100 )
+fig, ax1 = plt.subplots(figsize=(12, 6))
+
+# 背景效率雲圖
+R, T = np.meshgrid(rpms, np.linspace(0, spec["t_peak"] * 1.2, 100))
+Z = 95 - ((R - spec['max_rpm']*0.5)**2 / (spec['max_rpm']*200) + (T - spec['t_peak']*0.6)**2 / 100)
 Z = np.clip(Z, 70, 97)
-
-fig, ax1 = plt.subplots(figsize=(12, 5))
 cp = ax1.contourf(R, T, Z, levels=15, cmap='Greens', alpha=0.3)
-fig.colorbar(cp).set_label('Efficiency (%)')
+cbar = fig.colorbar(cp, ax=ax1, pad=0.08)
+cbar.set_label('Efficiency (%)')
 
-ax1.plot(rpms, torques, color='red', linewidth=4, label="Torque (Nm)")
-ax1.axhline(y=climb_torque_req, color='orange', linestyle='--', label=f"{grade}% 爬坡需求")
-ax1.set_ylabel("Torque (Nm)", color='red', fontsize=12)
+# 繪製曲線
+lns1 = ax1.plot(rpms, torques, color='red', linewidth=4, label="Torque (Nm)")
+lns2 = ax1.axhline(y=climb_torque_req, color='orange', linestyle='--', linewidth=2, label=f"Climb Req ({grade}%)")
+ax1.set_ylabel("Torque (Nm)", color='red', fontsize=12, fontweight='bold')
 ax1.set_xlabel("Speed (RPM)", fontsize=12)
+ax1.set_ylim(0, spec['t_peak'] * 1.3) # 增加頂部空間
 
 ax2 = ax1.twinx()
-ax2.plot(rpms, powers, color='blue', linestyle='--', linewidth=2, label="Power (kW)")
-ax2.set_ylabel("Power (kW)", color='blue', fontsize=12)
-ax1.legend(loc='upper right')
+lns3 = ax2.plot(rpms, powers, color='blue', linestyle='-.', linewidth=2, label="Power (kW)")
+ax2.set_ylabel("Power (kW)", color='blue', fontsize=12, fontweight='bold')
+ax2.set_ylim(0, spec['p_peak'] * 1.3) # 增加頂部空間
+
+# 整合所有圖例並移至上方，避免與曲線重疊
+lns = lns1 + [lns2] + lns3
+labs = [l.get_label() for l in lns]
+ax1.legend(lns, labs, loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=3, frameon=True, shadow=True)
 
 st.pyplot(fig)
 
-# --- 7. 下方專業模塊：供應商推薦與決策資訊 ---
+# --- 7. 下方專業模塊 ---
 st.markdown("---")
 tab1, tab2, tab3, tab4 = st.tabs(["🔍 供應商自動推薦", "📋 系統 BOM", "🛡️ 認證與熱管理", "✉️ 商務對接"])
 
@@ -123,7 +130,7 @@ with tab1:
         for i, s in enumerate(recs):
             with cols[i]:
                 st.info(f"**{s['name']}**")
-                st.write(f"等級：{s['type']}")
+                st.write(f"定位：{s['type']}")
                 if st.button(f"選擇對接 {s['name']}", key=f"rec_{i}"):
                     st.session_state.contact = s['name']
 
@@ -131,15 +138,15 @@ with tab2:
     st.table({
         "組件": ["馬達本體", "控制器 (MCU)", "線束規格", "感測器方案"],
         "規格": [f"{selected_platform} Platform", spec['bom_mcu'], spec['bom_harness'], selected_sensor],
-        "成本預估": ["系統核心", "計入總預算", "屏蔽要求", "技術對接"]
+        "預估": ["系統核心", "支持 FOC/弱磁", "屏蔽要求", "技術對接"]
     })
-    st.success(f"💰 預計系統總成本區間：{spec['bom_price']}")
+    st.success(f"💰 預計系統總成本參考：{spec['bom_price']}")
 
 with tab3:
     c_left, c_right = st.columns(2)
     with c_left:
         st.subheader("🌡️ 熱管理建議")
-        st.info(f"配置：{spec['cooling']}。建議 {'流量 > 8L/min' if '水' in spec['cooling'] else 'PWM 8-12kHz'}。")
+        st.info(f"當前冷卻配置：{spec['cooling']}。建議 {'流量 > 8L/min' if '水' in spec['cooling'] else 'PWM 8-12kHz 以優化空冷效率'}。")
     with c_right:
         st.subheader("🛡️ 國際認證檢核")
         for cert in spec['certs']: st.write(f"✅ {cert}")
@@ -147,6 +154,6 @@ with tab3:
 with tab4:
     target = st.session_state.get('contact', '未選擇')
     st.write(f"**對接對象：** {target}")
-    st.code(f"針對 {selected_platform} 平台開發，請求 {spec['bom_mcu']} 之技術資料...[電池電壓: {battery_v}V]", language="text")
+    st.code(f"針對 {selected_platform} 平台開發，請求 {spec['bom_mcu']} 之技術資料...[系統電壓: {battery_v}V]", language="text")
 
 st.caption("TAD-AGE Framework | 整合模擬、風險診斷與供應鏈之工程決策系統")
