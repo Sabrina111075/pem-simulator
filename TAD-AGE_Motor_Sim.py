@@ -194,79 +194,19 @@ with tabs[0]: # 供應商自動推薦
     st.markdown("---")
     st.info(f"💡 **供應商開發策略：** 針對 **{platform}** 平台，優先尋找具備 **Hairpin (扁線)** 繞組與 **FOC** 算法能力的夥伴 。")
 
-with tabs[1]: # 系統 BOM (極簡化專業版)
-    st.markdown("### 🛠️ 核心系統零件組成 (Bill of Materials)")
-    
-    # 根據圖片風格簡化資料
-    bom_simple_data = {
-        "OD120": {
-            "title": "OD120 系統核心件",
-            "items": [
-                {"part": "定子組件", "spec": "Hairpin 扁線 / 24槽"},
-                {"part": "轉子組件", "spec": "8極永磁轉子"},
-                {"part": "機殼結構", "spec": "自然空冷鋁殼"},
-                {"part": "減速機構", "spec": "單速減速器"},
-                {"part": "感測系統", "spec": "Hall 感測器"}
-            ]
-        },
-        "OD140": {
-            "title": "OD140 系統核心件",
-            "items": [
-                {"part": "定子組件", "spec": "強化型 Hairpin"},
-                {"part": "轉子組件", "spec": "高剩磁永磁體"},
-                {"part": "機殼結構", "spec": "強制風冷機殼"},
-                {"part": "減速機構", "spec": "雙速潛力機構"},
-                {"part": "感測系統", "spec": "Encoder 感測器"}
-            ]
-        },
-        "OD220": {
-            "title": "OD220 系統核心件",
-            "items": [
-                {"part": "定子組件", "spec": "800V 高壓扁線"},
-                {"part": "轉子組件", "spec": "IPM 內嵌永磁"},
-                {"part": "冷卻系統", "spec": "循環水冷/噴油"},
-                {"part": "接線模組", "spec": "HVIL 高壓互鎖"},
-                {"part": "感測系統", "spec": "Resolver 旋變"}
-            ]
-        }
-    }
-
-    selected_bom = bom_simple_data.get(platform)
-    
-    # --- 採用 image_0f8bf5.png 的極簡樣式 ---
-    st.markdown(f"""
-        <div style="
-            background-color: #1a73e8; 
-            color: white; 
-            padding: 12px 25px; 
-            border-top-left-radius: 10px; 
-            border-top-right-radius: 10px;
-            font-size: 18px;
-            font-weight: bold;
-        ">
-            {selected_bom['title']}
-        </div>
-        <div style="
-            background-color: #ffffff; 
-            border: 1px solid #e0e0e0; 
-            border-bottom-left-radius: 10px; 
-            border-bottom-right-radius: 10px;
-            padding: 5px 0px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        ">
-            {"".join([f'''
-            <div style="
-                display: flex; 
-                justify-content: space-between; 
-                padding: 12px 30px; 
-                border-bottom: { '1px solid #f1f3f4' if i < len(selected_bom['items'])-1 else 'none' };
-            ">
-                <span style="color: #5f6368; font-weight: 500;">{item['part']}</span>
-                <span style="color: #202124; font-weight: bold;">{item['spec']}</span>
-            </div>
-            ''' for i, item in enumerate(selected_bom['items'])])}
-        </div>
-    """, unsafe_allow_html=True)
+with tab1:
+    recs = get_recommended_suppliers(selected_platform, selected_sensor)
+    if not recs:
+        st.warning("❌ 當前組合無匹配供應商，請考慮升級感測器方案。")
+    else:
+        st.subheader("推薦合作供應商")
+        cols = st.columns(len(recs))
+        for i, s in enumerate(recs):
+            with cols[i]:
+                st.info(f"**{s['name']}**")
+                st.write(f"定位：{s['type']}")
+                if st.button(f"選擇對接 {s['name']}", key=f"rec_{i}"):
+                    st.session_state.contact = s['name']
 
 with tabs[2]: # 認證 [cite: 92]
     st.write(f"**冷卻策略：** {conf['thermal']}")
