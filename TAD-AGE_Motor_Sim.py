@@ -194,85 +194,79 @@ with tabs[0]: # 供應商自動推薦
     st.markdown("---")
     st.info(f"💡 **供應商開發策略：** 針對 **{platform}** 平台，優先尋找具備 **Hairpin (扁線)** 繞組與 **FOC** 算法能力的夥伴 。")
 
-with tabs[1]: # 系統 BOM 分頁優化版
+with tabs[1]: # 系統 BOM (極簡化專業版)
     st.markdown("### 🛠️ 核心系統零件組成 (Bill of Materials)")
     
-    # 根據規劃文件定義各平台的詳細 BOM 資料
-    bom_details = {
+    # 根據圖片風格簡化資料
+    bom_simple_data = {
         "OD120": {
-            "title": "OD120 輕型電驅系統核心件",
+            "title": "OD120 系統核心件",
             "items": [
-                {"part": "定子組件", "spec": "Hairpin 扁線繞組 / 24槽"},
-                {"part": "轉子組件", "spec": "8極永磁轉子 (PM)"},
-                {"part": "機殼結構", "spec": "高導熱鋁合金 / 自然空冷"},
-                {"part": "減速機構", "spec": "整合式單速減速器"},
-                {"part": "感測系統", "spec": "高精度 Hall 感測器"}
+                {"part": "定子組件", "spec": "Hairpin 扁線 / 24槽"},
+                {"part": "轉子組件", "spec": "8極永磁轉子"},
+                {"part": "機殼結構", "spec": "自然空冷鋁殼"},
+                {"part": "減速機構", "spec": "單速減速器"},
+                {"part": "感測系統", "spec": "Hall 感測器"}
             ]
         },
         "OD140": {
-            "title": "OD140 中功率電驅系統核心件",
+            "title": "OD140 系統核心件",
             "items": [
-                {"part": "定子組件", "spec": "強化型 Hairpin 扁線繞組"},
-                {"part": "轉子組件", "spec": "高剩磁永磁體 / 矽鋼片"},
-                {"part": "機殼結構", "spec": "壓鑄鋁合金 / 強制風冷"},
-                {"part": "減速機構", "spec": "支援雙速減速器潛力"},
-                {"part": "感測系統", "spec": "Hall + Encoder 雙備援"}
+                {"part": "定子組件", "spec": "強化型 Hairpin"},
+                {"part": "轉子組件", "spec": "高剩磁永磁體"},
+                {"part": "機殼結構", "spec": "強制風冷機殼"},
+                {"part": "減速機構", "spec": "雙速潛力機構"},
+                {"part": "感測系統", "spec": "Encoder 感測器"}
             ]
         },
         "OD220": {
-            "title": "OD220 高壓主驅系統核心件",
+            "title": "OD220 系統核心件",
             "items": [
-                {"part": "定子組件", "spec": "800V 高壓扁線繞組"},
-                {"part": "轉子組件", "spec": "內嵌式永磁 (IPM)"},
-                {"part": "熱管系統", "spec": "一體化水冷夾層 / 噴油"},
-                {"part": "接線盒", "spec": "整合型高壓互鎖 (HVIL)"},
-                {"part": "感測系統", "spec": "Resolver 旋轉變壓器"}
+                {"part": "定子組件", "spec": "800V 高壓扁線"},
+                {"part": "轉子組件", "spec": "IPM 內嵌永磁"},
+                {"part": "冷卻系統", "spec": "循環水冷/噴油"},
+                {"part": "接線模組", "spec": "HVIL 高壓互鎖"},
+                {"part": "感測系統", "spec": "Resolver 旋變"}
             ]
         }
     }
 
-    selected_bom = bom_details.get(platform)
+    selected_bom = bom_simple_data.get(platform)
     
-    # --- 優化後的 CSS 樣式：確保高度對齊與層次感 ---
+    # --- 採用 image_0f8bf5.png 的極簡樣式 ---
     st.markdown(f"""
         <div style="
             background-color: #1a73e8; 
             color: white; 
-            padding: 15px 25px; 
-            border-top-left-radius: 12px; 
-            border-top-right-radius: 12px;
-            font-size: 20px;
-            font-weight: 600;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 12px 25px; 
+            border-top-left-radius: 10px; 
+            border-top-right-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
         ">
-            📦 {selected_bom['title']}
+            {selected_bom['title']}
         </div>
         <div style="
             background-color: #ffffff; 
             border: 1px solid #e0e0e0; 
-            border-bottom-left-radius: 12px; 
-            border-bottom-right-radius: 12px;
-            padding: 10px 0px;
-            min-height: 320px; /* 固定最小高度，解決對齊問題 */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-bottom-left-radius: 10px; 
+            border-bottom-right-radius: 10px;
+            padding: 5px 0px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         ">
             {"".join([f'''
             <div style="
                 display: flex; 
                 justify-content: space-between; 
-                align-items: center;
-                padding: 15px 30px; 
-                border-bottom: { '1px solid #f8f9fa' if i < len(selected_bom['items'])-1 else 'none' };
+                padding: 12px 30px; 
+                border-bottom: { '1px solid #f1f3f4' if i < len(selected_bom['items'])-1 else 'none' };
             ">
-                <span style="color: #5f6368; font-weight: 500; font-size: 16px;">{item['part']}</span>
-                <span style="color: #202124; font-weight: 600; font-size: 16px; background: #f1f3f4; padding: 4px 12px; border-radius: 6px;">{item['spec']}</span>
+                <span style="color: #5f6368; font-weight: 500;">{item['part']}</span>
+                <span style="color: #202124; font-weight: bold;">{item['spec']}</span>
             </div>
             ''' for i, item in enumerate(selected_bom['items'])])}
         </div>
     """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.info(f"💡 **技術對接提示：** 以上 BOM 為 {platform} 平台之標配，若需調整減速比或變更感測器類型，請於商務對接分頁中說明。")
 
 with tabs[2]: # 認證 [cite: 92]
     st.write(f"**冷卻策略：** {conf['thermal']}")
