@@ -4,14 +4,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # ==========================================
-# 1. 核心數據層：根據規劃文件補齊所有數據
+# 1. 核心數據配置 (依據總結規劃文件補齊)
 # ==========================================
 
 def get_platform_config(platform):
     configs = {
         "OD120": {
             "p_peak": 14.8, "t_peak": 43.0, "rpm_max": 9000, "v_bus": "60/72/96V", "current": "250A",
-            "bom": ["Hairpin 扁線定子", "永磁轉子組件", "空冷鋁殼機箱", "單速減速器", "Hall 感測器"],
+            "bom": ["Hairpin 扁線定子", "永磁轉子組件", "空冷鋁殼機殼", "單速減速器", "Hall 感測器"],
             "safety": ["IP67 防水防塵", "CE 認證指標", "過流/過溫保護"],
             "thermal": "自然空冷 / 強制風冷",
             "vendors": "首選夥伴：安乃達 (Ananda)、天津松正 (Santroll)"
@@ -34,12 +34,11 @@ def get_platform_config(platform):
     return configs.get(platform)
 
 # ==========================================
-# 2. UI 介面層：恢復左側完整配置與右側專業圖表
+# 2. UI 佈局與側邊欄 (完整補齊缺失項)
 # ==========================================
 
 st.set_page_config(page_title="TAD-AGE 電車電機開發決策系統", layout="wide")
 
-# --- 左側側邊欄：完整補齊缺失資料 ---
 with st.sidebar:
     st.header("🚀 TAD-AGE 配置中心")
     platform = st.selectbox("主要馬達平台 (Platform)", ["OD120", "OD140", "OD220"])
@@ -63,88 +62,99 @@ with st.sidebar:
                           index=2 if platform == "OD220" else 0)
     protocol = st.multiselect("通訊協議", ["CAN 2.0B", "RS485", "J1939"], default=["CAN 2.0B"])
 
-# 載入數據與計算
 conf = get_platform_config(platform)
 fw_gain = 1.25 if enable_fw else 1.0
 rpm_limit = conf["rpm_max"] * fw_gain
-v_max = (rpm_limit / gear_ratio) * (2 * np.pi * tire_radius) * 60 / 1000
+
+# 計算 KPI
 t_wheel = conf["t_peak"] * gear_ratio
 angle = np.arctan(slope / 100)
 t_climb_req = (weight * 9.81 * np.sin(angle) * tire_radius) / gear_ratio
+v_max = (rpm_limit / gear_ratio) * (2 * np.pi * tire_radius) * 60 / 1000
 
-# 主畫面 KPI
+# 主畫面標題與指標
 st.title(f"🏢 {platform} 電車電機開發決策系統平台")
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("峰值功率", f"{conf['p_peak']} kW")
 c2.metric("輪端扭矩", f"{t_wheel:.1f} Nm")
 c3.metric("理論極速", f"{v_max:.1f} km/h")
-c4.metric("爬坡需求扭矩", f"{t_climb_req:.1f} Nm", f"{(t_wheel - t_climb_req):.1f} 餘裕")
+c4.metric("熱管理方式", conf['thermal'].split(" /")[0])
 
 st.markdown("---")
 
-# --- 右側圖表：完全恢復 image_10ec3a.png 的專業樣式 ---
+# ==========================================
+# 3. 圖表優化：解決扁平問題，提升清晰度
+# ==========================================
+
 st.subheader("📈 系統效率區間與作業特性曲線")
 
-rpm_range = np.linspace(0, rpm_limit * 1.05, 500)
-# 扭矩特性計算
+rpm_range = np.linspace(0, rpm_limit * 1.1, 500)
 torque_curve = [conf['t_peak'] if r < conf['rpm_max']*0.6 else conf['t_peak']*(conf['rpm_max']*0.6)/r for r in rpm_range]
-# 功率特性計算 (P = T * w)
 power_curve = [(t * r * 2 * np.pi / 60) / 1000 for t, r in zip(torque_curve, rpm_range)]
 
-# 建立雙 Y 軸圖表
-fig, ax1 = plt.subplots(figsize=(15, 6), dpi=120)
+# 提高 figsize 高度比例與 DPI
+fig, ax1 = plt.subplots(figsize=(15, 7.5), dpi=130)
 
-# 1. 繪製左軸：Torque (紅色實線)
-ax1.plot(rpm_range, torque_curve, color='red', linewidth=3.5, label="Torque (Nm)")
-ax1.axhline(y=t_climb_req/gear_ratio, color='orange', linestyle='--', linewidth=2, label=f"Climb Req ({slope}%)")
-ax1.set_xlabel("Speed (RPM)", fontsize=11)
-ax1.set_ylabel("Torque (Nm)", color='red', fontsize=11, fontweight='bold')
+# --- 左軸：扭矩 ---
+ax1.plot(rpm_range, torque_curve, color='red', linewidth=4, label="Torque (Nm)")
+ax1.axhline(y=t_climb_req/gear_ratio, color='orange', linestyle='--', linewidth=2.5, label=f"Climb Req ({slope}%)")
+
+# 優化關鍵：大幅提高 Y 軸上限，避免扁平感
+ax1.set_ylim(0, conf['t_peak'] * 1.5) 
+ax1.set_ylabel("Torque (Nm)", color='red', fontsize=12, fontweight='bold')
 ax1.tick_params(axis='y', labelcolor='red')
-ax1.set_ylim(0, conf['t_peak'] * 1.3)
 
-# 2. 繪製右軸：Power (藍色虛點線)
+# --- 右軸：功率 ---
 ax2 = ax1.twinx()
-ax2.plot(rpm_range, power_curve, color='blue', linestyle='-.', linewidth=2.5, label="Power (kW)")
-ax2.set_ylabel("Power (kW)", color='blue', fontsize=11, fontweight='bold')
+ax2.plot(rpm_range, power_curve, color='blue', linestyle='-.', linewidth=3, label="Power (kW)")
+# 同步提高功率軸上限
+ax2.set_ylim(0, conf['p_peak'] * 1.5)
+ax2.set_ylabel("Power (kW)", color='blue', fontsize=12, fontweight='bold')
 ax2.tick_params(axis='y', labelcolor='blue')
-ax2.set_ylim(0, conf['p_peak'] * 1.3)
 
-# 3. 繪製效率區間 (漸層綠色效果)
-X, Y = np.meshgrid(np.linspace(0, rpm_limit, 100), np.linspace(0, conf['t_peak'], 100))
-Z = np.exp(-((X - conf['rpm_max']*0.5)**2 / (rpm_limit**2) + (Y - conf['t_peak']*0.5)**2 / (conf['t_peak']**2)))
-ax1.contourf(X, Y, Z, levels=10, cmap='Greens', alpha=0.3)
+# --- 效率背景 (漸層效果) ---
+X, Y = np.meshgrid(np.linspace(0, rpm_limit*1.1, 100), np.linspace(0, conf['t_peak']*1.5, 100))
+Z = 95 * np.exp(-((X - conf['rpm_max']*0.4)**2 / (rpm_limit**1.8) + (Y - conf['t_peak']*0.5)**2 / (conf['t_peak']**1.8)))
+contour = ax1.contourf(X, Y, Z, levels=15, cmap='Greens', alpha=0.25)
+cbar = fig.colorbar(contour, ax=ax2, pad=0.08)
+cbar.set_label("Efficiency (%)", rotation=270, labelpad=15)
 
-# 合併圖例
+# 圖表細節優化
+ax1.set_xlabel("Speed (RPM)", fontsize=12)
+ax1.grid(True, which='both', linestyle=':', alpha=0.6)
 lines1, labels1 = ax1.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
-ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right', frameon=True, shadow=True)
+ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=3, frameon=True, shadow=True)
 
-ax1.grid(True, linestyle=':', alpha=0.5)
 st.pyplot(fig)
 
 st.markdown("---")
 
-# --- 專業分頁區 ---
+# ==========================================
+# 4. 專業功能分頁 (依據規劃文件補齊)
+# ==========================================
+
 tabs = st.tabs(["🔍 供應商自動推薦", "📋 系統 BOM", "🛡️ 認證與熱管理", "📊 標準詢價表", "✉️ 商務對接"])
 
-with tabs[0]:
+with tabs[0]: # 供應商推薦 [cite: 67, 68, 69, 70]
     st.success(f"**{conf['vendors']}**")
-    st.info("💡 建議：OD220 應優先對接具備 ASIL-C 認證經驗的供應商 [cite: 92, 100]。")
+    st.info("💡 建議策略：針對 OD220 高壓平台，應直接對接具備乘用車主驅經驗之廠商。")
 
-with tabs[1]:
-    st.table(pd.DataFrame({"項目": ["定子", "轉子", "冷卻", "減速機", "感測器"], "規格": conf['bom']}))
+with tabs[1]: # 系統 BOM [cite: 83, 84]
+    st.table(pd.DataFrame({"核心零件": ["定子組件", "轉子組件", "結構件", "傳動系統", "感測系統"], "技術描述": conf['bom']}))
 
-with tabs[2]:
-    st.info(f"**冷卻策略：** {conf['thermal']}")
-    for s in conf['safety']: st.write(f"- {s} [cite: 92]")
+with tabs[2]: # 認證 [cite: 92]
+    st.write(f"**冷卻策略：** {conf['thermal']}")
+    st.write("**關鍵安全機制：**")
+    for s in conf['safety']: st.write(f"- {s}")
 
-with tabs[3]:
+with tabs[3]: # 詢價表 [cite: 103]
     st.table(pd.DataFrame({
-        "對比項": ["平台型號", "母線電壓", "峰值電流", "最高轉速", "通訊方式"],
-        "系統需求": [platform, f"{v_bus}V", f"{i_limit}A", f"{rpm_limit:.0f} rpm", "/".join(protocol)]
+        "對比項": ["電機平台", "電壓等級", "需求電流", "最高轉速", "通訊/調參"],
+        "系統規格": [platform, f"{v_bus}V", f"{i_limit}A", f"{rpm_limit:.0f} rpm", "CAN/上位機工具"]
     }))
 
-with tabs[4]:
-    st.code(f"主旨：【詢價】{platform} {conf['p_peak']}kW 電機控制器開發\n內容：需支援 FOC、弱磁控制與 {protocol[0]} 通訊 [cite: 104]。", language="markdown")
+with tabs[4]: # 郵件模板 [cite: 104]
+    st.code(f"主旨：【詢價】TAD-AGE {platform} {conf['p_peak']}kW 控制器對接\n內容：要求支援 FOC、弱磁控制與回生煞車功能...", language="markdown")
 
-st.caption("TAD-AGE Framework v2.4 | 基於 OD 系列參數與供應商矩陣整合 [cite: 110]")
+st.caption("TAD-AGE Framework v2.5 | 整合模擬、風險診斷與供應鏈之工程決策系統")
