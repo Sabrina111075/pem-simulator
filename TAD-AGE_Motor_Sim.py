@@ -194,8 +194,77 @@ with tabs[0]: # 供應商自動推薦
     st.markdown("---")
     st.info(f"💡 **供應商開發策略：** 針對 **{platform}** 平台，優先尋找具備 **Hairpin (扁線)** 繞組與 **FOC** 算法能力的夥伴 。")
 
-with tabs[1]: # 系統 BOM [cite: 83, 84]
-    st.table(pd.DataFrame({"核心零件": ["定子組件", "轉子組件", "結構件", "傳動系統", "感測系統"], "技術描述": conf['bom']}))
+with tabs[1]: # 系統 BOM
+    st.markdown("### 🛠️ 核心系統零件組成 (Bill of Materials)")
+    
+    # 根據規劃文件定義各平台的詳細 BOM 資料
+    bom_details = {
+        "OD120": {
+            "title": "OD120 輕型電驅系統核心件",
+            "items": [
+                {"part": "定子組件", "spec": "Hairpin 扁線繞組 / 24槽設計"},
+                {"part": "轉子組件", "spec": "8極永磁轉子 (Permanent Magnet)"},
+                {"part": "機殼結構", "spec": "高導熱鋁合金 / 自然空冷鰭片"},
+                {"part": "減速機構", "spec": "整合式單速減速器"},
+                {"part": "感測系統", "spec": "高精度 Hall 效應感測器"}
+            ]
+        },
+        "OD140": {
+            "title": "OD140 中功率電驅系統核心件",
+            "items": [
+                {"part": "定子組件", "spec": "強化型 Hairpin 扁線繞組"},
+                {"part": "轉子組件", "spec": "高剩磁永磁體 / 低損耗矽鋼片"},
+                {"part": "機殼結構", "spec": "壓鑄鋁合金 / 強制風冷結構"},
+                {"part": "減速機構", "spec": "支援雙速減速器潛力設計"},
+                {"part": "感測系統", "spec": "Hall + Encoder 雙備援介面"}
+            ]
+        },
+        "OD220": {
+            "title": "OD220 高壓主驅系統核心件",
+            "items": [
+                {"part": "定子組件", "spec": "800V 高壓扁線繞組 / 專用絕緣漆"},
+                {"part": "轉子組件", "spec": "內嵌式永磁 (IPM) 抗退磁設計"},
+                {"part": "熱管系統", "spec": "一體化水冷夾層 / 支援噴油冷卻"},
+                {"part": "接線盒", "spec": "整合型高壓互鎖 (HVIL) 接線盒"},
+                {"part": "感測系統", "spec": "Resolver 旋轉變壓器 (支援15000rpm)"}
+            ]
+        }
+    }
+
+    selected_bom = bom_details.get(platform)
+    
+    # 使用自定義 HTML 模擬 image_0fa5e0.png 的專業卡片樣式
+    st.markdown(f"""
+        <div style="
+            background-color: #1a73e8; 
+            color: white; 
+            padding: 12px 20px; 
+            border-top-left-radius: 8px; 
+            border-top-right-radius: 8px;
+            font-size: 18px;
+            font-weight: 500;
+        ">
+            📦 {selected_bom['title']}
+        </div>
+        <div style="
+            background-color: #ffffff; 
+            border: 1px solid #e0e0e0; 
+            border-bottom-left-radius: 8px; 
+            border-bottom-right-radius: 8px;
+            padding: 10px 0px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        ">
+            {"".join([f'''
+            <div style="display: flex; justify-content: space-between; padding: 12px 25px; border-bottom: { '1px solid #f0f0f0' if i < len(selected_bom['items'])-1 else 'none' };">
+                <span style="color: #5f6368; font-weight: 500;">{item['part']}</span>
+                <span style="color: #202124; font-weight: 600;">{item['spec']}</span>
+            </div>
+            ''' for i, item in enumerate(selected_bom['items'])])}
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.warning(f"📝 **技術備註：** {platform} 平台之 BOM 均已包含控制器 FOC 演算法軟體授權與基本的 EMC 濾波組件。")
 
 with tabs[2]: # 認證 [cite: 92]
     st.write(f"**冷卻策略：** {conf['thermal']}")
