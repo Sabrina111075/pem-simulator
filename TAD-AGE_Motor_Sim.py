@@ -114,9 +114,11 @@ st.markdown("---")
 # ==========================================
 tabs = st.tabs(["🔍 供應商自動推薦", "📋 系統 BOM", "📊 標準詢價表", "✉️ 商務對接"])
 
-with tabs[0]:
-    st.subheader("推薦合作供應商")
-    v_cols = st.columns(2)
+tabs = st.tabs(["🔍 供應商自動推薦", "📋 系統 BOM", "🛡️ 認證與熱管理", "📊 標準詢價表", "✉️ 商務對接"])
+
+with tabs[0]: # 供應商推薦 [cite: 67, 68, 69, 70]
+    st.success(f"**{conf['vendors']}**")
+    st.info("💡 建議策略：針對 OD220 高壓平台，應直接對接具備乘用車主驅經驗之廠商。")
     
     for i, v_name in enumerate(conf["vendors"]):
         with v_cols[i]:
