@@ -194,80 +194,60 @@ with tabs[0]: # 供應商自動推薦
     st.markdown("---")
     st.info(f"💡 **供應商開發策略：** 針對 **{platform}** 平台，優先尋找具備 **Hairpin (扁線)** 繞組與 **FOC** 算法能力的夥伴 。")
 
-with tabs[1]: # 系統 BOM (單一整合表格版)
+with tabs[1]: # 系統 BOM (內建表格極簡版)
     st.markdown("### 🛠️ 系統 BOM 與預算成本整合表")
     
-    # 整合後的數據矩陣
-    combined_data = {
+    # 定義各平台的數據矩陣
+    bom_data = {
         "OD120": {
-            "rows": [
-                ["定子組件", "Hairpin 扁線 / 24槽", "¥1,200"],
-                ["轉子組件", "8極永磁轉子", "¥850"],
-                ["機殼結構", "自然空冷鋁殼", "¥450"],
-                ["減速機構", "單速減速器", "¥900"],
-                ["感測系統", "Hall 感測器", "¥150"]
-            ],
+            "df": pd.DataFrame({
+                "組件名稱": ["定子組件", "轉子組件", "機殼結構", "減速機構", "感測系統"],
+                "技術規格": ["Hairpin 扁線 / 24槽", "8極永磁轉子", "自然空冷鋁殼", "單速減速器", "Hall 感測器"],
+                "預算參考": ["¥1,200", "¥850", "¥450", "¥900", "¥150"]
+            }),
             "total": "¥3,550"
         },
         "OD140": {
-            "rows": [
-                ["定子組件", "強化型 Hairpin", "¥2,500"],
-                ["轉子組件", "高剩磁永磁體", "¥1,800"],
-                ["機殼結構", "強制風冷機殼", "¥750"],
-                ["減速機構", "雙速潛力機構", "¥1,500"],
-                ["感測系統", "Encoder 感測器", "¥450"]
-            ],
+            "df": pd.DataFrame({
+                "組件名稱": ["定子組件", "轉子組件", "機殼結構", "減速機構", "感測系統"],
+                "技術規格": ["強化型 Hairpin", "高剩磁永磁體", "強制風冷機殼", "雙速潛力機構", "Encoder 感測器"],
+                "預算參考": ["¥2,500", "¥1,800", "¥750", "¥1,500", "¥450"]
+            }),
             "total": "¥7,000"
         },
         "OD220": {
-            "rows": [
-                ["定子組件", "800V 高壓扁線", "¥8,500"],
-                ["轉子組件", "IPM 內嵌永磁", "¥6,200"],
-                ["冷卻系統", "循環水冷/噴油", "¥2,800"],
-                ["接線模組", "HVIL 高壓互鎖", "¥1,200"],
-                ["感測系統", "Resolver 旋變", "¥950"]
-            ],
+            "df": pd.DataFrame({
+                "組件名稱": ["定子組件", "轉子組件", "冷卻系統", "接線模組", "感測系統"],
+                "技術規格": ["800V 高壓扁線", "IPM 內嵌永磁", "循環水冷/噴油", "HVIL 高壓互鎖", "Resolver 旋變"],
+                "預算參考": ["¥8,500", "¥6,200", "¥2,800", "¥1,200", "¥950"]
+            }),
             "total": "¥19,650"
         }
     }
 
-    data = combined_data.get(platform)
+    selected = bom_data.get(platform)
 
-    # 產生標準 HTML 表格
-    html_table = f"""
-    <div style="margin: 10px 0px;">
-        <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #1a73e8; font-family: sans-serif;">
-            <thead>
-                <tr style="background-color: #1a73e8; color: white;">
-                    <th style="border: 1px solid #ffffff; padding: 12px; text-align: left; width: 25%;">組件名稱</th>
-                    <th style="border: 1px solid #ffffff; padding: 12px; text-align: left; width: 50%;">技術規格</th>
-                    <th style="border: 1px solid #ffffff; padding: 12px; text-align: right; width: 25%;">預算參考</th>
-                </tr>
-            </thead>
-            <tbody>
-    """
+    # 1. 使用 Streamlit 內建 table，保證表格化與對齊
+    st.table(selected["df"])
 
-    for row in data["rows"]:
-        html_table += f"""
-                <tr style="border-bottom: 1px solid #dddddd;">
-                    <td style="border-left: 1px solid #dddddd; border-right: 1px solid #dddddd; padding: 12px; color: #5f6368;">{row[0]}</td>
-                    <td style="border-right: 1px solid #dddddd; padding: 12px; color: #202124; font-weight: 500;">{row[1]}</td>
-                    <td style="border-right: 1px solid #dddddd; padding: 12px; text-align: right; color: #1a73e8; font-weight: bold;">{row[2]}</td>
-                </tr>
-        """
+    # 2. 顯示總成本 (採用簡單的卡片樣式)
+    st.markdown(f"""
+        <div style="
+            background-color: #f1f3f4; 
+            padding: 20px; 
+            border-radius: 10px; 
+            border-left: 5px solid #1a73e8;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+        ">
+            <span style="font-size: 18px; font-weight: bold; color: #202124;">預算系統總成本參考 (BOM Total)</span>
+            <span style="font-size: 24px; font-weight: 800; color: #d93025;">{selected['total']}</span>
+        </div>
+    """, unsafe_allow_html=True)
 
-    html_table += f"""
-                <tr style="background-color: #e8f0fe; font-weight: bold;">
-                    <td colspan="2" style="border: 1.5px solid #1a73e8; padding: 15px; font-size: 16px; color: #202124;">預算系統總成本參考 (BOM Total)</td>
-                    <td style="border: 1.5px solid #1a73e8; padding: 15px; text-align: right; font-size: 18px; color: #d93025;">{data['total']}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    """
-
-    st.markdown(html_table, unsafe_allow_html=True)
-    st.caption(f"註：以上為 {platform} 平台之整合預算表，規格參考自開發規劃文件。")
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.caption(f"註：以上數據僅供 {platform} 平台開發初期規劃參考。")
 
 with tabs[2]: # 認證 [cite: 92]
     st.write(f"**冷卻策略：** {conf['thermal']}")
