@@ -194,19 +194,8 @@ with tabs[0]: # 供應商自動推薦
     st.markdown("---")
     st.info(f"💡 **供應商開發策略：** 針對 **{platform}** 平台，優先尋找具備 **Hairpin (扁線)** 繞組與 **FOC** 算法能力的夥伴 。")
 
-with tab1:
-    recs = get_recommended_suppliers(selected_platform, selected_sensor)
-    if not recs:
-        st.warning("❌ 當前組合無匹配供應商，請考慮升級感測器方案。")
-    else:
-        st.subheader("推薦合作供應商")
-        cols = st.columns(len(recs))
-        for i, s in enumerate(recs):
-            with cols[i]:
-                st.info(f"**{s['name']}**")
-                st.write(f"定位：{s['type']}")
-                if st.button(f"選擇對接 {s['name']}", key=f"rec_{i}"):
-                    st.session_state.contact = s['name']
+with tabs[1]: # 系統 BOM [cite: 83, 84]
+    st.table(pd.DataFrame({"核心零件": ["定子組件", "轉子組件", "結構件", "傳動系統", "感測系統"], "技術描述": conf['bom']}))
 
 with tabs[2]: # 認證 [cite: 92]
     st.write(f"**冷卻策略：** {conf['thermal']}")
