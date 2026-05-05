@@ -136,9 +136,63 @@ st.markdown("---")
 
 tabs = st.tabs(["🔍 供應商自動推薦", "📋 系統 BOM", "🛡️ 認證與熱管理", "📊 標準詢價表", "✉️ 商務對接"])
 
-with tabs[0]: # 供應商推薦 [cite: 67, 68, 69, 70]
-    st.success(f"**{conf['vendors']}**")
-    st.info("💡 建議策略：針對 OD220 高壓平台，應直接對接具備乘用車主驅經驗之廠商。")
+with tabs[0]: # 供應商自動推薦
+    st.markdown("### 🏆 推薦合作供應商方案")
+    
+    # 根據平台定義供應商數據
+    vendor_data = {
+        "OD120": [
+            {"name": "安乃達 (Ananda)", "pos": "Mid-Range / 輕型電驅領導者", "tag": "成熟平台微調"},
+            {"name": "天津松正 (Santroll)", "pos": "Mid-Range / 全場景解決方案", "tag": "扁線電機優勢"}
+        ],
+        "OD140": [
+            {"name": "安乃達 (Ananda)", "pos": "Mid-Range / 高性能兩輪", "tag": "客製化能力強"},
+            {"name": "天津松正 (Santroll)", "pos": "Mid-Range / 越野與警用", "tag": "多規格適配"}
+        ],
+        "OD220": [
+            {"name": "匯川技術 (Inovance)", "pos": "High-End / 工業與乘用主驅", "tag": "ASIL-C 安全認證"},
+            {"name": "英威騰 (INVT)", "pos": "High-End / 商用車解決方案", "tag": "高壓高功率經驗"}
+        ]
+    }
+    
+    current_vendors = vendor_data.get(platform, [])
+    v_cols = st.columns(len(current_vendors))
+    
+    for i, v in enumerate(current_vendors):
+        with v_cols[i]:
+            # 使用自定義 HTML 模擬 image_100b5c.png 的視覺效果
+            st.markdown(f"""
+                <div style="
+                    background-color: #1a73e8; 
+                    color: white; 
+                    padding: 15px; 
+                    border-top-left-radius: 10px; 
+                    border-top-right-radius: 10px;
+                    font-size: 20px;
+                    font-weight: bold;
+                    text-align: center;
+                ">
+                    {v['name']}
+                </div>
+                <div style="
+                    background-color: #e8f0fe; 
+                    padding: 20px; 
+                    border-bottom-left-radius: 10px; 
+                    border-bottom-right-radius: 10px;
+                    border: 1px solid #d2e3fc;
+                    margin-bottom: 10px;
+                ">
+                    <p style="color: #185abc; font-weight: 500; margin-bottom: 5px;">📍 定位：{v['pos']}</p>
+                    <p style="color: #666; font-size: 14px;">🏷️ 核心：{v['tag']}</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # 對接按鈕
+            if st.button(f"🚀 開始對接 {v['name'].split(' ')[0]}", key=f"v_btn_{i}"):
+                st.success(f"已將 {platform} 技術矩陣發送至 {v['name']} 預約對接窗口")
+
+    st.markdown("---")
+    st.info(f"💡 **供應商開發策略：** 針對 **{platform}** 平台，優先尋找具備 **Hairpin (扁線)** 繞組與 **FOC** 算法能力的夥伴 。")
 
 with tabs[1]: # 系統 BOM [cite: 83, 84]
     st.table(pd.DataFrame({"核心零件": ["定子組件", "轉子組件", "結構件", "傳動系統", "感測系統"], "技術描述": conf['bom']}))
