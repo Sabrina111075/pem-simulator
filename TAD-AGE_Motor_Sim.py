@@ -4,136 +4,144 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # ==========================================
-# 1. 核心數據層：根據規劃文件補齊所有缺失資料
+# 1. 核心數據層：補足所有技術與供應商資料 [cite: 1, 29]
 # ==========================================
 
-def get_complete_platform_data(platform):
+def get_platform_config(platform):
     """
-    整合電機平台核心規格、BOM、安全認證與供應商矩陣 [cite: 28, 29, 39]
+    獲取各平台的完整技術參數、BOM與認證需求 [cite: 29, 31, 37]
     """
-    data = {
+    configs = {
         "OD120": {
-            "p_peak": 14.8, "t_peak": 43, "rpm_max": 9000, "v_bus": "60/72/96V",
-            "bom": ["Hairpin 扁線定子", "永磁轉子組件", "空冷鋁殼機箱", "單速/雙速減速器", "Hall 感測器"],
+            "p_peak": 14.8, "t_peak": 43, "rpm_max": 9000, "v_bus": "60/72/96V", "current": "250A",
+            "bom": ["Hairpin 扁線定子", "永磁轉子組件", "空冷鋁殼機箱", "單速減速器", "Hall 感測器"],
             "safety": ["IP67 防水防塵", "CE 認證指標", "過流/過溫保護"],
-            "thermal": "自然空冷 / 強制風冷 [cite: 29]",
-            "current": "250A",
-            "vendors": "首選：安乃達 (Ananda)、天津松正 (Santroll) [cite: 42]"
+            "thermal": "自然空冷 / 強制風冷",
+            "vendors": "首選夥伴：安乃達 (Ananda)、天津松正 (Santroll) [cite: 14, 42]"
         },
         "OD140": {
-            "p_peak": 30.0, "t_peak": 80, "rpm_max": 9000, "v_bus": "72/96V",
-            "bom": ["強化型 Hairpin 定子", "高剩磁永磁轉子", "一體化空冷機殼", "雙速減速機構潛力", "Hall/Encoder感測器"],
-            "safety": ["IP67 保護級別", "EMC Class B", "回生煞車安全機制 [cite: 32]"],
-            "thermal": "強制風冷 [cite: 29]",
-            "current": "350A",
-            "vendors": "首選：安乃達 (Ananda)、天津松正 (Santroll) [cite: 42]"
+            "p_peak": 30.0, "t_peak": 80, "rpm_max": 9000, "v_bus": "72/96V", "current": "350A",
+            "bom": ["強化型 Hairpin 定子", "高剩磁永磁轉子", "一體化機殼", "雙速減速機構潛力", "Encoder 感測器"],
+            "safety": ["IP67 保護級別", "EMC Class B", "回生煞車安全機制"],
+            "thermal": "強制風冷",
+            "vendors": "首選夥伴：安乃達 (Ananda)、天津松正 (Santroll) [cite: 14, 42]"
         },
         "OD220": {
-            "p_peak": 150.0, "t_peak": 350, "rpm_max": 15000, "v_bus": "400/800V",
-            "bom": ["高壓扁線定子 ", "內嵌永磁 (IPM) 轉子", "水冷/油冷夾層機殼", "高壓接線盒", "Resolver 旋變感測器"],
-            "safety": ["ASIL-C 安全等級", "預充電路 (Pre-charge) ", "高壓互鎖 (HVIL) ", "J1939 協議支援"],
-            "thermal": "循環水冷 / 噴油冷卻 [cite: 29]",
-            "current": "500A",
-            "vendors": "首選：匯川技術 (Inovance)、英威騰 (INVT)、精進電動 (JJE) [cite: 45]"
+            "p_peak": 150.0, "t_peak": 350, "rpm_max": 15000, "v_bus": "400/800V", "current": "500A",
+            "bom": ["高壓扁線定子", "內嵌永磁 (IPM) 轉子", "水冷/油冷機殼", "高壓接線盒", "Resolver 旋變感測器"],
+            "safety": ["ASIL-C 安全等級", "預充電路 (Pre-charge)", "高壓互鎖 (HVIL)", "J1939 協議"],
+            "thermal": "循環水冷 / 噴油冷卻",
+            "vendors": "首選夥伴：匯川技術 (Inovance)、英威騰 (INVT)、精進電動 (JJE) [cite: 15, 45]"
         }
     }
-    return data.get(platform)
+    return configs.get(platform)
 
 # ==========================================
-# 2. UI 介面層：恢復漂亮清晰的大圖表佈局
+# 2. UI 介面層：優化佈局比例與圖表清晰度
 # ==========================================
 
 st.set_page_config(page_title="TAD-AGE 電車電機開發決策系統", layout="wide")
 
-# 側邊欄參數設定 (保持完整)
+# --- 左側側邊欄：完整補齊缺失資料 ---
 with st.sidebar:
-    st.subheader("🚀 TAD-AGE 配置中心")
+    st.header("🚀 TAD-AGE 配置中心")
     platform = st.selectbox("主要馬達平台 (Platform)", ["OD120", "OD140", "OD220"])
+    
     st.markdown("---")
     st.subheader("🚗 車輛環境模擬")
-    weight = st.slider("整車總重 (kg)", 500, 3000, 1300)
+    weight = st.slider("整車總重 (kg)", 500, 3500, 1300)
     gear_ratio = st.slider("齒輪比 (Gear Ratio)", 1.0, 15.0, 8.0)
-    tire_radius = st.slider("輪胎半徑 (m)", 0.1, 0.5, 0.25)
-    slope = st.slider("模擬爬坡坡度 (%)", 0, 30, 15)
+    tire_radius = st.slider("輪胎半徑 (m)", 0.1, 0.6, 0.25)
+    slope = st.slider("模擬爬坡坡度 (%)", 0, 35, 15)
+    
+    st.markdown("---")
+    st.subheader("⚙️ 控制器進階配置")
+    v_input = st.number_input("系統運作電壓 (V)", value=72 if platform != "OD220" else 400)
+    sensor = st.selectbox("感測器類型", ["Hall", "Encoder", "Resolver"], 
+                          index=2 if platform == "OD220" else 0)
+    enable_fw = st.toggle("開啟弱磁控制 (Field Weakening)", value=True)
+    fw_gain = st.slider("弱磁擴速增益", 1.0, 1.5, 1.25) if enable_fw else 1.0
 
-# 載入選定平台的完整數據
-sys = get_complete_platform_data(platform)
+# 載入平台完整規格 [cite: 29]
+conf = get_platform_config(platform)
 
-# 頂部 KPI 指標
+# --- 主畫面：標題與 KPI 指標 ---
 st.title(f"🏢 {platform} 電車電機開發決策系統平台")
-rpm_limit = sys["rpm_max"]
-v_max = (rpm_limit / gear_ratio) * (2 * np.pi * tire_radius) * 60 / 1000
-t_wheel = sys["t_peak"] * gear_ratio
-t_climb = (weight * 9.81 * np.sin(np.arctan(slope/100)) * tire_radius) / gear_ratio
 
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("峰值功率", f"{sys['p_peak']} kW")
-c2.metric("輪端扭矩", f"{t_wheel:.1f} Nm")
-c3.metric("理論極速", f"{v_max:.1f} km/h")
-c4.metric("熱管理方式", sys['thermal'].split(" [")[0])
+# 物理計算
+rpm_max_eff = conf["rpm_max"] * fw_gain
+v_max = (rpm_max_eff / gear_ratio) * (2 * np.pi * tire_radius) * 60 / 1000
+t_wheel = conf["t_peak"] * gear_ratio
+# 爬坡阻力計算
+angle = np.arctan(slope / 100)
+t_climb_req = (weight * 9.81 * np.sin(angle) * tire_radius) / gear_ratio
+
+k1, k2, k3, k4 = st.columns(4)
+k1.metric("峰值功率", f"{conf['p_peak']} kW")
+k2.metric("輪端扭矩", f"{t_wheel:.1f} Nm")
+k3.metric("理論極速", f"{v_max:.1f} km/h", f"{(fw_gain-1)*100:+.0f}% 弱磁" if fw_gain > 1 else None)
+k4.metric("爬坡需求扭矩", f"{t_climb_req:.1f} Nm", f"{(t_wheel - t_climb_req):.1f} 餘裕")
 
 st.markdown("---")
 
-# 恢復大面積清晰圖表
+# --- 右側主圖表：加大、加寬、更清晰 ---
 st.subheader("📈 系統效率區間與作業特性曲線")
-rpm_range = np.linspace(0, rpm_limit * 1.1, 100)
-# 模擬特性曲線 (恆扭矩 + 恆功率)
-torque_curve = [sys['t_peak'] if r < rpm_limit*0.6 else sys['t_peak']*(rpm_limit*0.6)/r for r in rpm_range]
+# 增加採樣點讓曲線更平滑
+rpm_range = np.linspace(0, rpm_max_eff * 1.1, 200)
+torque_curve = [conf['t_peak'] if r < conf['rpm_max']*0.6 else conf['t_peak']*(conf['rpm_max']*0.6)/r for r in rpm_range]
 
-fig, ax = plt.subplots(figsize=(12, 4))
-ax.plot(rpm_range, torque_curve, color='red', linewidth=3, label="Torque (Nm)")
-ax.axhline(y=t_climb/gear_ratio, color='orange', linestyle='--', label=f"Climb Req ({slope}%)")
-ax.fill_between(rpm_range, torque_curve, alpha=0.15, color='green', label="Efficiency Zone")
-ax.set_xlabel("Speed (RPM)")
-ax.set_ylabel("Torque (Nm)")
-ax.grid(True, alpha=0.3)
-ax.legend()
+# 設定圖表尺寸 (figsize 加大) 與 DPI (清晰度)
+fig, ax = plt.subplots(figsize=(14, 5), dpi=100) 
+ax.plot(rpm_range, torque_curve, color='#FF0000', linewidth=3.5, label="Motor Torque (Nm)")
+ax.axhline(y=t_climb_req/gear_ratio, color='#FFA500', linestyle='--', linewidth=2, label=f"Climb Resistance ({slope}%)")
+
+# 繪製效率區間背景
+ax.fill_between(rpm_range, torque_curve, alpha=0.15, color='#2ECC71', label="High Efficiency Zone (>90%)")
+
+ax.set_xlabel("Motor Speed (RPM)", fontsize=11)
+ax.set_ylabel("Torque (Nm)", fontsize=11)
+ax.grid(True, which='both', linestyle='--', alpha=0.4)
+ax.legend(loc='upper right', frameon=True, shadow=True)
 st.pyplot(fig)
 
 st.markdown("---")
 
-# ==========================================
-# 3. 專業功能區：完整補齊缺失分頁內容
-# ==========================================
-
+# --- 專業分頁區：補齊所有缺失資料 ---
 tabs = st.tabs(["🔍 供應商自動推薦", "📋 系統 BOM", "🛡️ 認證與熱管理", "📊 標準詢價表", "✉️ 商務對接"])
 
-with tabs[0]: # 供應商推薦 (補齊)
-    st.write(f"### 🤝 {platform} 平台推薦對接夥伴 [cite: 39]")
-    st.success(sys['vendors'])
-    st.info("💡 建議策略：優先對接具備扁線電機解決方案之供應商，並要求提供上位機調參工具 [cite: 36, 55] 。")
+with tabs[0]:
+    st.write("### 🤝 推薦技術對接夥伴")
+    st.success(conf['vendors'])
+    st.info("💡 策略建議：採購前應要求供應商提供對應馬達之效率映射圖 (Efficiency Map) 與上位機調參工具 [cite: 36, 53] 。")
 
-with tabs[1]: # 系統 BOM (補齊)
-    st.write(f"### 📋 {platform} 核心系統零件組成 (BOM) ")
-    bom_df = pd.DataFrame({
-        "零件類別": ["定子組件", "轉子組件", "冷卻結構", "減速機構", "反饋感測器"],
-        "規格描述": sys['bom']
-    })
-    st.table(bom_df)
+with tabs[1]:
+    st.write(f"### 📋 {platform} 系統核心零件組成 (BOM)")
+    st.table(pd.DataFrame({
+        "零件類別": ["定子 (Stator)", "轉子 (Rotor)", "冷卻結構", "減速機", "反饋感測器"],
+        "技術規格": conf['bom']
+    }))
 
-with tabs[2]: # 認證與熱管理 (補齊)
-    st.write(f"### 🛡️ 技術認證與安全保護需求 ")
-    col_l, col_r = st.columns(2)
-    with col_l:
-        st.info(f"**熱管理策略：** {sys['thermal']}")
-        st.write("符合標準：ISO 26262, IP67 防水防塵要求")
-    with col_r:
-        st.write("**關鍵安全保護機制：**")
-        for s in sys['safety']: st.write(f"- {s}")
+with tabs[2]:
+    st.write("### 🛡️ 認證指標與熱管理策略 ")
+    cl1, cl2 = st.columns(2)
+    with cl1:
+        st.info(f"**冷卻方式：** {conf['thermal']}")
+        st.write("**防護等級：** IP67 / IP6K9K")
+    with cl2:
+        st.write("**系統安全機制：**")
+        for s in conf['safety']: st.write(f"- {s}")
 
-with tabs[3]: # 標準詢價表 (補齊對比項)
+with tabs[3]:
     st.write("### 📊 控制器開發橫向評估表 (樣機比測) ")
-    rfq_data = {
-        "橫向評估對比項": ["電機型號", "母線電壓 (V)", "峰值電流 (A)", "最高轉速 (rpm)", "感測器類型", "樣機交期", "NRE 費用"],
-        "系統需求 (Spec)": [platform, sys['v_bus'], sys['current'], f"{rpm_limit}", "Resolver" if platform=="OD220" else "Hall/Encoder", "4-6 週", "待定"],
-        "供應商 A": ["-", "-", "-", "-", "-", "-", "-"],
-        "供應商 B": ["-", "-", "-", "-", "-", "-", "-"]
-    }
-    st.table(pd.DataFrame(rfq_data))
+    st.table(pd.DataFrame({
+        "對比項目": ["電機型號", "母線電壓", "峰值電流", "最高轉速", "感測器支援", "樣機交期", "NRE費用"],
+        "系統需求 (Spec)": [platform, conf['v_bus'], conf['current'], f"{conf['rpm_max']} rpm", sensor, "4-6 週", "待定"]
+    }))
 
-with tabs[4]: # 商務對接 (補齊模板)
-    st.write("### ✉️ 分級郵件模板 (正式詢價版) [cite: 49]")
-    template = f"主旨：【詢價】{platform} {sys['p_peak']}kW 電機控制器開發技術對接\n\n內容：針對 {platform} 平台，要求支援 FOC 控制算法與 {sys['thermal'].split(' [')[0]} 散熱技術。請提供初步報價及樣機交期..."
-    st.code(template, language="markdown")
+with tabs[4]:
+    st.write("### ✉️ 分級郵件模板 (正式版) [cite: 49]")
+    mail_subject = f"主旨：【詢價】TAD-AGE {platform} 平台電機控制器開發技術對接"
+    mail_body = f"針對 {platform} 平台（{conf['p_peak']}kW），需支援 FOC 控制、弱磁擴速及 {conf['thermal']}。請提供規格書與樣機報價。"
+    st.code(f"{mail_subject}\n\n{mail_body}", language="markdown")
 
-st.caption("TAD-AGE Framework | 整合模擬、風險診斷與供應鏈之工程決策系統 [cite: 1]")
+st.caption("TAD-AGE Framework v2.2 | 整合模擬、風險診斷與供應鏈之工程決策系統 [cite: 26, 55]")
