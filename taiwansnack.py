@@ -1,81 +1,103 @@
 ﻿import streamlit as st
+import pandas as pd
+import plotly.express as px
 import os
 
-st.set_page_config(page_title="台灣小吃料理分析平台", layout="wide")
+# 1. 頁面基礎設定
+st.set_page_config(page_title="TAD-AGE 台灣小吃研發決策平台", layout="wide")
 
-# 初始化「目前選中的小吃」狀態，預設為 None
-if 'selected_snack' not in st.session_state:
-    st.session_state.selected_snack = None
-
-# --- 資料讀取函數 ---
-def load_data():
-    file_name = 'data.csv'
-    if os.path.exists(file_name):
-        with open(file_name, 'r', encoding='cp950') as f:
-            lines = f.readlines()
-        # 解析資料 (略過標題，並拆分欄位)
-        return [line.strip().split(',') for line in lines[1:] if line.strip()]
-    return []
-
-raw_data = load_data()
-
-# --- 側邊欄：縣市選擇 ---
-with st.sidebar:
-    st.header("🔍 篩選與導覽")
-    
-    # 提取不重複的縣市清單
-    cities = sorted(list(set([item[0] for item in raw_data])))
-    cities.insert(0, "全部縣市")
-    
-    selected_city = st.selectbox("請選擇縣市：", cities)
-    
-    st.write("---")
-    if st.button("回首頁 / 清除選取"):
-        st.session_state.selected_snack = None
-        st.rerun()
-    
-    st.caption("開發者：Sabrina")
-
-# --- 主畫面邏輯 ---
-st.title("🍜 台灣小吃料理分析平台")
-
-# 如果還沒點選特定小吃：顯示名單模式
-if st.session_state.selected_snack is None:
-    # 根據選取的縣市過濾資料
-    if selected_city == "全部縣市":
-        display_list = raw_data
-    else:
-        display_list = [d for d in raw_data if d[0] == selected_city]
-
-    st.subheader(f"📍 {selected_city} 的道地名點 (共 {len(display_list)} 筆)")
-    
-    # 使用網格排版顯示小吃清單
-    for item in display_list:
-        with st.expander(f"🍴 {item[2]} ({item[3]})"):
-            st.write(f"**主要食材：** {item[3]}")
-            # 點擊按鈕進入詳細頁面
-            if st.button(f"查看「{item[2]}」料理方法", key=item[2]):
-                st.session_state.selected_snack = item
-                st.rerun()
-
-# 如果已經點選特定小吃：顯示詳細料理模式
-else:
-    snack = st.session_state.selected_snack
-    
-    # 回上一步的按鈕
-    if st.button("⬅ 返回名單"):
-        st.session_state.selected_snack = None
-        st.rerun()
-    
-    st.divider()
-    
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.header(f"【{snack[2]}】")
-        st.write(f"🏙️ **地區：** {snack[0]}")
-        st.write(f"🥚 **主要食材：** {snack[3]}")
+# 2. 資料讀取函數 (整合聯動功能)
+@st.cache_data
+def load_all_data():
+    # 讀取小吃主資料庫
+    df_snack = None
+    for f in ['data.csv', 'data.csv.csv', 'data.csv.txt']:
+        if os.path.exists(f):
+            df_snack = pd.read_csv(f)
+            break
+            
+    # 讀取材料香料關連庫
+    df_spice = None
+    spice_file = '材料香料.csv' # 請確保 GitHub 上有這個檔案
+    if os.path.exists(spice_file):
+        df_spice = pd.read_csv(spice_file)
         
+    return df_snack, df_spice
+
+df, df_spice = load_all_data()
+
+# 3. 介面邏輯
+if df is not None:
+    st.title("🇹🇼 台灣小吃風味開發決策平台")
+    st.caption("系統架構：TAD-AGE (Table-Driven + AI-Generated Environment) V1.2")
+    st.markdown("---")
+
+    # 側邊欄：研發選擇
+    st.sidebar.header("📍 研發標的選擇")
+    county = st.sidebar.selectbox("1. 選擇目標縣市", df['縣市'].unique())
+    snack_options = df[df['縣市'] == county]['小吃名稱'].unique()
+    selected_snack = st.sidebar.selectbox("2. 選擇小吃菜單", snack_options)
+
+    # 取得當前小吃詳細資料
+    item = df[(df['縣市'] == county) & (df['小吃名稱'] == selected_snack)].iloc[0]
+
+    # --- 佈局開始 ---
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
+        st.subheader(f"🥣 {selected_snack} - 風味結構卡")
+        
+        # 使用 Metric 顯示核心分數
+        m1, m2, m3 = st.columns(3)
+        m1.metric("主題辨識度", f"{item['主題']}/5")
+        m2.metric("中段支撐", f"{item['支撐']}/5")
+        m3.metric("前段清亮", f"{item['清亮']}/5")
+
+        # 君臣佐使配方細節
+        st.info(f"**【君】主體：** {item['君']}  \n"
+                f"**【臣】支撐：** {item['臣']}  \n"
+                f"**【佐】修飾：** {item['佐']}  \n"
+                f"**【使】導向：** {item['使']}")
+        
+        st.success(f"📌 **建議香氣配比：** \n{item['建議香氣配比']}")
+        st.warning(f"⚠️ **開發風險提示：** \n{item['風味風險/修正提醒']}")
+
     with col2:
-        st.subheader("👨‍🍳 料理方法與建議")
-        method = snack[4] if len(snack) > 4 else "資料整理中..."
-        st.info(method)
+        st.subheader("📊 五維風味雷達模型")
+        # 準備雷達圖數據
+        radar_df = pd.DataFrame(dict(
+            r=[item['主題'], item['支撐'], item['修飾'], item['清亮'], item['收尾']],
+            theta=['主題(君)', '支撐(臣)', '修飾(佐)', '清亮(使/前)', '收尾(使/後)']
+        ))
+        
+        fig = px.line_polar(radar_df, r='r', theta='theta', line_close=True, range_r=[0,5])
+        fig.update_traces(fill='toself', line_color='#FF5722', fillcolor='rgba(255, 87, 34, 0.3)')
+        fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+
+    # --- 自動聯動功能：材料深度解析 ---
+    st.markdown("---")
+    st.subheader("🧪 核心材料/香料深度解析 (聯動)")
+    
+    if df_spice is not None:
+        # 從目前小吃的「辛香料」欄位抓取關鍵字
+        current_spices = str(item['辛香料'])
+        
+        # 比對材料庫
+        matched_spices = df_spice[df_spice['材料/香料'].apply(lambda x: x in current_spices)]
+        
+        if not matched_spices.empty:
+            # 建立專業的橫向卡片顯示聯動資料
+            for index, spice in matched_spices.iterrows():
+                with st.expander(f"🔍 材料解析：{spice['材料/香料']} ({spice['常見角色']})", expanded=True):
+                    sc1, sc2, sc3 = st.columns(3)
+                    sc1.markdown(f"**主要作用：** \n{spice['主要作用']}")
+                    sc2.markdown(f"**適用類型：** \n{spice['適用小吃類型']}")
+                    sc3.markdown(f"**使用風險：** \n<span style='color:red'>{spice['風險']}</span>", unsafe_allow_html=True)
+        else:
+            st.write("💡 該小吃之核心辛香料尚未收錄於材料庫中，建議手動新增。")
+    else:
+        st.error("❌ 找不到材料香料庫檔案 (材料香料.csv)，無法進行聯動分析。")
+
+    st.markdown("---")
+    st.caption("© 2026 Sabrina's TAD-AGE System | 數據僅供研發教學參考")
