@@ -1,61 +1,70 @@
 ﻿import streamlit as st
+import pandas as pd
 
-def display_snack_dashboard(selected_snack_data):
-    # 1. 取得後端邏輯算出的榮譽類型與評分
-    honor_type = selected_snack_data['Honor_Type']
-    snack_name = selected_snack_data['小吃名稱']
-    rating_scores = {
-        "主題": selected_snack_data['主題發音度'],
-        "支撐": selected_snack_data['中段支撐'],
-        "前段": selected_snack_data['前段清亮']
-        # 可根據 ScoreModel 擴充更多維度
-    }
+# --- 1. 後端資料載入與同步 (加強錯誤檢查) ---
+def safe_load_data():
+    try:
+        # 讀取檔案 (請確保檔名與您上傳的一致)
+        df_db = pd.read_csv('snack_v3.xlsx - CountySnackDB.csv')
+        df_michelin = pd.read_csv('snack_v3.xlsx - MichelinLayer.csv')
+        df_scores = pd.read_csv('snack_v3.xlsx - ScoreModel.csv')
+        
+        # 清洗欄位空白
+        for df in [df_db, df_michelin, df_scores]:
+            df.columns = df.columns.str.strip()
+            if '小吃名稱' in df.columns:
+                df['小吃名稱'] = df['小吃名稱'].str.strip()
 
-    # 2. 標題區塊：根據榮譽等級動態渲染
-    title_col1, title_col2 = st.columns([0.7, 0.3])
+        # 進行合併
+        # 加上 validate="1:1" 確保資料不會因為重複而膨脹
+        master = pd.merge(df_db, df_michelin[['小吃名稱', '等級']].drop_duplicates(), on='小吃名稱', how='left')
+        master = pd.merge(master, df_scores.drop_duplicates(), on='小吃名稱', how='left')
+        
+        # 填充缺失值，避免評分變成 NaN 導致雷達圖報錯
+        master['等級'] = master['等級'].fillna('一般推薦')
+        master = master.fillna(0) # 沒評分的部分先給 0
+        
+        return master
+    except Exception as e:
+        st.error(f"資料載入失敗，錯誤訊息: {e}")
+        return None
+
+# --- 2. 前端顯示邏輯 (確保元件一定會渲染) ---
+master_data = safe_load_data()
+
+if master_data is not None:
+    # 側邊欄選擇
+    st.sidebar.header("研發標的選擇")
+    all_counties = master_data['縣市'].unique()
+    selected_county = st.sidebar.selectbox("1. 選擇目標縣市", all_counties)
     
-    with title_col1:
-        st.title(f"🍴 {snack_name} - 風味結構開發")
-        st.caption(f"系統架構：TAD-AGE | 研發人員：Sabrina")
-
-    with title_col2:
-        # 動態顯示米其林標章
-        if honor_type == "必比登推介":
-            st.markdown(
-                '<div style="background-color: #ff4b4b; color: white; padding: 10px; border-radius: 10px; text-align: center;">'
-                '<strong>😋 Bib Gourmand</strong><br>必比登推介'
-                '</div>', unsafe_allow_html=True
-            )
-        elif honor_type == "米其林入選":
-            st.markdown(
-                '<div style="background-color: #1e1e1e; color: #f9d71c; padding: 10px; border-radius: 10px; border: 1px solid #f9d71c; text-align: center;">'
-                '<strong>⭐ Michelin Selected</strong><br>米其林入選'
-                '</div>', unsafe_allow_html=True
-            )
-
-    st.divider()
-
-    # 3. 風味結構卡 (加上視覺強化)
-    st.subheader("📋 風味結構卡")
+    # 根據縣市過濾小吃
+    county_snacks = master_data[master_data['縣市'] == selected_county]
+    selected_snack_name = st.sidebar.selectbox("2. 選擇小吃菜單", county_snacks['小吃名稱'])
     
-    # 如果是榮譽項目，卡片區塊給予淡淡的底色區隔
-    bg_color = "#fff9e6" if honor_type != "一般推薦" else "#ffffff"
-    
-    cols = st.columns(len(rating_scores))
-    for i, (label, score) in enumerate(rating_scores.items()):
-        with cols[i]:
-            st.markdown(
-                f'<div style="background-color: {bg_color}; border: 1px solid #ddd; padding: 20px; border-radius: 10px; text-align: center;">'
-                f'<small>{label}</small><br>'
-                f'<span style="font-size: 24px; font-weight: bold;">{score}/5</span>'
-                '</div>', unsafe_allow_html=True
-            )
+    # 取得選定小吃的整行資料
+    snack_info = county_snacks[county_snacks['小吃名稱'] == selected_snack_name].iloc[0]
 
-    # 4. 側邊欄過濾功能
-    with st.sidebar:
-        st.header("🔍 研發標的過濾")
-        target_level = st.multiselect(
-            "選擇榮譽等級",
-            options=["一般推薦", "必比登推介", "米其林入選"],
-            default=["一般推薦", "必比登推介", "米其林入選"]
-        )
+    # --- UI 渲染 ---
+    title_col, badge_col = st.columns([0.7, 0.3])
+    
+    with title_col:
+        st.title(f"🍽️ {selected_snack_name}")
+        st.write(f"系統架構：TAD-AGE | 研發人員：Sabrina")
+
+    with badge_col:
+        # 根據 '等級' 欄位顯示標籤
+        level = snack_info['等級']
+        if "Bib" in str(level):
+            st.warning("😋 必比登推介")
+        elif "Selected" in str(level) or "入選" in str(level):
+            st.info("⭐ 米其林入選")
+
+    # 顯示評分卡 (確保數值存在)
+    col1, col2, col3 = st.columns(3)
+    col1.metric("主題發音度", f"{int(snack_info.get('主題發音度', 0))}/5")
+    col2.metric("中段支撐", f"{int(snack_info.get('中段支撐', 0))}/5")
+    col3.metric("前段清亮", f"{int(snack_info.get('前段清亮', 0))}/5")
+
+else:
+    st.warning("請檢查 CSV 檔案路徑與欄位名稱是否正確。")
