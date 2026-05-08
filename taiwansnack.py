@@ -2,52 +2,74 @@
 import pandas as pd
 import plotly.express as px
 
-# --- 1. 超強防禦資料讀取 ---
+# 1. 穩定讀取主資料庫
 @st.cache_data
-def load_and_fix_data():
+def load_master_db():
     try:
+        # 直接讀取主表，這張表已經整合了大部分資訊
         df = pd.read_csv('snack_v3.xlsx - CountySnackDB.csv')
-        df.columns = df.columns.str.strip()
-        
-        # 強制轉換評分欄位為數字，出錯就變 0
-        score_cols = ['主題', '支撐', '修飾', '清亮', '收尾']
-        for col in score_cols:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+        df.columns = df.columns.str.strip() # 去除隱形空格
         return df
     except Exception as e:
-        st.error(f"❌ 讀取 CSV 失敗，請確認檔案名稱與格式: {e}")
+        st.error(f"找不到主資料庫檔案: {e}")
         return None
 
-df = load_and_fix_data()
+df = load_master_db()
 
 if df is not None:
-    # 側邊欄與資料選取 (略，維持原本邏輯)
-    st.sidebar.header("📍 研發導航")
+    # 側邊欄過濾
+    st.sidebar.header("📍 TAD-AGE 導航系統")
     counties = df['縣市'].unique()
     sel_county = st.sidebar.selectbox("選擇縣市", counties)
-    sel_snack = st.sidebar.selectbox("選擇小吃", df[df['縣市']==sel_county]['小吃名稱'])
+    
+    # 取得該縣市小吃
+    snack_list = df[df['縣市'] == sel_county]['小吃名稱'].unique()
+    sel_snack = st.sidebar.selectbox("選擇小吃菜單", snack_list)
+    
+    # 抓取該筆資料行
     s = df[df['小吃名稱'] == sel_snack].iloc[0]
 
-    # --- 2. 顯示標題與標籤 (安全模式) ---
-    st.title(f"🍽️ {sel_snack}")
+    # --- UI 呈現 ---
+    col_t, col_b = st.columns([0.7, 0.3])
     
-    # --- 3. 雷達圖 (加入 try-except 保護) ---
-    try:
+    with col_t:
+        st.title(f"🍽️ {sel_snack}")
+        st.write(f"**區域：** {sel_county} | **信心等級：** {s.get('資料信心等級', 'D')}")
+
+    with col_b:
+        # 修正 KeyError 的關鍵：使用 .get 並對應正確欄位名 Michelin_Status
+        m_status = str(s.get('Michelin_Status', 'None'))
+        
+        if m_status != 'None' and m_status != 'nan':
+            st.error(f"😋 {m_status}") # 必比登/米其林用紅色顯示
+        else:
+            st.info("🏠 在地風味精選")
+
+    st.divider()
+
+    # --- 雷達圖保護區 ---
+    c1, c2 = st.columns([0.6, 0.4])
+    with c1:
+        # 定義五維維度
         categories = ['主題', '支撐', '修飾', '清亮', '收尾']
-        values = [float(s[c]) for c in categories]
+        # 強制轉為浮點數，預防亂碼或空值
+        values = [pd.to_numeric(s.get(cat, 0), errors='coerce') for cat in categories]
+        values = [0 if pd.isna(v) else v for v in values] # 處理 NaN
         
         fig = px.line_polar(pd.DataFrame(dict(r=values, theta=categories)), 
                            r='r', theta='theta', line_close=True)
-        fig.update_traces(fill='toself', fillcolor='rgba(255, 75, 75, 0.3)')
+        fig.update_traces(fill='toself', fillcolor='rgba(255, 75, 75, 0.3)', line_color='#FF4B4B')
         st.plotly_chart(fig, use_container_width=True)
-    except Exception as chart_err:
-        st.warning(f"⚠️ 雷達圖目前無法顯示，可能是數據格式問題：{chart_err}")
 
-    # --- 4. 顯示數值 (使用 metric) ---
-    cols = st.columns(5)
-    for i, cat in enumerate(['主題', '支撐', '修飾', '清亮', '收尾']):
-        cols[i].metric(cat, s.get(cat, 0))
-
-else:
-    st.info("💡 請確保 snack_v3 相關的 CSV 檔案已上傳至正確目錄。")
+    with c2:
+        st.subheader("📊 風味組成 (君臣佐使)")
+        st.write(f"**君：** {s.get('君', '-')}")
+        st.write(f"**臣：** {s.get('臣', '-')}")
+        st.write(f"**佐：** {s.get('佐', '-')}")
+        st.write(f"**使：** {s.get('使', '-')}")
+        
+        with st.expander("💡 研發配比與提醒"):
+            st.caption("建議配比：")
+            st.write(s.get('建議香氣配比', '暫無資料'))
+            st.caption("修正提醒：")
+            st.write(s.get('風味風險/修正提醒', '尚無備註'))
