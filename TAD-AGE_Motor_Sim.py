@@ -123,7 +123,7 @@ m1.metric("平台峰值功率", f"{conf['p_peak']} kW")
 m2.metric("最大輪端扭矩", f"{t_wheel_max:.1f} Nm")
 m3.metric("爬坡需求扭矩", f"{t_req_wheel:.1f} Nm", delta=f"電機 {t_climb_req_motor:.1f} Nm", delta_color="inverse")
 m4.metric("系統理論極速", f"{v_max_theory:.1f} km/h")
-m5.metric("感測器配置", sensor_type)
+m5.metric("熱管理方式 [cite: 84]", conf['thermal'].split(" /")[0])
 
 st.markdown("---")
 
