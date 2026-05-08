@@ -1,36 +1,61 @@
-﻿import pandas as pd
+﻿import streamlit as st
 
-def load_and_sync_data():
-    # 1. 載入各個分頁 (假設已轉為 CSV 或直接讀取 Excel)
-    df_db = pd.read_csv('snack_v3.xlsx - CountySnackDB.csv')
-    df_michelin = pd.read_csv('snack_v3.xlsx - MichelinLayer.csv')
-    df_scores = pd.read_csv('snack_v3.xlsx - ScoreModel.csv')
-    df_formula = pd.read_csv('snack_v3.xlsx - FormulaCard_Template.csv')
+def display_snack_dashboard(selected_snack_data):
+    # 1. 取得後端邏輯算出的榮譽類型與評分
+    honor_type = selected_snack_data['Honor_Type']
+    snack_name = selected_snack_data['小吃名稱']
+    rating_scores = {
+        "主題": selected_snack_data['主題發音度'],
+        "支撐": selected_snack_data['中段支撐'],
+        "前段": selected_snack_data['前段清亮']
+        # 可根據 ScoreModel 擴充更多維度
+    }
 
-    # 2. 資料清洗 (去除空白字元，確保 Key 值對齊)
-    for df in [df_db, df_michelin, df_scores, df_formula]:
-        df.columns = df.columns.str.strip()
-        if '小吃名稱' in df.columns:
-            df['小吃名稱'] = df['小吃名稱'].str.strip()
-
-    # 3. 核心關聯邏輯：將榮譽標籤與評分併入主資料庫
-    # 我們使用 '小吃名稱' 作為 Key，進行 Left Join
-    master_df = pd.merge(df_db, df_michelin[['小吃名稱', '等級', '年份']], on='小吃名稱', how='left')
-    master_df = pd.merge(master_df, df_scores, on='小吃名稱', how='left')
-
-    # 4. 邏輯判斷：標註推薦類型 (用於前端顯示標籤)
-    def categorize_honor(row):
-        if pd.isna(row['等級']):
-            return "一般推薦"
-        elif "Bib" in str(row['等級']):
-            return "必比登推介"
-        elif "Selected" in str(row['等級']) or "入選" in str(row['等級']):
-            return "米其林入選"
-        return "星級餐廳"
-
-    master_df['Honor_Type'] = master_df.apply(categorize_honor, axis=1)
+    # 2. 標題區塊：根據榮譽等級動態渲染
+    title_col1, title_col2 = st.columns([0.7, 0.3])
     
-    return master_df, df_formula
+    with title_col1:
+        st.title(f"🍴 {snack_name} - 風味結構開發")
+        st.caption(f"系統架構：TAD-AGE | 研發人員：Sabrina")
 
-# 執行載入
-master_data, formula_template = load_and_sync_data()
+    with title_col2:
+        # 動態顯示米其林標章
+        if honor_type == "必比登推介":
+            st.markdown(
+                '<div style="background-color: #ff4b4b; color: white; padding: 10px; border-radius: 10px; text-align: center;">'
+                '<strong>😋 Bib Gourmand</strong><br>必比登推介'
+                '</div>', unsafe_allow_html=True
+            )
+        elif honor_type == "米其林入選":
+            st.markdown(
+                '<div style="background-color: #1e1e1e; color: #f9d71c; padding: 10px; border-radius: 10px; border: 1px solid #f9d71c; text-align: center;">'
+                '<strong>⭐ Michelin Selected</strong><br>米其林入選'
+                '</div>', unsafe_allow_html=True
+            )
+
+    st.divider()
+
+    # 3. 風味結構卡 (加上視覺強化)
+    st.subheader("📋 風味結構卡")
+    
+    # 如果是榮譽項目，卡片區塊給予淡淡的底色區隔
+    bg_color = "#fff9e6" if honor_type != "一般推薦" else "#ffffff"
+    
+    cols = st.columns(len(rating_scores))
+    for i, (label, score) in enumerate(rating_scores.items()):
+        with cols[i]:
+            st.markdown(
+                f'<div style="background-color: {bg_color}; border: 1px solid #ddd; padding: 20px; border-radius: 10px; text-align: center;">'
+                f'<small>{label}</small><br>'
+                f'<span style="font-size: 24px; font-weight: bold;">{score}/5</span>'
+                '</div>', unsafe_allow_html=True
+            )
+
+    # 4. 側邊欄過濾功能
+    with st.sidebar:
+        st.header("🔍 研發標的過濾")
+        target_level = st.multiselect(
+            "選擇榮譽等級",
+            options=["一般推薦", "必比登推介", "米其林入選"],
+            default=["一般推薦", "必比登推介", "米其林入選"]
+        )
