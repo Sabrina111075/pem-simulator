@@ -1,111 +1,104 @@
 ﻿import streamlit as st
 import pandas as pd
-import plotly.express as px
+import plotly.graph_objects as go
 
-# 1. 頁面配置
-st.set_page_config(page_title="TAD-AGE 台灣小吃開發平台", layout="wide")
+# 1. 資料庫建立：整合 22 縣市與米其林/必比登標註
+# 建議未來可將此部分移至 data/snacks.py
+SNACK_DB = {
+    "新竹縣": {
+        "仙草雞": {
+            "michelin_star": 0,
+            "bib_gourmand": True,
+            "desc": "在地嚴選主料，搭配傳統炮製方法",
+            "flavor": {"主題": 4, "支撐": 5, "修飾": 3, "清亮": 3, "收尾": 4}
+        },
+        "粄條": {
+            "michelin_star": 0,
+            "bib_gourmand": False,
+            "desc": "傳統純米製作，口感Q彈",
+            "flavor": {"主題": 4, "支撐": 3, "修飾": 4, "清亮": 2, "收尾": 3}
+        },
+        "擂茶": {"michelin_star": 0, "bib_gourmand": False, "desc": "客家傳統飲品", "flavor": {"主題": 5, "支撐": 4, "修飾": 3, "清亮": 2, "收尾": 5}}
+    },
+    # 你可以依此格式繼續加入其他 21 個縣市
+}
 
-# 2. 建立全台 22 縣市完整資料庫 (基於核心資料庫邏輯)
-@st.cache_data
-def load_full_taiwan_db():
-    # 22 縣市清單
-    counties = [
-        "基隆市", "台北市", "新北市", "桃園市", "新竹市", "新竹縣", "苗栗縣", "台中市", "彰化縣", "南投縣",
-        "雲林縣", "嘉義市", "嘉義縣", "台南市", "高雄市", "屏東縣", "宜蘭縣", "花蓮縣", "台東縣", "澎湖縣",
-        "金門縣", "連江縣"
-    ]
+# --- UI 介面開始 ---
+st.set_page_config(page_title="TAD-AGE 台灣小吃風味平台", layout="wide")
+
+# 側邊導覽中心
+with st.sidebar:
+    st.header("🧭 導覽中心")
     
-    # 各縣市對應小吃 (各5項)
-    county_mapping = {
-        "基隆市": ["鼎邊銼", "天婦羅", "營養三明治", "豆乾包", "泡泡冰"],
-        "台北市": ["蚵仔煎", "牛肉麵", "滷肉飯", "刈包", "生煎包"],
-        "新北市": ["阿給", "深坑臭豆腐", "九份芋圓", "金山鴨肉", "鶯歌壽司"],
-        "桃園市": ["大溪豆乾", "龍岡米干", "石門活魚", "潤餅", "排骨飯"],
-        "新竹市": ["貢丸湯", "米粉", "水蒸蛋糕", "潤餅", "肉圓"],
-        "新竹縣": ["粄條", "仙草雞", "擂茶", "菜包", "柿餅"],
-        "苗栗縣": ["水晶餃", "客家小炒", "麻糬", "薑絲大腸", "煨湯"],
-        "台中市": ["太陽餅", "大腸包小腸", "炒麵", "肉圓", "麻薏湯"],
-        "彰化縣": ["肉圓", "爌肉飯", "貓鼠麵", "糯米炸", "蛤仔麵"],
-        "南投縣": ["意麵", "肉圓", "竹筒飯", "扣仔嗲", "茶梅"],
-        "雲林縣": ["鵝肉", "鴨肉飯", "圓仔冰", "當歸鴨", "肉羹"],
-        "嘉義市": ["火雞肉飯", "美乃滋涼麵", "砂鍋魚頭", "豆花", "米糕"],
-        "嘉義縣": ["民雄鵝肉", "奮起湖便當", "東石蚵仔", "苦茶油雞", "黑根"],
-        "台南市": ["擔仔麵", "牛肉湯", "碗粿", "鱔魚意麵", "虱目魚粥"],
-        "高雄市": ["鍋燒意麵", "海鮮粥", "旗魚黑輪", "鴨肉珍", "烤黑輪"],
-        "屏東縣": ["萬巒豬腳", "肉粿", "黑鮪魚", "冷熱冰", "粄條"],
-        "宜蘭縣": ["肉羹", "蔥油餅", "糕渣", "卜肉", "鴨賞"],
-        "花蓮縣": ["液香扁食", "炸蛋蔥油餅", "公正包子", "麻糬", "周家蒸餃"],
-        "台東縣": ["卑南肉包", "米苔目", "豬血湯", "地瓜酥", "池上便當"],
-        "澎湖縣": ["仙人掌冰", "黑糖糕", "小管麵線", "金瓜米粉", "花枝丸"],
-        "金門縣": ["廣東粥", "燒餅", "貢糖", "油條", "炒泡麵"],
-        "連江縣": ["老酒麵線", "繼光餅", "紅糟肉", "魚麵", "鼎邊糊"]
-    }
+    # 1. 選擇縣市
+    all_cities = list(SNACK_DB.keys())
+    selected_city = st.selectbox("1. 選擇縣市", all_cities if all_cities else ["請載入資料"])
     
-    # 縣市平均風味分數 (模擬數據)
-    summary_data = pd.DataFrame({
-        "縣市": counties,
-        "主題": [4.5, 5.0, 4.2, 4.3, 4.8, 4.4, 4.1, 4.6, 4.8, 4.2, 4.1, 4.7, 4.3, 5.0, 4.5, 4.6, 4.4, 4.5, 4.2, 4.8, 4.4, 4.9],
-        "支撐": [3.2, 4.0, 3.5, 3.8, 3.6, 4.0, 3.6, 3.8, 4.0, 3.5, 3.8, 4.0, 3.7, 5.0, 4.2, 4.5, 3.6, 3.4, 3.5, 3.8, 3.9, 4.5],
-        "修飾": [2.5, 3.4, 3.0, 3.2, 2.8, 3.5, 3.2, 3.0, 3.2, 3.0, 3.4, 3.6, 3.5, 4.2, 3.8, 3.0, 3.2, 3.0, 3.2, 2.8, 3.0, 3.5],
-        "清亮": [4.0, 2.2, 3.2, 2.5, 3.5, 3.0, 3.4, 2.8, 2.2, 2.5, 2.8, 2.5, 3.4, 2.0, 3.0, 2.8, 3.8, 4.2, 3.8, 4.5, 2.5, 4.0],
-        "收尾": [2.2, 4.2, 3.5, 4.0, 2.8, 3.4, 3.5, 3.6, 3.8, 3.2, 3.8, 4.2, 3.8, 5.0, 4.5, 4.8, 2.5, 2.8, 3.0, 3.2, 4.0, 4.5]
-    })
-    
-    return summary_data, county_mapping
+    # 2. 選擇代表小吃 (動態加上獎項圖示)
+    if selected_city in SNACK_DB:
+        snack_options = SNACK_DB[selected_city]
+        
+        # 建立選單顯示名稱：若有獎項則加上圖示
+        def get_label(name):
+            info = snack_options[name]
+            label = name
+            if info["michelin_star"] > 0: label += f" ⭐{info['michelin_star']}"
+            if info["bib_gourmand"]: label += " 😋"
+            return label
 
-df_summary, snack_db = load_full_taiwan_db()
+        selected_snack_name = st.selectbox("2. 代表小吃", list(snack_options.keys()), format_func=get_label)
+        snack_info = snack_options[selected_snack_name]
+    else:
+        st.error("找不到縣市資料")
 
-# --- UI 開始 ---
-st.title("🇹🇼 TAD-AGE 台灣小吃風味平台 V3")
+# 主畫面標題
+st.title("🍜 TAD-AGE 台灣小吃風味平台 V3")
 
-# 3. 左側側邊欄
-st.sidebar.header("🧭 導覽中心")
-selected_county = st.sidebar.selectbox("1. 選擇縣市", df_summary["縣市"])
+if selected_city and selected_snack_name:
+    col1, col2 = st.columns([1, 1])
 
-# 動態更新小吃選單
-available_snacks = snack_db.get(selected_county, [])
-selected_snack = st.sidebar.selectbox(f"2. {selected_county} 代表小吃", available_snacks)
+    with col1:
+        # 顯示小吃標題與獎項標籤
+        award_html = ""
+        if snack_info["michelin_star"] > 0:
+            award_html += f'<span style="background-color: #E60012; color: white; padding: 2px 8px; border-radius: 4px; margin-right: 5px;">米其林 {snack_info["michelin_star"]} 星</span>'
+        if snack_info["bib_gourmand"]:
+            award_html += '<span style="background-color: #FFB300; color: black; padding: 2px 8px; border-radius: 4px;">必比登推介 😋</span>'
+        
+        st.markdown(f"### 風味模擬卡：{selected_snack_name} {award_html}", unsafe_allow_html=True)
+        
+        st.markdown("#### 🧱 結構解構")
+        f = snack_info["flavor"]
+        st.write(f"* **【君】核心主味**：{snack_info['desc']}")
+        st.write(f"* **【臣】中段支撐**：骨架食材 (強度: {f['支撐']})")
+        st.write(f"* **【佐】修飾平衡**：提升層次 (強度: {f['修飾']})")
+        st.write(f"* **【使】風味導向**：收尾留香 (強度: {f['收尾']})")
 
-st.sidebar.divider()
-st.sidebar.info("已載入全台 22 縣市共 110 筆小吃資料。")
+        with st.expander("🍳 核心工藝 (炮製方法)", expanded=True):
+            st.info(f"針對『{selected_snack_name}』的傳統作法，需注重『火候控管』與『投料順序』。")
 
-# 4. 右側主畫面
-col_info, col_radar = st.columns([1, 1.2])
+    with col2:
+        st.markdown("#### 📊 風味雷達圖")
+        
+        # 雷達圖繪製邏輯
+        categories = list(snack_info["flavor"].keys())
+        values = list(snack_info["flavor"].values())
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatterpolar(
+            r=values + [values[0]],
+            theta=categories + [categories[0]],
+            fill='toself',
+            name=selected_snack_name,
+            line_color='#E64A19'
+        ))
 
-with col_info:
-    st.header(f"🗂️ 風味模擬卡：{selected_snack}")
-    
-    # 模擬該項小吃的君臣佐使 (此處可進一步串接完整資料庫)
-    st.subheader("🧪 結構解構")
-    st.markdown(f"""
-    - **【君】核心主味**：在地嚴選主料 (辨識度高)
-    - **【臣】中段支撐**：骨架食材 (飽滿感)
-    - **【佐】修飾平衡**：去腥解膩、提升層次
-    - **【使】風味導向**：提氣、收尾留香
-    """)
-    
-    with st.expander("👨‍🍳 核心工藝 (炮製方法)", expanded=True):
-        st.write(f"針對 **{selected_snack}** 的傳統作法，需注重『火侯控管』與『投料順序』。建議依據該地區的【清亮】與【收尾】比值進行微調。")
+        fig.update_layout(
+            polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
+            showlegend=False,
+            margin=dict(l=40, r=40, t=40, b=40)
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
-with col_radar:
-    st.header("📊 風味雷達圖")
-    # 取得當前縣市的數值
-    c_data = df_summary[df_summary["縣市"] == selected_county].iloc[0]
-    
-    radar_df = pd.DataFrame(dict(
-        r=[c_data['主題'], c_data['支撐'], c_data['修飾'], c_data['清亮'], c_data['收尾']],
-        theta=['主題 (Theme)', '支撐 (Body)', '修飾 (Balance)', '清亮 (Bright)', '收尾 (Finish)']
-    ))
-    
-    fig = px.line_polar(radar_df, r='r', theta='theta', line_close=True)
-    fig.update_traces(fill='toself', line_color='#E63946', fillcolor='rgba(230, 57, 70, 0.3)')
-    
-    fig.update_layout(
-        polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
-        showlegend=False
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-
-st.divider()
-st.write("技術註記：若右側圖表顯示不全，請嘗試重新整理瀏覽器或檢查 Plotly 庫是否正確安裝。")
+else:
+    st.info("請從左側選單選擇縣市與小吃以開始模擬。")
