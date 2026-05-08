@@ -1,104 +1,112 @@
 ﻿import streamlit as st
-import pandas as pd
 import plotly.graph_objects as go
 
-# 1. 資料庫建立：整合 22 縣市與米其林/必比登標註
-# 建議未來可將此部分移至 data/snacks.py
+# --- 1. 完整資料庫 (22 縣市框架) ---
+# 這裡先預填部分內容，你可以隨時修改數值
 SNACK_DB = {
+    "基隆市": {"營養三明治": {"star": 0, "bib": True, "flavor": [4,3,4,2,3], "desc": "高溫油炸麵包配上濃郁美乃滋"}},
+    "台北市": {"牛肉麵": {"star": 1, "bib": False, "flavor": [5,5,4,3,4], "desc": "長時間熬煮紅燒湯頭，肉質軟嫩"}},
+    "新北市": {"深坑豆腐": {"star": 0, "bib": True, "flavor": [4,4,3,2,5], "desc": "獨特焦香味，層次分明"}},
+    "桃園市": {"大溪豆乾": {"star": 0, "bib": False, "flavor": [3,4,4,2,3], "desc": "陳年滷汁透心香"}},
     "新竹縣": {
-        "仙草雞": {
-            "michelin_star": 0,
-            "bib_gourmand": True,
-            "desc": "在地嚴選主料，搭配傳統炮製方法",
-            "flavor": {"主題": 4, "支撐": 5, "修飾": 3, "清亮": 3, "收尾": 4}
-        },
-        "粄條": {
-            "michelin_star": 0,
-            "bib_gourmand": False,
-            "desc": "傳統純米製作，口感Q彈",
-            "flavor": {"主題": 4, "支撐": 3, "修飾": 4, "清亮": 2, "收尾": 3}
-        },
-        "擂茶": {"michelin_star": 0, "bib_gourmand": False, "desc": "客家傳統飲品", "flavor": {"主題": 5, "支撐": 4, "修飾": 3, "清亮": 2, "收尾": 5}}
+        "仙草雞": {"star": 0, "bib": True, "flavor": [5,4,3,3,4], "desc": "在地仙草與土雞慢火燉煮"},
+        "粄條": {"star": 0, "bib": False, "flavor": [4,3,4,2,3], "desc": "純米手作，口感紮實"},
+        "擂茶": {"star": 0, "bib": False, "flavor": [5,4,3,2,5], "desc": "多種穀物研磨而成"}
     },
-    # 你可以依此格式繼續加入其他 21 個縣市
+    "新竹市": {"貢丸湯": {"star": 0, "bib": False, "flavor": [4,4,3,3,2], "desc": "紮實豬肉搥打，彈牙多汁"}},
+    "苗栗縣": {"水晶餃": {"star": 0, "bib": False, "flavor": [3,5,3,2,3], "desc": "皮Q餡香的客家特色"}},
+    "台中市": {"太陽餅": {"star": 0, "bib": False, "flavor": [5,3,3,4,4], "desc": "麥芽糖內餡與千層酥皮"}},
+    "彰化縣": {"肉圓": {"star": 0, "bib": True, "flavor": [4,5,4,2,4], "desc": "低溫油泡，外皮Q彈"}},
+    "南投縣": {"意麵": {"star": 0, "bib": False, "flavor": [3,4,3,3,3], "desc": "鹼水麵條搭配特製肉燥"}},
+    "雲林縣": {"鵝肉": {"star": 0, "bib": True, "flavor": [5,4,3,3,4], "desc": "原味多汁，鮮甜可口"}},
+    "嘉義縣": {"火雞肉飯": {"star": 0, "bib": True, "flavor": [5,4,3,3,3], "desc": "火雞肉絲與香噴噴雞油"}},
+    "嘉義市": {"美乃滋涼麵": {"star": 0, "bib": False, "flavor": [4,3,5,3,2], "desc": "嘉義獨有的白醋風味"}},
+    "台南市": {"牛肉湯": {"star": 0, "bib": True, "flavor": [5,3,2,4,5], "desc": "產地直送，現燙鮮甜"}},
+    "高雄市": {"鴨肉飯": {"star": 0, "bib": False, "flavor": [4,4,3,3,4], "desc": "煙燻鴨肉與滷汁的完美結合"}},
+    "屏東縣": {"萬丹紅豆餅": {"star": 0, "bib": False, "flavor": [5,3,2,4,3], "desc": "皮薄餡多，紅豆飽滿"}},
+    "宜蘭縣": {"肉羹": {"star": 0, "bib": False, "flavor": [4,4,4,2,3], "desc": "蒜味濃郁，勾芡滑順"}},
+    "花蓮縣": {"扁食": {"star": 0, "bib": False, "flavor": [4,3,3,3,3], "desc": "皮薄如蟬翼，肉餡鮮香"}},
+    "台東縣": {"米苔目": {"star": 0, "bib": False, "flavor": [3,4,4,2,3], "desc": "柴魚片點綴的台式風味"}},
+    "澎湖縣": {"黑糖糕": {"star": 0, "bib": False, "flavor": [5,2,2,3,4], "desc": "鬆軟Q彈，黑糖香氣持久"}},
+    "金門縣": {"廣東粥": {"star": 0, "bib": False, "flavor": [4,5,3,2,4], "desc": "煮到看不見米粒的糜粥"}},
+    "連江縣": {"繼光餅": {"star": 0, "bib": False, "flavor": [4,4,2,2,3], "desc": "馬祖貝果，芝麻香氣誘人"}}
 }
 
-# --- UI 介面開始 ---
-st.set_page_config(page_title="TAD-AGE 台灣小吃風味平台", layout="wide")
+# --- 2. 介面設定 ---
+st.set_page_config(page_title="TAD-AGE 平台 V3", layout="wide")
 
-# 側邊導覽中心
+# 套用精緻 CSS 樣式
+st.markdown("""
+    <style>
+    .michelin-tag { background-color: #E60012; color: white; padding: 3px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+    .bib-tag { background-color: #F0F2F6; color: #1E1E1E; padding: 3px 12px; border-radius: 20px; border: 1px solid #CCC; font-weight: bold; font-size: 14px; }
+    .sidebar-text { font-size: 1.1rem; font-weight: 600; }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- 3. 側邊導覽 ---
 with st.sidebar:
-    st.header("🧭 導覽中心")
+    st.title("🧭 導覽中心")
+    selected_city = st.selectbox("1. 選擇縣市", list(SNACK_DB.keys()), index=4) # 預設新竹縣
     
-    # 1. 選擇縣市
-    all_cities = list(SNACK_DB.keys())
-    selected_city = st.selectbox("1. 選擇縣市", all_cities if all_cities else ["請載入資料"])
+    snack_list = list(SNACK_DB[selected_city].keys())
     
-    # 2. 選擇代表小吃 (動態加上獎項圖示)
-    if selected_city in SNACK_DB:
-        snack_options = SNACK_DB[selected_city]
+    def snack_formatter(name):
+        info = SNACK_DB[selected_city][name]
+        icon = " ⭐" if info["star"] > 0 else (" 😋" if info["bib"] else "")
+        return f"{name}{icon}"
         
-        # 建立選單顯示名稱：若有獎項則加上圖示
-        def get_label(name):
-            info = snack_options[name]
-            label = name
-            if info["michelin_star"] > 0: label += f" ⭐{info['michelin_star']}"
-            if info["bib_gourmand"]: label += " 😋"
-            return label
+    selected_snack = st.selectbox("2. 代表小吃", snack_list, format_func=snack_formatter)
+    data = SNACK_DB[selected_city][selected_snack]
 
-        selected_snack_name = st.selectbox("2. 代表小吃", list(snack_options.keys()), format_func=get_label)
-        snack_info = snack_options[selected_snack_name]
-    else:
-        st.error("找不到縣市資料")
-
-# 主畫面標題
+# --- 4. 主畫面佈局 ---
 st.title("🍜 TAD-AGE 台灣小吃風味平台 V3")
 
-if selected_city and selected_snack_name:
-    col1, col2 = st.columns([1, 1])
+# 顯示標題與標籤
+col_title, col_tags = st.columns([2, 3])
+with col_title:
+    st.subheader(f"風味模擬卡：{selected_snack}")
 
-    with col1:
-        # 顯示小吃標題與獎項標籤
-        award_html = ""
-        if snack_info["michelin_star"] > 0:
-            award_html += f'<span style="background-color: #E60012; color: white; padding: 2px 8px; border-radius: 4px; margin-right: 5px;">米其林 {snack_info["michelin_star"]} 星</span>'
-        if snack_info["bib_gourmand"]:
-            award_html += '<span style="background-color: #FFB300; color: black; padding: 2px 8px; border-radius: 4px;">必比登推介 😋</span>'
-        
-        st.markdown(f"### 風味模擬卡：{selected_snack_name} {award_html}", unsafe_allow_html=True)
-        
-        st.markdown("#### 🧱 結構解構")
-        f = snack_info["flavor"]
-        st.write(f"* **【君】核心主味**：{snack_info['desc']}")
-        st.write(f"* **【臣】中段支撐**：骨架食材 (強度: {f['支撐']})")
-        st.write(f"* **【佐】修飾平衡**：提升層次 (強度: {f['修飾']})")
-        st.write(f"* **【使】風味導向**：收尾留香 (強度: {f['收尾']})")
+with col_tags:
+    st.write("") # 調整垂直對齊
+    tags_html = ""
+    if data["star"] > 0:
+        tags_html += f'<span class="michelin-tag">MICHELIN ⭐ {data["star"]}</span> '
+    if data["bib"]:
+        tags_html += '<span class="bib-tag">Bib Gourmand 😋</span>'
+    st.markdown(tags_html, unsafe_allow_html=True)
 
-        with st.expander("🍳 核心工藝 (炮製方法)", expanded=True):
-            st.info(f"針對『{selected_snack_name}』的傳統作法，需注重『火候控管』與『投料順序』。")
+st.divider()
 
-    with col2:
-        st.markdown("#### 📊 風味雷達圖")
-        
-        # 雷達圖繪製邏輯
-        categories = list(snack_info["flavor"].keys())
-        values = list(snack_info["flavor"].values())
-        
-        fig = go.Figure()
-        fig.add_trace(go.Scatterpolar(
-            r=values + [values[0]],
-            theta=categories + [categories[0]],
-            fill='toself',
-            name=selected_snack_name,
-            line_color='#E64A19'
-        ))
+col1, col2 = st.columns([4, 6])
 
-        fig.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
-            showlegend=False,
-            margin=dict(l=40, r=40, t=40, b=40)
-        )
-        st.plotly_chart(fig, use_container_width=True)
+with col1:
+    st.markdown("### 🧱 結構解構")
+    st.markdown(f"**【君】核心主味**：{data['desc']}")
+    st.markdown(f"**【臣】中段支撐**：骨架食材 (強度: {data['flavor'][1]})")
+    st.markdown(f"**【佐】修飾平衡**：提升層次 (強度: {data['flavor'][2]})")
+    st.markdown(f"**【使】風味導向**：收尾留香 (強度: {data['flavor'][4]})")
+    
+    with st.expander("🍳 核心工藝 (炮製方法)", expanded=True):
+        st.info(f"針對「{selected_snack}」的傳統作法，需注重火候控管與投料順序。")
 
-else:
-    st.info("請從左側選單選擇縣市與小吃以開始模擬。")
+with col2:
+    # 雷達圖
+    categories = ['主題 (Theme)', '支撐 (Body)', '修飾 (Balance)', '清亮 (Bright)', '收尾 (Finish)']
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=data['flavor'] + [data['flavor'][0]],
+        theta=categories + [categories[0]],
+        fill='toself',
+        line_color='#E64A19',
+        fillcolor='rgba(230, 74, 25, 0.3)'
+    ))
+    
+    fig.update_layout(
+        polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
+        showlegend=False,
+        height=450,
+        margin=dict(l=50, r=50, t=20, b=20)
+    )
+    st.plotly_chart(fig, use_container_width=True)
