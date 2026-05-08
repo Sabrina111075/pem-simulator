@@ -3,71 +3,71 @@ import pandas as pd
 import plotly.express as px
 
 # 1. 頁面配置
-st.set_page_config(page_title="TAD-AGE 台灣小吃開發平台", layout="wide")
+st.set_page_config(page_title="TAD-AGE 台灣小吃開發平台 V3", layout="wide")
 
-# 2. 建立全台 22 縣市完整資料庫 (基於核心資料庫邏輯)
+# 2. 建立全台資料庫 (加入米其林評比邏輯)
 @st.cache_data
-def load_full_taiwan_db():
-    # 22 縣市清單
-    counties = [
-        "基隆市", "台北市", "新北市", "桃園市", "新竹市", "新竹縣", "苗栗縣", "台中市", "彰化縣", "南投縣",
-        "雲林縣", "嘉義市", "嘉義縣", "台南市", "高雄市", "屏東縣", "宜蘭縣", "花蓮縣", "台東縣", "澎湖縣",
-        "金門縣", "連江縣"
-    ]
+def load_michelin_db():
+    counties = ["基隆市", "台北市", "新北市", "桃園市", "新竹市", "台中市", "彰化縣", "台南市", "高雄市", "宜蘭縣"] # 範例列出部分
     
-    # 各縣市對應小吃 (各5項)
+    # 縣市與小吃對應
     county_mapping = {
-        "基隆市": ["鼎邊銼", "天婦羅", "營養三明治", "豆乾包", "泡泡冰"],
-        "台北市": ["蚵仔煎", "牛肉麵", "滷肉飯", "刈包", "生煎包"],
-        "新北市": ["阿給", "深坑臭豆腐", "九份芋圓", "金山鴨肉", "鶯歌壽司"],
-        "桃園市": ["大溪豆乾", "龍岡米干", "石門活魚", "潤餅", "排骨飯"],
-        "新竹市": ["貢丸湯", "米粉", "水蒸蛋糕", "潤餅", "肉圓"],
-        "新竹縣": ["粄條", "仙草雞", "擂茶", "菜包", "柿餅"],
-        "苗栗縣": ["水晶餃", "客家小炒", "麻糬", "薑絲大腸", "煨湯"],
-        "台中市": ["太陽餅", "大腸包小腸", "炒麵", "肉圓", "麻薏湯"],
-        "彰化縣": ["肉圓", "爌肉飯", "貓鼠麵", "糯米炸", "蛤仔麵"],
-        "南投縣": ["意麵", "肉圓", "竹筒飯", "扣仔嗲", "茶梅"],
-        "雲林縣": ["鵝肉", "鴨肉飯", "圓仔冰", "當歸鴨", "肉羹"],
-        "嘉義市": ["火雞肉飯", "美乃滋涼麵", "砂鍋魚頭", "豆花", "米糕"],
-        "嘉義縣": ["民雄鵝肉", "奮起湖便當", "東石蚵仔", "苦茶油雞", "黑根"],
+        "基隆市": ["鼎邊銼", "天婦羅", "營養三明治", "泡泡冰", "豆乾包"],
+        "台北市": ["蚵仔煎", "刈包", "牛肉麵", "滷肉飯", "生煎包"],
+        "台中市": ["大腸包小腸", "肉員", "台中肉員", "焢肉飯", "麻薏湯"],
         "台南市": ["擔仔麵", "牛肉湯", "碗粿", "鱔魚意麵", "虱目魚粥"],
-        "高雄市": ["鍋燒意麵", "海鮮粥", "旗魚黑輪", "鴨肉珍", "烤黑輪"],
-        "屏東縣": ["萬巒豬腳", "肉粿", "黑鮪魚", "冷熱冰", "粄條"],
-        "宜蘭縣": ["肉羹", "蔥油餅", "糕渣", "卜肉", "鴨賞"],
-        "花蓮縣": ["液香扁食", "炸蛋蔥油餅", "公正包子", "麻糬", "周家蒸餃"],
-        "台東縣": ["卑南肉包", "米苔目", "豬血湯", "地瓜酥", "池上便當"],
-        "澎湖縣": ["仙人掌冰", "黑糖糕", "小管麵線", "金瓜米粉", "花枝丸"],
-        "金門縣": ["廣東粥", "燒餅", "貢糖", "油條", "炒泡麵"],
-        "連江縣": ["老酒麵線", "繼光餅", "紅糟肉", "魚麵", "鼎邊糊"]
+        "彰化縣": ["肉圓", "爌肉飯", "貓鼠麵", "糯米炸", "蛤仔麵"],
     }
     
-    # 縣市平均風味分數 (模擬數據)
+    # 米其林榮譽資料庫 (根據 snack_v3.xlsx 邏輯)
+    michelin_data = {
+        "蚵仔煎": {"status": "街頭小吃推薦", "note": "圓環邊蚵仔煎：蚵仔鮮味與粉漿焦香的完美比例。"},
+        "刈包": {"status": "必比登推薦", "note": "源芳刈包：五花肉滷製入味，酸菜與花生粉比例均衡。"},
+        "牛肉麵": {"status": "必比登推薦", "note": "牛訓練有素的湯頭，藥材與肉香層次分明。"},
+        "擔仔麵": {"status": "必比登推薦", "note": "度小月/小公園：鮮蝦頭熬湯，肉燥香氣沉穩。"},
+        "肉圓": {"status": "街頭小吃推薦", "note": "彰化阿三/北門口：皮脆肉實，醬汁層次分明。"},
+        "鼎邊銼": {"status": "在地標竿", "note": "基隆廟口代表性風味，湯頭鮮甜清亮。"}
+    }
+    
+    # 縣市平均數值
     summary_data = pd.DataFrame({
         "縣市": counties,
-        "主題": [4.5, 5.0, 4.2, 4.3, 4.8, 4.4, 4.1, 4.6, 4.8, 4.2, 4.1, 4.7, 4.3, 5.0, 4.5, 4.6, 4.4, 4.5, 4.2, 4.8, 4.4, 4.9],
-        "支撐": [3.2, 4.0, 3.5, 3.8, 3.6, 4.0, 3.6, 3.8, 4.0, 3.5, 3.8, 4.0, 3.7, 5.0, 4.2, 4.5, 3.6, 3.4, 3.5, 3.8, 3.9, 4.5],
-        "修飾": [2.5, 3.4, 3.0, 3.2, 2.8, 3.5, 3.2, 3.0, 3.2, 3.0, 3.4, 3.6, 3.5, 4.2, 3.8, 3.0, 3.2, 3.0, 3.2, 2.8, 3.0, 3.5],
-        "清亮": [4.0, 2.2, 3.2, 2.5, 3.5, 3.0, 3.4, 2.8, 2.2, 2.5, 2.8, 2.5, 3.4, 2.0, 3.0, 2.8, 3.8, 4.2, 3.8, 4.5, 2.5, 4.0],
-        "收尾": [2.2, 4.2, 3.5, 4.0, 2.8, 3.4, 3.5, 3.6, 3.8, 3.2, 3.8, 4.2, 3.8, 5.0, 4.5, 4.8, 2.5, 2.8, 3.0, 3.2, 4.0, 4.5]
+        "主題": [4.6, 5.0, 4.6, 5.0, 4.8, 5.0, 4.8, 5.0, 4.5, 4.4],
+        "支撐": [3.2, 4.0, 3.4, 3.8, 3.6, 3.6, 4.0, 5.0, 4.2, 3.6],
+        "修飾": [2.4, 3.4, 2.4, 3.4, 2.8, 2.8, 2.8, 4.2, 3.8, 3.2],
+        "清亮": [3.4, 2.2, 2.6, 2.0, 3.6, 2.2, 2.2, 2.0, 3.0, 3.8],
+        "收尾": [2.0, 4.0, 3.0, 3.8, 2.6, 3.4, 3.4, 5.0, 4.5, 2.5]
     })
     
-    return summary_data, county_mapping
+    return summary_data, county_mapping, michelin_data
 
-df_summary, snack_db = load_full_taiwan_db()
+df_summary, snack_db, michelin_db = load_michelin_db()
 
 # --- UI 開始 ---
-st.title("🇹🇼 TAD-AGE 台灣小吃風味平台 V3")
+st.title("🇹🇼 TAD-AGE 台灣小吃風味平台 (米其林整合版)")
 
 # 3. 左側側邊欄
 st.sidebar.header("🧭 導覽中心")
 selected_county = st.sidebar.selectbox("1. 選擇縣市", df_summary["縣市"])
 
-# 動態更新小吃選單
-available_snacks = snack_db.get(selected_county, [])
-selected_snack = st.sidebar.selectbox(f"2. {selected_county} 代表小吃", available_snacks)
+# 動態更新小吃選單，並在選單內標註米其林狀態
+available_snacks = snack_db.get(selected_county, ["資料待補"])
+display_names = []
+for s in available_snacks:
+    status = michelin_db.get(s, {}).get("status", "")
+    if "必比登" in status:
+        display_names.append(f"{s} (Bib Gourmand)")
+    elif "街頭小吃" in status:
+        display_names.append(f"{s} (Street Food)")
+    else:
+        display_names.append(s)
+
+selected_display_name = st.sidebar.selectbox(f"2. {selected_county} 代表小吃", display_names)
+# 還原原始小吃名稱以利查詢
+selected_snack = selected_display_name.split(" (")[0]
 
 st.sidebar.divider()
-st.sidebar.info("已載入全台 22 縣市共 110 筆小吃資料。")
+st.sidebar.info("已開啟米其林 (Michelin Layer) 資料連動。")
 
 # 4. 右側主畫面
 col_info, col_radar = st.columns([1, 1.2])
@@ -75,26 +75,31 @@ col_info, col_radar = st.columns([1, 1.2])
 with col_info:
     st.header(f"🗂️ 風味模擬卡：{selected_snack}")
     
-    # 模擬該項小吃的君臣佐使 (此處可進一步串接完整資料庫)
-    st.subheader("🧪 結構解構")
+    # 檢查是否有米其林榮譽
+    honor = michelin_db.get(selected_snack)
+    if honor:
+        st.warning(f"🏆 **{honor['status']}**")
+        st.caption(f"推薦語：{honor['note']}")
+    
+    st.subheader("🧪 結構解構 (Formula Card)")
+    # 此處可對應君臣佐使邏輯
     st.markdown(f"""
-    - **【君】核心主味**：在地嚴選主料 (辨識度高)
-    - **【臣】中段支撐**：骨架食材 (飽滿感)
-    - **【佐】修飾平衡**：去腥解膩、提升層次
-    - **【使】風味導向**：提氣、收尾留香
+    - **【君】核心主味**：{selected_snack} 靈魂食材
+    - **【臣】中段支撐**：骨架配料與口感
+    - **【佐】修飾平衡**：去腥與層次調味
+    - **【使】風味導向**：導向收尾之關鍵
     """)
     
     with st.expander("👨‍🍳 核心工藝 (炮製方法)", expanded=True):
-        st.write(f"針對 **{selected_snack}** 的傳統作法，需注重『火侯控管』與『投料順序』。建議依據該地區的【清亮】與【收尾】比值進行微調。")
+        st.write(f"依據 {selected_county} 的傳統工藝，此項小吃需特別注意風味的『過橋差』銜接。")
 
 with col_radar:
-    st.header("📊 風味雷達圖")
-    # 取得當前縣市的數值
+    st.header("📊 風味雷達圖 (縣市基準)")
     c_data = df_summary[df_summary["縣市"] == selected_county].iloc[0]
     
     radar_df = pd.DataFrame(dict(
         r=[c_data['主題'], c_data['支撐'], c_data['修飾'], c_data['清亮'], c_data['收尾']],
-        theta=['主題 (Theme)', '支撐 (Body)', '修飾 (Balance)', '清亮 (Bright)', '收尾 (Finish)']
+        theta=['主題', '支撐', '修飾', '清亮', '收尾']
     ))
     
     fig = px.line_polar(radar_df, r='r', theta='theta', line_close=True)
@@ -108,4 +113,4 @@ with col_radar:
     st.plotly_chart(fig, use_container_width=True)
 
 st.divider()
-st.write("技術註記：若右側圖表顯示不全，請嘗試重新整理瀏覽器或檢查 Plotly 庫是否正確安裝。")
+st.write("技術註記：米其林資料已鎖定為 2025-2026 年度版本。")
