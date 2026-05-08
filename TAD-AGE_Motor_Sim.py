@@ -45,9 +45,9 @@ with st.sidebar:
     
     st.markdown("---")
     st.subheader("🚗 車輛環境模擬")
-    weight = st.slider("整車總重 (kg)", 500, 3500, 1300)
+    weight = st.slider("整車總重 (kg)", 0, 500, 150)
     gear_ratio = st.slider("齒輪比 (Gear Ratio)", 1.0, 15.0, 8.0)
-    tire_radius = st.slider("輪胎半徑 (m)", 0.1, 0.6, 0.25)
+    tire_radius = st.slider("輪胎半徑 (m)", 0.05, 0.6, 0.25)
     slope = st.slider("模擬爬坡坡度 (%)", 0, 35, 15)
     
     st.markdown("---")
