@@ -1,86 +1,71 @@
 ﻿import streamlit as st
 import pandas as pd
 
-def load_data_with_auto_detect():
+# 1. 資料載入 (增加對編碼與空白的防禦)
+@st.cache_data
+def get_clean_data():
     try:
-        # 讀取檔案
-        df_db = pd.read_csv('snack_v3.xlsx - CountySnackDB.csv')
-        df_michelin = pd.read_csv('snack_v3.xlsx - MichelinLayer.csv')
-        df_scores = pd.read_csv('snack_v3.xlsx - ScoreModel.csv')
-        
-        # 強制清理所有欄位名稱的空格
-        for df in [df_db, df_michelin, df_scores]:
-            df.columns = df.columns.str.strip()
-
-        # --- 自動偵測關鍵欄位名稱 ---
-        # 尋找包含「縣市」或「City」字眼的欄位
-        county_col = [c for c in df_db.columns if '縣市' in c or 'City' in c]
-        county_col = county_col[0] if county_col else df_db.columns[0]
-        
-        # 尋找包含「小吃」或「Name」字眼的欄位
-        snack_col = [c for c in df_db.columns if '小吃' in c or 'Name' in c]
-        snack_col = snack_col[0] if snack_col else df_db.columns[1]
-
-        # 為了後續處理方便，我們統一重新命名這兩個核心欄位
-        df_db = df_db.rename(columns={county_col: '縣市', snack_col: '小吃名稱'})
-        df_michelin = df_michelin.rename(columns={
-            [c for c in df_michelin.columns if '小吃' in c][0]: '小吃名稱',
-            [c for c in df_michelin.columns if '等級' in c][0]: '等級'
-        })
-        df_scores = df_scores.rename(columns={[c for c in df_scores.columns if '小吃' in c][0]: '小吃名稱'})
-
-        # --- 進行安全合併 ---
-        # 1. 先合必比登等級
-        master = pd.merge(df_db, df_michelin[['小吃名稱', '等級']].drop_duplicates(), on='小吃名稱', how='left')
-        # 2. 再合評分模型
-        master = pd.merge(master, df_scores.drop_duplicates(), on='小吃名稱', how='left')
-        
-        # 填充空值
-        master['等級'] = master['等級'].fillna('一般推薦')
-        master = master.fillna(0)
-        
-        return master
+        # 讀取主資料庫
+        df = pd.read_csv('snack_v3.xlsx - CountySnackDB.csv')
+        # 清理所有欄位名稱前後的空白字元
+        df.columns = df.columns.str.strip()
+        # 確保小吃名稱與縣市沒有多餘空白
+        df['縣市'] = df['縣市'].astype(str).str.strip()
+        df['小吃名稱'] = df['小吃名稱'].astype(str).str.strip()
+        return df
     except Exception as e:
-        st.error(f"偵測到欄位異常: {e}")
-        # 印出目前抓到的欄位名稱，方便除錯
-        if 'df_db' in locals(): st.write("資料庫欄位有:", df_db.columns.tolist())
+        st.error(f"讀取 CSV 失敗: {e}")
         return None
 
-# --- 執行並渲染 UI ---
-data = load_data_with_auto_detect()
+df = get_clean_data()
 
-if data is not None:
-    # 側邊欄過濾
-    st.sidebar.header("研發標的選擇")
-    counties = data['縣市'].unique()
-    sel_county = st.sidebar.selectbox("1. 選擇目標縣市", counties)
+if df is not None:
+    # --- 側邊欄控制 ---
+    st.sidebar.header("📍 研發導航")
+    counties = df['縣市'].unique()
+    selected_county = st.sidebar.selectbox("選擇縣市", counties)
     
-    # 顯示該縣市清單
-    snacks = data[data['縣市'] == sel_county]
-    sel_snack = st.sidebar.selectbox("2. 選擇小吃菜單", snacks['小吃名稱'])
+    # 過濾該縣市小吃
+    county_df = df[df['縣市'] == selected_county]
+    selected_snack = st.sidebar.selectbox("選擇小吃", county_df['小吃名稱'])
     
-    # 抓取該筆資料
-    row = snacks[snacks['小吃名稱'] == sel_snack].iloc[0]
+    # 取得當前小吃的所有資訊
+    s = county_df[county_df['小吃名稱'] == selected_snack].iloc[0]
 
-    # 畫面渲染區
-    col_t, col_b = st.columns([0.7, 0.3])
-    with col_t:
-        st.title(f"🍽️ {sel_snack}")
-        st.caption("TAD-AGE 台灣小吃風味開發決策平台")
+    # --- 畫面主體 ---
+    col_title, col_badge = st.columns([0.7, 0.3])
     
-    with col_b:
-        # 動態標籤顯示
-        lvl = str(row['等級'])
-        if "Bib" in lvl or "必比登" in lvl:
-            st.error("😋 Bib Gourmand")
-        elif "Selected" in lvl or "入選" in lvl:
-            st.info("⭐ Michelin Selected")
+    with col_title:
+        st.title(f"{selected_snack}")
+        st.write(f"**開發架構：** {s.get('君', '未定義')} (君) / {s.get('臣', '未定義')} (臣)")
+
+    with col_badge:
+        # 直接從 CountySnackDB 的 Michelin_Status 判斷
+        status = str(s.get('Michelin_Status', 'None'))
+        if status != 'None' and status != 'nan':
+            # 這裡可以根據您的資料內容微調判斷邏輯
+            st.markdown(
+                f'<div style="background-color: #FF4B4B; color: white; padding: 8px; border-radius: 5px; text-align: center; font-weight: bold;">'
+                f'😋 {status}'
+                f'</div>', unsafe_allow_html=True
+            )
 
     st.divider()
+
+    # --- 風味評分卡 (五分制) ---
+    st.subheader("📊 風味開發模型")
+    m1, m2, m3, m4, m5 = st.columns(5)
     
-    # 數值卡片
-    c1, c2, c3 = st.columns(3)
-    # 這裡的欄位名稱請對應您 ScoreModel 裡的正確標題
-    c1.metric("主題發音度", f"{row.get('主題發音度', 0)}/5")
-    c2.metric("中段支撐", f"{row.get('中段支撐', 0)}/5")
-    c3.metric("前段清亮", f"{row.get('前段清亮', 0)}/5")
+    # 使用 .get 確保如果欄位名稱微標不符，也不會報錯導致白畫面
+    m1.metric("主題", f"{s.get('主題', 0)}")
+    m2.metric("支撐", f"{s.get('支撐', 0)}")
+    m3.metric("修飾", f"{s.get('修飾', 0)}")
+    m4.metric("清亮", f"{s.get('清亮', 0)}")
+    m5.metric("收尾", f"{s.get('收尾', 0)}")
+
+    # --- 研發備註 ---
+    with st.expander("📝 研發風險與修正提醒"):
+        st.info(s.get('風味風險/修正提醒', '尚無備註'))
+        
+    # 如果想看原始資料欄位(Debug 用，正常後可刪除)
+    # st.write("目前可用欄位：", list(df.columns))
