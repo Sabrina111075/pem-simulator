@@ -2,7 +2,7 @@
 import plotly.graph_objects as go
 
 # 1. 設置頁面 (去框化基礎)
-st.set_page_config(page_title="TAD-AGE 台灣小吃 Formula 實作平台", layout="wide")
+st.set_page_config(page_title="台灣小吃 Formula 實作平台", layout="wide")
 
 # 2. 核心資料庫 (補齊 22 縣市、各 5 項，共 110 項)
 SNACK_LIBRARY = {
@@ -182,7 +182,7 @@ st.markdown("""
 with st.sidebar:
     st.title("🎛️ TAD-AGE 控制中心")
     county_list = sorted(list(SNACK_LIBRARY.keys())) # 確保順序美觀
-    sel_county = st.selectbox("🗺️ 選擇縣市 (22縣市已補齊)", county_list, index=county_list.index("臺南市") if "臺南市" in county_list else 0)
+    sel_county = st.selectbox("🗺️ 選擇縣市 )", county_list, index=county_list.index("臺南市") if "臺南市" in county_list else 0)
     snack_list = list(SNACK_LIBRARY[sel_county].keys())
     sel_snack = st.selectbox(f"🍴 {sel_county} 代表性小吃", snack_list)
 
