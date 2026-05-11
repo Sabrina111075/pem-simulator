@@ -223,60 +223,50 @@ with col_left:
     st.markdown(f'<div class="risk-container"><span class="risk-title">⚠️ 風味風險提醒 (Risk Alert)</span><div class="risk-content">{data["risk"]}</div></div>', unsafe_allow_html=True)
 
 with col_right:
+    # 確保右側標題一致性
+    st.markdown('<div style="text-align: center; font-weight: bold; color: #555; margin-top: 10px; margin-bottom: 20px; font-size: 16px;">風味維度分析 (Flavour Radar)</div>', unsafe_allow_html=True)
     
-    # 6. 風味維度分析 (雷達圖)
-    
-    st.markdown('<div style="text-align: center; font-weight: bold; color: #555; margin-bottom: 10px;">風味維度分析 (Flavour Radar)</div>', unsafe_allow_html=True)
-    
+    # 1. 獲取資料與防錯 (若資料庫缺失 scores 則補上預設值)
     categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
+    r_values = data.get("scores", [3.0, 3.0, 3.0, 3.0, 3.0]) 
     
-    # 模擬數值計算
-   
-     r_values = [4.2, min(len(data['臣'])*1.5, 5.0), min(len(data['佐'])*1.5, 5.0), min(len(data['使'])*2.0, 5.0), min(len(data['君'])*2.0, 5.0)]
-    
-    
-
+    # 2. 構建雷達圖物件
     fig = go.Figure()
-    
     fig.add_trace(go.Scatterpolar(
-        
-    r=r_values + [r_values[0]],
-        
-    theta=categories + [categories[0]],
-        
-    fill='toself',
-        
-    fillcolor='rgba(211, 156, 107, 0.4)',
-         
-    line=dict(color='#D39C6B', width=3)
-   
+        r=r_values + [r_values[0]],  # 封閉路徑
+        theta=categories + [categories[0]],
+        fill='toself',
+        fillcolor='rgba(211, 156, 107, 0.4)', # 暖棕色半透明填充
+        line=dict(color='#D39C6B', width=3),
+        marker=dict(size=8, color='#B37A4D'),
+        hoverinfo='r+theta'
     ))
-    
+
+    # 3. 佈局設定 (極簡去框化)
     fig.update_layout(
-        
-         polar=dict(
-            
-                radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEE"),
-            
-                angularaxis=dict(gridcolor="#EEE", tickfont_size=14)
-        
-         ),
-        
-         showlegend=False,
-        
-         paper_bgcolor='rgba(0,0,0,0)',
-        
-         plot_bgcolor='rgba(0,0,0,0)',
-        
-         margin=dict(l=60, r=60, t=20, b=20),
-        
-         height=450
-    
+        polar=dict(
+            bgcolor='rgba(0,0,0,0)',
+            radialaxis=dict(
+                visible=True,
+                range=[0, 5],
+                gridcolor="#EEEEEE",
+                linecolor="rgba(0,0,0,0)",
+                tickfont=dict(size=10, color="#999")
+            ),
+            angularaxis=dict(
+                gridcolor="#EEEEEE",
+                tickfont=dict(size=14, fontfamily="Microsoft JhengHei", color="#444"),
+                rotation=90,  # 讓第一個維度垂直向上
+                direction="clockwise"
+            )
+        ),
+        showlegend=False,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=50, r=50, t=30, b=30),
+        height=450,
+        dragmode=False # 禁用縮放與移動
     )
-    
+
+    # 4. 渲染至 Streamlit (隱藏 Plotly 工具列)
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-
-
-st.markdown("---")
-
-st.caption("⚙️ TAD-AGE Universal Simulator | Formula-Driven Architecture")
