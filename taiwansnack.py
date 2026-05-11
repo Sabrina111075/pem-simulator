@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 # 1. 頁面配置
-st.set_page_config(page_title="TAD-AGE 台灣小吃 Formula 實作平台", layout="wide")
+st.set_page_config(page_title="台灣小吃 Formula 實作平台", layout="wide")
 
 # 2. 自定義 CSS (完全移除白色背景框，實現全透明質感)
 st.markdown("""
