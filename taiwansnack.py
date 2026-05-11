@@ -3,133 +3,115 @@ import pandas as pd
 import plotly.express as px
 
 # 1. 頁面配置
-st.set_page_config(page_title="TAD-AGE 台灣小吃結構解構平台", layout="wide")
+st.set_page_config(page_title="TAD-AGE 台灣小吃 Formula 平台", layout="wide")
 
-# 2. 自定義 CSS (修正白框間距與強化視覺填充)
+# 2. 自定義 CSS (移除大白框，改用卡片與清單式佈局)
 st.markdown("""
 <style>
     .stApp { background-color: #fdfaf5; }
-    .main-title { color: #5d4037; font-family: 'Noto Sans TC', sans-serif; font-weight: 800; text-align: center; }
-    .card { background-color: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; min-height: 480px; }
-    .badge-michelin { background-color: #e60012; color: white; padding: 4px 12px; border-radius: 50px; font-size: 14px; font-weight: bold; margin-left: 10px; border: 1px solid #c00000; }
-    .badge-bib { background-color: #ffc107; color: #333; padding: 4px 12px; border-radius: 50px; font-size: 14px; font-weight: bold; margin-left: 10px; border: 1px solid #e0a800; }
-    .role-header { border-left: 5px solid #d4a373; padding-left: 10px; color: #5d4037; font-weight: bold; margin-top: 18px; font-size: 1.1em; }
-    .snack-title { font-size: 2.2em; color: #5d4037; display: flex; align-items: center; margin-bottom: 10px; font-weight: 900; }
-    .report-box { background-color: #fcf8f2; border-radius: 8px; padding: 15px; border: 1px solid #eee; margin-top: 10px; color: #5d4037; line-height: 1.6; }
-    .analysis-card { background-color: #fff; padding: 15px; border-radius: 10px; border-left: 5px solid #d4a373; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+    .formula-card { background-color: #ffffff; padding: 20px; border-radius: 15px; border: 1px solid #e6e0d8; margin-bottom: 20px; }
+    .section-title { color: #5d4037; font-size: 1.2em; font-weight: 800; border-bottom: 2px solid #d4a373; padding-bottom: 5px; margin-bottom: 15px; }
+    .ingredient-tag { display: inline-block; background-color: #f4ece2; color: #5d4037; padding: 5px 12px; border-radius: 5px; margin: 5px; font-size: 0.9em; border: 1px solid #dcd3c9; }
+    .badge-michelin { background-color: #e60012; color: white; padding: 2px 10px; border-radius: 50px; font-size: 12px; font-weight: bold; }
+    .badge-bib { background-color: #ffc107; color: #333; padding: 2px 10px; border-radius: 50px; font-size: 12px; font-weight: bold; }
+    .risk-text { color: #b71c1c; font-size: 0.85em; font-style: italic; }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 22 縣市完整資料庫 (確保每個項目都有 desc)
-full_snack_db = {
-    "基隆市": [
-        {"name": "營養三明治", "award": "", "base": 4.5, "support": 3.8, "refine": 4.2, "finish": 3.5, "desc": "酥脆炸麵包作為『君』料核心，搭配美乃滋的油香載體，建立出極具辨識度的基隆街頭風味。"},
-        {"name": "鼎邊趖", "award": "", "base": 4.0, "support": 4.5, "refine": 3.2, "finish": 4.2, "desc": "以純米趖為主體，蝦仁羹與肉羹作為強力支撐的『臣』料，湯頭清甜回甘。"},
-        {"name": "天婦羅", "award": "", "base": 4.2, "support": 3.5, "refine": 4.5, "finish": 3.0, "desc": "鮮魚漿的高溫油炸建立主味，搭配酸甜小黃瓜作為『佐』料，達到絕佳的解膩平衡。"},
-        {"name": "泡泡冰", "award": "", "base": 4.8, "support": 2.5, "refine": 2.0, "finish": 4.5, "desc": "純手打的細緻冰晶，將單一風味（如花生、鳳梨）濃縮至極致，結構簡約而強烈。"},
-        {"name": "大腸圈", "award": "Bib", "base": 4.3, "support": 4.2, "refine": 3.8, "finish": 3.5, "desc": "古法豬大腸衣包覆調味糯米，強調大腸香氣與米香的深度融合。"}
-    ],
-    "臺南市": [
-        {"name": "擔仔麵", "award": "Bib", "base": 4.5, "support": 4.2, "refine": 3.8, "finish": 4.5, "desc": "靈魂肉燥（君）與蝦頭熬製湯底（臣）的精密對稱，是府城風味結構的教科書。"},
-        {"name": "牛肉湯", "award": "Michelin", "base": 4.9, "support": 3.2, "refine": 2.8, "finish": 4.7, "desc": "極致純粹的溫體牛鮮味，不需過多修飾，以食材原味建立強大穿透力。"},
-        {"name": "虱目魚粥", "award": "Bib", "base": 4.3, "support": 4.5, "refine": 3.5, "finish": 4.0, "desc": "魚骨湯底提供厚實支撐，魚肉鮮甜與油蔥香氣導向完美的清爽收尾。"},
-        {"name": "碗粿", "award": "Bib", "base": 4.1, "support": 4.8, "refine": 3.2, "finish": 3.5, "desc": "米漿的紮實感與內餡滷肉燥的油脂滲透，構建出深層的支撐力。"},
-        {"name": "鱔魚意麵", "award": "Michelin", "base": 4.8, "support": 4.3, "refine": 4.5, "finish": 3.5, "desc": "大火鑊氣賦予主料深度，獨特的甜酸勾芡作為平衡關鍵，動態感極強。"}
-    ]
+# 3. 數據整合 (將 CSV 邏輯整合進資料庫)
+# 模擬從 小吃22.csv 與 小吃55.csv 提取出的實體數據
+snack_library = {
+    "臺南市": {
+        "擔仔麵": {
+            "award": "Bib", "base": 4.5, "support": 4.2, "refine": 3.8, "finish": 4.5,
+            "main": "油麵、鮮蝦", "spices": "蒜泥、白胡椒", "sauce": "肉燥、蝦頭湯、五印醋",
+            "oil": "豬油、紅蔥頭", "garnish": "香菜、豆芽菜",
+            "formula": {"君": "特製肉燥", "臣": "蝦頭清湯", "佐": "蒜泥與烏醋", "使": "香菜香氣"},
+            "risks": {"白胡椒": "過量會尖、粗", "油蔥": "焦苦風險", "香菜": "過多會蓋清湯"}
+        },
+        "牛肉湯": {
+            "award": "Michelin", "base": 4.9, "support": 3.0, "refine": 2.5, "finish": 4.2,
+            "main": "溫體牛肉", "spices": "薑絲", "sauce": "牛大骨湯",
+            "oil": "牛肉本身脂香", "garnish": "米酒 (提味)",
+            "formula": {"君": "鮮牛肉", "臣": "大骨湯底", "佐": "薑絲去腥", "使": "米酒提鮮"},
+            "risks": {"薑": "過量會辛辣刺口"}
+        }
+    },
+    "基隆市": {
+        "營養三明治": {
+            "award": "", "base": 4.3, "support": 4.0, "refine": 4.5, "finish": 3.5,
+            "main": "高筋炸麵包", "spices": "黑胡椒 (火腿用)", "sauce": "台式甜味美乃滋",
+            "oil": "炸油", "garnish": "小黃瓜、滷蛋、番茄",
+            "formula": {"君": "炸麵包", "臣": "滷蛋火腿", "佐": "小黃瓜解膩", "使": "美乃滋"},
+            "risks": {"黑胡椒": "過量會壓主味"}
+        }
+    }
 }
-
-# 預設通用小吃資料 (防止其他縣市出現空白)
-default_snacks = [
-    {"name": "特色風味小吃", "award": "Bib", "base": 4.2, "support": 4.0, "refine": 3.5, "finish": 3.8, "desc": "這道料理展現了地方文化的風味縮影，透過經典的君臣關係建立穩定的口感。"},
-    {"name": "家傳麵食", "award": "", "base": 4.0, "support": 4.5, "refine": 3.2, "finish": 3.5, "desc": "以厚實的麵體與湯頭支撐整體結構，是具備飽足感與溫度的在地風味。"},
-    {"name": "古法米食", "award": "Michelin", "base": 4.4, "support": 3.8, "refine": 3.0, "finish": 4.2, "desc": "強調米糧原有的清香，搭配適當的油脂載體，讓風味延展性極佳。"},
-    {"name": "清香湯羹", "award": "", "base": 4.1, "support": 4.6, "refine": 4.0, "finish": 3.5, "desc": "透過勾芡與食材鮮味的融合，在口中建立出柔和且綿長的支撐力。"},
-    {"name": "傳統涼品", "award": "", "base": 4.5, "support": 2.5, "refine": 2.0, "finish": 4.8, "desc": "以清爽、直接的主題感為主，負責洗滌味蕾，帶來乾淨的清亮感收尾。"}
-]
 
 counties = ["基隆市", "臺北市", "新北市", "桃園市", "新竹縣", "新竹市", "苗栗縣", "臺中市", "彰化縣", "南投縣", "雲林縣", "嘉義縣", "嘉義市", "臺南市", "高雄市", "屏東縣", "宜蘭縣", "花蓮縣", "臺東縣", "澎湖縣", "金門縣", "連江縣"]
 
-# 4. 畫面呈現
-st.markdown("<h1 class='main-title'>🍜 TAD-AGE 台灣小吃「君臣佐使」結構解構平台</h1>", unsafe_allow_html=True)
+# 4. UI 介面
+st.title("🍜 TAD-AGE 台灣小吃 Formula 料理研究平台")
 
-# 頂部選擇區
-c1, c2 = st.columns([1, 1])
+c1, c2 = st.columns(2)
 with c1:
-    selected_county = st.selectbox("🌍 選擇縣市", counties, index=0)
+    sel_county = st.selectbox("📍 選擇縣市", counties, index=13) # 預設台南
 with c2:
-    current_list = full_snack_db.get(selected_county, default_snacks)
-    selected_snack_name = st.selectbox("🍴 代表性 5 項小吃", [s['name'] for s in current_list])
-    selected_snack = next(item for item in current_list if item["name"] == selected_snack_name)
+    available_snacks = snack_library.get(sel_county, {"預設小吃": {"base":3, "support":3, "refine":3, "finish":3, "main":"待補充", "spices":"待補充", "sauce":"待補充", "oil":"待補充", "garnish":"待補充", "formula":{}, "risks":{}}})
+    sel_snack_name = st.selectbox("🍴 選擇小吃 (讀取配方檔案...)", list(available_snacks.keys()))
+    data = available_snacks[sel_snack_name]
 
 st.markdown("---")
 
-# 主展示區
-col_left, col_right = st.columns([1, 1])
+# 主畫面：料理 Formula 卡片
+col_left, col_right = st.columns([1.5, 1])
 
 with col_left:
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown(f"<div class='formula-card'>", unsafe_allow_html=True)
     # 標題與徽章
-    award_badge = ""
-    if selected_snack['award'] == "Michelin":
-        award_badge = "<span class='badge-michelin'>⭐ 米其林推薦</span>"
-    elif selected_snack['award'] == "Bib":
-        award_badge = "<span class='badge-bib'>😋 必比登推介</span>"
+    badge = f"<span class='badge-bib'>😋 Bib</span>" if data.get('award')=="Bib" else (f"<span class='badge-michelin'>⭐ Michelin</span>" if data.get('award')=="Michelin" else "")
+    st.markdown(f"<h3>{sel_snack_name} {badge}</h3>", unsafe_allow_html=True)
     
-    st.markdown(f"<div class='snack-title'>{selected_snack['name']}{award_badge}</div>", unsafe_allow_html=True)
+    # 料理組成 (小吃22 檔案內容)
+    st.markdown("<div class='section-title'>📦 料理組成元素 (Formula Card)</div>", unsafe_allow_html=True)
+    f_c1, f_c2 = st.columns(2)
+    with f_c1:
+        st.write("**主食材 (君):**")
+        st.markdown(f"<span class='ingredient-tag'>{data['main']}</span>", unsafe_allow_html=True)
+        st.write("**醬料/湯底 (臣):**")
+        st.markdown(f"<span class='ingredient-tag'>{data['sauce']}</span>", unsafe_allow_html=True)
+    with f_c2:
+        st.write("**辛香料 (佐):**")
+        st.markdown(f"<span class='ingredient-tag'>{data['spices']}</span>", unsafe_allow_html=True)
+        st.write("**清香/收尾 (使):**")
+        st.markdown(f"<span class='ingredient-tag'>{data['garnish']}</span>", unsafe_allow_html=True)
+
+    # 香料風險 (小吃55 檔案內容)
+    if data['risks']:
+        st.markdown("<div class='section-title'>⚠️ 香料應用風險與修正</div>", unsafe_allow_html=True)
+        for s, risk in data['risks'].items():
+            st.markdown(f"**{s}**: <span class='risk-text'>{risk}</span>", unsafe_allow_html=True)
     
-    # 修正白框問題 1：結構概述區塊內容填充
-    st.markdown(f"""
-        <div class='report-box'>
-            <strong>【結構解構描述】</strong><br>
-            {selected_snack['desc']}
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # 角色定義
-    st.markdown("<p class='role-header'>君 (Prime) - 主題核心</p>", unsafe_allow_html=True)
-    st.caption("決定小吃的靈魂與基調。")
-    st.markdown("<p class='role-header'>臣 (Minister) - 中段支撐</p>", unsafe_allow_html=True)
-    st.caption("構建風味骨架，延展層次感。")
-    st.markdown("<p class='role-header'>佐 (Assistant) - 修飾平衡</p>", unsafe_allow_html=True)
-    st.caption("去腥、解膩、平衡中和。")
-    st.markdown("<p class='role-header'>使 (Envoy) - 導向收尾</p>", unsafe_allow_html=True)
-    st.caption("香氣引導，負責清亮感收尾。")
     st.markdown("</div>", unsafe_allow_html=True)
 
 with col_right:
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.subheader("📊 風味結構分析圖")
+    st.markdown("<div class='formula-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>📊 君臣佐使結構比重</div>", unsafe_allow_html=True)
+    
     df_radar = pd.DataFrame(dict(
-        r=[selected_snack['base'], selected_snack['support'], selected_snack['refine'], selected_snack['finish'], 4.0],
+        r=[data['base'], data['support'], data['refine'], data['finish'], 4.0],
         theta=['主題感 (君)', '支撐度 (臣)', '修飾度 (佐)', '清亮感 (使)', '穿透力']
     ))
     fig = px.line_polar(df_radar, r='r', theta='theta', line_close=True)
-    fig.update_traces(fill='toself', line_color='#d4a373', line_width=3)
-    fig.update_layout(
-        polar=dict(radialaxis=dict(visible=True, range=[0, 5], gridcolor="#eee")),
-        margin=dict(l=40, r=40, t=40, b=40)
-    )
+    fig.update_traces(fill='toself', line_color='#d4a373')
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), margin=dict(l=30,r=30,t=30,b=30))
     st.plotly_chart(fig, use_container_width=True)
+    
+    # 結構說明
+    if data['formula']:
+        for role, desc in data['formula'].items():
+            st.markdown(f"**{role}** : {desc}")
     st.markdown("</div>", unsafe_allow_html=True)
 
-# 修正白框問題 2：底部報告區塊資料填充
-st.markdown("### 📋 TAD-AGE 系統分析報告")
-res_c1, res_c2 = st.columns(2)
-with res_c1:
-    st.markdown(f"""
-        <div class='analysis-card'>
-            <h4 style='color: #5d4037; margin-top:0;'>穩定性分析：核心強度 {selected_snack['base']}</h4>
-            <p style='color: #666;'>系統偵測顯示，該小吃的『君料』重心明確。在縣市料理邏輯中，這代表了極高的風味辨識度與穩定性。</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-with res_c2:
-    status_text = "平衡度優異" if selected_snack['refine'] >= 4.0 else "平衡度觀察中"
-    status_color = "#28a745" if selected_snack['refine'] >= 4.0 else "#ffc107"
-    
-    st.markdown(f"""
-        <div class='analysis-card'>
-            <h4 style='color: {status_color}; margin-top:0;'>平衡評估：{status_text}</h4>
-            <p style='color: #666;'>當前『佐』與『使』的比例為 {selected_snack['refine']} : {selected_snack['finish']}。建議維持目前的油脂載體比例，以確保風味的穿透力。</p>
-        </div>
-    """, unsafe_allow_html=True)
+# 底部修正提醒
+st.info(f"💡 **料理建議：** 根據系統分析，『{sel_snack_name}』的主題強度為 {data['base']}。若要提升層次，建議優化『{list(data['formula'].keys())[1]}』的厚度。")
