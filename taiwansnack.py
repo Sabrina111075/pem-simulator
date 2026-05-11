@@ -1,243 +1,111 @@
 ﻿import streamlit as st
+import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 
-# --- 1. 完整資料庫：22 縣市 x 5 項代表小吃 (共 110 筆) ---
-SNACK_DB = {
-    "基隆市": {
-        "營養三明治": {"star": 0, "bib": True, "flavor": [4,3,4,2,3], "desc": "高溫油炸麵包配上特調美乃滋"},
-        "鼎邊趖": {"star": 0, "bib": False, "flavor": [3,4,3,4,2], "desc": "在鍋邊滾動形成的米漿皮"},
-        "天婦羅": {"star": 0, "bib": False, "flavor": [4,4,3,2,3], "desc": "鮮魚漿手作，酥炸Q彈"},
-        "泡泡冰": {"star": 0, "bib": False, "flavor": [5,2,2,4,4], "desc": "綿密細緻的傳統冰品"},
-        "紅燒鰻魚羹": {"star": 0, "bib": True, "flavor": [5,4,4,2,4], "desc": "厚實鰻魚塊與濃郁湯頭"}
-    },
-    "台北市": {
-        "牛肉麵": {"star": 1, "bib": False, "flavor": [5,5,4,3,4], "desc": "紅燒湯頭與軟嫩牛腱肉"},
-        "滷肉飯": {"star": 0, "bib": True, "flavor": [5,4,3,2,4], "desc": "手切肥而不膩的滷肉"},
-        "小籠包": {"star": 1, "bib": False, "flavor": [4,4,5,3,3], "desc": "皮薄多汁，內餡鮮甜"},
-        "蚵仔麵線": {"star": 0, "bib": True, "flavor": [4,4,3,2,5], "desc": "柴魚高湯與特製大腸蚵仔"},
-        "雞肉飯": {"star": 0, "bib": False, "flavor": [4,3,3,4,3], "desc": "鮮嫩雞肉片淋上雞油香"}
-    },
-    "新北市": {
-        "深坑豆腐": {"star": 0, "bib": True, "flavor": [4,4,3,2,5], "desc": "獨特焦香味，層次分明"},
-        "淡水阿給": {"star": 0, "bib": False, "flavor": [3,5,3,2,3], "desc": "油豆腐塞入粉絲與特製醬汁"},
-        "九份芋圓": {"star": 0, "bib": False, "flavor": [5,3,2,4,3], "desc": "手作Q彈，濃濃芋頭香"},
-        "油飯": {"star": 0, "bib": True, "flavor": [4,4,4,2,3], "desc": "麻油香與長糯米的完美結合"},
-        "肉粽": {"star": 0, "bib": False, "flavor": [4,5,3,2,3], "desc": "南北口味各異，內餡豐富"}
-    },
-    "桃園市": {
-        "大溪豆乾": {"star": 0, "bib": False, "flavor": [3,4,4,2,3], "desc": "陳年滷汁透心香"},
-        "石門活魚": {"star": 0, "bib": False, "flavor": [5,4,3,3,4], "desc": "現撈鮮魚多吃法"},
-        "龍岡米干": {"star": 0, "bib": True, "flavor": [4,4,3,3,5], "desc": "滇緬風味純米製麵"},
-        "客家小炒": {"star": 0, "bib": False, "flavor": [5,4,4,2,3], "desc": "五花肉、豆乾、魷魚交織"},
-        "花生糖": {"star": 0, "bib": False, "flavor": [5,2,2,3,3], "desc": "龍潭名產，香脆不沾牙"}
-    },
-    "新竹縣": {
-        "仙草雞": {"star": 0, "bib": True, "flavor": [5,4,3,3,4], "desc": "在地仙草與土雞慢火燉煮"},
-        "粄條": {"star": 0, "bib": False, "flavor": [4,3,4,2,3], "desc": "純米手作，口感紮實"},
-        "擂茶": {"star": 0, "bib": False, "flavor": [5,4,3,2,5], "desc": "多種穀物研磨而成"},
-        "菜包": {"star": 0, "bib": False, "flavor": [3,5,4,2,3], "desc": "客家大菜包，皮Q餡香"},
-        "柿餅": {"star": 0, "bib": False, "flavor": [5,2,2,3,4], "desc": "天然風乾，清甜回甘"}
-    },
-    "新竹市": {
-        "貢丸湯": {"star": 0, "bib": False, "flavor": [4,4,3,3,2], "desc": "紮實豬肉搥打，彈牙多汁"},
-        "炒米粉": {"star": 0, "bib": False, "flavor": [4,3,4,3,3], "desc": "新竹風強催出的韌性米粉"},
-        "潤餅": {"star": 0, "bib": True, "flavor": [3,4,5,3,4], "desc": "配料豐富，獨特花生粉"},
-        "肉圓": {"star": 0, "bib": False, "flavor": [4,5,4,2,3], "desc": "紅糟肉餡，外皮Q軟"},
-        "水蒸蛋糕": {"star": 0, "bib": False, "flavor": [3,2,2,4,4], "desc": "古法水蒸，濕潤清爽"}
-    },
-    "苗栗縣": {
-        "水晶餃": {"star": 0, "bib": False, "flavor": [3,5,3,2,3], "desc": "皮Q餡香的客家特色"},
-        "油蔥酥麵": {"star": 0, "bib": False, "flavor": [4,4,3,2,4], "desc": "自製油蔥香氣撲鼻"},
-        "鹽焗雞": {"star": 0, "bib": False, "flavor": [5,3,2,3,4], "desc": "肉質鮮嫩，原汁原味"},
-        "麻糬": {"star": 0, "bib": False, "flavor": [5,2,2,3,3], "desc": "傳統客家粢粑"},
-        "酸菜鴨": {"star": 0, "bib": False, "flavor": [4,4,4,3,5], "desc": "自家醃漬酸菜，鮮甜開胃"}
-    },
-    "台中市": {
-        "太陽餅": {"star": 0, "bib": False, "flavor": [5,3,3,4,4], "desc": "麥芽糖與千層酥皮"},
-        "肉圓": {"star": 0, "bib": True, "flavor": [4,5,4,2,4], "desc": "淋上特製白醬與甜辣醬"},
-        "麻薏湯": {"star": 0, "bib": False, "flavor": [3,3,4,5,4], "desc": "台中特有消暑聖品"},
-        "大麵羹": {"star": 0, "bib": False, "flavor": [3,5,3,2,4], "desc": "特有鹼味粗麵條"},
-        "鳳梨酥": {"star": 0, "bib": False, "flavor": [5,3,3,3,4], "desc": "金黃酥皮包裹冬瓜鳳梨餡"}
-    },
-    "彰化縣": {
-        "爌肉飯": {"star": 0, "bib": True, "flavor": [5,5,3,2,4], "desc": "軟Q豬腳或爌肉搭配白飯"},
-        "肉圓": {"star": 0, "bib": True, "flavor": [4,5,4,2,4], "desc": "低溫油泡，北斗或彰化派"},
-        "貓鼠麵": {"star": 0, "bib": False, "flavor": [3,4,3,4,3], "desc": "清甜大骨蛤蜊湯頭"},
-        "糯米炸": {"star": 0, "bib": False, "flavor": [5,2,2,3,3], "desc": "現炸Q軟沾花生粉"},
-        "蛤仔麵": {"star": 0, "bib": False, "flavor": [4,4,3,5,4], "desc": "鮮甜蛤蜊肉鋪滿麵條"}
-    },
-    "南投縣": {
-        "意麵": {"star": 0, "bib": False, "flavor": [3,4,3,3,3], "desc": "鹼水麵條搭配特製肉燥"},
-        "肉圓": {"star": 0, "bib": False, "flavor": [4,5,4,2,3], "desc": "水里特色，吃完留皮加湯"},
-        "扣仔嗲": {"star": 0, "bib": False, "flavor": [4,4,4,2,2], "desc": "現炸韭菜與肉餡炸餅"},
-        "竹筒飯": {"star": 0, "bib": False, "flavor": [4,3,2,4,4], "desc": "帶有竹膜香氣的糯米"},
-        "紹興米糕": {"star": 0, "bib": False, "flavor": [5,4,3,2,4], "desc": "埔里特色酒香米糕"}
-    },
-    "雲林縣": {
-        "當歸鴨": {"star": 0, "bib": True, "flavor": [5,4,3,3,4], "desc": "中藥香氣與軟嫩鴨肉"},
-        "鵝肉": {"star": 0, "bib": True, "flavor": [5,4,3,3,4], "desc": "產地直送，鮮甜多汁"},
-        "肉羹": {"star": 0, "bib": False, "flavor": [4,4,4,2,3], "desc": "獨特醬油湯頭風味"},
-        "魷魚嘴羹": {"star": 0, "bib": False, "flavor": [4,4,3,2,3], "desc": "嚼勁十足的魷魚嘴"},
-        "咖啡": {"star": 0, "bib": False, "flavor": [5,3,4,5,5], "desc": "古坑產地特色風味"}
-    },
-    "嘉義縣": {
-        "火雞肉飯": {"star": 0, "bib": True, "flavor": [5,4,3,3,3], "desc": "正宗火雞肉與雞油香"},
-        "新港飴": {"star": 0, "bib": False, "flavor": [5,2,2,3,3], "desc": "傳統Q軟花生軟糖"},
-        "鴨肉羹": {"star": 0, "bib": True, "flavor": [4,5,4,2,4], "desc": "鑊氣十足的濃郁羹湯"},
-        "奮起湖便當": {"star": 0, "bib": False, "flavor": [4,4,3,2,3], "desc": "山區鐵路懷舊風味"},
-        "苦茶油雞": {"star": 0, "bib": False, "flavor": [5,4,3,2,4], "desc": "溫潤苦茶油煸薑香"}
-    },
-    "嘉義市": {
-        "美乃滋涼麵": {"star": 0, "bib": False, "flavor": [4,3,5,3,2], "desc": "獨門白醋配寬麵"},
-        "砂鍋魚頭": {"star": 0, "bib": True, "flavor": [5,5,4,2,4], "desc": "濃郁沙茶與炸魚頭"},
-        "豆花": {"star": 0, "bib": False, "flavor": [4,2,2,4,4], "desc": "搭配豆漿底的傳統美味"},
-        "葡萄柚綠": {"star": 0, "bib": False, "flavor": [5,2,3,5,5], "desc": "滿滿果肉的特色飲品"},
-        "火雞肉飯(市)": {"star": 0, "bib": False, "flavor": [5,4,3,3,3], "desc": "各家自有獨門配方"}
-    },
-    "台南市": {
-        "牛肉湯": {"star": 0, "bib": True, "flavor": [5,3,2,4,5], "desc": "溫體牛現燙，鮮美甘甜"},
-        "碗粿": {"star": 0, "bib": True, "flavor": [4,4,3,2,4], "desc": "中心包肉，口感紮實"},
-        "鱔魚意麵": {"star": 0, "bib": True, "flavor": [5,4,5,3,4], "desc": "酸甜適口，鑊氣濃郁"},
-        "擔仔麵": {"star": 0, "bib": False, "flavor": [3,4,4,3,3], "desc": "經典肉燥與一尾蝦"},
-        "蝦捲": {"star": 0, "bib": False, "flavor": [4,4,3,3,3], "desc": "鮮蝦與網油炸出酥脆"}
-    },
-    "高雄市": {
-        "鴨肉飯": {"star": 0, "bib": False, "flavor": [4,4,3,3,4], "desc": "煙燻鴨肉與特製滷汁"},
-        "白糖粿": {"star": 0, "bib": False, "flavor": [5,2,2,3,3], "desc": "現炸糯米裹糖粉"},
-        "岡山羊肉": {"star": 0, "bib": False, "flavor": [5,4,4,2,3], "desc": "豆瓣醬調味與新鮮羊肉"},
-        "旗津海產": {"star": 0, "bib": False, "flavor": [5,3,3,4,4], "desc": "現捕海鮮，原味呈現"},
-        "牛肉火鍋": {"star": 0, "bib": True, "flavor": [5,4,3,3,5], "desc": "南部鮮甜溫體牛火鍋"}
-    },
-    "屏東縣": {
-        "萬丹紅豆餅": {"star": 0, "bib": False, "flavor": [5,3,2,4,3], "desc": "皮薄餡多，紅豆香濃"},
-        "豬腳": {"star": 0, "bib": False, "flavor": [5,5,3,2,4], "desc": "萬巒特色，Q彈不膩"},
-        "黑鮪魚": {"star": 0, "bib": False, "flavor": [5,3,2,4,5], "desc": "東港之寶，鮮甜入口即化"},
-        "旗魚黑輪": {"star": 0, "bib": False, "flavor": [4,3,3,3,3], "desc": "魚漿包蛋，現炸美味"},
-        "燒冷冰": {"star": 0, "bib": False, "flavor": [5,3,2,4,4], "desc": "熱配料與冷挫冰的衝擊"}
-    },
-    "宜蘭縣": {
-        "肉羹": {"star": 0, "bib": False, "flavor": [4,4,4,2,3], "desc": "蒜味濃郁，湯頭勾芡"},
-        "三星蔥餅": {"star": 0, "bib": False, "flavor": [5,4,3,2,2], "desc": "香氣爆發的三星蔥"},
-        "卜肉": {"star": 0, "bib": False, "flavor": [4,4,3,3,3], "desc": "特製醃肉，酥炸脆香"},
-        "糕渣": {"star": 0, "bib": False, "flavor": [3,4,5,2,4], "desc": "外冷內燙，雞湯結晶"},
-        "鴨賞": {"star": 0, "bib": False, "flavor": [5,4,4,2,4], "desc": "古法煙燻，嚼勁十足"}
-    },
-    "花蓮縣": {
-        "扁食": {"star": 0, "bib": False, "flavor": [4,3,3,3,3], "desc": "皮薄餡鮮，清爽湯頭"},
-        "炸蛋蔥油餅": {"star": 0, "bib": False, "flavor": [5,4,3,2,2], "desc": "半熟蛋流出與酥脆餅皮"},
-        "公正包子": {"star": 0, "bib": False, "flavor": [4,4,3,2,3], "desc": "麵皮帶甜，肉餡紮實"},
-        "麻糬": {"star": 0, "bib": False, "flavor": [5,2,2,3,3], "desc": "花蓮名產，Q軟多種口味"},
-        "剝皮辣椒": {"star": 0, "bib": False, "flavor": [5,3,4,4,5], "desc": "辛辣鮮甜，開胃聖品"}
-    },
-    "台東縣": {
-        "米苔目": {"star": 0, "bib": False, "flavor": [3,4,4,2,3], "desc": "柴魚片灑滿，Q彈麵條"},
-        "卑南包子": {"star": 0, "bib": False, "flavor": [4,4,3,2,3], "desc": "排隊名店，個頭碩大"},
-        "豬血湯": {"star": 0, "bib": False, "flavor": [4,4,4,3,3], "desc": "大骨湯頭與新鮮豬血"},
-        "地瓜酥": {"star": 0, "bib": False, "flavor": [5,2,2,3,4], "desc": "薄脆沾糖漿，停不下來"},
-        "原住民石板烤肉": {"star": 0, "bib": False, "flavor": [5,4,3,2,4], "desc": "石板煎烤，香氣四溢"}
-    },
-    "澎湖縣": {
-        "黑糖糕": {"star": 0, "bib": False, "flavor": [5,2,2,3,4], "desc": "鬆軟Q彈，黑糖香氣"},
-        "仙人掌冰": {"star": 0, "bib": False, "flavor": [5,2,4,5,5], "desc": "獨特酸甜紫紅色冰品"},
-        "小管麵線": {"star": 0, "bib": False, "flavor": [4,3,2,4,5], "desc": "產地鮮甜，小管清脆"},
-        "土魠魚羹": {"star": 0, "bib": False, "flavor": [4,4,4,2,3], "desc": "魚塊鮮甜，羹湯適口"},
-        "炸棗": {"star": 0, "bib": False, "flavor": [4,3,3,2,3], "desc": "喜慶點心，外酥內軟"}
-    },
-    "金門縣": {
-        "廣東粥": {"star": 0, "bib": False, "flavor": [4,5,3,2,4], "desc": "煮到看不見米粒的糜粥"},
-        "油條": {"star": 0, "bib": False, "flavor": [4,3,2,3,2], "desc": "紮實口感，粥品最佳拍檔"},
-        "貢糖": {"star": 0, "bib": False, "flavor": [5,2,2,3,3], "desc": "花生香濃，酥脆可口"},
-        "炒泡麵": {"star": 0, "bib": False, "flavor": [4,4,4,2,3], "desc": "軍旅回憶，配料豐富"},
-        "蚵嗲": {"star": 0, "bib": False, "flavor": [4,4,3,2,2], "desc": "滿滿石蚵，現炸酥香"}
-    },
-    "連江縣": {
-        "繼光餅": {"star": 0, "bib": False, "flavor": [4,4,2,2,3], "desc": "馬祖貝果，芝麻香氣"},
-        "紅糟肉": {"star": 0, "bib": False, "flavor": [5,4,4,2,4], "desc": "紅糟醃漬，獨特酒香"},
-        "魚麵": {"star": 0, "bib": False, "flavor": [4,4,3,3,4], "desc": "魚漿製麵，鮮味濃郁"},
-        "老酒麵線": {"star": 0, "bib": False, "flavor": [5,4,3,3,5], "desc": "香醇老酒與麻油蛋"},
-        "淡菜": {"star": 0, "bib": False, "flavor": [5,3,2,4,5], "desc": "馬祖特產，肥美多汁"}
+# 設定頁面語系與寬度
+st.set_page_config(page_title="TAD-AGE 小吃結構解構模擬器", layout="wide")
+
+# --- 1. 核心資料模型整合 (基於上傳檔案) ---
+def load_framework_logic():
+    # 整合 小吃10.csv 的角色定義
+    roles = {
+        "君 (Prime)": {"def": "主題核心：決定風味基調", "metrics": ["主題感", "前調"], "color": "#FF4B4B"},
+        "臣 (Minister)": {"def": "中段支撐：撐起風味骨架", "metrics": ["支撐度", "中調"], "color": "#FFA15A"},
+        "佐 (Assistant)": {"def": "修飾平衡：去腥解膩平衡", "metrics": ["修飾度", "平衡感"], "color": "#19D3F3"},
+        "使 (Envoy)": {"def": "導向載體：引導與收尾", "metrics": ["清亮感", "後調"], "color": "#00CC96"}
     }
-}
-
-# --- 2. 介面與 CSS 樣式 ---
-st.set_page_config(page_title="TAD-AGE 平台 V3", layout="wide")
-
-st.markdown("""
-    <style>
-    .main-title { font-size: 2.2rem; font-weight: 800; color: #1E1E1E; margin-bottom: 20px; }
-    .michelin-tag { background-color: #E60012; color: white; padding: 4px 15px; border-radius: 20px; font-weight: bold; }
-    .bib-tag { background-color: #F0F2F6; color: #1E1E1E; padding: 4px 15px; border-radius: 20px; border: 1px solid #CCC; font-weight: bold; }
-    .stSelectbox label { font-size: 1.1rem; font-weight: 600; }
-    </style>
-""", unsafe_allow_html=True)
-
-# --- 3. 側邊導覽 ---
-with st.sidebar:
-    st.header("🧭 導覽中心")
-    selected_city = st.selectbox("1. 選擇縣市", list(SNACK_DB.keys()), index=4) # 預設新竹縣
     
-    snack_list = list(SNACK_DB[selected_city].keys())
-    
-    def snack_formatter(name):
-        info = SNACK_DB[selected_city][name]
-        icon = " ⭐" if info["star"] > 0 else (" 😋" if info["bib"] else "")
-        return f"{name}{icon}"
-        
-    selected_snack = st.selectbox("2. 代表小吃", snack_list, format_func=snack_formatter)
-    data = SNACK_DB[selected_city][selected_snack]
+    # 整合 小吃55.csv 的材料與風險邏輯
+    ingredients_db = {
+        "白胡椒": {"role": "佐/使", "effect": "提氣、去腥、增加前段穿透", "risk": "過量會尖、粗"},
+        "黑胡椒": {"role": "君/佐", "effect": "厚辛、暖辣、建立主題", "risk": "過量會壓主味"},
+        "八角": {"role": "臣/佐", "effect": "滷香骨架、甜辛後段", "risk": "過量會藥味重"},
+        "油蔥": {"role": "使/臣", "effect": "油香、香氣延展", "risk": "焦苦風險"},
+        "香菜": {"role": "使", "effect": "清香收尾、解膩", "risk": "過多會蓋清湯"}
+    }
+    return roles, ingredients_db
 
-# --- 4. 主畫面渲染 ---
-st.markdown(f'<div class="main-title">🍜 TAD-AGE 台灣小吃風味平台 V3</div>', unsafe_allow_html=True)
+roles_data, spice_db = load_framework_logic()
 
-# 顯示標題與獲獎標籤
-col_title, col_tags = st.columns([1, 1])
-with col_title:
-    st.subheader(f"風味模擬卡：{selected_snack}")
+# --- 2. 側邊欄：參數輸入 (對應 小吃22.csv 模板) ---
+st.sidebar.header("🛠️ 結構參數輸入 (TAD-AGE Model)")
+snack_name = st.sidebar.text_input("小吃名稱", "台南胡椒餅 (模擬)")
+base_score = st.sidebar.slider("核心主題強度 (君)", 0.0, 5.0, 4.5)
+support_score = st.sidebar.slider("中段支撐強度 (臣)", 0.0, 5.0, 3.8)
+refine_score = st.sidebar.slider("平衡修飾強度 (佐)", 0.0, 5.0, 2.5)
+finish_score = st.sidebar.slider("清亮收尾強度 (使)", 0.0, 5.0, 3.0)
 
-with col_tags:
-    st.write("") # 垂直間距
-    tags_html = ""
-    if data["star"] > 0:
-        tags_html += f'<span class="michelin-tag">MICHELIN ⭐ {data["star"]}</span> '
-    if data["bib"]:
-        tags_html += '<span class="bib-tag">Bib Gourmand 😋</span>'
-    st.markdown(tags_html, unsafe_allow_html=True)
+# --- 3. 主畫面佈局 ---
+st.title(f"🍜 TAD-AGE: {snack_name} 風味結構解構系統")
+st.markdown("---")
 
-st.divider()
-
-col1, col2 = st.columns([4, 6])
+col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.markdown("### 🧱 結構解構")
-    st.markdown(f"**【君】核心主味**：{data['desc']}")
-    st.markdown(f"**【臣】中段支撐**：骨架食材 (強度: {data['flavor'][1]})")
-    st.markdown(f"**【佐】修飾平衡**：提升層次 (強度: {data['flavor'][2]})")
-    st.markdown(f"**【使】風味導向**：收尾留香 (強度: {data['flavor'][4]})")
-    
-    with st.expander("🍳 核心工藝 (炮製方法)", expanded=True):
-        st.info(f"針對『{selected_snack}』的傳統作法，需注重火候控管與投料順序。建議依據該地區的【清亮】與【收尾】比值進行微調。")
+    st.subheader("🎯 君臣佐使：權重與定義")
+    # 顯示基於 小吃10.csv 的解構卡片
+    for role, info in roles_data.items():
+        with st.expander(f"{role} - {info['def']}"):
+            st.write(f"**關鍵指標：** {', '.join(info['metrics'])}")
+            if "君" in role: score = base_score
+            elif "臣" in role: score = support_score
+            elif "佐" in role: score = refine_score
+            else: score = finish_score
+            st.progress(score / 5.0)
 
 with col2:
-    # 雷達圖繪製
-    categories = ['主題 (Theme)', '支撐 (Body)', '修飾 (Balance)', '清亮 (Bright)', '收尾 (Finish)']
-    
-    fig = go.Figure()
-    fig.add_trace(go.Scatterpolar(
-        r=data['flavor'] + [data['flavor'][0]],
-        theta=categories + [categories[0]],
-        fill='toself',
-        line_color='#E64A19',
-        fillcolor='rgba(230, 74, 25, 0.3)'
-    ))
-    
-    fig.update_layout(
-        polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
-        showlegend=False,
-        height=450,
-        margin=dict(l=60, r=60, t=20, b=20)
-    )
+    st.subheader("📊 五維感官雷達圖 (Sensory Radar)")
+    # 雷達圖邏輯
+    df_radar = pd.DataFrame(dict(
+        r=[base_score, support_score, refine_score, 4.0, finish_score], # 4.0為預設層次感
+        theta=['主題感', '支撐度', '修飾度', '穿透力', '清亮感']))
+    fig = px.line_polar(df_radar, r='r', theta='theta', line_close=True)
+    fig.update_traces(fill='toself', line_color='#636EFA')
     st.plotly_chart(fig, use_container_width=True)
 
-# 頁尾統計資訊
-st.sidebar.markdown("---")
-st.sidebar.caption(f"已載入全台 22 縣市共 {len(SNACK_DB) * 5} 筆小吃資料。")
+st.markdown("---")
+
+# --- 4. 風味時序譜系圖 (前、中、後調) ---
+st.subheader("⏳ 風味時序譜系 (Time-Sequence Spectrum)")
+time_data = {
+    "階段": ["前調 (First Bite)", "中調 (Chewing)", "後調 (Aftertaste)"],
+    "強度": [base_score, support_score, finish_score],
+    "描述": ["主題衝擊", "風味骨架支撐", "香氣延展與收尾"]
+}
+df_time = pd.DataFrame(time_data)
+fig_time = px.area(df_time, x="階段", y="強度", text="描述", 
+                   title="風味動態演變曲線", color_discrete_sequence=['#FFA15A'])
+st.plotly_chart(fig_time, use_container_width=True)
+
+# --- 5. 自動化風險偵測系統 (基於 小吃55.csv) ---
+st.subheader("⚠️ 風味風險預警 (Risk Analysis)")
+r_col1, r_col2, r_col3 = st.columns(3)
+
+# 邏輯判斷：若分數異常則觸發風險提示
+with r_col1:
+    if refine_score < 2.0:
+        st.warning("【佐料不足】系統偵測：去腥或解膩能力較弱，可能存在油膩風險。")
+    else:
+        st.success("【平衡優良】修飾度足以覆蓋主料腥味。")
+
+with r_col2:
+    if base_score > 4.8:
+        st.error("【君料過載】風險提醒：主題過於強烈，可能導致尖銳感 (參考：白胡椒風險)。")
+    else:
+        st.info("【主題穩定】風味中心明確。")
+
+with r_col3:
+    if finish_score > 4.5:
+        st.warning("【使料溢出】收尾過重，可能蓋過清湯原味 (參考：香菜/芹菜效應)。")
+    else:
+        st.success("【收尾乾淨】後調導向清晰。")
+
+# --- 6. 結構解構對照底表 ---
+st.markdown("### 📋 結構解構邏輯矩陣")
+st.table(pd.DataFrame({
+    "解構角色": list(roles_data.keys()),
+    "工程定義": [v["def"] for v in roles_data.values()],
+    "模擬參數": [base_score, support_score, refine_score, finish_score],
+    "建議對應材料": ["黑胡椒/肉類", "滷汁/八角", "薑/蒜/白胡椒", "油蔥/香菜"]
+}))
