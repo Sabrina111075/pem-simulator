@@ -183,34 +183,36 @@ with col_left:
     """, unsafe_allow_html=True)
 
 with col_right:
-    # 右側：標題 (強行上移減少留白)
-    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 22px; margin-bottom: -60px; font-family: \'Microsoft JhengHei\';">🥘 風味維度分析</div>', unsafe_allow_html=True)
+    # 1. 標題與圖表間距優化
+    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 24px; margin-bottom: -50px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
     
-    # 圖表邏輯
-    categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
-    r_values = data.get("scores", [3, 3, 3, 3, 3])
+    # 2. 準備數據 (放在變數裡，減少層次)
+    radar_cats = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
+    radar_scores = data.get("scores", [3, 3, 3, 3, 3])
     
-    fig = go.Figure()
-    fig.add_trace(go.Scatterpolar(
-        r=r_values + [r_values[0]],
-        theta=categories + [categories[0]],
+    # 3. 建立圖表物件
+    fig_radar = go.Figure()
+    
+    fig_radar.add_trace(go.Scatterpolar(
+        r=radar_scores + [radar_scores[0]],
+        theta=radar_cats + [radar_cats[0]],
         fill='toself',
         fillcolor='rgba(211, 156, 107, 0.4)',
         line=dict(color='#8B4513', width=3),
-        marker=dict(color='#D39C6B', size=8)
+        marker=dict(color='#D39C6B', size=10)
     ))
 
-    fig.update_layout(
+    fig_radar.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEE", tickfont=dict(size=10)),
-            angularaxis=dict(tickfont=dict(size=14, font=dict(weight="bold")), gridcolor="#EEE")
+            bgcolor="rgba(255, 255, 255, 0)",
+            radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEEEEE"),
+            angularaxis=dict(tickfont=dict(size=16, font=dict(family="Microsoft JhengHei", weight="bold")), gridcolor="#EEEEEE")
         ),
         showlegend=False,
-        height=720, # 極大化高度
-        margin=dict(l=60, r=60, t=0, b=0), # 消除邊距
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)"
+        height=750, 
+        margin=dict(l=80, r=80, t=0, b=0),
+        paper_bgcolor="rgba(0,0,0,0)"
     )
     
-    # 最終顯示 (確保縮排與 fig.update_layout 對齊)
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    # 4. 渲染圖表 (請確保這行前面只有 4 個半型空格，與上方對齊)
+    st.plotly_chart(fig_radar, use_container_width=True, config={'displayModeBar': False})
