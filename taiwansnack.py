@@ -191,12 +191,12 @@ with st.sidebar:
     sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
     sel_snack = st.selectbox("請選擇小吃", list(SNACK_LIBRARY[sel_city].keys()))
 
-# --- 新增的部分開始 ---
+    # --- 新增的部分開始 ---
     
-st.divider()  
-st.success("✅ 系統狀態：基因數據載入完畢") 
+    st.divider()  
+    st.success("✅ 系統狀態：基因數據載入完畢") 
     
-# --- 新增的部分結束 ---
+    # --- 新增的部分結束 ---
 
 data = SNACK_LIBRARY[sel_city][sel_snack]
 
