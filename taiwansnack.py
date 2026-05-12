@@ -187,13 +187,18 @@ st.markdown("""
 
 # 4. 側邊欄與選單
 with st.sidebar:
-    st.header("📍 縣市導覽")
+    st.header("📍 台灣小吃縣市導覽")
     sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
     sel_snack = st.selectbox("請選擇小吃", list(SNACK_LIBRARY[sel_city].keys()))
 
 data = SNACK_LIBRARY[sel_city][sel_snack]
 
 # 5. 主內容顯示
+st.title("食光模擬器：解析台灣小吃的風味基因")
+
+st.divider() # 建議加一個分隔線，視覺上會更專業
+
+# ----------------------
 michelin_val = data.get("michelin", 0)
 if michelin_val == 2:
     tag_html = '<span class="michelin-star">MICHELIN ⭐ STAR</span>'
