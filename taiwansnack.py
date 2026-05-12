@@ -213,44 +213,34 @@ with col_left:
         st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
     
 with col_right:
-    # 標題優化
-    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 22px; margin-bottom: 5px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
+    # 標題：置中且加大
+    st.markdown('<h3 style="text-align: center; color: #444; font-family: \'Microsoft JhengHei\';">🥘 風味維度分析</h3>', unsafe_allow_html=True)
     
+    # 準備數據
     categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
-    r_values = data.get("scores", [3, 3, 3, 3, 3])
-    r_plot = r_values + [r_values[0]]
-    theta_plot = categories + [categories[0]]
+    # 確保取得數據，若無則給預設值
+    scores = data.get("scores", [3, 3, 3, 3, 3])
     
-    fig = go.Figure()
-    fig.add_trace(go.Scatterpolar(
-        r=r_plot,
-        theta=theta_plot,
+    # 建立雷達圖
+    fig = go.Figure(data=go.Scatterpolar(
+        r=scores + [scores[0]],
+        theta=categories + [categories[0]],
         fill='toself',
-        fillcolor='rgba(211, 156, 107, 0.5)', 
-        line=dict(color='#8B4513', width=3),   
-        marker=dict(color='#D39C6B', size=8),  
-        name=sel_snack
+        fillcolor='rgba(211, 156, 107, 0.5)',
+        line=dict(color='#8B4513', width=3),
+        marker=dict(size=8, color='#D39C6B')
     ))
 
+    # 簡化配置，避免 ValueError
     fig.update_layout(
         polar=dict(
-            bgcolor="rgba(255, 255, 255, 0)",
-            radialaxis=dict(
-                visible=True, 
-                range=[0, 5], 
-                gridcolor="#EEEEEE",
-                tickfont=dict(size=11, color="#999")
-            ),
-            angularaxis=dict(
-                tickfont=dict(size=14, color="#333", font=dict(family="Microsoft JhengHei", weight="bold")), 
-                gridcolor="#EEEEEE"
-            )
+            radialaxis=dict(visible=True, range=[0, 5]),
+            angularaxis=dict(tickfont=dict(size=14, font=dict(family="Microsoft JhengHei", weight="bold")))
         ),
         showlegend=False,
-        height=600, # 增加高度
-        margin=dict(l=50, r=50, t=10, b=10), # 調整邊距，確保文字不會被切到
-        paper_bgcolor="rgba(0,0,0,0)"
+        height=600,  # 強制增加圖表高度
+        margin=dict(l=40, r=40, t=20, b=20) # 緊湊邊距減少留白
     )
-    
-    # 顯示圖表
+
+    # 使用 container 寬度並關閉工具列以保持簡潔
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
