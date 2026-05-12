@@ -155,25 +155,29 @@ SNACK_LIBRARY = {
     }
 } 
 
+# --- 請刪除從 st.markdown(f'<div class="snack-header"> 開始到最後的所有代碼，替換為以下內容 ---
+
 # 1. 顯示標題與標章
 michelin_val = data.get("michelin", 0)
 tag_html = ""
-if michelin_val == 2: tag_html = '<span class="michelin-star">MICHELIN ⭐ STAR</span>'
-elif michelin_val == 1: tag_html = '<span class="michelin-badge">BIB GOURMAND 😋</span>'
+if michelin_val == 2:
+    tag_html = '<span class="michelin-star">MICHELIN ⭐ STAR</span>'
+elif michelin_val == 1:
+    tag_html = '<span class="michelin-badge">BIB GOURMAND 😋</span>'
 
 st.markdown(f'<div class="snack-header"><span class="snack-title">{sel_snack}</span>{tag_html}</div>', unsafe_allow_html=True)
 
 # 2. 建立左右佈局
-col_left, col_right = st.columns([1, 1.2]) # 稍微加寬右側比例給圖表
+col_left, col_right = st.columns([1, 1.2])
 
 with col_left:
-    # 顯示配方標籤
+    # 左側：配方標籤
     for label, key in [("君 (核心食材)", "君"), ("臣 (主要調味)", "臣"), ("佐 (輔助提味)", "佐"), ("使 (點綴平衡)", "使")]:
         st.markdown(f'<div class="formula-label">{label}</div>', unsafe_allow_html=True)
         tags = "".join([f'<div class="tag-item">{i}</div>' for i in data.get(key, [])])
         st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
     
-    # 顯示風險提醒
+    # 左側：風險提醒
     st.markdown(f"""
         <div class="risk-container">
             <div style="color:#FF4B4B; font-weight:900; font-size:16px; margin-bottom:5px;">⚠️ 風味風險提醒</div>
@@ -182,10 +186,10 @@ with col_left:
     """, unsafe_allow_html=True)
 
 with col_right:
-    # 標題：置中、加粗、極度貼近圖表
+    # 右側：標題 (強行上移減少留白)
     st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 22px; margin-bottom: -60px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
     
-    # 圖表數據準備
+    # 圖表邏輯
     categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
     r_values = data.get("scores", [3, 3, 3, 3, 3])
     
@@ -205,11 +209,11 @@ with col_right:
             angularaxis=dict(tickfont=dict(size=14, font=dict(weight="bold")), gridcolor="#EEE")
         ),
         showlegend=False,
-        height=700, # 圖面拉到最大
-        margin=dict(l=60, r=60, t=0, b=0), # 緊湊邊距
+        height=720, # 極大化高度
+        margin=dict(l=60, r=60, t=0, b=0), # 消除邊距
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)"
     )
     
-    # 最終渲染
+    # 最終顯示 (確保縮排與 fig.update_layout 對齊)
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
