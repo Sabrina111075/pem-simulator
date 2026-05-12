@@ -212,52 +212,34 @@ with col_left:
         tags = "".join([f'<div class="tag-item">{i}</div>' for i in data[key]])
         st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
     
-    st.markdown(f'<div class="risk-container"><span class="risk-title">⚠️ 風味風險提醒 (Risk Alert)</span><div style="color:#FF4B4B;">{data["risk"]}</div></div>', unsafe_allow_html=True)
-
 with col_right:
     st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 20px; margin-bottom: 10px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
     
-    # 定義維度名稱與數據
     categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
     r_values = data.get("scores", [3, 3, 3, 3, 3])
-    # 閉合數值 (讓圖形連起來)
     r_plot = r_values + [r_values[0]]
     theta_plot = categories + [categories[0]]
     
     fig = go.Figure()
-
-    # 繪製雷達圖填充與線條
     fig.add_trace(go.Scatterpolar(
         r=r_plot,
         theta=theta_plot,
         fill='toself',
-        # 使用更有層次感的漸層色 (焦糖色系)
-        fillcolor='rgba(211, 156, 107, 0.5)',
-        line=dict(color='#8B4513', width=3),
-        marker=dict(color='#D39C6B', size=8),
+        fillcolor='rgba(211, 156, 107, 0.5)', # 優雅的焦糖色填充
+        line=dict(color='#8B4513', width=3),   # 深色邊界線
+        marker=dict(color='#D39C6B', size=8),  # 頂點標記
         name=sel_snack
     ))
 
     fig.update_layout(
         polar=dict(
-            bgcolor="rgba(255, 255, 255, 0)", # 背景透明
-            radialaxis=dict(
-                visible=True,
-                range=[0, 5],
-                tickfont=dict(size=10, color="#999"),
-                gridcolor="#EEEEEE", # 網格線顏色調淡
-            ),
-            angularaxis=dict(
-                tickfont=dict(size=14, color="#333", font=dict(family="Microsoft JhengHei", weight="bold")),
-                gridcolor="#EEEEEE",
-                linecolor="#CCCCCC", # 外圈線條
-            )
+            bgcolor="rgba(255, 255, 255, 0)",
+            radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEEEEE"),
+            angularaxis=dict(tickfont=dict(size=14, weight="bold"), gridcolor="#EEEEEE")
         ),
         showlegend=False,
-        margin=dict(l=40, r=40, t=20, b=20), # 優化邊距
         height=450,
-        paper_bgcolor="rgba(0,0,0,0)", # 畫布背景透明
-        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=40, r=40, t=20, b=20),
+        paper_bgcolor="rgba(0,0,0,0)"
     )
-    
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
