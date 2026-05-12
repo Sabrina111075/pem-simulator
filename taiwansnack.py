@@ -146,27 +146,46 @@ SNACK_LIBRARY = {
         "蚵嗲": {"君": ["石蚵"], "臣": ["高麗菜"], "佐": ["粉漿"], "使": ["蒜蓉醬"], "risk": "石蚵鮮味重需注意平衡", "michelin": 0, "scores": [4, 3, 5, 4, 3]},
         "燒餅": {"君": ["油酥皮"], "臣": ["豬肉"], "佐": ["白糖"], "使": ["芝麻"], "risk": "層次感不足像普通大餅", "michelin": 0, "scores": [4, 4, 3, 2, 4]}
     },
-   "連江縣": {
+    "連江縣": {
         "紅糟肉": {"君": ["紅糟"], "臣": ["五花肉"], "佐": ["糖"], "使": ["蒜末"], "risk": "紅糟發酵過度帶有酒酸", "michelin": 0, "scores": [5, 4, 4, 2, 5]},
         "老酒麵線": {"君": ["馬祖老酒"], "臣": ["煎蛋"], "佐": ["麵線"], "使": ["老薑"], "risk": "老酒加熱過久失去香氣", "michelin": 0, "scores": [5, 4, 3, 4, 5]},
         "繼光餅": {"君": ["麵糰"], "臣": ["芝麻"], "佐": ["蚵蛋"], "使": ["炭火"], "risk": "炭火過旺餅底焦黑", "michelin": 0, "scores": [4, 4, 3, 3, 4]},
         "魚麵": {"君": ["魚漿麵"], "臣": ["清湯"], "佐": ["紫菜"], "使": ["芹菜"], "risk": "曬乾不足帶有腥味", "michelin": 0, "scores": [4, 3, 4, 5, 3]},
         "鼎邊糊": {"君": ["米漿糊"], "臣": ["海鮮湯底"], "佐": ["黑木耳"], "使": ["蔥花"], "risk": "糊度不夠像普通湯麵", "michelin": 0, "scores": [4, 4, 3, 4, 4]}
+    },
+    "新北市2": {
+        "九份紅糟肉圓": {"君": ["紅糟豬肉"], "臣": ["筍片"], "佐": ["糯米皮"], "使": ["甜辣醬"], "risk": "皮太軟無法支撐內餡", "michelin": 0, "scores": [4, 4, 4, 3, 4]},
+        "淡水鐵蛋": {"君": ["鵪鶉蛋"], "臣": ["中藥滷汁"], "佐": ["醬油"], "使": ["冰糖"], "risk": "滷過久則口感像橡皮", "michelin": 0, "scores": [3, 5, 2, 2, 5]},
+        "永和豆漿鹹": {"君": ["豆漿"], "臣": ["蝦米/油條"], "佐": ["醋"], "使": ["辣油"], "risk": "醋量不對無法結成豆花狀", "michelin": 0, "scores": [4, 3, 3, 5, 4]},
+        "深坑麻辣臭豆腐": {"君": ["臭豆腐"], "臣": ["麻辣湯"], "佐": ["鴨血"], "使": ["酸菜"], "risk": "辣度過高掩蓋豆腐發酵香", "michelin": 0, "scores": [5, 4, 4, 1, 5]},
+        "板橋小籠包": {"君": ["薄皮"], "臣": ["豬肉/鮮蝦"], "佐": ["薑絲"], "使": ["醋"], "risk": "蒸太久皮易爛破", "michelin": 0, "scores": [5, 4, 4, 3, 4]}
     }
-} 
-# --- 請刪除從 CSS 樣式開始到結尾的所有內容，更換為以下代碼 ---
+}
 
+# 3. CSS 樣式
 st.markdown("""
-<style>
+    <style>
     .snack-header { display: flex; align-items: center; margin-bottom: 25px; }
     .snack-title { font-size: 38px; font-weight: 800; color: #1A1A1A; font-family: "Microsoft JhengHei"; }
+    .michelin-star { 
+        background: linear-gradient(135deg, #FFD700 0%, #D4AF37 100%);
+        color: #000; padding: 5px 16px; border-radius: 4px; font-size: 14px; font-weight: bold; margin-left: 15px; 
+        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.4); border: 1px solid #B8860B; 
+    }
+    .michelin-badge { 
+        background: linear-gradient(135deg, #E60012 0%, #B3000E 100%);
+        color: white; padding: 5px 16px; border-radius: 4px; font-size: 14px; font-weight: bold; margin-left: 15px; 
+        box-shadow: 0 4px 10px rgba(230, 0, 18, 0.3); border: 1px solid #FF4D4D;
+    }
     .formula-label { font-size: 15px; color: #888; font-weight: bold; margin-bottom: 6px; }
     .tag-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
-    .tag-item { background: #F2F2F2; color: #333; padding: 6px 14px; border-radius: 50px; font-size: 14px; }
+    .tag-item { background: #F2F2F2; color: #333; padding: 6px 14px; border-radius: 50px; font-size: 14px; font-weight: 500; }
     .risk-container { background-color: #FFF5F5; border-left: 6px solid #FF4B4B; padding: 20px; border-radius: 8px; margin-top: 40px; }
-</style>
+    .risk-title { color: #FF4B4B; font-weight: 900; font-size: 16px; margin-bottom: 5px; display: block; }
+    </style>
 """, unsafe_allow_html=True)
 
+# 4. 側邊欄與選單
 with st.sidebar:
     st.header("📍 縣市導覽")
     sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
@@ -174,40 +193,39 @@ with st.sidebar:
 
 data = SNACK_LIBRARY[sel_city][sel_snack]
 
-# 佈局分欄
-c1, c2 = st.columns([1, 1.2])
+# 5. 主內容顯示
+michelin_val = data.get("michelin", 0)
+if michelin_val == 2:
+    tag_html = '<span class="michelin-star">MICHELIN ⭐ STAR</span>'
+elif michelin_val == 1:
+    tag_html = '<span class="michelin-badge">BIB GOURMAND 😋</span>'
+else:
+    tag_html = ""
 
-# 左側邏輯 (全部靠左對齊)
-c1.markdown(f'<div class="snack-header"><span class="snack-title">{sel_snack}</span></div>', unsafe_allow_html=True)
+st.markdown(f'<div class="snack-header"><span class="snack-title">{sel_snack}</span>{tag_html}</div>', unsafe_allow_html=True)
 
-for label, key in [("君 (核心食材)", "君"), ("臣 (主要調味)", "臣"), ("佐 (輔助提味)", "佐"), ("使 (點綴平衡)", "使")]:
-    c1.markdown(f'<div class="formula-label">{label}</div>', unsafe_allow_html=True)
-    tags = "".join([f'<div class="tag-item">{i}</div>' for i in data.get(key, [])])
-    c1.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
+col_left, col_right = st.columns([1, 1])
 
-c1.markdown(f'<div class="risk-container"><div style="color:#FF4B4B; font-weight:900;">⚠️ 風味風險提醒</div><div style="color:#FF4B4B;">{data.get("risk", "N/A")}</div></div>', unsafe_allow_html=True)
+with col_left:
+    for label, key in [("君 (核心食材)", "君"), ("臣 (主要調味)", "臣"), ("佐 (輔助提味)", "佐"), ("使 (點綴平衡)", "使")]:
+        st.markdown(f'<div class="formula-label">{label}</div>', unsafe_allow_html=True)
+        tags = "".join([f'<div class="tag-item">{i}</div>' for i in data[key]])
+        st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
+    
+    st.markdown(f'<div class="risk-container"><span class="risk-title">⚠️ 風味風險提醒 (Risk Alert)</span><div style="color:#FF4B4B;">{data["risk"]}</div></div>', unsafe_allow_html=True)
 
-# 右側邏輯 (全部靠左對齊，完全不使用 with 縮排)
-c2.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 24px; margin-bottom: -50px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
-
-radar_cats = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
-radar_scores = data.get("scores", [3, 3, 3, 3, 3])
-
-fig_radar = go.Figure(data=go.Scatterpolar(
-    r=radar_scores + [radar_scores[0]],
-    theta=radar_cats + [radar_cats[0]],
-    fill='toself',
-    fillcolor='rgba(211, 156, 107, 0.4)',
-    line=dict(color='#8B4513', width=3),
-    marker=dict(color='#D39C6B', size=10)
-))
-
-fig_radar.update_layout(
-    polar=dict(radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEE"), angularaxis=dict(tickfont=dict(size=16, font=dict(weight="bold")))),
-    showlegend=False,
-    height=750,
-    margin=dict(l=80, r=80, t=0, b=0),
-    paper_bgcolor="rgba(0,0,0,0)"
-)
-
-c2.plotly_chart(fig_radar, use_container_width=True, config={'displayModeBar': False})
+with col_right:
+    st.markdown('<div style="text-align: center; font-weight: bold; color: #555; margin-bottom: 20px;">風味維度分析 (Radar)</div>', unsafe_allow_html=True)
+    categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
+    r_values = data.get("scores", [3, 3, 3, 3, 3])
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=r_values + [r_values[0]],
+        theta=categories + [categories[0]],
+        fill='toself',
+        fillcolor='rgba(211, 156, 107, 0.4)',
+        line=dict(color='#D39C6B')
+    ))
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=False, height=450)
+    st.plotly_chart(fig, use_container_width=True)
