@@ -204,20 +204,22 @@ else:
 
 st.markdown(f'<div class="snack-header"><span class="snack-title">{sel_snack}</span>{tag_html}</div>', unsafe_allow_html=True)
 
+# 請確保這行與前面的程式碼左側對齊
 col_left, col_right = st.columns([1, 1])
 
 with col_left:
     for label, key in [("君 (核心食材)", "君"), ("臣 (主要調味)", "臣"), ("佐 (輔助提味)", "佐"), ("使 (點綴平衡)", "使")]:
-        st.markdown(f'<div class="formula-label">{label}</div>', unsafe_allow_html=True)
-        tags = "".join([f'<div class="tag-item">{i}</div>' for i in data[key]])
+        st.markdown(f'<div class="formula-label" style="font-weight:bold; color:#888; margin-top:10px;">{label}</div>', unsafe_allow_html=True)
+        tags = "".join([f'<div class="tag-item" style="display:inline-block; background:#F2F2F2; padding:5px 12px; border-radius:50px; margin-right:5px; margin-bottom:5px; font-size:14px;">{i}</div>' for i in data[key]])
         st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
     
-    st.markdown(f'<div class="risk-container"><span class="risk-title">⚠️ 風味風險提醒 (Risk Alert)</span><div style="color:#FF4B4B;">{data["risk"]}</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="risk-container" style="background:#FFF5F5; border-left:5px solid #FF4B4B; padding:15px; margin-top:30px;"><span style="color:#FF4B4B; font-weight:bold;">⚠️ 風味風險提醒</span><br><span style="color:#FF4B4B;">{data["risk"]}</span></div>', unsafe_allow_html=True)
 
 with col_right:
-    # 標題加粗加大，減少上方留白
-    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 24px; margin-top: -10px; margin-bottom: 0px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
+    # 標題優化：稍微上移，減少留白
+    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 24px; margin-bottom: -20px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
     
+    # 準備雷達圖數據
     categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
     scores = data.get("scores", [3, 3, 3, 3, 3])
     
@@ -228,19 +230,20 @@ with col_right:
         fill='toself',
         fillcolor='rgba(211, 156, 107, 0.5)',
         line=dict(color='#8B4513', width=3),
-        marker=dict(color='#D39C6B', size=8)
+        marker=dict(color='#D39C6B', size=10)
     ))
 
     fig.update_layout(
         polar=dict(
             bgcolor="rgba(255, 255, 255, 0)",
-            radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEEEEE"),
-            angularaxis=dict(tickfont=dict(size=14, color="#333", font=dict(family="Microsoft JhengHei", weight="bold")), gridcolor="#EEEEEE")
+            radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEE", tickfont=dict(size=10)),
+            angularaxis=dict(tickfont=dict(size=15, font=dict(weight="bold")), gridcolor="#EEE")
         ),
         showlegend=False,
-        height=650, # 再次拉高，填滿垂直空間
-        margin=dict(l=60, r=60, t=10, b=10), # 調整左右間距確保文字完整，減少上下留白
+        height=680, # 極大化高度
+        margin=dict(l=80, r=80, t=20, b=20), # 增加左右邊距確保文字不被切掉，減少上下留白
         paper_bgcolor="rgba(0,0,0,0)"
     )
     
+    # 關鍵：這行必須與 fig.update_layout 精確對齊
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
