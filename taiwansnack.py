@@ -213,8 +213,8 @@ with col_left:
         st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
     
 with col_right:
-    # 優化標題：置中、更明顯
-    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 22px; margin-bottom: 20px; font-family: \'Microsoft JhengHei\';">🥘 風味維度分析</div>', unsafe_allow_html=True)
+    # 標題優化
+    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 22px; margin-bottom: 5px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
     
     categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
     r_values = data.get("scores", [3, 3, 3, 3, 3])
@@ -232,7 +232,6 @@ with col_right:
         name=sel_snack
     ))
 
-    # 🔥 關鍵修改點：把圖拉大、去除所有不必要的留白
     fig.update_layout(
         polar=dict(
             bgcolor="rgba(255, 255, 255, 0)",
@@ -248,10 +247,10 @@ with col_right:
             )
         ),
         showlegend=False,
-        # 🔥 修改此處：將高度從 450 提升到 550 (甚至 600)
-        height=580, 
-        # 🔥 修改此處：將四個邊距 (l, r, t, b) 全部調為 0，讓圖表緊貼邊緣
-        margin=dict(l=0, r=0, t=0, b=0), 
+        height=600, # 增加高度
+        margin=dict(l=50, r=50, t=10, b=10), # 調整邊距，確保文字不會被切到
         paper_bgcolor="rgba(0,0,0,0)"
     )
+    
+    # 顯示圖表
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
