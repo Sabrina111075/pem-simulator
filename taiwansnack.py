@@ -238,9 +238,10 @@ with col_right:
             angularaxis=dict(tickfont=dict(size=15, font=dict(family="Microsoft JhengHei", weight="bold")), gridcolor="#EEEEEE")
         ),
         showlegend=False,
-        height=700, # 圖面極大化
-        margin=dict(l=80, r=80, t=0, b=0), # 去除上下留白
+        height=700,
+        margin=dict(l=80, r=80, t=0, b=0),
         paper_bgcolor="rgba(0,0,0,0)"
     )
     
+    # 確保這一行前面只有空格，並且跟上面的 fig.update_layout 左側對齊
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
