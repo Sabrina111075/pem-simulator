@@ -155,8 +155,6 @@ SNACK_LIBRARY = {
     },
 }
 
-# --- 以下是 UI 渲染邏輯，請確保這些代碼全部靠左對齊，不要縮排 ---
-
 # 3. CSS 樣式
 st.markdown("""
     <style>
