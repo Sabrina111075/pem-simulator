@@ -209,7 +209,7 @@ else:
 
 st.markdown(f'<div class="snack-header"><span class="snack-title">{sel_snack}</span>{tag_html}</div>', unsafe_allow_html=True)
 
-col_left, col_right = st.columns([2,5])
+col_left, col_right = st.columns([2,7])
 
 with col_left:
     for label, key in [("君 (核心食材)", "君"), ("臣 (主要調味)", "臣"), ("佐 (輔助提味)", "佐"), ("使 (點綴平衡)", "使")]:
