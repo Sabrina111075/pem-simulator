@@ -212,35 +212,35 @@ with col_left:
         tags = "".join([f'<div class="tag-item">{i}</div>' for i in data[key]])
         st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
     
+    st.markdown(f'<div class="risk-container"><span class="risk-title">⚠️ 風味風險提醒 (Risk Alert)</span><div style="color:#FF4B4B;">{data["risk"]}</div></div>', unsafe_allow_html=True)
+
 with col_right:
-    # 標題：置中且加大
-    st.markdown('<h3 style="text-align: center; color: #444; font-family: \'Microsoft JhengHei\';">🥘 風味維度分析</h3>', unsafe_allow_html=True)
+    # 標題加粗加大，減少上方留白
+    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 24px; margin-top: -10px; margin-bottom: 0px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
     
-    # 準備數據
     categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
-    # 確保取得數據，若無則給預設值
     scores = data.get("scores", [3, 3, 3, 3, 3])
     
-    # 建立雷達圖
-    fig = go.Figure(data=go.Scatterpolar(
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
         r=scores + [scores[0]],
         theta=categories + [categories[0]],
         fill='toself',
         fillcolor='rgba(211, 156, 107, 0.5)',
         line=dict(color='#8B4513', width=3),
-        marker=dict(size=8, color='#D39C6B')
+        marker=dict(color='#D39C6B', size=8)
     ))
 
-    # 簡化配置，避免 ValueError
     fig.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0, 5]),
-            angularaxis=dict(tickfont=dict(size=14, font=dict(family="Microsoft JhengHei", weight="bold")))
+            bgcolor="rgba(255, 255, 255, 0)",
+            radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEEEEE"),
+            angularaxis=dict(tickfont=dict(size=14, color="#333", font=dict(family="Microsoft JhengHei", weight="bold")), gridcolor="#EEEEEE")
         ),
         showlegend=False,
-        height=600,  # 強制增加圖表高度
-        margin=dict(l=40, r=40, t=20, b=20) # 緊湊邊距減少留白
+        height=650, # 再次拉高，填滿垂直空間
+        margin=dict(l=60, r=60, t=10, b=10), # 調整左右間距確保文字完整，減少上下留白
+        paper_bgcolor="rgba(0,0,0,0)"
     )
-
-    # 使用 container 寬度並關閉工具列以保持簡潔
+    
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
