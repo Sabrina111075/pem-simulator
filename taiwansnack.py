@@ -1,8 +1,9 @@
 ﻿import streamlit as st
-import plotly.graph_objects as go
+import pandas as pd
+import plotly.express as px
 
-# 1. 設置頁面 (去框化、寬版佈局)
-st.set_page_config(page_title="TAD-AGE 台灣小吃 Formula 實作平台", layout="wide")
+# 1. 頁面配置
+st.set_page_config(page_title="TAD-AGE 台灣小吃研發平台 V3", layout="wide")
 
 # 2. 核心資料庫 (補齊 22 縣市 x 5 項 = 110 項)
 # michelin: 1=顯示紅色顯眼徽章, 0=隱藏
