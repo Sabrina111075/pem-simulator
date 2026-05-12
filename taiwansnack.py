@@ -170,22 +170,19 @@ st.markdown("""
     .michelin-star { 
         background: linear-gradient(135deg, #FFD700 0%, #D4AF37 100%);
         color: #000; padding: 5px 16px; border-radius: 4px; font-size: 14px; font-weight: bold; margin-left: 15px; 
-        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.4); border: 1px solid #B8860B; 
     }
     .michelin-badge { 
         background: linear-gradient(135deg, #E60012 0%, #B3000E 100%);
         color: white; padding: 5px 16px; border-radius: 4px; font-size: 14px; font-weight: bold; margin-left: 15px; 
-        box-shadow: 0 4px 10px rgba(230, 0, 18, 0.3); border: 1px solid #FF4D4D;
     }
     .formula-label { font-size: 15px; color: #888; font-weight: bold; margin-bottom: 6px; }
     .tag-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
-    .tag-item { background: #F2F2F2; color: #333; padding: 6px 14px; border-radius: 50px; font-size: 14px; font-weight: 500; }
+    .tag-item { background: #F2F2F2; color: #333; padding: 6px 14px; border-radius: 50px; font-size: 14px; }
     .risk-container { background-color: #FFF5F5; border-left: 6px solid #FF4B4B; padding: 20px; border-radius: 8px; margin-top: 40px; }
-    .risk-title { color: #FF4B4B; font-weight: 900; font-size: 16px; margin-bottom: 5px; display: block; }
     </style>
 """, unsafe_allow_html=True)
 
-# 4. 側邊欄與選單
+# 4. 側邊欄
 with st.sidebar:
     st.header("📍 縣市導覽")
     sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
@@ -195,12 +192,9 @@ data = SNACK_LIBRARY[sel_city][sel_snack]
 
 # 5. 主內容顯示
 michelin_val = data.get("michelin", 0)
-if michelin_val == 2:
-    tag_html = '<span class="michelin-star">MICHELIN ⭐ STAR</span>'
-elif michelin_val == 1:
-    tag_html = '<span class="michelin-badge">BIB GOURMAND 😋</span>'
-else:
-    tag_html = ""
+tag_html = ""
+if michelin_val == 2: tag_html = '<span class="michelin-star">MICHELIN ⭐ STAR</span>'
+elif michelin_val == 1: tag_html = '<span class="michelin-badge">BIB GOURMAND 😋</span>'
 
 st.markdown(f'<div class="snack-header"><span class="snack-title">{sel_snack}</span>{tag_html}</div>', unsafe_allow_html=True)
 
@@ -211,18 +205,15 @@ with col_left:
         st.markdown(f'<div class="formula-label">{label}</div>', unsafe_allow_html=True)
         tags = "".join([f'<div class="tag-item">{i}</div>' for i in data[key]])
         st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
-    
-    st.markdown(f'<div class="risk-container"><span class="risk-title">⚠️ 風味風險提醒 (Risk Alert)</span><div style="color:#FF4B4B;">{data["risk"]}</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="risk-container"><div style="color:#FF4B4B; font-weight:900;">⚠️ 風味風險提醒</div><div style="color:#FF4B4B;">{data["risk"]}</div></div>', unsafe_allow_html=True)
 
 with col_right:
-    # 標題與圖表
-    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 24px; margin-top: -10px; margin-bottom: -30px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 24px; margin-bottom: -40px;">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
     
     categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
     scores = data.get("scores", [3, 3, 3, 3, 3])
     
-    fig = go.Figure()
-    fig.add_trace(go.Scatterpolar(
+    fig = go.Figure(data=go.Scatterpolar(
         r=scores + [scores[0]],
         theta=categories + [categories[0]],
         fill='toself',
@@ -233,15 +224,12 @@ with col_right:
 
     fig.update_layout(
         polar=dict(
-            bgcolor="rgba(255, 255, 255, 0)",
-            radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEEEEE"),
-            angularaxis=dict(tickfont=dict(size=15, font=dict(family="Microsoft JhengHei", weight="bold")), gridcolor="#EEEEEE")
+            radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEE"),
+            angularaxis=dict(tickfont=dict(size=16, font=dict(weight="bold")))
         ),
         showlegend=False,
-        height=700,
-        margin=dict(l=80, r=80, t=0, b=0),
-        paper_bgcolor="rgba(0,0,0,0)"
+        height=750, # 高度最大化
+        margin=dict(l=80, r=80, t=20, b=20)
     )
     
-    # 確保這一行前面只有空格，並且跟上面的 fig.update_layout 左側對齊
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
