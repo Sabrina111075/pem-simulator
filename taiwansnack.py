@@ -213,7 +213,8 @@ with col_left:
         st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
     
 with col_right:
-    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 20px; margin-bottom: 10px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
+    # 優化標題：置中、更明顯
+    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 22px; margin-bottom: 20px; font-family: \'Microsoft JhengHei\';">🥘 風味維度分析</div>', unsafe_allow_html=True)
     
     categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
     r_values = data.get("scores", [3, 3, 3, 3, 3])
@@ -225,21 +226,32 @@ with col_right:
         r=r_plot,
         theta=theta_plot,
         fill='toself',
-        fillcolor='rgba(211, 156, 107, 0.5)', # 優雅的焦糖色填充
-        line=dict(color='#8B4513', width=3),   # 深色邊界線
-        marker=dict(color='#D39C6B', size=8),  # 頂點標記
+        fillcolor='rgba(211, 156, 107, 0.5)', 
+        line=dict(color='#8B4513', width=3),   
+        marker=dict(color='#D39C6B', size=8),  
         name=sel_snack
     ))
 
+    # 🔥 關鍵修改點：把圖拉大、去除所有不必要的留白
     fig.update_layout(
         polar=dict(
             bgcolor="rgba(255, 255, 255, 0)",
-            radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEEEEE"),
-            angularaxis=dict(tickfont=dict(size=14, weight="bold"), gridcolor="#EEEEEE")
+            radialaxis=dict(
+                visible=True, 
+                range=[0, 5], 
+                gridcolor="#EEEEEE",
+                tickfont=dict(size=11, color="#999")
+            ),
+            angularaxis=dict(
+                tickfont=dict(size=14, color="#333", font=dict(family="Microsoft JhengHei", weight="bold")), 
+                gridcolor="#EEEEEE"
+            )
         ),
         showlegend=False,
-        height=450,
-        margin=dict(l=40, r=40, t=20, b=20),
+        # 🔥 修改此處：將高度從 450 提升到 550 (甚至 600)
+        height=580, 
+        # 🔥 修改此處：將四個邊距 (l, r, t, b) 全部調為 0，讓圖表緊貼邊緣
+        margin=dict(l=0, r=0, t=0, b=0), 
         paper_bgcolor="rgba(0,0,0,0)"
     )
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
