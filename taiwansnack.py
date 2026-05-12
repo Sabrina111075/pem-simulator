@@ -204,7 +204,6 @@ else:
 
 st.markdown(f'<div class="snack-header"><span class="snack-title">{sel_snack}</span>{tag_html}</div>', unsafe_allow_html=True)
 
-# 請確保這行與前面的程式碼左側對齊
 col_left, col_right = st.columns([1, 1])
 
 with col_left:
