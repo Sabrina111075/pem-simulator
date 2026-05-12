@@ -154,9 +154,6 @@ SNACK_LIBRARY = {
         "鼎邊糊": {"君": ["米漿糊"], "臣": ["海鮮湯底"], "佐": ["黑木耳"], "使": ["蔥花"], "risk": "糊度不夠像普通湯麵", "michelin": 0, "scores": [4, 4, 3, 4, 4]}
     }
 } 
-
-# --- 請刪除從 st.markdown(f'<div class="snack-header"> 開始到最後的所有代碼，替換為以下內容 ---
-
 # 1. 顯示標題與標章
 michelin_val = data.get("michelin", 0)
 tag_html = ""
@@ -187,7 +184,7 @@ with col_left:
 
 with col_right:
     # 右側：標題 (強行上移減少留白)
-    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 22px; margin-bottom: -60px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 22px; margin-bottom: -60px; font-family: \'Microsoft JhengHei\';">🥘 風味維度分析</div>', unsafe_allow_html=True)
     
     # 圖表邏輯
     categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
