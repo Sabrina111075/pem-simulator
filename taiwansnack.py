@@ -157,26 +157,9 @@ SNACK_LIBRARY = {
 
 # --- 以下所有代碼請務必「完全靠左」，前面不能有任何空格 ---
 
-st.markdown("""
-    <style>
-    .snack-header { display: flex; align-items: center; margin-bottom: 25px; }
-    .snack-title { font-size: 38px; font-weight: 800; color: #1A1A1A; font-family: "Microsoft JhengHei"; }
-    .michelin-star { background: linear-gradient(135deg, #FFD700 0%, #D4AF37 100%); color: #000; padding: 5px 16px; border-radius: 4px; font-size: 14px; font-weight: bold; margin-left: 15px; }
-    .michelin-badge { background: linear-gradient(135deg, #E60012 0%, #B3000E 100%); color: white; padding: 5px 16px; border-radius: 4px; font-size: 14px; font-weight: bold; margin-left: 15px; }
-    .formula-label { font-size: 15px; color: #888; font-weight: bold; margin-bottom: 6px; }
-    .tag-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
-    .tag-item { background: #F2F2F2; color: #333; padding: 6px 14px; border-radius: 50px; font-size: 14px; }
-    .risk-container { background-color: #FFF5F5; border-left: 6px solid #FF4B4B; padding: 20px; border-radius: 8px; margin-top: 40px; }
-    </style>
-""", unsafe_allow_html=True)
+# --- 以下請直接從 st.markdown(f'<div class="snack-header">... 之後開始替換 ---
 
-with st.sidebar:
-    st.header("📍 縣市導覽")
-    sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
-    sel_snack = st.selectbox("請選擇小吃", list(SNACK_LIBRARY[sel_city].keys()))
-
-data = SNACK_LIBRARY[sel_city][sel_snack]
-
+# 1. 顯示標題與標章
 michelin_val = data.get("michelin", 0)
 tag_html = ""
 if michelin_val == 2: tag_html = '<span class="michelin-star">MICHELIN ⭐ STAR</span>'
@@ -184,39 +167,53 @@ elif michelin_val == 1: tag_html = '<span class="michelin-badge">BIB GOURMAND �
 
 st.markdown(f'<div class="snack-header"><span class="snack-title">{sel_snack}</span>{tag_html}</div>', unsafe_allow_html=True)
 
-col_left, col_right = st.columns([1, 1])
+# 2. 建立左右佈局
+col_left, col_right = st.columns([1, 1.2]) # 稍微加寬右側比例給圖表
 
 with col_left:
+    # 顯示配方標籤
     for label, key in [("君 (核心食材)", "君"), ("臣 (主要調味)", "臣"), ("佐 (輔助提味)", "佐"), ("使 (點綴平衡)", "使")]:
         st.markdown(f'<div class="formula-label">{label}</div>', unsafe_allow_html=True)
-        tags = "".join([f'<div class="tag-item">{i}</div>' for i in data[key]])
+        tags = "".join([f'<div class="tag-item">{i}</div>' for i in data.get(key, [])])
         st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="risk-container"><div style="color:#FF4B4B; font-weight:900;">⚠️ 風味風險提醒</div><div style="color:#FF4B4B;">{data["risk"]}</div></div>', unsafe_allow_html=True)
+    
+    # 顯示風險提醒
+    st.markdown(f"""
+        <div class="risk-container">
+            <div style="color:#FF4B4B; font-weight:900; font-size:16px; margin-bottom:5px;">⚠️ 風味風險提醒</div>
+            <div style="color:#FF4B4B; line-height:1.5;">{data.get("risk", "尚無風險評估")}</div>
+        </div>
+    """, unsafe_allow_html=True)
 
 with col_right:
-    # 標題上移，減少留白
-    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 24px; margin-bottom: -30px;">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
+    # 標題：置中、加粗、極度貼近圖表
+    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 22px; margin-bottom: -60px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
     
+    # 圖表數據準備
     categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
-    scores = data.get("scores", [3, 3, 3, 3, 3])
+    r_values = data.get("scores", [3, 3, 3, 3, 3])
     
-    fig = go.Figure(data=go.Scatterpolar(
-        r=scores + [scores[0]],
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=r_values + [r_values[0]],
         theta=categories + [categories[0]],
         fill='toself',
-        fillcolor='rgba(211, 156, 107, 0.5)',
+        fillcolor='rgba(211, 156, 107, 0.4)',
         line=dict(color='#8B4513', width=3),
-        marker=dict(color='#D39C6B', size=10)
+        marker=dict(color='#D39C6B', size=8)
     ))
 
     fig.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEE"),
-            angularaxis=dict(tickfont=dict(size=16, font=dict(weight="bold")))
+            radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEE", tickfont=dict(size=10)),
+            angularaxis=dict(tickfont=dict(size=14, font=dict(weight="bold")), gridcolor="#EEE")
         ),
         showlegend=False,
-        height=720, # 圖表極大化
-        margin=dict(l=80, r=80, t=10, b=10)
+        height=700, # 圖面拉到最大
+        margin=dict(l=60, r=60, t=0, b=0), # 緊湊邊距
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)"
     )
     
+    # 最終渲染
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
