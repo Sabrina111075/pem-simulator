@@ -165,54 +165,44 @@ elif michelin_val == 1:
 st.markdown(f'<div class="snack-header"><span class="snack-title">{sel_snack}</span>{tag_html}</div>', unsafe_allow_html=True)
 
 # 2. 建立左右佈局
-col_left, col_right = st.columns([1, 1.2])
+c1, c2 = st.columns([1, 1.2])
 
-with col_left:
-    # 左側：配方標籤
-    for label, key in [("君 (核心食材)", "君"), ("臣 (主要調味)", "臣"), ("佐 (輔助提味)", "佐"), ("使 (點綴平衡)", "使")]:
-        st.markdown(f'<div class="formula-label">{label}</div>', unsafe_allow_html=True)
-        tags = "".join([f'<div class="tag-item">{i}</div>' for i in data.get(key, [])])
-        st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
-    
-    # 左側：風險提醒
-    st.markdown(f"""
-        <div class="risk-container">
-            <div style="color:#FF4B4B; font-weight:900; font-size:16px; margin-bottom:5px;">⚠️ 風味風險提醒</div>
-            <div style="color:#FF4B4B; line-height:1.5;">{data.get("risk", "尚無風險評估")}</div>
-        </div>
-    """, unsafe_allow_html=True)
+# 左側：配方與風險
+c1.markdown(f'<div class="snack-header"><span class="snack-title">{sel_snack}</span></div>', unsafe_allow_html=True)
 
-with col_right:
-    # 1. 標題與圖表間距優化
-    st.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 24px; margin-bottom: -50px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
-    
-    # 2. 準備數據 (放在變數裡，減少層次)
-    radar_cats = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
-    radar_scores = data.get("scores", [3, 3, 3, 3, 3])
-    
-    # 3. 建立圖表物件
-    fig_radar = go.Figure()
-    
-    fig_radar.add_trace(go.Scatterpolar(
-        r=radar_scores + [radar_scores[0]],
-        theta=radar_cats + [radar_cats[0]],
-        fill='toself',
-        fillcolor='rgba(211, 156, 107, 0.4)',
-        line=dict(color='#8B4513', width=3),
-        marker=dict(color='#D39C6B', size=10)
-    ))
+for label, key in [("君 (核心食材)", "君"), ("臣 (主要調味)", "臣"), ("佐 (輔助提味)", "佐"), ("使 (點綴平衡)", "使")]:
+    c1.markdown(f'<div class="formula-label">{label}</div>', unsafe_allow_html=True)
+    items = data.get(key, [])
+    tags = "".join([f'<div class="tag-item">{i}</div>' for i in items])
+    c1.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
 
-    fig_radar.update_layout(
-        polar=dict(
-            bgcolor="rgba(255, 255, 255, 0)",
-            radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEEEEE"),
-            angularaxis=dict(tickfont=dict(size=16, font=dict(family="Microsoft JhengHei", weight="bold")), gridcolor="#EEEEEE")
-        ),
-        showlegend=False,
-        height=750, 
-        margin=dict(l=80, r=80, t=0, b=0),
-        paper_bgcolor="rgba(0,0,0,0)"
-    )
-    
-    # 4. 渲染圖表 (請確保這行前面只有 4 個半型空格，與上方對齊)
-    st.plotly_chart(fig_radar, use_container_width=True, config={'displayModeBar': False})
+c1.markdown(f'<div class="risk-container"><div style="color:#FF4B4B; font-weight:900;">⚠️ 風味風險提醒</div><div style="color:#FF4B4B;">{data.get("risk", "N/A")}</div></div>', unsafe_allow_html=True)
+
+# 右側：風味維度分析 (完全不使用 with 縮排)
+c2.markdown('<div style="text-align: center; font-weight: 900; color: #444; font-size: 24px; margin-bottom: -50px; font-family: \'Microsoft JhengHei\';">🥘 風味維度專刊分析</div>', unsafe_allow_html=True)
+
+radar_cats = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
+radar_scores = data.get("scores", [3, 3, 3, 3, 3])
+
+fig_final = go.Figure(data=go.Scatterpolar(
+    r=radar_scores + [radar_scores[0]],
+    theta=radar_cats + [radar_cats[0]],
+    fill='toself',
+    fillcolor='rgba(211, 156, 107, 0.4)',
+    line=dict(color='#8B4513', width=3),
+    marker=dict(color='#D39C6B', size=10)
+))
+
+fig_final.update_layout(
+    polar=dict(
+        radialaxis=dict(visible=True, range=[0, 5], gridcolor="#EEE"),
+        angularaxis=dict(tickfont=dict(size=16, font=dict(weight="bold")), gridcolor="#EEE")
+    ),
+    showlegend=False,
+    height=750,
+    margin=dict(l=80, r=80, t=0, b=0),
+    paper_bgcolor="rgba(0,0,0,0)"
+)
+
+# 使用 c2.plotly_chart 直接呼叫，完全避開縮排深度問題
+c2.plotly_chart(fig_final, use_container_width=True, config={'displayModeBar': False})
