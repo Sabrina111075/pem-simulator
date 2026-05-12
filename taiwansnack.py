@@ -99,13 +99,14 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 4. 側邊欄：22 縣市完整控制
+# 4. 側邊欄：22 縣市、代表性小吃選單
 with st.sidebar:
-    st.title("🎛️ TAD-AGE 控制中心")
-    county_list = sorted(list(SNACK_LIBRARY.keys()))
-    sel_county = st.selectbox("🗺️ 選擇縣市", county_list, index=county_list.index("臺南市") if "臺南市" in county_list else 0)
+    st.title("🎛️ 台灣各縣市代表性小吃")
+    county_list = sorted(list(SNACK_LIBRARY.keys())) # 確保順序美觀
+    sel_county = st.selectbox("🗺️ 選擇縣市 ", county_list, index=county_list.index("臺南市") if "臺南市" in county_list else 0)
     snack_list = list(SNACK_LIBRARY[sel_county].keys())
-    sel_snack = st.selectbox(f"🍴 {sel_county} 代表小吃", snack_list)
+    sel_snack = st.selectbox(f"🍴 {sel_county} 代表性小吃", snack_list)
+
 
 # 5. 主畫面：資料與雷達圖
 data = SNACK_LIBRARY[sel_county][sel_snack]
