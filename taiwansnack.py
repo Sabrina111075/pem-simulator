@@ -185,18 +185,18 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 確保以下程式碼都在 with st.sidebar: 的縮排內 ---
-st.markdown("### ⚙️ TAD-AGE 風味模擬引擎")
+# 4. 側邊欄與選單
+with st.sidebar:
+    st.header("📍 台灣小吃縣市導覽")
+    sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
+    sel_snack = st.selectbox("請選擇小吃", list(SNACK_LIBRARY[sel_city].keys()))
 
-# 1. 紅色連動：賞味時間
-st.markdown('<p style="color: #FF4B4B; font-weight: bold; margin-bottom: -15px;">🔴 賞味時間 (對應：紅色標籤)</p>', unsafe_allow_html=True)
-sim_time = st.slider("時間偏移 (分鐘)", 0, 60, 0, key="sim_time")
-
-st.write("") # 增加間距
-
-# 2. 藍色連動：口味客製
-st.markdown('<p style="color: #1E90FF; font-weight: bold; margin-bottom: -15px;">🔵 客製配方 (對應：藍色標籤)</p>', unsafe_allow_html=True)
-sim_custom = st.slider("口味調整", 1, 10, 5, key="sim_custom")
+    # --- 新增的部分開始 ---
+    
+    st.divider()  
+    st.success("✅ 系統狀態：基因數據載入完畢") 
+    
+    # --- 新增的部分結束 ---
 
 data = SNACK_LIBRARY[sel_city][sel_snack]
 
@@ -216,7 +216,7 @@ else:
 
 st.markdown(f'<div class="snack-header"><span class="snack-title">{sel_snack}</span>{tag_html}</div>', unsafe_allow_html=True)
 
-col_left, col_right = st.columns([2, 10])
+col_left, col_right = st.columns([2, 8])
 
 with col_left:
     for label, key in [("君 (核心食材)", "君"), ("臣 (主要調味)", "臣"), ("佐 (輔助提味)", "佐"), ("使 (點綴平衡)", "使")]:
@@ -224,105 +224,20 @@ with col_left:
         tags = "".join([f'<div class="tag-item">{i}</div>' for i in data[key]])
         st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
     
-# --- 3. 動態風險顏色優化邏輯 ---
-risk_text = data.get("risk", "尚無明顯風險")
-risk_level_color = "#FF4B4B"  # 預設：高風險紅色 (Danger)
-
-# 邏輯判斷：根據關鍵字決定顏色等級
-# 1. 如果是完美的狀態 (Green)
-if any(word in risk_text for word in ["完美", "平衡", "絕佳", "穩定"]):
-    risk_level_color = "#28A745" # 成功綠
-# 2. 如果只是輕微的建議 (Orange)
-elif any(word in risk_text for word in ["建議", "注意", "稍微", "稍微", "偏"]):
-    risk_level_color = "#FFA500" # 警告橘
-
-# 繪製美化後的風險容器
-st.markdown(f'''
-    <div style="
-        background-color: {risk_level_color}15; 
-        border-left: 5px solid {risk_level_color}; 
-        padding: 15px; 
-        margin-top: 20px;
-        border-radius: 5px;
-    ">
-        <span style="color: {risk_level_color}; font-weight: bold; font-size: 1.1em;">
-            ⚠️ 風味風險提醒 (Risk Alert)
-        </span><br>
-        <div style="color: #444; margin-top: 8px; line-height: 1.5;">
-            {risk_text}
-        </div>
-    </div>
-''', unsafe_allow_html=True)
+    st.markdown(f'<div class="risk-container"><span class="risk-title">⚠️ 風味風險提醒 (Risk Alert)</span><div style="color:#FF4B4B;">{data["risk"]}</div></div>', unsafe_allow_html=True)
 
 with col_right:
     st.markdown('<div style="text-align: center; font-weight: bold; color: #555; margin-bottom: 20px;">風味維度分析 (Radar)</div>', unsafe_allow_html=True)
-    categories = ['入味程度', '口感紮實', '解膩層次', '清爽程度', '濃郁飽滿']
-
-    # A. 先獲取原始分數
-
-    original_values = data.get("scores", [3, 3, 3, 3, 3])
-
-    # --- 定義環境加成 ---
-    import datetime
-    current_month = datetime.datetime.now().month
+    categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
+    r_values = data.get("scores", [3, 3, 3, 3, 3])
     
-    # C. 進行動態基因演算 (包含模擬偏移量與夏季加成)
-
-    r_values = [
-    max(0, min(5, original_values[0] + offset_osmosis)), # 入味程度
-    max(0, min(5, original_values[1] + offset_body)),    # 口感紮實
-    original_values[2],                                   # 解膩層次
-    max(0, min(5, original_values[3] + offset_clarity)), # 清爽程度
-    max(0, min(5, original_values[4] + offset_body))     # 濃郁飽滿
-]    
-
-    # 這裡進行動態基因演算
-    r_values = [
-        max(0, min(5, original_values[0] + offset_osmosis)), # 滲透力
-
-        max(0, min(5, original_values[1] + offset_body)),    # 支撐度
-
-        original_values[2],                                  # 修飾度(保持穩定)
-        
-        max(0, min(5, original_values[3] + offset_clarity)), # 清亮感
-        
-        max(0, min(5, original_values[4] + offset_body))     # 厚度
-
-    ]
-
-# --- 1. 繪製雷達圖 (TAD-AGE 引擎輸出) ---
-import plotly.graph_objects as go
-
-fig = go.Figure()
-fig.add_trace(go.Scatterpolar(
-    r=r_values + [r_values[0]],
-    theta=categories + [categories[0]],
-    fill='toself',
-    fillcolor='rgba(211, 156, 107, 0.4)',
-    line=dict(color='#D39C6B')
-))
-
-fig.update_layout(
-    polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
-    showlegend=False,
-    height=450
-)
-st.plotly_chart(fig, use_container_width=True)
-
-# --- 2. 恢復妳要的連動徽章 (印章區) ---
-st.write("---")
-stamp_cols = st.columns(3)
-
-with stamp_cols[0]:
-    # 對應紅色標籤
-    if sim_time <= 15: st.success("✨ 黃金賞味期")
-    elif 15 < sim_time <= 40: st.warning("⚠️ 風味遞減中")
-    else: st.error("🛑 建議現吃/加熱")
-
-with stamp_cols[1]:
-    # 對應藍色標籤
-    if 1 <= sim_custom <= 5: st.info("💎 最佳配方")
-    else: st.info("🥘 濃醇重口味")
-
-with stamp_cols[2]:
-    st.info("🍵 建議配茶飲")
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=r_values + [r_values[0]],
+        theta=categories + [categories[0]],
+        fill='toself',
+        fillcolor='rgba(211, 156, 107, 0.4)',
+        line=dict(color='#D39C6B')
+    ))
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=False, height=450)
+    st.plotly_chart(fig, use_container_width=True)
