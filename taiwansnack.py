@@ -333,18 +333,18 @@ with col_right:
     st.plotly_chart(fig, use_container_width=True)
 
     # --- 側邊欄模擬引擎：視覺強化版 ---
-    st.markdown("### ⚙️ TAD-AGE 風味模擬引擎")
+        st.markdown("### ⚙️ TAD-AGE 風味模擬引擎")
 
     # 1. 紅色連動區：賞味時間
-    st.markdown('<p style="color: #FF4B4B; font-weight: bold; margin-bottom: -15px;">🔴 時間維度 (對應：賞味狀態)</p>', unsafe_allow_html=True)
-    sim_time = st.slider("賞味期限 (分鐘)", 0, 60, 0, help="模擬食物隨時間產生的質地變化")
+        st.markdown('<p style="color: #FF4B4B; font-weight: bold; margin-bottom: -15px;">🔴 時間維度 (對應：賞味狀態)</p>', unsafe_allow_html=True)
+        sim_time = st.slider("賞味期限 (分鐘)", 0, 60, 0, help="模擬食物隨時間產生的質地變化")
 
     st.write("") # 增加一點間距
 
     # 2. 藍色連動區：口味客製
-    st.markdown('<p style="color: #1E90FF; font-weight: bold; margin-bottom: -15px;">🔵 基因維度 (對應：配方鑑定)</p>', unsafe_allow_html=True)
-    sim_custom = st.slider("客製化口味", 1, 10, 5, help="1-2:輕盈, 3-5:最佳, 6-8:醬香, 9-10:濃醇")
+        st.markdown('<p style="color: #1E90FF; font-weight: bold; margin-bottom: -15px;">🔵 基因維度 (對應：配方鑑定)</p>', unsafe_allow_html=True)
+        sim_custom = st.slider("客製化口味", 1, 10, 5, help="1-2:輕盈, 3-5:最佳, 6-8:醬香, 9-10:濃醇")
 
     # 3. 夏季感測狀態 (原本的)
-    if is_summer:
+        if is_summer:
         st.sidebar.caption("☀️ 當前環境：夏季模擬模式已開啟")
