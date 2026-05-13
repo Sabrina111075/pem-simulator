@@ -201,7 +201,7 @@ with st.sidebar:
 data = SNACK_LIBRARY[sel_city][sel_snack]
 
 # 5. 主內容顯示
-st.title("食光模擬器：解析台灣小吃的風味基因")
+st.title("TAD-AGE | 台灣小吃風味解析系統")
 
 st.divider() # 建議加一個分隔線，視覺上會更專業
 
@@ -216,7 +216,7 @@ else:
 
 st.markdown(f'<div class="snack-header"><span class="snack-title">{sel_snack}</span>{tag_html}</div>', unsafe_allow_html=True)
 
-col_left, col_right = st.columns([2, 6])
+col_left, col_right = st.columns([2, 8])
 
 with col_left:
     for label, key in [("君 (核心食材)", "君"), ("臣 (主要調味)", "臣"), ("佐 (輔助提味)", "佐"), ("使 (點綴平衡)", "使")]:
