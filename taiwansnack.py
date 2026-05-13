@@ -198,18 +198,18 @@ with st.sidebar:
     
     # --- 新增的部分結束 ---
 
-# --- 模擬器控制台 ---
-st.divider()
-st.subheader("🧪 TAD-AGE 風味模擬引擎")
-sim_time = st.slider("🕰️ 外送時長 (分鐘)", 0, 60, 0, help="模擬食物隨著時間產生的風味滲透與質地變化")
-sim_master = st.slider("🔥 職人火候", 1, 10, 5, help="模擬收汁程度與食材紮實度")
+    # --- 模擬器控制台 ---
+    st.divider()
+    st.subheader("🧪 TAD-AGE 風味模擬引擎")
+    sim_time = st.slider("🕰️ 外送時長 (分鐘)", 0, 60, 0, help="模擬食物隨著時間產生的風味滲透與質地變化")
+    sim_master = st.slider("🔥 職人火候", 1, 10, 5, help="模擬收汁程度與食材紮實度")
 
-# 計算模擬偏移量 (Logic Layer)
-# 1. 時間越長，滲透力(+)、清亮感(-)
-# 2. 火候越強，厚度(+)、支撐度(+)
-offset_osmosis = (sim_time / 60) * 1.5
-offset_clarity = -(sim_time / 60) * 1.0
-offset_body = (sim_master - 5) * 0.2
+    # 計算模擬偏移量 (Logic Layer)
+    # 1. 時間越長，滲透力(+)、清亮感(-)
+    # 2. 火候越強，厚度(+)、支撐度(+)
+    offset_osmosis = (sim_time / 60) * 1.5
+    offset_clarity = -(sim_time / 60) * 1.0
+    offset_body = (sim_master - 5) * 0.2
 
 data = SNACK_LIBRARY[sel_city][sel_snack]
 
