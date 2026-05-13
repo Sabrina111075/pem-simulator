@@ -228,7 +228,7 @@ with col_left:
 
 with col_right:
     st.markdown('<div style="text-align: center; font-weight: bold; color: #555; margin-bottom: 20px;">風味維度分析 (Radar)</div>', unsafe_allow_html=True)
-    categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
+    categories = ['入味程度', '口感紮實', '解膩層次', '清爽程度', '濃郁飽滿']
     r_values = data.get("scores", [3, 3, 3, 3, 3])
     
     fig = go.Figure()
