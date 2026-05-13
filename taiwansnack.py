@@ -332,19 +332,28 @@ with col_right:
     fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=False, height=450)
     st.plotly_chart(fig, use_container_width=True)
 
-# --- 側邊欄模擬引擎：視覺強化版 ---
-st.markdown("### ⚙️ TAD-AGE 風味模擬引擎")
+# --- 修正版：確保所有元件都在側邊欄內 ---
+with st.sidebar:
+    st.header("🗺️ 台灣小吃縣市導覽")
+    sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
+    sel_snack = st.selectbox("請選擇小吃", list(SNACK_LIBRARY[sel_city].keys()))
+    
+    st.divider()
+    st.success("✔️ 系統狀態：基因數據載入完畢")
+    
+    st.divider()
+    st.markdown("### ⚙️ TAD-AGE 風味模擬引擎")
 
-# 1. 紅色連動區：賞味時間
-st.markdown('<p style="color: #FF4B4B; font-weight: bold; margin-bottom: -15px;">🔴 時間維度 (對應：賞味狀態)</p>', unsafe_allow_html=True)
-sim_time = st.slider("賞味期限 (分鐘)", 0, 60, 0, help="模擬食物隨時間產生的質地變化")
+    # 1. 紅色連動區：對齊縮排
+    st.markdown('<p style="color: #FF4B4B; font-weight: bold; margin-bottom: -5px;">🔴 賞味時間 (對應：紅色標籤)</p>', unsafe_allow_html=True)
+    sim_time = st.slider("時間偏移 (分鐘)", 0, 60, 0, key="sim_time_sidebar")
 
-st.write("") # 增加一點間距
+    st.write("") 
 
-# 2. 藍色連動區：口味客製
-st.markdown('<p style="color: #1E90FF; font-weight: bold; margin-bottom: -15px;">🔵 基因維度 (對應：配方鑑定)</p>', unsafe_allow_html=True)
-sim_custom = st.slider("客製化口味", 1, 10, 5, help="1-2:輕盈, 3-5:最佳, 6-8:醬香, 9-10:濃醇")
+    # 2. 藍色連動區：對齊縮排
+    st.markdown('<p style="color: #1E90FF; font-weight: bold; margin-bottom: -5px;">🔵 客製配方 (對應：藍色標籤)</p>', unsafe_allow_html=True)
+    sim_custom = st.slider("口味調整", 1, 10, 5, key="sim_custom_sidebar")
 
-# 3. 夏季感測狀態 (原本的)
-if is_summer:
-    st.sidebar.caption("☀️ 當前環境：夏季模擬模式已開啟")
+    # 3. 環境狀態顯示
+    if is_summer:
+        st.caption("☀️ 當前環境：夏季模擬模式已開啟")
