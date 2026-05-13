@@ -201,7 +201,7 @@ with st.sidebar:
     # --- 模擬器控制台 ---
     st.divider()
     st.subheader("🧪 TAD-AGE 風味模擬引擎")
-    sim_time = st.slider("🕰️ 外送時長 (分鐘)", 0, 60, 0, help="模擬食物隨著時間產生的風味滲透與質地變化")
+    sim_time = st.slider("🕰️ 賞味期限 (分鐘)", 0, 60, 0, help="模擬食物從出餐後經過的時間，這會影響質地與滲透壓")
     sim_custom = st.slider("🔥 客製化口味", 1, 10, 5, help="1-2:輕爽, 3-5:最佳, 6-8:醬香, 9-10:濃醇")
 
     # 計算模擬偏移量 (Logic Layer)
@@ -336,13 +336,14 @@ with col_right:
 st.write("---")
 stamp_cols = st.columns(3)
 
-# A. 外送狀態印章 (維持原樣)
-if sim_time > 45:
-    with stamp_cols[0]: st.error("🛑 建議現吃")
-elif sim_time > 20:
-    with stamp_cols[0]: st.warning("⚠️ 風味流失中")
-else:
-    with stamp_cols[0]: st.success("✨ 新鮮出爐")
+# --- 1. 賞味狀態印章 (Pink/Red Tag) ---
+with stamp_cols[0]:
+    if sim_time <= 15:
+        st.success("✨ 黃金賞味期") # 15分鐘內最完美
+    elif 15 < sim_time <= 40:
+        st.warning("⚠️ 風味遞減中") # 開始產生變化
+    else:
+        st.error("🛑 建議現吃/加熱") # 時間過長，強烈建議
 
 # B. 客製化配方印章 (依照你的數值定義)
 with stamp_cols[1]:
