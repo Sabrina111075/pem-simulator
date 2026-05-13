@@ -269,21 +269,12 @@ with col_right:
     # C. 進行動態基因演算 (包含模擬偏移量與夏季加成)
 
     r_values = [
-        
     max(0, min(5, original_values[0] + offset_osmosis)), # 入味程度
-
     max(0, min(5, original_values[1] + offset_body)),    # 口感紮實
-
-    original_values[2],                                  # 解膩層次
-        
-    max(0, min(5, original_values[3] + offset_clarity)) # 清爽程度 (加成放這)
-        
+    original_values[2],                                   # 解膩層次
+    max(0, min(5, original_values[3] + offset_clarity)), # 清爽程度
     max(0, min(5, original_values[4] + offset_body))     # 濃郁飽滿
-
-
-    ]
-    
-    
+]    
 
     # 這裡進行動態基因演算
     r_values = [
