@@ -213,6 +213,19 @@ with st.sidebar:
 
 data = SNACK_LIBRARY[sel_city][sel_snack]
 
+# --- 2. 夏季環境感測 ---
+import datetime
+current_month = datetime.datetime.now().month
+is_summer = 5 <= current_month <= 9
+
+# 如果是夏季，自動調整預設的「清爽程度」權重
+season_bonus = 0.5 if is_summer else 0.0
+r_values[3] = max(0, min(5, r_values[3] + season_bonus)) 
+
+# 在介面上顯示環境狀態
+if is_summer:
+    st.sidebar.caption("☀️ 當前環境：夏季模擬模式已開啟（清爽度權重加成）")
+
 # 5. 主內容顯示
 st.title("TAD-AGE | 台灣小吃風味解析系統")
 
