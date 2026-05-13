@@ -253,7 +253,7 @@ with col_right:
         
         max(0, min(5, original_values[4] + offset_body))     # 厚度
 
-   ]
+    ]
    
     fig = go.Figure()
     fig.add_trace(go.Scatterpolar(
