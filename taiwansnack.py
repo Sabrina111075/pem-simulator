@@ -242,22 +242,20 @@ with col_right:
     fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=False, height=450)
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- 在這裡開始插入「模擬器」區塊 ---
-    st.write("---") # 加一條細分隔線
+
+    # --- 以下是你新貼上的內容，請確保縮排與上方 st.plotly_chart 對齊 ---
+    st.write("---") 
     with st.expander("🛠️ TAD-AGE 職人調味模擬 (不變更原始數據)"):
-    st.markdown('<div style="color: #666; font-size: 0.9em;">調整以下參數以觀察「佐、使」對風味維度的動態影響：</div>', unsafe_allow_html=True)
-            
-    # 使用滑桿進行虛擬調味
-    sim_garlic = st.slider("辛香滲透 (加強蒜泥/薑絲)", -2.0, 2.0, 0.0, step=0.5)
-    sim_acid = st.slider("層次拉提 (加強烏醋/酸菜)", -2.0, 2.0, 0.0, step=0.5)
-            
-    # 計算模擬後的數值 (r_values 是你原本定義好的原始數值)
-    # 這裡採用「增量」邏輯，確保不會改到原有的 data 字典
-    sim_values = r_values.copy()
-    sim_values[0] = max(0, min(5, sim_values[0] + sim_garlic)) # 影響滲透力
-    sim_values[2] = max(0, min(5, sim_values[2] + sim_acid))   # 影響修飾度
-            
-    if sim_garlic != 0 or sim_acid != 0:
-        st.info(f"💡 模擬提示：當前風味基因已偏移。滲透力預測值：{sim_values[0]}")
-    else:
-        st.caption("目前顯示為原始基因數據，請移動滑桿開始模擬。")
+        st.markdown('<div style="color: #666; font-size: 0.9em;">調整以下參數以觀察「佐、使」對風味維度的動態影響：</div>', unsafe_allow_html=True)
+        
+        sim_garlic = st.slider("辛香滲透 (加強蒜泥/薑絲)", -2.0, 2.0, 0.0, step=0.5)
+        sim_acid = st.slider("層次拉提 (加強烏醋/酸菜)", -2.0, 2.0, 0.0, step=0.5)
+        
+        sim_values = r_values.copy()
+        sim_values[0] = max(0, min(5, sim_values[0] + sim_garlic))
+        sim_values[2] = max(0, min(5, sim_values[2] + sim_acid))
+        
+        if sim_garlic != 0 or sim_acid != 0:
+            st.info(f"💡 模擬提示：當前風味基因已偏移。滲透力預測值：{sim_values[0]}")
+        else:
+            st.caption("目前顯示為原始基因數據，請移動滑桿開始模擬。")
