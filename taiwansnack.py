@@ -185,31 +185,19 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 4. 側邊欄與選單 (確保所有內容都在 with st.sidebar: 縮排內)
-with st.sidebar:
-    st.header("🗺️ 台灣小吃縣市導覽")
-    sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
-    sel_snack = st.selectbox("請選擇小吃", list(SNACK_LIBRARY[sel_city].keys()))
-    
-    st.divider()
-    st.success("✔️ 系統狀態：基因數據載入完畢")
-    st.divider()
+# --- 確保以下程式碼都在 with st.sidebar: 的縮排內 ---
+st.markdown("### ⚙️ TAD-AGE 風味模擬引擎")
 
-    st.markdown("### ⚙️ TAD-AGE 風味模擬引擎")
+# 1. 紅色連動：賞味時間
+st.markdown('<p style="color: #FF4B4B; font-weight: bold; margin-bottom: -15px;">🔴 賞味時間 (對應：紅色標籤)</p>', unsafe_allow_html=True)
+sim_time = st.slider("時間偏移 (分鐘)", 0, 60, 0, key="sim_time")
 
-    # 紅色連動：賞味時間
-    st.markdown('<p style="color: #FF4B4B; font-weight: bold; margin-bottom: -15px;">🔴 賞味時間 (對應：紅色標籤)</p>', unsafe_allow_html=True)
-    sim_time = st.slider("時間偏移 (分鐘)", 0, 60, 0, key="main_sim_time")
+st.write("") # 增加間距
 
-    st.write("") 
+# 2. 藍色連動：口味客製
+st.markdown('<p style="color: #1E90FF; font-weight: bold; margin-bottom: -15px;">🔵 客製配方 (對應：藍色標籤)</p>', unsafe_allow_html=True)
+sim_custom = st.slider("口味調整", 1, 10, 5, key="sim_custom")
 
-    # 藍色連動：口味客製
-    st.markdown('<p style="color: #1E90FF; font-weight: bold; margin-bottom: -15px;">🔵 客製配方 (對應：藍色標籤)</p>', unsafe_allow_html=True)
-    sim_custom = st.slider("口味調整", 1, 10, 5, key="main_sim_custom")
-
-    # 夏季感測 (原本就在這的部分)
-    if is_summer:
-        st.caption("☀️ 當前環境：夏季模擬模式已開啟")
 
     # --- 模擬器控制台 ---
     st.divider()
