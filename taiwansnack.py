@@ -202,7 +202,7 @@ with st.sidebar:
     st.divider()
     st.subheader("🧪 TAD-AGE 風味模擬引擎")
     sim_time = st.slider("🕰️ 外送時長 (分鐘)", 0, 60, 0, help="模擬食物隨著時間產生的風味滲透與質地變化")
-    sim_master = st.slider("🔥 客製化口味", 1, 10, 5, help="1-2:輕爽, 3-5:最佳, 6-8:醬香, 9-10:濃醇")
+    sim_custom = st.slider("🔥 客製化口味", 1, 10, 5, help="1-2:輕爽, 3-5:最佳, 6-8:醬香, 9-10:濃醇")
 
     # 計算模擬偏移量 (Logic Layer)
     # 1. 時間越長，滲透力(+)、清亮感(-)
