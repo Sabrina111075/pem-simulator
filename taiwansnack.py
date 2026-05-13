@@ -344,8 +344,10 @@ elif sim_time > 20:
 else:
     with stamp_cols[0]: st.success("✨ 新鮮出爐")
 
-if r_values[4] >= 4.5: # 濃郁飽滿
-    with stamp_cols[1]: st.info("🏆 職人厚韻")
+if r_values[4] >= 4.5: 
+    with stamp_cols[1]: st.info("🥘 醬香味十足")
+elif r_values[4] < 2.5:
+    with stamp_cols[1]: st.warning("💧 味道偏清淡")
 
 if r_values[3] >= 4.0: # 清爽程度
     with stamp_cols[2]: st.success("🍃 極致清爽")
