@@ -347,4 +347,4 @@ with col_right:
 
     # 3. 夏季感測狀態 (原本的)
     if is_summer:
-    st.sidebar.caption("☀️ 當前環境：夏季模擬模式已開啟")
+        st.sidebar.caption("☀️ 當前環境：夏季模擬模式已開啟")
