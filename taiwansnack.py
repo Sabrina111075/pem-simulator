@@ -242,35 +242,40 @@ with col_left:
 with col_right:
     st.markdown('<div style="text-align: center; font-weight: bold; color: #555; margin-bottom: 20px;">風味維度分析 (Radar)</div>', unsafe_allow_html=True)
     categories = ['入味程度', '口感紮實', '解膩層次', '清爽程度', '濃郁飽滿']
+
+    # A. 先獲取原始分數
+
     original_values = data.get("scores", [3, 3, 3, 3, 3])
 
-# --- 2. 夏季環境感測 ---
-import datetime
-current_month = datetime.datetime.now().month
-is_summer = 5 <= current_month <= 9
-season_bonus = 0.5 if is_summer else 0.0
+    # --- 定義環境加成 ---
+    import datetime
+    current_month = datetime.datetime.now().month
+    is_summer = 5 <= current_month <= 9
+    season_bonus = 0.5 if is_summer else 0.0
 
-# C. 進行動態基因演算 (包含模擬偏移量與夏季加成)
+    # C. 進行動態基因演算 (包含模擬偏移量與夏季加成)
 
-r_values = [
+    r_values = [
         
-max(0, min(5, original_values[0] + offset_osmosis)), # 入味程度
+    max(0, min(5, original_values[0] + offset_osmosis)), # 入味程度
 
-max(0, min(5, original_values[1] + offset_body)),    # 口感紮實
+    max(0, min(5, original_values[1] + offset_body)),    # 口感紮實
 
-original_values[2],                                  # 解膩層次
+    original_values[2],                                  # 解膩層次
         
-max(0, min(5, original_values[3] + offset_clarity + season_bonus)), # 清爽程度 (加成放這)
+    max(0, min(5, original_values[3] + offset_clarity + season_bonus)), # 清爽程度 (加成放這)
         
-max(0, min(5, original_values[4] + offset_body))     # 濃郁飽滿
+    max(0, min(5, original_values[4] + offset_body))     # 濃郁飽滿
+
 
     ]
     
     
 
-# D. 在側邊欄顯示狀態 (放在這沒問題)
+    # D. 在側邊欄顯示狀態 (放在這沒問題)
 
     if is_summer:
+
         st.sidebar.caption("☀️ 當前環境：夏季模擬模式已開啟（清爽度權重加成）")
 
 
