@@ -198,20 +198,6 @@ st.write("") # 增加間距
 st.markdown('<p style="color: #1E90FF; font-weight: bold; margin-bottom: -15px;">🔵 客製配方 (對應：藍色標籤)</p>', unsafe_allow_html=True)
 sim_custom = st.slider("口味調整", 1, 10, 5, key="sim_custom")
 
-
-    # --- 模擬器控制台 ---
-    st.divider()
-    st.subheader("🧪 TAD-AGE 風味模擬引擎")
-    sim_time = st.slider("🕰️ 賞味期限 (分鐘)", 0, 60, 0, help="模擬食物從出餐後經過的時間，這會影響質地與滲透壓")
-    sim_custom = st.slider("🔥 客製化口味", 1, 10, 5, help="1-2:輕爽, 3-5:最佳, 6-8:醬香, 9-10:濃醇")
-
-    # 計算模擬偏移量 (Logic Layer)
-    # 1. 時間越長，滲透力(+)、清亮感(-)
-    # 2. 火候越強，厚度(+)、支撐度(+)
-    offset_osmosis = (sim_time / 60) * 1.5
-    offset_clarity = -(sim_time / 60) * 1.0
-    offset_body = (sim_custom - 5) * 0.2
-
 data = SNACK_LIBRARY[sel_city][sel_snack]
 
 # 5. 主內容顯示
@@ -279,9 +265,7 @@ with col_right:
     # --- 定義環境加成 ---
     import datetime
     current_month = datetime.datetime.now().month
-    is_summer = 5 <= current_month <= 9
-    season_bonus = 0.5 if is_summer else 0.0
-
+    
     # C. 進行動態基因演算 (包含模擬偏移量與夏季加成)
 
     r_values = [
@@ -292,7 +276,7 @@ with col_right:
 
     original_values[2],                                  # 解膩層次
         
-    max(0, min(5, original_values[3] + offset_clarity + season_bonus)), # 清爽程度 (加成放這)
+    max(0, min(5, original_values[3] + offset_clarity)) # 清爽程度 (加成放這)
         
     max(0, min(5, original_values[4] + offset_body))     # 濃郁飽滿
 
@@ -300,13 +284,6 @@ with col_right:
     ]
     
     
-
-    # D. 在側邊欄顯示狀態 (放在這沒問題)
-
-    if is_summer:
-
-        st.sidebar.caption("☀️ 當前環境：夏季模擬模式已開啟（清爽度權重加成）")
-
 
     # 這裡進行動態基因演算
     r_values = [
@@ -322,11 +299,39 @@ with col_right:
 
     ]
 
-    fig = go.Figure()
-    fig.add_trace(go.Scatterpolar(
-        r=r_values + [r_values[0]],
-        theta=categories + [categories[0]],
-        fill='toself',
-        fillcolor='rgba(211, 156, 107, 0.4)',
-        line=dict(color='#D39C6B')
-    ))
+# --- 1. 繪製雷達圖 (TAD-AGE 引擎輸出) ---
+import plotly.graph_objects as go
+
+fig = go.Figure()
+fig.add_trace(go.Scatterpolar(
+    r=r_values + [r_values[0]],
+    theta=categories + [categories[0]],
+    fill='toself',
+    fillcolor='rgba(211, 156, 107, 0.4)',
+    line=dict(color='#D39C6B')
+))
+
+fig.update_layout(
+    polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
+    showlegend=False,
+    height=450
+)
+st.plotly_chart(fig, use_container_width=True)
+
+# --- 2. 恢復妳要的連動徽章 (印章區) ---
+st.write("---")
+stamp_cols = st.columns(3)
+
+with stamp_cols[0]:
+    # 對應紅色標籤
+    if sim_time <= 15: st.success("✨ 黃金賞味期")
+    elif 15 < sim_time <= 40: st.warning("⚠️ 風味遞減中")
+    else: st.error("🛑 建議現吃/加熱")
+
+with stamp_cols[1]:
+    # 對應藍色標籤
+    if 1 <= sim_custom <= 5: st.info("💎 最佳配方")
+    else: st.info("🥘 濃醇重口味")
+
+with stamp_cols[2]:
+    st.info("🍵 建議配茶飲")
