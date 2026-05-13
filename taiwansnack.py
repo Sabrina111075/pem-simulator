@@ -202,14 +202,14 @@ with st.sidebar:
     st.divider()
     st.subheader("🧪 TAD-AGE 風味模擬引擎")
     sim_time = st.slider("🕰️ 外送時長 (分鐘)", 0, 60, 0, help="模擬食物隨著時間產生的風味滲透與質地變化")
-    sim_master = st.slider("🔥 職人火候", 1, 10, 5, help="模擬收汁程度與食材紮實度")
+    sim_master = st.slider("🔥 客製化口味", 1, 10, 5, help="1-2:輕爽, 3-5:最佳, 6-8:醬香, 9-10:濃醇")
 
     # 計算模擬偏移量 (Logic Layer)
     # 1. 時間越長，滲透力(+)、清亮感(-)
     # 2. 火候越強，厚度(+)、支撐度(+)
     offset_osmosis = (sim_time / 60) * 1.5
     offset_clarity = -(sim_time / 60) * 1.0
-    offset_body = (sim_master - 5) * 0.2
+    offset_body = (sim_custom - 5) * 0.2
 
 data = SNACK_LIBRARY[sel_city][sel_snack]
 
@@ -332,11 +332,11 @@ with col_right:
     fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=False, height=450)
     st.plotly_chart(fig, use_container_width=True)
 
-# --- 1. 動態鑑定印章邏輯 ---
+# --- 1. 動態鑑定印章邏輯 (更新版) ---
 st.write("---")
 stamp_cols = st.columns(3)
 
-# 鑑定邏輯：根據 r_values (模擬後的數值) 判斷
+# A. 外送狀態印章 (維持原樣)
 if sim_time > 45:
     with stamp_cols[0]: st.error("🛑 建議現吃")
 elif sim_time > 20:
@@ -344,12 +344,19 @@ elif sim_time > 20:
 else:
     with stamp_cols[0]: st.success("✨ 新鮮出爐")
 
-if r_values[4] >= 4.5: 
-    with stamp_cols[1]: st.info("🥘 醬香味十足")
-elif r_values[4] < 2.5:
-    with stamp_cols[1]: st.warning("💧 味道偏清淡")
+# B. 客製化配方印章 (依照你的數值定義)
+with stamp_cols[1]:
+    if 1 <= sim_custom <= 2:
+        st.info("🍃 輕盈爽口")
+    elif 3 <= sim_custom <= 5:
+        st.info("💎 最佳風味")
+    elif 6 <= sim_custom <= 8:
+        st.info("🥘 醬香味十足")
+    else: # 9-10
+        st.info("📜 濃醇厚韻")
 
-if r_values[3] >= 4.0: # 清爽程度
-    with stamp_cols[2]: st.success("🍃 極致清爽")
+# C. 清爽/解膩印章 (可保留或根據需要調整)
+if r_values[3] >= 4.0: 
+    with stamp_cols[2]: st.success("🌟 完美解膩")
 elif r_values[3] < 2.5:
     with stamp_cols[2]: st.warning("☁️ 口感滯重")
