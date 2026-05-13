@@ -242,7 +242,6 @@ with col_right:
     fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=False, height=450)
     st.plotly_chart(fig, use_container_width=True)
 
-
         # --- 在這裡開始插入「模擬器」區塊 ---
         st.write("---") # 加一條細分隔線
         with st.expander("🛠️ TAD-AGE 職人調味模擬 (不變更原始數據)"):
