@@ -267,3 +267,23 @@ with col_right:
     ))
     fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=False, height=450)
     st.plotly_chart(fig, use_container_width=True)
+
+# --- 1. 動態鑑定印章邏輯 ---
+st.write("---")
+stamp_cols = st.columns(3)
+
+# 鑑定邏輯：根據 r_values (模擬後的數值) 判斷
+if sim_time > 45:
+    with stamp_cols[0]: st.error("🛑 建議現吃")
+elif sim_time > 20:
+    with stamp_cols[0]: st.warning("⚠️ 風味流失中")
+else:
+    with stamp_cols[0]: st.success("✨ 新鮮出爐")
+
+if r_values[4] >= 4.5: # 濃郁飽滿
+    with stamp_cols[1]: st.info("🏆 職人厚韻")
+
+if r_values[3] >= 4.0: # 清爽程度
+    with stamp_cols[2]: st.success("🍃 極致清爽")
+elif r_values[3] < 2.5:
+    with stamp_cols[2]: st.warning("☁️ 口感滯重")
