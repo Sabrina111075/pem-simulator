@@ -237,7 +237,35 @@ with col_left:
         tags = "".join([f'<div class="tag-item">{i}</div>' for i in data[key]])
         st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
     
-    st.markdown(f'<div class="risk-container"><span class="risk-title">⚠️ 風味風險提醒 (Risk Alert)</span><div style="color:#FF4B4B;">{data["risk"]}</div></div>', unsafe_allow_html=True)
+# --- 3. 動態風險顏色優化邏輯 ---
+risk_text = data.get("risk", "尚無明顯風險")
+risk_level_color = "#FF4B4B"  # 預設：高風險紅色 (Danger)
+
+# 邏輯判斷：根據關鍵字決定顏色等級
+# 1. 如果是完美的狀態 (Green)
+if any(word in risk_text for word in ["完美", "平衡", "絕佳", "穩定"]):
+    risk_level_color = "#28A745" # 成功綠
+# 2. 如果只是輕微的建議 (Orange)
+elif any(word in risk_text for word in ["建議", "注意", "稍微", "稍微", "偏"]):
+    risk_level_color = "#FFA500" # 警告橘
+
+# 繪製美化後的風險容器
+st.markdown(f'''
+    <div style="
+        background-color: {risk_level_color}15; 
+        border-left: 5px solid {risk_level_color}; 
+        padding: 15px; 
+        margin-top: 20px;
+        border-radius: 5px;
+    ">
+        <span style="color: {risk_level_color}; font-weight: bold; font-size: 1.1em;">
+            ⚠️ 風味風險提醒 (Risk Alert)
+        </span><br>
+        <div style="color: #444; margin-top: 8px; line-height: 1.5;">
+            {risk_text}
+        </div>
+    </div>
+''', unsafe_allow_html=True)
 
 with col_right:
     st.markdown('<div style="text-align: center; font-weight: bold; color: #555; margin-bottom: 20px;">風味維度分析 (Radar)</div>', unsafe_allow_html=True)
