@@ -191,19 +191,6 @@ with st.sidebar:
     sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
     sel_snack = st.selectbox("請選擇小吃", list(SNACK_LIBRARY[sel_city].keys()))
 
-# --- 確保以下程式碼都在 with st.sidebar: 的縮排內 ---
-st.markdown("### ⚙️ TAD-AGE 風味模擬引擎")
-
-# 1. 紅色連動：賞味時間
-st.markdown('<p style="color: #FF4B4B; font-weight: bold; margin-bottom: -15px;">🔴 賞味時間 (對應：紅色標籤)</p>', unsafe_allow_html=True)
-sim_time = st.slider("時間偏移 (分鐘)", 0, 60, 0, key="sim_time")
-
-st.write("") # 增加間距
-
-# 2. 藍色連動：客製口味
-st.markdown('<p style="color: #1E90FF; font-weight: bold; margin-bottom: -15px;">🔵 客製配方 (對應：藍色標籤)</p>', unsafe_allow_html=True)
-sim_custom = st.slider("口味調整", 1, 10, 5, key="sim_custom")
-
     # --- 新增的部分開始 ---
     
     st.divider()  
