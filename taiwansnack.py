@@ -332,35 +332,19 @@ with col_right:
     fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=False, height=450)
     st.plotly_chart(fig, use_container_width=True)
 
-# --- 1. 動態鑑定印章邏輯 (更新版) ---
-st.write("---")
-stamp_cols = st.columns(3)
+# --- 側邊欄模擬引擎：視覺強化版 ---
+st.markdown("### ⚙️ TAD-AGE 風味模擬引擎")
 
-# --- 1. 賞味狀態印章 (Pink/Red Tag) ---
-with stamp_cols[0]:
-    if sim_time <= 15:
-        st.success("✨ 黃金賞味期") # 15分鐘內最完美
-    elif 15 < sim_time <= 40:
-        st.warning("⚠️ 風味遞減中") # 開始產生變化
-    else:
-        st.error("🛑 建議現吃/加熱") # 時間過長，強烈建議
+# 1. 紅色連動區：賞味時間
+st.markdown('<p style="color: #FF4B4B; font-weight: bold; margin-bottom: -15px;">🔴 時間維度 (對應：賞味狀態)</p>', unsafe_allow_html=True)
+sim_time = st.slider("賞味期限 (分鐘)", 0, 60, 0, help="模擬食物隨時間產生的質地變化")
 
-# B. 客製化配方印章 (依照你的數值定義)
-with stamp_cols[1]:
-    if 1 <= sim_custom <= 2:
-        st.info("🍃 輕盈爽口")
-    elif 3 <= sim_custom <= 5:
-        st.info("💎 最佳風味")
-    elif 6 <= sim_custom <= 8:
-        st.info("🥘 醬香味十足")
-    else: # 9-10
-        st.info("📜 濃醇厚韻")
+st.write("") # 增加一點間距
 
-# --- 修改第三個印章：清爽度/解膩度 ---
-if r_values[3] >= 4.0: 
-    with stamp_cols[2]: st.success("🌟 完美解膩")
-elif r_values[3] < 1.5:  # 數值低於門檻時
-    # 改成一個無論甜鹹都合理的詞
-    with stamp_cols[2]: st.warning("🍵 建議配茶飲") 
-else:
-    with stamp_cols[2]: st.info("🧊 風味平衡")
+# 2. 藍色連動區：口味客製
+st.markdown('<p style="color: #1E90FF; font-weight: bold; margin-bottom: -15px;">🔵 基因維度 (對應：配方鑑定)</p>', unsafe_allow_html=True)
+sim_custom = st.slider("客製化口味", 1, 10, 5, help="1-2:輕盈, 3-5:最佳, 6-8:醬香, 9-10:濃醇")
+
+# 3. 夏季感測狀態 (原本的)
+if is_summer:
+    st.sidebar.caption("☀️ 當前環境：夏季模擬模式已開啟")
