@@ -198,6 +198,38 @@ with st.sidebar:
     
     # --- 新增的部分結束 ---
 
+# --- 把剛才那段貼在這裡，並確保前面有「空格」對齊 ---
+
+    st.markdown("### ⚙️ TAD-AGE 風味模擬引擎")
+
+
+  
+
+    # 紅色連動
+
+    st.sidebar.markdown('<p style="color: #FF4B4B; font-weight: bold; margin-bottom: -15px;">🔴 賞味時間 (對應：紅色標籤)</p>', unsafe_allow_html=True)
+
+    sim_time = st.sidebar.slider("時間偏移 (分鐘)", 0, 60, 0)
+
+
+
+   st.sidebar.write("")
+
+
+    # 藍色連動
+
+    st.sidebar.markdown('<p style="color: #1E90FF; font-weight: bold; margin-bottom: -15px;">🔵 客製配方 (對應：藍色標籤)</p>', unsafe_allow_html=True)
+
+    sim_custom = st.sidebar.slider("口味調整", 1, 10, 5)
+
+
+   
+    # 環境狀態
+
+    if is_summer:
+
+        st.sidebar.caption("☀️ 當前環境：夏季模擬模式已開啟")
+
     # --- 模擬器控制台 ---
     st.divider()
     st.subheader("🧪 TAD-AGE 風味模擬引擎")
