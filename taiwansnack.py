@@ -243,7 +243,18 @@ with col_right:
     st.markdown('<div style="text-align: center; font-weight: bold; color: #555; margin-bottom: 20px;">風味維度分析 (Radar)</div>', unsafe_allow_html=True)
     categories = ['滲透力', '支撐度', '修飾度', '清亮感', '厚度']
     r_values = data.get("scores", [3, 3, 3, 3, 3])
-    
+        max(0, min(5, original_values[0] + offset_osmosis)), # 滲透力
+
+        max(0, min(5, original_values[1] + offset_body)),    # 支撐度
+
+        original_values[2],                                  # 修飾度(保持穩定)
+        
+        max(0, min(5, original_values[3] + offset_clarity)), # 清亮感
+        
+        max(0, min(5, original_values[4] + offset_body))     # 厚度
+
+    ]
+   
     fig = go.Figure()
     fig.add_trace(go.Scatterpolar(
         r=r_values + [r_values[0]],
