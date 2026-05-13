@@ -355,8 +355,11 @@ with stamp_cols[1]:
     else: # 9-10
         st.info("📜 濃醇厚韻")
 
-# C. 清爽/解膩印章 (可保留或根據需要調整)
+# --- 修改第三個印章：清爽度/解膩度 ---
 if r_values[3] >= 4.0: 
     with stamp_cols[2]: st.success("🌟 完美解膩")
-elif r_values[3] < 2.5:
-    with stamp_cols[2]: st.warning("☁️ 口感滯重")
+elif r_values[3] < 1.5:  # 數值低於門檻時
+    # 改成一個無論甜鹹都合理的詞
+    with stamp_cols[2]: st.warning("🍵 建議配茶飲") 
+else:
+    with stamp_cols[2]: st.info("🧊 風味平衡")
