@@ -329,8 +329,6 @@ with col_right:
         fillcolor='rgba(211, 156, 107, 0.4)',
         line=dict(color='#D39C6B')
     ))
-    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=False, height=450)
-    st.plotly_chart(fig, use_container_width=True)
 
     # --- 側邊欄模擬引擎：視覺強化版 ---
         st.markdown("### ⚙️ TAD-AGE 風味模擬引擎")
