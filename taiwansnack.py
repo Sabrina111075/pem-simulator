@@ -246,8 +246,9 @@ else:
     # --- 3. 刪除 st.caption(texture_info) 和 st.caption(pairing_drink) ---
     # 讓側邊欄保持乾淨
 
+with st.sidebar:
     st.divider()
-    st.success("✅ 系統狀態：基因數據載入完畢")
+    st.success("💻 系統狀態：基因數據載入完畢")
 
 data = SNACK_LIBRARY[sel_city][sel_snack]
 
