@@ -215,8 +215,6 @@ else:
     fresh_status, fresh_color, fresh_text_color = "□ 不建議食用", "#EEEEEE", "#616161"
     texture_info, text_color = "□ 狀態：口感完整度下降", "#EEEEEE"
 
-# --- 2. 飲品推薦保持原樣 (原本就很通用) ---
-
     # --- 2. 飲品推薦保持原樣 (原本就很通用) ---
 
     # 3. 口味判定 (方案 A)
