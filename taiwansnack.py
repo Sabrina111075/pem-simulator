@@ -208,14 +208,15 @@ with st.sidebar:
     else:
         fresh_status, fresh_color, fresh_text_color = "🚫 不建議食用", "#EEEEEE", "#616161"
 
-    # --- 新增：物理特性模擬 (口感預測) ---
+# --- 1. 更新通用物理特性模擬 (更中性的描述) ---
     if shelf_life <= 15:
-        texture_info = "⚡ 狀態：最佳酥脆期 / 麵衣乾爽"
+        texture_info, text_color = "🎯 狀態：最佳風味統合期", "#E3F2FD" # 藍色 (最穩定)
     elif 15 < shelf_life <= 40:
-        texture_info = "💧 狀態：水分滲透中 / 麵衣回軟"
+        texture_info, text_color = "🔄 狀態：質地動態轉化中", "#FFF3E0" # 橘色 (警示)
     else:
-        texture_info = "📉 狀態：口感偏硬 / 建議氣炸復原"
-    # ----------------------------------
+        texture_info, text_color = "⚠️ 狀態：風味結構已解構", "#EEEEEE" # 灰色 (劣化)
+
+    # --- 2. 飲品推薦保持原樣 (原本就很通用) ---
 
     # 3. 口味判定 (方案 A)
     if 1 <= taste_level <= 2:
