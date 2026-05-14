@@ -207,7 +207,7 @@ if shelf_life <= 15:
 elif 16 <= shelf_life <= 40:
     # 當時間稍長，判定為風味流失/質地轉化中
     fresh_status, fresh_color, fresh_text_color = "⚠️ 風味流失", "#FFF3E0", "#E65100"
-    texture_info, text_color = "□ 狀態：質地動態轉化中", "#FFF3E0"
+    texture_info, text_color = "□ 狀態：口感逐漸變化中", "#FFF3E0"
     
 else:
     # 超過 40 分鐘，判定為不建議食用/口感下降
