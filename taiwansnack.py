@@ -194,11 +194,11 @@ with st.sidebar:
     st.divider()
     st.subheader("🧪 風味模擬器")
     
-# 1. 定義滑桿
+# 1. 定義滑桿 (保持原樣)
     shelf_life = st.slider("⏳ 賞味期限 (分鐘)", 1, 60, 10)
     taste_level = st.slider("🌶️ 客製化口味 (1-10)", 1, 10, 5)
 
-    # 2. 【核心修正】根據時間判定新鮮度狀態 (補回遺失的變數)
+    # 2. 新鮮度判定 (保持原樣)
     if shelf_life <= 10:
         fresh_status, fresh_color, fresh_text_color = "✨ 新鮮享用", "#E8F5E9", "#2E7D32"
     elif 11 <= shelf_life <= 30:
@@ -208,7 +208,16 @@ with st.sidebar:
     else:
         fresh_status, fresh_color, fresh_text_color = "🚫 不建議食用", "#EEEEEE", "#616161"
 
-    # 3. 根據口味判定標籤 (採用方案 A：通用型)
+    # --- 新增：物理特性模擬 (口感預測) ---
+    if shelf_life <= 15:
+        texture_info = "⚡ 狀態：最佳酥脆期 / 麵衣乾爽"
+    elif 15 < shelf_life <= 40:
+        texture_info = "💧 狀態：水分滲透中 / 麵衣回軟"
+    else:
+        texture_info = "📉 狀態：口感偏硬 / 建議氣炸復原"
+    # ----------------------------------
+
+    # 3. 口味判定 (方案 A)
     if 1 <= taste_level <= 2:
         taste_tag, tag_color = "清爽解膩", "#E1F5FE"
     elif 3 <= taste_level <= 5:
@@ -218,6 +227,8 @@ with st.sidebar:
     else:
         taste_tag, tag_color = "重磅厚實", "#FCE4EC"
 
+    # 4. 在側邊欄顯示即時口感狀態 (加在原本的成功訊息上方)
+    st.caption(texture_info) 
     st.divider()
     st.success("✅ 系統狀態：基因數據載入完畢")
 
