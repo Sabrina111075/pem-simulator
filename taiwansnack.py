@@ -229,6 +229,22 @@ with st.sidebar:
 
     # 4. 在側邊欄顯示即時口感狀態 (加在原本的成功訊息上方)
     st.caption(texture_info) 
+
+# --- 新增：適配飲品推薦 (Smart Pairing) ---
+    if 1 <= taste_level <= 2:
+        pairing_drink = "🥤 推薦搭配：無糖綠茶 / 氣泡水 (解膩首選)"
+    elif 3 <= taste_level <= 5:
+        pairing_drink = "🥤 推薦搭配：古早味紅茶 / 鮮奶茶 (平衡風味)"
+    elif 6 <= taste_level <= 8:
+        pairing_drink = "🥤 推薦搭配：酸梅汁 / 洛神花茶 (生津止渴)"
+    else:
+        pairing_drink = "🥤 推薦搭配：厚片青茶 / 濃郁烏龍 (化解厚重感)"
+    # ---------------------------------------
+
+    # 4. 在側邊欄顯示即時資訊
+    st.caption(texture_info) 
+    st.caption(pairing_drink) # 將飲品建議也顯示出來
+    
     st.divider()
     st.success("✅ 系統狀態：基因數據載入完畢")
 
