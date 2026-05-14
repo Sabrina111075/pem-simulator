@@ -215,7 +215,7 @@ with st.sidebar:
     elif 15 < shelf_life <= 40:
         texture_info, text_color = "🔄 狀態：質地動態轉化中", "#FFF3E0" # 橘色 (警示)
     else:
-        texture_info, text_color = "⚠️ 狀態：風味結構已解構", "#EEEEEE" # 灰色 (劣化)
+        texture_info, text_color = "⚠️ 狀態：口感完整度下降", "#EEEEEE" # 灰色 (劣化)
 
     # --- 2. 飲品推薦保持原樣 (原本就很通用) ---
 
