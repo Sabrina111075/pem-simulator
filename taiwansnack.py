@@ -239,13 +239,13 @@ with st.sidebar:
         pairing_drink = "🥤 推薦搭配：厚片青茶 / 濃郁烏龍 (化解厚重感)"
     # ---------------------------------------
 
-# --- 1. 更新物理特性模擬 (加入顏色設定) ---
+# --- 1. 更新通用物理特性模擬 (更中性的描述) ---
     if shelf_life <= 15:
-        texture_info, text_color = "⚡ 最佳酥脆期", "#E3F2FD" # 淺藍
+        texture_info, text_color = "🎯 狀態：最佳風味統合期", "#E3F2FD" # 藍色 (最穩定)
     elif 15 < shelf_life <= 40:
-        texture_info, text_color = "💧 麵衣回軟中", "#FFF3E0" # 淺橘
+        texture_info, text_color = "🔄 狀態：質地動態轉化中", "#FFF3E0" # 橘色 (警示)
     else:
-        texture_info, text_color = "📉 口感偏硬", "#EEEEEE" # 淺灰
+        texture_info, text_color = "⚠️ 狀態：風味結構已解構", "#EEEEEE" # 灰色 (劣化)
 
     # --- 2. 更新適配飲品推薦 (同樣定義變數即可) ---
     if 1 <= taste_level <= 2:
