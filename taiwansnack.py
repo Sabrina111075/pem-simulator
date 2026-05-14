@@ -194,11 +194,21 @@ with st.sidebar:
     st.divider()
     st.subheader("🧪 風味模擬器")
     
-    # 【關鍵修正：必須先寫這兩行，定義出變數】
+# 1. 定義滑桿
     shelf_life = st.slider("⏳ 賞味期限 (分鐘)", 1, 60, 10)
     taste_level = st.slider("🌶️ 客製化口味 (1-10)", 1, 10, 5)
 
-    # 根據口味判定標籤 (方案 A：通用型)
+    # 2. 【核心修正】根據時間判定新鮮度狀態 (補回遺失的變數)
+    if shelf_life <= 10:
+        fresh_status, fresh_color, fresh_text_color = "✨ 新鮮享用", "#E8F5E9", "#2E7D32"
+    elif 11 <= shelf_life <= 30:
+        fresh_status, fresh_color, fresh_text_color = "⚠️ 風味流失", "#FFF3E0", "#E65100"
+    elif 31 <= shelf_life <= 50:
+        fresh_status, fresh_color, fresh_text_color = "📉 建議加熱", "#FFEBEE", "#C62828"
+    else:
+        fresh_status, fresh_color, fresh_text_color = "🚫 不建議食用", "#EEEEEE", "#616161"
+
+    # 3. 根據口味判定標籤 (採用方案 A：通用型)
     if 1 <= taste_level <= 2:
         taste_tag, tag_color = "清爽解膩", "#E1F5FE"
     elif 3 <= taste_level <= 5:
@@ -208,18 +218,9 @@ with st.sidebar:
     else:
         taste_tag, tag_color = "重磅厚實", "#FCE4EC"
 
-    # 根據口味判定標籤 (原本這段也要保留)
-    if 1 <= taste_level <= 2:
-        taste_tag, tag_color = "清爽", "#E1F5FE"
-    elif 3 <= taste_level <= 5:
-        taste_tag, tag_color = "最佳風味", "#E8F5E9"
-    elif 6 <= taste_level <= 8:
-        taste_tag, tag_color = "醬香十足", "#FFF3E0"
-    else:
-        taste_tag, tag_color = "濃醇", "#FCE4EC"
-
     st.divider()
     st.success("✅ 系統狀態：基因數據載入完畢")
+
 data = SNACK_LIBRARY[sel_city][sel_snack]
 
 # 5. 主內容顯示
