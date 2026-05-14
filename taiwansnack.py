@@ -198,25 +198,24 @@ with st.sidebar:
     shelf_life = st.slider("⏳ 賞味期限 (分鐘)", 1, 60, 10)
     taste_level = st.slider("🌶️ 客製化口味 (1-10)", 1, 10, 5)
 
-# 2. 新鮮度判定 (優化語義，冷熱通用)
-    if shelf_life <= 10:
-        fresh_status, fresh_color, fresh_text_color = "✨ 新鮮享用", "#E8F5E9", "#2E7D32"
-    elif 11 <= shelf_life <= 30:
-        fresh_status, fresh_color, fresh_text_color = "⚠️ 風味流失", "#FFF3E0", "#E65100"
-    elif 31 <= shelf_life <= 50:
-        # 修改重點：加上「低溫保鮮」建議，讓冰品也適用
-        fresh_status, fresh_color, fresh_text_color = "📉 建議加熱 / 低溫保鮮", "#FFEBEE", "#C62828"
-    else:
-        fresh_status, fresh_color, fresh_text_color = "🚫 不建議食用", "#EEEEEE", "#616161"
+# 2. 新鮮度與口感狀態判定 (邏輯對齊修改)
+if shelf_life <= 15:
+    # 當賞味期限在 15 分鐘內，判定為新鮮最佳期
+    fresh_status, fresh_color, fresh_text_color = "□ 新鮮享用", "#E8F5E9", "#2E7D32"
+    texture_info, text_color = "□ 狀態：最佳風味統合期", "#E3F2FD"
+    
+elif 16 <= shelf_life <= 40:
+    # 當時間稍長，判定為風味流失/質地轉化中
+    fresh_status, fresh_color, fresh_text_color = "⚠️ 風味流失", "#FFF3E0", "#E65100"
+    texture_info, text_color = "□ 狀態：質地動態轉化中", "#FFF3E0"
+    
+else:
+    # 超過 40 分鐘，判定為不建議食用/口感下降
+    # 這裡同步修正您提到的：將「解構」改為「口感完整度下降」
+    fresh_status, fresh_color, fresh_text_color = "□ 不建議食用", "#EEEEEE", "#616161"
+    texture_info, text_color = "□ 狀態：口感完整度下降", "#EEEEEE"
 
-# --- 1. 更新通用物理特性模擬 (更親民的描述) ---
-    if shelf_life <= 15:
-        texture_info, text_color = "🎯 狀態：最佳風味統合期", "#E3F2FD"
-    elif 15 < shelf_life <= 40:
-        texture_info, text_color = "🔄 狀態：質地動態轉化中", "#FFF3E0"
-    else:
-        # 修改重點：將「解構」改為「口感完整度下降」
-        texture_info, text_color = "⚠️ 狀態：口感完整度下降", "#EEEEEE"
+# --- 2. 飲品推薦保持原樣 (原本就很通用) ---
 
     # --- 2. 飲品推薦保持原樣 (原本就很通用) ---
 
