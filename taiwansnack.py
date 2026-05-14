@@ -264,3 +264,22 @@ with col_right:
     ))
     fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=False, height=450)
     st.plotly_chart(fig, use_container_width=True)
+
+# 在右側下方新增一個模擬結果的顯示區域
+st.markdown("---")
+st.markdown(f"#### 📢 現做風味模擬結果")
+
+# 使用 HTML 畫出漂亮的徽章 (Badge)
+badge_html = f"""
+<div style="display: flex; gap: 10px;">
+    <div style="background-color: #F0F2F6; padding: 10px 20px; border-radius: 10px; border-left: 5px solid #FF4B4B;">
+        <small>剩餘賞味時間</small><br>
+        <strong>{shelf_life} 分鐘</strong>
+    </div>
+    <div style="background-color: {tag_color}; padding: 10px 20px; border-radius: 10px; border-left: 5px solid #2E7D32;">
+        <small>客製化等級</small><br>
+        <strong>{taste_tag} ({taste_level}/10)</strong>
+    </div>
+</div>
+"""
+st.markdown(badge_html, unsafe_allow_html=True)
