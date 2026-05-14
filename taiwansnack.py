@@ -186,7 +186,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ################################################
-# # 4. 側邊欄與選單 (定義變數)
+# # 4. 側邊欄與選單
 # ################################################
 with st.sidebar:
     st.header("🍱 台灣小吃縣市導覽")
@@ -196,12 +196,11 @@ with st.sidebar:
     st.divider()
     st.subheader("📋 風味模擬器")
     
-    # 先定義變數，後續邏輯才不會崩潰
     shelf_life = st.slider("⌛ 賞味期限 (分鐘)", 1, 60, 10)
     taste_level = st.slider("👅 客製化口味 (1-10)", 1, 10, 5)
 
 # ################################################
-# # 5. 核心判定邏輯 (統一時間閾值 15/40)
+# # 5. 核心判定邏輯
 # ################################################
 
 # --- 新鮮度判定 ---
@@ -212,7 +211,7 @@ elif 16 <= shelf_life <= 40:
 else:
     fresh_status, fresh_color, fresh_text_color = "📉 建議加熱 / 低溫保鮮", "#FFEBEE", "#C62828"
 
-# --- 口感狀態判定 (優化為淺顯易懂的詞) ---
+# --- 口感狀態判定 ---
 if shelf_life <= 15:
     texture_info, text_color = "🎯 狀態：最佳風味統合期", "#E3F2FD"
 elif 16 <= shelf_life <= 40:
@@ -220,39 +219,46 @@ elif 16 <= shelf_life <= 40:
 else:
     texture_info, text_color = "⚠️ 狀態：口感完整度下降", "#EEEEEE"
 
-# --- 飲品推薦判定 (Smart Pairing) ---
+# --- 口味標籤判定 (修正 KeyError 的關鍵) ---
 if 1 <= taste_level <= 2:
-    pairing_drink = "🍵 推薦搭配：無糖綠茶 / 氣泡水 (解膩首選)"
+    taste_tag, tag_color = "清爽解膩", "#E1F5FE"
 elif 3 <= taste_level <= 5:
-    pairing_drink = "☕ 推薦搭配：古早味紅茶 / 鮮奶茶 (平衡風味)"
+    taste_tag, tag_color = "均衡適口", "#E8F5E9"
 elif 6 <= taste_level <= 8:
-    pairing_drink = "🥤 推薦搭配：酸梅汁 / 洛神花茶 (生津止渴)"
+    taste_tag, tag_color = "濃郁飽滿", "#FFF3E0"
 else:
-    pairing_drink = "🍵 推薦搭配：厚片青茶 / 濃郁烏龍 (化解厚重感)"
+    taste_tag, tag_color = "重磅厚實", "#FCE4EC"
+
+# --- 飲品推薦判定 ---
+if 1 <= taste_level <= 2:
+    pairing_drink = "🍵 推薦搭配：無糖綠茶 / 氣泡水"
+elif 3 <= taste_level <= 5:
+    pairing_drink = "☕ 推薦搭配：古早味紅茶 / 鮮奶茶"
+elif 6 <= taste_level <= 8:
+    pairing_drink = "🥤 推薦搭配：酸梅汁 / 洛神花茶"
+else:
+    pairing_drink = "🍵 推薦搭配：厚片青茶 / 濃郁烏龍"
 
 # ################################################
-# # 6. 視覺化呈現 (雷達圖與徽章)
+# # 6. 視覺化呈現
 # ################################################
 
-# (雷達圖程式碼保持不變...)
-# ... [請保留你原本繪製 Plotly 雷達圖的程式碼] ...
-
-# --- 顯示第一排徽章 ---
+# --- 第一排徽章 (修正後的變數版本) ---
 badge_html = f"""
 <div style="display: flex; gap: 10px; margin-top: 10px;">
     <div style="background-color: {fresh_color}; padding: 12px 20px; border-radius: 10px; border-left: 5px solid {fresh_text_color}; min-width: 150px;">
         <small style="color: {fresh_text_color};">新鮮度診斷</small><br>
         <strong style="color: {fresh_text_color}; font-size: 18px;">{fresh_status}</strong>
     </div>
-    <div style="background-color: #F5F5F5; padding: 12px 20px; border-radius: 10px; border-left: 5px solid #444; min-width: 150px;">
+    <div style="background-color: {tag_color}; padding: 12px 20px; border-radius: 10px; border-left: 5px solid #444; min-width: 150px;">
         <small>客製化口味</small><br>
-        <strong style="font-size: 18px;">{SNACK_LIBRARY[sel_city][sel_snack]['taste_tag']} ({taste_level}/10)</strong>
+        <strong style="font-size: 18px;">{taste_tag} ({taste_level}/10)</strong>
     </div>
 </div>
 """
 st.markdown(badge_html, unsafe_allow_html=True)
 
-# --- 顯示第二排徽章：口感與飲品 ---
+# --- 第二排徽章 ---
 st.markdown(f"""
 <div style="display: flex; gap: 10px; margin-top: 10px;">
     <div style="flex: 1; background-color: {text_color}; padding: 15px; border-radius: 10px; border-left: 5px solid #90A4AE;">
