@@ -187,35 +187,47 @@ st.markdown("""
 
 # 4. 側邊欄與選單
 with st.sidebar:
-    st.header("📍 台灣小吃縣市導覽")
+    st.header("📂 台灣小吃縣市導覽")
     sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
     sel_snack = st.selectbox("請選擇小吃", list(SNACK_LIBRARY[sel_city].keys()))
 
-    # --- 將模擬器移到這裡 (注意縮排) ---
     st.divider()
     st.subheader("🧪 風味模擬器")
     
+    # 【關鍵修正：必須先寫這兩行，定義出變數】
+    shelf_life = st.slider("⏳ 賞味期限 (分鐘)", 1, 60, 10)
+    taste_level = st.slider("🌶️ 客製化口味 (1-10)", 1, 10, 5)
+
     # 根據時間判定新鮮度狀態
-if shelf_life <= 10:
-    fresh_status = "✨ 新鮮享用"
-    fresh_color = "#E8F5E9"  # 鮮綠背景
-    fresh_text_color = "#2E7D32" # 深綠文字
-elif 11 <= shelf_life <= 30:
-    fresh_status = "⚠️ 風味流失"
-    fresh_color = "#FFF3E0"  # 淺橘背景
-    fresh_text_color = "#E65100" # 深橘文字
-elif 31 <= shelf_life <= 50:
-    fresh_status = "📉 建議加熱"
-    fresh_color = "#FFEBEE"  # 淺紅背景
-    fresh_text_color = "#C62828" # 深紅文字
-else:
-    fresh_status = "🚫 不建議食用"
-    fresh_color = "#EEEEEE"  # 灰色背景
-    fresh_text_color = "#616161" # 深灰文字
-    
+    if shelf_life <= 10:
+        fresh_status = "✨ 新鮮享用"
+        fresh_color = "#E8F5E9"
+        fresh_text_color = "#2E7D32"
+    elif 11 <= shelf_life <= 30:
+        fresh_status = "⚠️ 風味流失"
+        fresh_color = "#FFF3E0"
+        fresh_text_color = "#E65100"
+    elif 31 <= shelf_life <= 50:
+        fresh_status = "📉 建議加熱"
+        fresh_color = "#FFEBEE"
+        fresh_text_color = "#C62828"
+    else:
+        fresh_status = "🚫 不建議食用"
+        fresh_color = "#EEEEEE"
+        fresh_text_color = "#616161"
+
+    # 根據口味判定標籤 (原本這段也要保留)
+    if 1 <= taste_level <= 2:
+        taste_tag, tag_color = "清爽", "#E1F5FE"
+    elif 3 <= taste_level <= 5:
+        taste_tag, tag_color = "最佳風味", "#E8F5E9"
+    elif 6 <= taste_level <= 8:
+        taste_tag, tag_color = "醬香十足", "#FFF3E0"
+    else:
+        taste_tag, tag_color = "濃醇", "#FCE4EC"
+
     st.divider()
     st.success("✅ 系統狀態：基因數據載入完畢")
-
 data = SNACK_LIBRARY[sel_city][sel_snack]
 
 # 5. 主內容顯示
