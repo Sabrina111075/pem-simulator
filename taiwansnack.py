@@ -232,25 +232,16 @@ else:
     tag_color = "#FCE4EC"
 
 # --- 新增：適配飲品推薦 (Smart Pairing) ---
-    if 1 <= taste_level <= 2:
-        pairing_drink = "🥤 推薦搭配：無糖綠茶 / 氣泡水 (解膩首選)"
-    elif 3 <= taste_level <= 5:
-        pairing_drink = "🥤 推薦搭配：古早味紅茶 / 鮮奶茶 (平衡風味)"
-    elif 6 <= taste_level <= 8:
-        pairing_drink = "🥤 推薦搭配：酸梅汁 / 洛神花茶 (生津止渴)"
-    else:
-        pairing_drink = "🥤 推薦搭配：厚片青茶 / 濃郁烏龍 (化解厚重感)"
-    # ---------------------------------------
+pairing_drink = "推薦搭配：純淨礦泉水" # 先給一個預設值，預防萬一
 
-    # --- 2. 更新適配飲品推薦 (同樣定義變數即可) ---
-    if 1 <= taste_level <= 2:
-        pairing_drink = "🥤 無糖綠茶 / 氣泡水"
-    elif 3 <= taste_level <= 5:
-        pairing_drink = "🥤 古早味紅茶 / 鮮奶茶"
-    elif 6 <= taste_level <= 8:
-        pairing_drink = "🥤 酸梅汁 / 洛神花茶"
-    else:
-        pairing_drink = "🥤 厚片青茶 / 濃郁烏龍"
+if taste_level <= 2:
+    pairing_drink = "推薦搭配：無糖綠茶 / 氣泡水 (解膩首選)"
+elif taste_level <= 5:
+    pairing_drink = "推薦搭配：古早味紅茶 / 鮮奶茶 (平衡風味)"
+elif taste_level <= 8:
+    pairing_drink = "推薦搭配：酸梅汁 / 洛神花茶 (生津止渴)"
+else:
+    pairing_drink = "推薦搭配：厚片青茶 / 濃郁烏龍 (化解厚重感)"
 
     # --- 3. 刪除 st.caption(texture_info) 和 st.caption(pairing_drink) ---
     # 讓側邊欄保持乾淨
