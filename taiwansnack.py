@@ -209,13 +209,14 @@ with st.sidebar:
     else:
         fresh_status, fresh_color, fresh_text_color = "🚫 不建議食用", "#EEEEEE", "#616161"
 
-# --- 1. 更新通用物理特性模擬 (更中性的描述) ---
+# --- 1. 更新通用物理特性模擬 (更親民的描述) ---
     if shelf_life <= 15:
-        texture_info, text_color = "🎯 狀態：最佳風味統合期", "#E3F2FD" # 藍色 (最穩定)
+        texture_info, text_color = "🎯 狀態：最佳風味統合期", "#E3F2FD"
     elif 15 < shelf_life <= 40:
-        texture_info, text_color = "🔄 狀態：質地動態轉化中", "#FFF3E0" # 橘色 (警示)
+        texture_info, text_color = "🔄 狀態：質地動態轉化中", "#FFF3E0"
     else:
-        texture_info, text_color = "⚠️ 狀態：口感完整度下降", "#EEEEEE" # 灰色 (劣化)
+        # 修改重點：將「解構」改為「口感完整度下降」
+        texture_info, text_color = "⚠️ 狀態：口感完整度下降", "#EEEEEE"
 
     # --- 2. 飲品推薦保持原樣 (原本就很通用) ---
 
