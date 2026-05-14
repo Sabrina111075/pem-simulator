@@ -185,143 +185,80 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 4. 側邊欄與選單
+# ################################################
+# # 4. 側邊欄與選單 (定義變數)
+# ################################################
 with st.sidebar:
-    st.header("📂 台灣小吃縣市導覽")
+    st.header("🍱 台灣小吃縣市導覽")
     sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
     sel_snack = st.selectbox("請選擇小吃", list(SNACK_LIBRARY[sel_city].keys()))
 
     st.divider()
-    st.subheader("🧪 風味模擬器")
+    st.subheader("📋 風味模擬器")
     
-# 1. 統一時間閾值 (15/40 分鐘)
-    
-    # --- 新鮮度判定邏輯 ---
-    if shelf_life <= 15:
-        fresh_status, fresh_color, fresh_text_color = "✨ 新鮮享用", "#E8F5E9", "#2E7D32"
-    elif 16 <= shelf_life <= 40:
-        fresh_status, fresh_color, fresh_text_color = "⚠️ 風味流失", "#FFF3E0", "#E65100"
-    else:
-        fresh_status, fresh_color, fresh_text_color = "📉 建議加熱 / 低溫保鮮", "#FFEBEE", "#C62828"
+    # 先定義變數，後續邏輯才不會崩潰
+    shelf_life = st.slider("⌛ 賞味期限 (分鐘)", 1, 60, 10)
+    taste_level = st.slider("👅 客製化口味 (1-10)", 1, 10, 5)
 
-    # --- 口感模擬狀態邏輯 (對應優化語詞) ---
-    if shelf_life <= 15:
-        texture_info, text_color = "🎯 狀態：最佳風味統合期", "#E3F2FD"
-    elif 16 <= shelf_life <= 40:
-        # 這裡改為更淺顯易懂的詞
-        texture_info, text_color = "🔄 狀態：口感開始變化", "#FFF3E0" 
-    else:
-        texture_info, text_color = "⚠️ 狀態：口感完整度下降", "#EEEEEE"
+# ################################################
+# # 5. 核心判定邏輯 (統一時間閾值 15/40)
+# ################################################
 
-    # --- 2. 飲品推薦保持原樣 (原本就很通用) ---
-
-    # 3. 口味判定 (方案 A)
-    if 1 <= taste_level <= 2:
-        taste_tag, tag_color = "清爽解膩", "#E1F5FE"
-    elif 3 <= taste_level <= 5:
-        taste_tag, tag_color = "均衡適口", "#E8F5E9"
-    elif 6 <= taste_level <= 8:
-        taste_tag, tag_color = "濃郁飽滿", "#FFF3E0"
-    else:
-        taste_tag, tag_color = "重磅厚實", "#FCE4EC"
-
-# --- 新增：適配飲品推薦 (Smart Pairing) ---
-    if 1 <= taste_level <= 2:
-        pairing_drink = "🥤 推薦搭配：無糖綠茶 / 氣泡水 (解膩首選)"
-    elif 3 <= taste_level <= 5:
-        pairing_drink = "🥤 推薦搭配：古早味紅茶 / 鮮奶茶 (平衡風味)"
-    elif 6 <= taste_level <= 8:
-        pairing_drink = "🥤 推薦搭配：酸梅汁 / 洛神花茶 (生津止渴)"
-    else:
-        pairing_drink = "🥤 推薦搭配：厚片青茶 / 濃郁烏龍 (化解厚重感)"
-    # ---------------------------------------
-
-    # --- 2. 更新適配飲品推薦 (同樣定義變數即可) ---
-    if 1 <= taste_level <= 2:
-        pairing_drink = "🥤 無糖綠茶 / 氣泡水"
-    elif 3 <= taste_level <= 5:
-        pairing_drink = "🥤 古早味紅茶 / 鮮奶茶"
-    elif 6 <= taste_level <= 8:
-        pairing_drink = "🥤 酸梅汁 / 洛神花茶"
-    else:
-        pairing_drink = "🥤 厚片青茶 / 濃郁烏龍"
-
-    # --- 3. 刪除 st.caption(texture_info) 和 st.caption(pairing_drink) ---
-    # 讓側邊欄保持乾淨
-
-    st.divider()
-    st.success("✅ 系統狀態：基因數據載入完畢")
-
-data = SNACK_LIBRARY[sel_city][sel_snack]
-
-# 5. 主內容顯示
-st.title("TAD-AGE | 台灣小吃風味解析系統")
-
-st.divider() # 建議加一個分隔線，視覺上會更專業
-
-# ----------------------
-michelin_val = data.get("michelin", 0)
-if michelin_val == 2:
-    tag_html = '<span class="michelin-star">MICHELIN ⭐ STAR</span>'
-elif michelin_val == 1:
-    tag_html = '<span class="michelin-badge">BIB GOURMAND 😋</span>'
+# --- 新鮮度判定 ---
+if shelf_life <= 15:
+    fresh_status, fresh_color, fresh_text_color = "✨ 新鮮享用", "#E8F5E9", "#2E7D32"
+elif 16 <= shelf_life <= 40:
+    fresh_status, fresh_color, fresh_text_color = "⚠️ 風味流失", "#FFF3E0", "#E65100"
 else:
-    tag_html = ""
+    fresh_status, fresh_color, fresh_text_color = "📉 建議加熱 / 低溫保鮮", "#FFEBEE", "#C62828"
 
-st.markdown(f'<div class="snack-header"><span class="snack-title">{sel_snack}</span>{tag_html}</div>', unsafe_allow_html=True)
+# --- 口感狀態判定 (優化為淺顯易懂的詞) ---
+if shelf_life <= 15:
+    texture_info, text_color = "🎯 狀態：最佳風味統合期", "#E3F2FD"
+elif 16 <= shelf_life <= 40:
+    texture_info, text_color = "🔄 狀態：口感開始變化", "#FFF3E0"
+else:
+    texture_info, text_color = "⚠️ 狀態：口感完整度下降", "#EEEEEE"
 
-col_left, col_right = st.columns([2, 8])
+# --- 飲品推薦判定 (Smart Pairing) ---
+if 1 <= taste_level <= 2:
+    pairing_drink = "🍵 推薦搭配：無糖綠茶 / 氣泡水 (解膩首選)"
+elif 3 <= taste_level <= 5:
+    pairing_drink = "☕ 推薦搭配：古早味紅茶 / 鮮奶茶 (平衡風味)"
+elif 6 <= taste_level <= 8:
+    pairing_drink = "🥤 推薦搭配：酸梅汁 / 洛神花茶 (生津止渴)"
+else:
+    pairing_drink = "🍵 推薦搭配：厚片青茶 / 濃郁烏龍 (化解厚重感)"
 
-with col_left:
-    for label, key in [("君 (核心食材)", "君"), ("臣 (主要調味)", "臣"), ("佐 (輔助提味)", "佐"), ("使 (點綴平衡)", "使")]:
-        st.markdown(f'<div class="formula-label">{label}</div>', unsafe_allow_html=True)
-        tags = "".join([f'<div class="tag-item">{i}</div>' for i in data[key]])
-        st.markdown(f'<div class="tag-group">{tags}</div>', unsafe_allow_html=True)
-    
-    st.markdown(f'<div class="risk-container"><span class="risk-title">⚠️ 風味風險提醒 (Risk Alert)</span><div style="color:#FF4B4B;">{data["risk"]}</div></div>', unsafe_allow_html=True)
+# ################################################
+# # 6. 視覺化呈現 (雷達圖與徽章)
+# ################################################
 
-with col_right:
-    st.markdown('<div style="text-align: center; font-weight: bold; color: #555; margin-bottom: 20px;">風味維度分析 (Radar)</div>', unsafe_allow_html=True)
-    categories = ['入味程度', '口感紮實', '解膩層次', '清爽程度', '濃郁飽滿']
-    r_values = data.get("scores", [3, 3, 3, 3, 3])
-    
-    fig = go.Figure()
-    fig.add_trace(go.Scatterpolar(
-        r=r_values + [r_values[0]],
-        theta=categories + [categories[0]],
-        fill='toself',
-        fillcolor='rgba(211, 156, 107, 0.4)',
-        line=dict(color='#D39C6B')
-    ))
-    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=False, height=450)
-    st.plotly_chart(fig, use_container_width=True)
+# (雷達圖程式碼保持不變...)
+# ... [請保留你原本繪製 Plotly 雷達圖的程式碼] ...
 
-# 更新後的徽章 HTML 語法
+# --- 顯示第一排徽章 ---
 badge_html = f"""
 <div style="display: flex; gap: 10px; margin-top: 10px;">
-    <!-- 新鮮度感測器 -->
     <div style="background-color: {fresh_color}; padding: 12px 20px; border-radius: 10px; border-left: 5px solid {fresh_text_color}; min-width: 150px;">
         <small style="color: {fresh_text_color};">新鮮度診斷</small><br>
         <strong style="color: {fresh_text_color}; font-size: 18px;">{fresh_status}</strong>
     </div>
-    <!-- 客製化等級 -->
-    <div style="background-color: {tag_color}; padding: 12px 20px; border-radius: 10px; border-left: 5px solid #444; min-width: 150px;">
+    <div style="background-color: #F5F5F5; padding: 12px 20px; border-radius: 10px; border-left: 5px solid #444; min-width: 150px;">
         <small>客製化口味</small><br>
-        <strong style="font-size: 18px;">{taste_tag} ({taste_level}/10)</strong>
+        <strong style="font-size: 18px;">{SNACK_LIBRARY[sel_city][sel_snack]['taste_tag']} ({taste_level}/10)</strong>
     </div>
 </div>
 """
 st.markdown(badge_html, unsafe_allow_html=True)
 
-# --- 新增第二排徽章：口感與飲品 ---
+# --- 顯示第二排徽章：口感與飲品 ---
 st.markdown(f"""
 <div style="display: flex; gap: 10px; margin-top: 10px;">
-    <!-- 口感狀態徽章 -->
     <div style="flex: 1; background-color: {text_color}; padding: 15px; border-radius: 10px; border-left: 5px solid #90A4AE;">
         <p style="margin: 0; font-size: 0.8rem; color: #546E7A;">口感模擬狀態</p>
         <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #263238;">{texture_info}</p>
     </div>
-    <!-- 推薦飲品徽章 -->
     <div style="flex: 1.5; background-color: #F3E5F5; padding: 15px; border-radius: 10px; border-left: 5px solid #8E24AA;">
         <p style="margin: 0; font-size: 0.8rem; color: #7B1FA2;">專家推薦飲品</p>
         <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4A148C;">{pairing_drink}</p>
