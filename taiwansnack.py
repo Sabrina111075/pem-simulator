@@ -328,18 +328,16 @@ st.markdown(badge_html, unsafe_allow_html=True)
 
 # --- 新增第二排徽章：口感與飲品 ---
 st.markdown(f"""
-    <div style="display: flex; gap: 10px; margin-top: 10px;">
-        <!-- 口感狀態徽章 -->
-        <div style="flex: 1; background-color: {text_color}; padding: 15px; border-radius: 10px; border-left: 5px solid #90A4AE;">
-            <p style="margin: 0; font-size: 0.8rem; color: #546E7A;">口感模擬狀態</p>
-            <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #263238;">{texture_info}</p>
-        </div>
-        <!-- 推薦飲品徽章 -->
-        <div style="flex: 1.5; background-color: #F3E5F5; padding: 15px; border-radius: 10px; border-left: 5px solid #8E24AA;">
-            <p style="margin: 0; font-size: 0.8rem; color: #7B1FA2;">專家推薦飲品</p>
-        <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #263238;">
-            {texture_info}  <!-- 這裡必須是變數！ -->
-    </p>
-
+<div style="display: flex; gap: 10px; margin-top: 10px;">
+    <!-- 口感狀態徽章 -->
+    <div style="flex: 1; background-color: {text_color}; padding: 15px; border-radius: 10px; border-left: 5px solid #90A4AE;">
+        <p style="margin: 0; font-size: 0.8rem; color: #546E7A;">口感模擬狀態</p>
+        <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #263238;">{texture_info}</p>
     </div>
+    <!-- 推薦飲品徽章 -->
+    <div style="flex: 1.5; background-color: #F3E5F5; padding: 15px; border-radius: 10px; border-left: 5px solid #8E24AA;">
+        <p style="margin: 0; font-size: 0.8rem; color: #7B1FA2;">專家推薦飲品</p>
+        <p style="margin: 0; font-size: 1rem; font-weight: bold; color: #4A148C;">{pairing_drink}</p>
+    </div>
+</div>
 """, unsafe_allow_html=True)
