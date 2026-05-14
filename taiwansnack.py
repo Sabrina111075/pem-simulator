@@ -198,13 +198,14 @@ with st.sidebar:
     shelf_life = st.slider("⏳ 賞味期限 (分鐘)", 1, 60, 10)
     taste_level = st.slider("🌶️ 客製化口味 (1-10)", 1, 10, 5)
 
-    # 2. 新鮮度判定 (保持原樣)
+# 2. 新鮮度判定 (優化語義，冷熱通用)
     if shelf_life <= 10:
         fresh_status, fresh_color, fresh_text_color = "✨ 新鮮享用", "#E8F5E9", "#2E7D32"
     elif 11 <= shelf_life <= 30:
         fresh_status, fresh_color, fresh_text_color = "⚠️ 風味流失", "#FFF3E0", "#E65100"
     elif 31 <= shelf_life <= 50:
-        fresh_status, fresh_color, fresh_text_color = "📉 建議加熱", "#FFEBEE", "#C62828"
+        # 修改重點：加上「低溫保鮮」建議，讓冰品也適用
+        fresh_status, fresh_color, fresh_text_color = "📉 建議加熱 / 低溫保鮮", "#FFEBEE", "#C62828"
     else:
         fresh_status, fresh_color, fresh_text_color = "🚫 不建議食用", "#EEEEEE", "#616161"
 
