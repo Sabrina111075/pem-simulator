@@ -219,13 +219,13 @@ else:
 
     # 3. 口味判定 (方案 A)
     if 1 <= taste_level <= 2:
-        taste_tag, tag_color = "清爽解膩", "#E1F5FE"
+         tag_tag, tag_color = "清爽解膩", "#E1F5FE"
     elif 3 <= taste_level <= 5:
-        taste_tag, tag_color = "均衡適口", "#E8F5E9"
+        tag_tag, tag_color = "均衡適口", "#E8F5E9"
     elif 6 <= taste_level <= 8:
-        taste_tag, tag_color = "濃郁飽滿", "#FFF3E0"
+        tag_tag, tag_color = "濃郁飽滿", "#FFF3E0"
     else:
-        taste_tag, tag_color = "重磅厚實", "#FCE4EC"
+        tag_tag, tag_color = "重磅厚實", "#FCE4EC"
 
 # --- 新增：適配飲品推薦 (Smart Pairing) ---
     if 1 <= taste_level <= 2:
