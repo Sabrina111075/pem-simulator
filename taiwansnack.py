@@ -191,35 +191,31 @@ with st.sidebar:
     sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
     sel_snack = st.selectbox("請選擇小吃", list(SNACK_LIBRARY[sel_city].keys()))
 
+    # 4. 側邊欄與選單
+with st.sidebar:
+    st.header("📂 台灣小吃縣市導覽")
+    sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
+    sel_snack = st.selectbox("請選擇小吃", list(SNACK_LIBRARY[sel_city].keys()))
+
+    # --- 將模擬器移到這裡 (注意縮排) ---
     st.divider()
     st.subheader("🧪 風味模擬器")
-
-    # 第一個滑桿：賞味期限
+    
     shelf_life = st.slider("⏳ 賞味期限 (分鐘)", 1, 60, 30)
-
-    # 第二個滑桿：客製化口味
     taste_level = st.slider("🌶️ 客製化口味 (1-10)", 1, 10, 5)
 
-    # 根據滑桿數值判定口味標籤
+    # 判斷口味邏輯 (同樣要在縮排內)
     if 1 <= taste_level <= 2:
-    taste_tag = "清爽"
-    tag_color = "#E1F5FE" # 淺藍
+        taste_tag, tag_color = "清爽", "#E1F5FE"
     elif 3 <= taste_level <= 5:
-    taste_tag = "最佳風味"
-    tag_color = "#E8F5E9" # 淺綠
+        taste_tag, tag_color = "最佳風味", "#E8F5E9"
     elif 6 <= taste_level <= 8:
-    taste_tag = "醬香十足"
-    tag_color = "#FFF3E0" # 淺橘
+        taste_tag, tag_color = "醬香十足", "#FFF3E0"
     else:
-    taste_tag = "濃醇"
-    tag_color = "#FCE4EC" # 淺粉
-
-    # --- 新增的部分開始 ---
+        taste_tag, tag_color = "濃醇", "#FCE4EC"
     
-    st.divider()  
-    st.success("✅ 系統狀態：基因數據載入完畢") 
-    
-    # --- 新增的部分結束 ---
+    st.divider()
+    st.success("✅ 系統狀態：基因數據載入完畢")
 
 data = SNACK_LIBRARY[sel_city][sel_snack]
 
