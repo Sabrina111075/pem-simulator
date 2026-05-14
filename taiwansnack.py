@@ -217,19 +217,19 @@ else:
 
     # --- 2. 飲品推薦保持原樣 (原本就很通用) ---
 
-# 3. 口味判定 (方案 A)
-    if taste_level <= 2:
-        tag_name = "清爽解膩"
-        tag_color = "#E1F5FE"
-    elif taste_level <= 5:
-        tag_name = "均衡適口"
-        tag_color = "#E8F5E9"
-    elif taste_level <= 8:
-        tag_name = "濃郁飽滿"
-        tag_color = "#FFF3E0"
-    else:
-        tag_name = "重磅厚實"
-        tag_color = "#FCE4EC"
+# 3. 口味判定 (方案 A) - 根據 HTML 標籤需求完全對齊
+if taste_level <= 2:
+    taste_tag = "清爽解膩"
+    tag_color = "#E1F5FE"
+elif taste_level <= 5:
+    taste_tag = "均衡適口"
+    tag_color = "#E8F5E9"
+elif taste_level <= 8:
+    taste_tag = "濃郁飽滿"
+    tag_color = "#FFF3E0"
+else:
+    taste_tag = "重磅厚實"
+    tag_color = "#FCE4EC"
 
 # --- 新增：適配飲品推薦 (Smart Pairing) ---
     if 1 <= taste_level <= 2:
@@ -323,7 +323,7 @@ st.markdown(badge_html, unsafe_allow_html=True)
 st.markdown(f"""
 <div style="display: flex; gap: 10px; margin-top: 10px;">
     <!-- 口感狀態徽章 -->
-    <div style="flex: 1; background-color: {text_name}; padding: 15px; border-radius: 10px; border-left: 5px solid #90A4AE;">
+    <div style="flex: 1; background-color: {text_color}; padding: 15px; border-radius: 10px; border-left: 5px solid #90A4AE;">
         <p style="margin: 0; font-size: 0.8rem; color: #546E7A;">口感模擬狀態</p>
         <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #263238;">{texture_info}</p>
     </div>
