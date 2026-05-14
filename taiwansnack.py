@@ -238,10 +238,27 @@ with st.sidebar:
         pairing_drink = "🥤 推薦搭配：厚片青茶 / 濃郁烏龍 (化解厚重感)"
     # ---------------------------------------
 
-    # 4. 在側邊欄顯示即時資訊
-    st.caption(texture_info) 
-    st.caption(pairing_drink) # 將飲品建議也顯示出來
-    
+# --- 1. 更新物理特性模擬 (加入顏色設定) ---
+    if shelf_life <= 15:
+        texture_info, text_color = "⚡ 最佳酥脆期", "#E3F2FD" # 淺藍
+    elif 15 < shelf_life <= 40:
+        texture_info, text_color = "💧 麵衣回軟中", "#FFF3E0" # 淺橘
+    else:
+        texture_info, text_color = "📉 口感偏硬", "#EEEEEE" # 淺灰
+
+    # --- 2. 更新適配飲品推薦 (同樣定義變數即可) ---
+    if 1 <= taste_level <= 2:
+        pairing_drink = "🥤 無糖綠茶 / 氣泡水"
+    elif 3 <= taste_level <= 5:
+        pairing_drink = "🥤 古早味紅茶 / 鮮奶茶"
+    elif 6 <= taste_level <= 8:
+        pairing_drink = "🥤 酸梅汁 / 洛神花茶"
+    else:
+        pairing_drink = "🥤 厚片青茶 / 濃郁烏龍"
+
+    # --- 3. 刪除 st.caption(texture_info) 和 st.caption(pairing_drink) ---
+    # 讓側邊欄保持乾淨
+
     st.divider()
     st.success("✅ 系統狀態：基因數據載入完畢")
 
