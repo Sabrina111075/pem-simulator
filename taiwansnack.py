@@ -198,23 +198,15 @@ with st.sidebar:
     shelf_life = st.slider("⏳ 賞味期限 (分鐘)", 1, 60, 10)
     taste_level = st.slider("🌶️ 客製化口味 (1-10)", 1, 10, 5)
 
-    # 根據時間判定新鮮度狀態
-    if shelf_life <= 10:
-        fresh_status = "✨ 新鮮享用"
-        fresh_color = "#E8F5E9"
-        fresh_text_color = "#2E7D32"
-    elif 11 <= shelf_life <= 30:
-        fresh_status = "⚠️ 風味流失"
-        fresh_color = "#FFF3E0"
-        fresh_text_color = "#E65100"
-    elif 31 <= shelf_life <= 50:
-        fresh_status = "📉 建議加熱"
-        fresh_color = "#FFEBEE"
-        fresh_text_color = "#C62828"
+    # 根據口味判定標籤 (方案 A：通用型)
+    if 1 <= taste_level <= 2:
+        taste_tag, tag_color = "清爽解膩", "#E1F5FE"
+    elif 3 <= taste_level <= 5:
+        taste_tag, tag_color = "均衡適口", "#E8F5E9"
+    elif 6 <= taste_level <= 8:
+        taste_tag, tag_color = "濃郁飽滿", "#FFF3E0"
     else:
-        fresh_status = "🚫 不建議食用"
-        fresh_color = "#EEEEEE"
-        fresh_text_color = "#616161"
+        taste_tag, tag_color = "重磅厚實", "#FCE4EC"
 
     # 根據口味判定標籤 (原本這段也要保留)
     if 1 <= taste_level <= 2:
