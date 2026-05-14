@@ -227,9 +227,6 @@ with st.sidebar:
     else:
         taste_tag, tag_color = "重磅厚實", "#FCE4EC"
 
-    # 4. 在側邊欄顯示即時口感狀態 (加在原本的成功訊息上方)
-    st.caption(texture_info) 
-
 # --- 新增：適配飲品推薦 (Smart Pairing) ---
     if 1 <= taste_level <= 2:
         pairing_drink = "🥤 推薦搭配：無糖綠茶 / 氣泡水 (解膩首選)"
