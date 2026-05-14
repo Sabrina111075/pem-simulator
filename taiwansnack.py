@@ -195,18 +195,23 @@ with st.sidebar:
     st.divider()
     st.subheader("🧪 風味模擬器")
     
-    shelf_life = st.slider("⏳ 賞味期限 (分鐘)", 1, 60, 30)
-    taste_level = st.slider("🌶️ 客製化口味 (1-10)", 1, 10, 5)
-
-    # 判斷口味邏輯 (同樣要在縮排內)
-    if 1 <= taste_level <= 2:
-        taste_tag, tag_color = "清爽", "#E1F5FE"
-    elif 3 <= taste_level <= 5:
-        taste_tag, tag_color = "最佳風味", "#E8F5E9"
-    elif 6 <= taste_level <= 8:
-        taste_tag, tag_color = "醬香十足", "#FFF3E0"
-    else:
-        taste_tag, tag_color = "濃醇", "#FCE4EC"
+    # 根據時間判定新鮮度狀態
+if shelf_life <= 10:
+    fresh_status = "✨ 新鮮享用"
+    fresh_color = "#E8F5E9"  # 鮮綠背景
+    fresh_text_color = "#2E7D32" # 深綠文字
+elif 11 <= shelf_life <= 30:
+    fresh_status = "⚠️ 風味流失"
+    fresh_color = "#FFF3E0"  # 淺橘背景
+    fresh_text_color = "#E65100" # 深橘文字
+elif 31 <= shelf_life <= 50:
+    fresh_status = "📉 建議加熱"
+    fresh_color = "#FFEBEE"  # 淺紅背景
+    fresh_text_color = "#C62828" # 深紅文字
+else:
+    fresh_status = "🚫 不建議食用"
+    fresh_color = "#EEEEEE"  # 灰色背景
+    fresh_text_color = "#616161" # 深灰文字
     
     st.divider()
     st.success("✅ 系統狀態：基因數據載入完畢")
@@ -255,20 +260,18 @@ with col_right:
     fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 5])), showlegend=False, height=450)
     st.plotly_chart(fig, use_container_width=True)
 
-# 在右側下方新增一個模擬結果的顯示區域
-st.markdown("---")
-st.markdown(f"#### 📢 現做風味模擬結果")
-
-# 使用 HTML 畫出漂亮的徽章 (Badge)
+# 更新後的徽章 HTML 語法
 badge_html = f"""
-<div style="display: flex; gap: 10px;">
-    <div style="background-color: #F0F2F6; padding: 10px 20px; border-radius: 10px; border-left: 5px solid #FF4B4B;">
-        <small>剩餘賞味時間</small><br>
-        <strong>{shelf_life} 分鐘</strong>
+<div style="display: flex; gap: 10px; margin-top: 10px;">
+    <!-- 新鮮度感測器 -->
+    <div style="background-color: {fresh_color}; padding: 12px 20px; border-radius: 10px; border-left: 5px solid {fresh_text_color}; min-width: 150px;">
+        <small style="color: {fresh_text_color};">新鮮度診斷</small><br>
+        <strong style="color: {fresh_text_color}; font-size: 18px;">{fresh_status}</strong>
     </div>
-    <div style="background-color: {tag_color}; padding: 10px 20px; border-radius: 10px; border-left: 5px solid #2E7D32;">
-        <small>客製化等級</small><br>
-        <strong>{taste_tag} ({taste_level}/10)</strong>
+    <!-- 客製化等級 -->
+    <div style="background-color: {tag_color}; padding: 12px 20px; border-radius: 10px; border-left: 5px solid #444; min-width: 150px;">
+        <small>客製化口味</small><br>
+        <strong style="font-size: 18px;">{taste_tag} ({taste_level}/10)</strong>
     </div>
 </div>
 """
