@@ -191,12 +191,6 @@ with st.sidebar:
     sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
     sel_snack = st.selectbox("請選擇小吃", list(SNACK_LIBRARY[sel_city].keys()))
 
-    # 4. 側邊欄與選單
-with st.sidebar:
-    st.header("📂 台灣小吃縣市導覽")
-    sel_city = st.selectbox("請選擇縣市", list(SNACK_LIBRARY.keys()))
-    sel_snack = st.selectbox("請選擇小吃", list(SNACK_LIBRARY[sel_city].keys()))
-
     # --- 將模擬器移到這裡 (注意縮排) ---
     st.divider()
     st.subheader("🧪 風味模擬器")
