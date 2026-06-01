@@ -8,7 +8,7 @@ import core_engine
 # 設置寬螢幕模式
 st.set_page_config(layout="wide")
 
-st.title("🔮 Crystal-machine 語意作業系統
+st.title("🔮 Crystal-machine 語意作業系統")
 st.write("---")
 
 # 載入核心數據與狀態空間
