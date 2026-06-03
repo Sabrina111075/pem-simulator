@@ -1,15 +1,28 @@
-﻿import streamlit as st
+﻿# 💡 1. 這是防禦性偽裝：在 Streamlit 載入前，先在記憶體中建立一個假的 pyarrow 模組
+import sys
+from types import ModuleType
+if 'pyarrow' not in sys.modules:
+    sys.modules['pyarrow'] = ModuleType('pyarrow')
+
+# 💡 2. 這是你原本的導入區（現在它們能平安載入了）
+import streamlit as st
 import pandas as pd
 import time
 
 # ==============================================================================
-# 1. 網頁基本配置 & 全域 CSS 樣式
+# # 1. 網頁基本配置 & 全域 CSS 樣式
 # ==============================================================================
 st.set_page_config(
     page_title="Crystal-Machine: 企業語意作業系統",
     page_icon="🔮",
     layout="wide"
 )
+
+# 💡 3. 防止 Google 翻譯自作聰明
+st.markdown('<meta name="google" content="notranslate">', unsafe_allow_html=True)
+
+# 💡 4. 網頁自我監測：每 10 秒 網頁原生的動態重新整理
+st.markdown('<meta http-equiv="refresh" content="30">', unsafe_allow_html=True)
 
 current_time = time.strftime("%H:%M:%S", time.localtime())
 
@@ -123,14 +136,14 @@ def render_heartbeat_panel(status_type):
 # 3. 靜態集中式資料字典 (【徹底校正】修正 O1002 內的 alert_msg 錯置 Bug)
 # ==============================================================================
 DYNAMIC_UI_DATA = {
-    "O1001 (台灣電子 A 公司)": {
+    "O1001 (台灣電子公司)": {
         "order_id": "O1001",
         "status_type": "danger",
         "alert_msg": "關鍵庫存 M002 庫存嚴重不足！供應商交期間歇，已引發最左端 O1001 骨牌效應斷鏈風險！",
         "pdca_status": "⚠️ **【PDCA 心跳警報】偵測到企業語意鏈邊界異常！自動啟動 S-Path 治理程序...**",
         "pdca_logs": f"☁️ 心跳訊號定時循環觸發 ( {current_time} ) ：【C-Check】🚨 偵測到 M002 爆發點 -> 【A-Action】觸發 O1001 骨牌效應修改防禦機制。\n\n📂 Heartbeat 訊號定時循環觸發 ( 14:46:38 ) : [P-Plan] 持續觀察拓撲 -> [D-Do] 更新狀態圖層 -> [C-Check] 偵測邊界異常。",
         
-        "n1_txt": "🟦 節點 [1/5]：客戶層面 (Customer Layer)\n   [名稱] 台灣電子 A 公司 \n   [狀態] 良好 (已下單)",
+        "n1_txt": "🟦 節點 [1/5]：客戶層面 (Customer Layer)\n   [名稱] 台灣電子公司 \n   [狀態] 良好 (已下單)",
         "n2_txt": "📦 節點 [2/5]：訂單層面 (Order Layer) \n   [單號] O1001 \n   [狀態] ⚠️ 多米諾骨牌效應普遍存在風險",
         "n3_txt": "🏷️ 節點 [3/5]：產品展示層面 (Product Layer) \n   [品名] 高階控制模組 \n   [狀態] ❌ 受下游缺料波及",
         "n4_txt": "🧩 節點 [4/5]：關鍵物料層 (Material Layer) \n   [料號] M002 核心晶片 \n   [狀態] 🚨 庫存嚴重不足 (交期嚴重)",
@@ -187,7 +200,7 @@ st.subheader("🗂 語意資料鏈搜尋控制台")
 
 selected_order = st.selectbox(
     "💡 請選擇渴望回溯推理的目標順序：",
-    options=["請選擇訂單...", "O1001 (台灣電子 A 公司)", "O1002 (凌雲科技)"],
+    options=["請選擇訂單...", "O1001 (台灣電子公司)", "O1002 (凌雲科技)"],
     index=1
 )
 
