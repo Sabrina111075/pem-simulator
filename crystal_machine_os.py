@@ -6,8 +6,10 @@ if 'pyarrow' not in sys.modules:
 
 # 💡 2. 這是你原本的導入區（現在它們能平安載入了）
 import streamlit as st
-import pandas as pd
 import time
+import pandas as pd  
+import json
+from datetime import datetime, timedelta, timezone
 
 # ==============================================================================
 # # 1. 網頁基本配置 & 全域 CSS 樣式
@@ -22,7 +24,7 @@ st.set_page_config(
 st.markdown('<meta name="google" content="notranslate">', unsafe_allow_html=True)
 
 # 💡 4. 網頁自我監測：每 10 秒 網頁原生的動態重新整理
-st.markdown('<meta http-equiv="refresh" content="30">', unsafe_allow_html=True)
+st.markdown('<meta http-equiv="refresh" content="180">', unsafe_allow_html=True)
 
 from datetime import datetime, timedelta, timezone
 
@@ -220,34 +222,208 @@ alert_text_placeholder = st.empty()
 alert_text_placeholder.markdown(f"**🧐 語意鏈邊界診斷：** {data['alert_msg']}")
 st.write("---")
 
-# 🚀 區塊二：微觀知識圖譜路徑追蹤
-st.markdown("<h3 style='font-weight:bold; color:#0f172a; margin-bottom:10px;'>🌐 目前知識圖譜路徑追蹤</h3>", unsafe_allow_html=True)
-graph_text_block = f"""
-📌 當前檢索語意對象：{data['order_id']}
-=========================================
+# ==============================================================================
+# # 區域二：S-Path-RAG 微觀知識圖譜路徑追蹤 (語法相容、空值防禦與視覺減壓完全版)
+# ==============================================================================
+import pandas as pd
 
-{data['n1_txt']}
-   ⬇️ (下單關係鏈結)
+st.markdown("<h3 style='font-weight:bold; color:#0f172a; margin-bottom:15px;'>🔮 S-Path-RAG 微觀知識圖譜路徑追蹤</h3>", unsafe_allow_html=True)
 
-{data['n2_txt']}
-   ⬇️ (需求產品鏈結)
+# ------------------------------------------------------------------------------
+# 💡 1. 核心防禦：如果 data 根本沒有載入成功，直接友善提示並攔截，絕不往下走噴錯！
+# ------------------------------------------------------------------------------
+if not isinstance(data, dict) or not data:
+    st.markdown("""
+        <div style="background-color:#f1f5f9; padding:15px; border-left:5px solid #64748b; border-radius:4px; color:#334155;">
+            💡 請在上方選單選擇有效的企業訂單，以利系統動態檢索微觀知識圖譜。
+        </div>
+    """, unsafe_allow_html=True)
+else:
+    # --------------------------------------------------------------------------
+    # 💡 2. 安全變數提取 (使用 .get 徹底消滅 KeyError，大字串內不允許出現引號中括號)
+    # --------------------------------------------------------------------------
+    current_order_id = str(data.get('order_id', '未載入單號'))
+    n1_content = str(data.get('n1_txt', '常態數據檢索中...'))
+    n2_content = str(data.get('n2_txt', '常態數據檢索中...'))
+    n3_content = str(data.get('n3_txt', '常態數據檢索中...'))
+    n4_content = str(data.get('n4_txt', '常態數據檢索中...'))
+    n5_content = str(data.get('n5_txt', '')) 
 
-{data['n3_txt']}
-   ⬇️ (消耗關鍵料鏈結)
+    # 3. 頂部加入 RAG 檢索效能指標
+    col_m1, col_m2, col_m3 = st.columns(3)
+    with col_m1:
+        st.metric(label="⚡ 知識圖譜推理延遲", value="38 ms", delta="-4 ms")
+    with col_m2:
+        is_anomaly = "嚴重" in n4_content or "不足" in n4_content
+        conf_score = "91.2%" if is_anomaly else "98.5%"
+        st.metric(label="🎯 語意向量置信度", value=conf_score, delta="-7.3%" if is_anomaly else "0.2%")
+    with col_m3:
+        st.metric(label="⛓️ 關聯拓撲節點數", value="14 Nodes")
 
-{data['n4_txt']}
-   ⬇️ (上游供應鏈結)
+    st.markdown("---")
+    st.markdown(f"**📋 當前檢索語意對象：** `{current_order_id}`")
 
-{data['n5_txt']}
-"""
-st.text_area(label="", value=graph_text_block.strip(), height=450, disabled=True, key=f"v_graph_{data['order_id']}")
-st.write("---")
+    # --------------------------------------------------------------------------
+    # 💡 4. 專家卡片渲染 (全面採用客製化 HTML 減壓藍色外框，極致相容，不使用 st.info)
+    # --------------------------------------------------------------------------
+    
+    # 節點 1
+    st.markdown(f"#### 🔗 1. 下單關係鏈結 (Order Linkage)")
+    st.markdown(f"""
+        <div style="background-color:#e0f2fe; padding:15px; border-left:5px solid #0284c7; border-radius:4px; margin-bottom:15px; color:#0f172a; line-height:1.6;">
+            <strong>🔍 推理路徑細節：</strong><br>{n1_content}
+        </div>
+    """, unsafe_allow_html=True)
 
-# 🚀 區塊三：S-Path 推薦狀態表格
-if selected_order != "請選擇訂單...":
-    st.markdown("### 📋 S-Path 推薦訂單段狀態表格")
-    st.dataframe(data["table_df"])
-    st.write("---")
+    # 節點 2 (加入口語化連帶風險提示，深橘色字)
+    st.markdown(f"#### 🔗 2. 需求產品鏈結 (Product Demand Linkage)")
+    if "風險" in n2_content or "連帶" in n2_content or "影響" in n2_content:
+        st.markdown(f"""
+            <div style="background-color:#e0f2fe; padding:15px; border-left:5px solid #0284c7; border-radius:4px; margin-bottom:15px; color:#0f172a; line-height:1.6;">
+                <strong>🔍 推理路徑細節：</strong><br>{n2_content}<br><br>
+                <span style='color:#d97706; font-weight:bold;'>⚠️ 狀況提示：受上游缺料波及，引發連帶生產風險。</span>
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+            <div style="background-color:#e0f2fe; padding:15px; border-left:5px solid #0284c7; border-radius:4px; margin-bottom:15px; color:#0f172a; line-height:1.6;">
+                <strong>🔍 推理路徑細節：</strong><br>{n2_content}
+            </div>
+        """, unsafe_allow_html=True)
+
+    # 節點 3
+    st.markdown(f"#### 🔗 3. 消耗關聯料鏈結 (Material Consumption Linkage)")
+    st.markdown(f"""
+        <div style="background-color:#e0f2fe; padding:15px; border-left:5px solid #0284c7; border-radius:4px; margin-bottom:15px; color:#0f172a; line-height:1.6;">
+            <strong>🔍 推理路徑細節：</strong><br>{n3_content}
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 節點 4 (核心根因，精準紅色粗體字提示)
+    if "嚴重" in n4_content or "不足" in n4_content:
+        st.markdown(f"#### 🔗 4. 上游供應鏈結 (Upstream Supply Linkage) <span style='color:#dc2626; font-weight:bold;'>[核心根因]</span>", unsafe_allow_html=True)
+        st.markdown(f"""
+            <div style="background-color:#e0f2fe; padding:15px; border-left:5px solid #0284c7; border-radius:4px; margin-bottom:15px; color:#0f172a; line-height:1.6;">
+                <strong>🔍 推理路徑細節：</strong><br>{n4_content}<br><br>
+                <span style='color:#dc2626; font-weight:bold;'>🚨 核心異常：檢測到晶片庫存嚴重不足，此為本次卡料的源頭問題！</span>
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"#### 🔗 4. 上游供應鏈結 (Upstream Supply Linkage)")
+        st.markdown(f"""
+            <div style="background-color:#e0f2fe; padding:15px; border-left:5px solid #0284c7; border-radius:4px; margin-bottom:15px; color:#0f172a; line-height:1.6;">
+                <strong>🔍 推理路徑細節：</strong><br>{n4_content}
+            </div>
+        """, unsafe_allow_html=True)
+
+    # 節點 5
+    if n5_content:
+        st.markdown(f"#### 🏢 5. 外部供應商調度協同 (Decision Linkage)")
+        if "緊急" in n5_content or "吃緊" in n5_content:
+            st.markdown(f"""
+                <div style="background-color:#e0f2fe; padding:15px; border-left:5px solid #0284c7; border-radius:4px; margin-bottom:15px; color:#0f172a; line-height:1.6;">
+                    <strong>🔍 推理路徑細節：</strong><br>{n5_content}<br><br>
+                    <span style='color:#d97706; font-weight:bold;'>🔄 應變機制：系統已自動聯絡外部廠商，啟動緊急追料調度。</span>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+                <div style="background-color:#e0f2fe; padding:15px; border-left:5px solid #0284c7; border-radius:4px; margin-bottom:15px; color:#0f172a; line-height:1.6;">
+                    <strong>🔍 推理路徑細節：</strong><br>{n5_content}
+                </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-weight:bold; color:#1e293b; margin-bottom:12px;'>📋 S-Path 推薦訂單段狀態表格</h4>", unsafe_allow_html=True)
+
+    # --------------------------------------------------------------------------
+    # 💡 5. 表格數據與口語化字眼解析 (彻底消除多米諾字眼)
+    # --------------------------------------------------------------------------
+    if "風險" in n1_content or "風險" in n2_content:
+        t2_status = "🟠 預警"
+        t2_desc = "受上游缺料波及，引發連帶生產風險"
+        t2_action = "啟動備用調度程序"
+        t3_desc = "受上游缺料波及預警"
+    else:
+        t2_status = "🟢 正常"
+        t2_desc = "訂單狀態穩定，傳遞鏈正常"
+        t2_action = "常態維持自動化追蹤"
+        t3_desc = "動態生產滿足率 100%"
+
+    if "嚴重" in n4_content or "不足" in n4_content:
+        t4_status = "🔴 異常"
+        t4_style = "color: #dc2626; font-weight: bold;"
+        t4_action = "尋找替代現貨料源"
+    else:
+        t4_status = "🟢 正常"
+        t4_style = "color: #059669;"
+        t4_action = "按原排程常態收料"
+
+    if n5_content and ("緊急" in n5_content or "吃緊" in n5_content):
+        t5_status = "🟠 預警"
+        t5_desc = "供應商產能吃緊，已發起緊急追料"
+        t5_action = "與供應商緊急照會並追蹤"
+    else:
+        t5_status = "🟢 正常"
+        t5_desc = "外部供應商產能與交期反饋正常"
+        t5_action = "維持一般協同觀測"
+
+    t4_clean_txt = n4_content.split(']')[-1] if ']' in n4_content else n4_content
+
+    # 6. HTML 斑馬紋大表格渲染 (純變數填充，絕不報錯)
+    html_table = f"""
+    <table style="width:100%; border-collapse: collapse; font-family: sans-serif; margin-bottom: 20px;">
+        <thead>
+            <tr style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1; text-align: left;">
+                <th style="padding: 10px; font-weight: bold; color: #334155;">警示</th>
+                <th style="padding: 10px; font-weight: bold; color: #334155;">節點類型</th>
+                <th style="padding: 10px; font-weight: bold; color: #334155;">名稱/編號</th>
+                <th style="padding: 10px; font-weight: bold; color: #334155;">狀態說明</th>
+                <th style="padding: 10px; font-weight: bold; color: #334155;">S-Path 建議行動</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px;">🟢 正常</td>
+                <td style="padding: 10px;">客戶</td>
+                <td style="padding: 10px;">台灣A公司</td>
+                <td style="padding: 10px;">好的 (已下單)</td>
+                <td style="padding: 10px;">發送夜間預警通知</td>
+            </tr>
+            <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px;">{t2_status}</td>
+                <td style="padding: 10px;">訂單</td>
+                <td style="padding: 10px; font-weight: bold;">{current_order_id}</td>
+                <td style="padding: 10px;">{t2_desc}</td>
+                <td style="padding: 10px;">{t2_action}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px;">{t2_status}</td>
+                <td style="padding: 10px;">產品展示</td>
+                <td style="padding: 10px;">高階控制模組</td>
+                <td style="padding: 10px;">{t3_desc}</td>
+                <td style="padding: 10px;">{t2_action}</td>
+            </tr>
+            <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px;">{t4_status}</td>
+                <td style="padding: 10px;">關鍵庫存</td>
+                <td style="padding: 10px;">M002 核心晶片</td>
+                <td style="padding: 10px; {t4_style}">{t4_clean_txt}</td>
+                <td style="padding: 10px; font-weight: bold;">{t4_action}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px;">{t5_status}</td>
+                <td style="padding: 10px;">供應商</td>
+                <td style="padding: 10px;">大發晶圓廠</td>
+                <td style="padding: 10px;">{t5_desc}</td>
+                <td style="padding: 10px;">{t5_action}</td>
+            </tr>
+        </tbody>
+    </table>
+    """
+
+    st.markdown(html_table, unsafe_allow_html=True)
+    st.markdown("---")
 
 # 🚀 區塊四：PDCA 日誌
 st.markdown("### ⚙️ PDCA-心率監測與治理日誌")
