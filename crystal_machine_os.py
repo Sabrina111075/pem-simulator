@@ -212,7 +212,7 @@ st.write("---")
 data = DYNAMIC_UI_DATA[selected_order]
 
 # 🚀 區塊一：動態心跳與邊界診斷
-st.markdown(f"### 🚨 即時預警與治理因果推理路徑 (更新時間: {current_time})")
+st.markdown(f"### 🚨 即時監控與治理因果推理路徑 (更新時間: {current_time})")
 render_heartbeat_panel(data["status_type"])
 
 # 利用 st.empty() 強制當場覆寫，雙重防護
