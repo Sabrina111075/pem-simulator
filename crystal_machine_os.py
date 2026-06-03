@@ -24,7 +24,11 @@ st.markdown('<meta name="google" content="notranslate">', unsafe_allow_html=True
 # 💡 4. 網頁自我監測：每 10 秒 網頁原生的動態重新整理
 st.markdown('<meta http-equiv="refresh" content="30">', unsafe_allow_html=True)
 
-current_time = time.strftime("%H:%M:%S", time.localtime())
+from datetime import datetime, timedelta, timezone
+
+# 💡 強制鎖定台灣時區 (GMT+8)，解決雲端 Linux 伺服器的 8 小時時差
+tz_taiwan = timezone(timedelta(hours=8))
+current_time = datetime.now(tz_taiwan).strftime("%H:%M:%S")
 
 st.markdown("""
 <style>
