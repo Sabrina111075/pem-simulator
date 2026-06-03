@@ -1,249 +1,242 @@
-﻿# -*- coding: utf-8 -*-
-import streamlit as st
-import networkx as nx
-from pyvis.network import Network
-import streamlit.components.v1 as components
-import core_engine
+﻿import streamlit as st
+import pandas as pd
+import time
 
-# 設置寬螢幕模式
-st.set_page_config(layout="wide")
+# ==============================================================================
+# 1. 網頁基本配置 & 全域 CSS 樣式
+# ==============================================================================
+st.set_page_config(
+    page_title="Crystal-Machine: 企業語意作業系統",
+    page_icon="🔮",
+    layout="wide"
+)
 
-st.title("🔮 Crystal-machine 語意作業系統")
-st.write("---")
+current_time = time.strftime("%H:%M:%S", time.localtime())
 
-# 載入核心數據與狀態空間
-EKG = core_engine.build_enterprise_graph_from_excel()
-EKG, alerts = core_engine.execute_reasoning(EKG)
+st.markdown("""
+<style>
+    .reportview-container { 
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important; 
+    }
+    .dataframe { 
+        width: 100% !important; 
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+    }
+    .stTextArea textarea:disabled {
+        opacity: 1 !important;
+        -webkit-text-fill-color: currentcolor !important; 
+    }
+    .stTextArea textarea {
+        border-radius: 10px !important;
+        font-family: 'Consolas', 'Courier New', monospace !important;
+        font-size: 15px !important; 
+        line-height: 1.6 !important;
+        padding: 18px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+    }
+    /* 圖譜區塊：高對比蔚藍底 */
+    .stTextArea:nth-of-type(1) textarea {
+        background-color: #e0f2fe !important;    
+        color: #034494 !important;               
+        border: 2px solid #38bdf8 !important;     
+        font-weight: 600 !important;
+    }
+    /* 日誌區塊：護眼暖陽黃底 */
+    .stTextArea:nth-of-type(2) textarea {
+        background-color: #fefcbf !important;    
+        color: #1e293b !important;               
+        border: 2px solid #fef08a !important;     
+        border-left: 6px solid #eab308 !important; 
+        font-weight: 500 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-highlight_nodes = set()
-highlight_edges = set()
-
-top_col1, top_col2 = st.columns([11, 10])
-
-with top_col2:
-    st.subheader("📋 智能語意問答 (S-Path-RAG)")
-    target_id = st.selectbox(
-        "請選擇要聚焦分析的銷貨訂單編號：",
-        options=["O1001", "O1002", "O1003"],
-        index=0
-    )
-    
-    # 【安全高亮因果鏈演算法】
-    if target_id in EKG:
-        highlight_nodes.add(target_id)
-        for predecessor in list(EKG.predecessors(target_id)):
-            if predecessor in EKG:
-                highlight_nodes.add(predecessor)
-                highlight_edges.add((predecessor, target_id))
-            
-        descendants = nx.descendants(EKG, target_id)
-        for d_node in descendants:
-            if d_node in EKG:
-                highlight_nodes.add(d_node)
-        
-        # 安全掃描關係連線
-        for u, v, d in list(EKG.edges(data=True)):
-            if u in EKG and v in EKG:
-                if d.get("relation") == "triggers_alarm" and (v in highlight_nodes or u in highlight_nodes):
-                    highlight_nodes.add(u)
-                    highlight_nodes.add(v)
-                    highlight_edges.add((u, v))
-
-        for u, v in list(EKG.edges()):
-            if u in highlight_nodes and v in highlight_nodes:
-                highlight_edges.add((u, v))
-
-# 🎯 將 Python set 轉換為純字串，方便直接傳遞給前端 JavaScript 判斷
-js_highlight_nodes_string = ",".join([str(n) for n in highlight_nodes])
-
-# 提取當前焦點鏈數據做成橫向圖例
-current_customer = "無關聯"
-current_order = f"{target_id}"
-current_product = "無關聯"
-current_materials = []
-current_suppliers = []
-
-for node in highlight_nodes:
-    if node in EKG:
-        node_data = EKG.nodes[node]
-        node_type = node_data.get("type")
-        node_name = node_data.get("name", "")
-        
-        if node_type == "Customer":
-            current_customer = f"{node} {node_name}"
-        elif node_type == "Product":
-            current_product = f"{node} {node_name}"
-        elif node_type == "Material":
-            current_materials.append(f"{node} {node_name}")
-        elif node_type == "Supplier":
-            current_suppliers.append(f"{node} {node_name}")
-
-current_material_str = "、".join(current_materials) if current_materials else "無關聯"
-current_supplier_str = "、".join(current_suppliers) if current_suppliers else "無關聯"
-
-with top_col1:
-    st.subheader("🚨 企業即時語意預警 (規則本體)")
-    if alerts:
-        for alert in alerts:
-            if alert["level"] == "Danger":
-                st.error(alert["msg"])
-            elif alert["level"] == "Warning":
-                st.warning(alert["msg"])
+# ==============================================================================
+# 2. 核心功能：動態 Heartbeat 脈搏面板渲染器
+# ==============================================================================
+def render_heartbeat_panel(status_type):
+    if status_type == "danger":
+        theme_color = "#ef4444"
+        bg_color = "#fef2f2"
+        text_color = "#991b1b"
+        pulse_speed = "0.8s"
+        status_text = "⚠️ 系統狀態：異常警告 (CRITICAL ALERT)"
+    elif status_type == "normal":
+        theme_color = "#10b981"
+        bg_color = "#ecfdf5"
+        text_color = "#166534"
+        pulse_speed = "1.6s"
+        status_text = "🟢 系統狀態：一切正常 (SYSTEM HEALTHY)"
     else:
-        st.success("✅ 目前系統動態運作健全，未偵測到任何超限 Alarm。")
+        theme_color = "#94a3b8"
+        bg_color = "#f8fafc"
+        text_color = "#475569"
+        pulse_speed = "3s"
+        status_text = "ℹ️ 系統狀態：等待指令"
 
-    st.write("---")
-    st.subheader("📊 供應鏈關鍵狀態指標")
-    kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
-    with kpi_col1:
-        st.metric(label="📦 關鍵晶片 M002 庫存", value="10 顆", delta="-30 顆 (低於安全水位)", delta_color="inverse")
-    with kpi_col2:
-        st.metric(label="🏭 晶圓廠 S002 交期", value="18 天", delta="+3 天 (超出標準)", delta_color="inverse")
-    with kpi_col3:
-        st.metric(label="📋 受波及銷貨訂單", value="2 筆", delta="O1001, O1002", delta_color="off")
-
-with top_col2:
-    try:
-        report = core_engine.path_reasoning_query(EKG, target_id)
-        st.info(report)
-    except Exception as e:
-        st.warning(f"❌ 核心引擎推理提示：無法生成詳細報告。原因：{e}")
-    st.success(f"🎯 目前下方圖譜已為您即時聚焦高亮 【 {target_id} 】 的因果依賴鏈。")
-
-st.write("---")
-st.subheader(f"🌐 圖譜世界模型視覺圖例 (依據 {target_id} 動態對照)")
-full_lg_col1, full_lg_col2, full_lg_col3, full_lg_col4, full_lg_col5 = st.columns(5)
-full_lg_col1.markdown(f"<div style='padding:16px 12px; text-align:center; background-color:#97C2FC; border-radius:8px; color:black; min-height:120px; box-shadow: 2px 2px 6px #cccccc;'><div style='font-size:15px; font-weight:bold; opacity:0.85; letter-spacing:1px;'>👤 客戶 (Customer)</div><div style='font-size:18px; font-weight:900; margin-top:14px; line-height:1.4;'>{current_customer}</div></div>", unsafe_allow_html=True)
-full_lg_col2.markdown(f"<div style='padding:16px 12px; text-align:center; background-color:#FB7E81; border-radius:8px; color:black; min-height:120px; box-shadow: 2px 2px 6px #cccccc;'><div style='font-size:15px; font-weight:bold; opacity:0.85; letter-spacing:1px;'>📄 訂單 (Order)</div><div style='font-size:20px; font-weight:900; margin-top:14px; line-height:1.4;'>{current_order}</div></div>", unsafe_allow_html=True)
-full_lg_col3.markdown(f"<div style='padding:16px 12px; text-align:center; background-color:#FFD21E; border-radius:8px; color:black; min-height:120px; box-shadow: 2px 2px 6px #cccccc;'><div style='font-size:15px; font-weight:bold; opacity:0.85; letter-spacing:1px;'>🎁 產品 (Product)</div><div style='font-size:18px; font-weight:900; margin-top:14px; line-height:1.4;'>{current_product}</div></div>", unsafe_allow_html=True)
-full_lg_col4.markdown(f"<div style='padding:16px 12px; text-align:center; background-color:#91E3B7; border-radius:8px; color:black; min-height:120px; box-shadow: 2px 2px 6px #cccccc;'><div style='font-size:15px; font-weight:bold; opacity:0.85; letter-spacing:1px;'>🔑 物料 (Material)</div><div style='font-size:16px; font-weight:900; margin-top:12px; line-height:1.4;'>{current_material_str}</div></div>", unsafe_allow_html=True)
-full_lg_col5.markdown(f"<div style='padding:16px 12px; text-align:center; background-color:#C2FABC; border-radius:8px; color:black; min-height:120px; box-shadow: 2px 2px 6px #cccccc;'><div style='font-size:15px; font-weight:bold; opacity:0.85; letter-spacing:1px;'>🏭 供應商 (Supplier)</div><div style='font-size:16px; font-weight:900; margin-top:12px; line-height:1.4;'>{current_supplier_str}</div></div>", unsafe_allow_html=True)
-
-st.write("---")
-st.subheader(f"🗺️ 企業世界模型 (當前聚焦分析：{target_id})")
-
-pv_net = Network(height="700px", width="100%", notebook=False, directed=True)
-
-color_map = {
-    "Customer": "#97C2FC", "Order": "#FB7E81", "Product": "#FFD21E",
-    "Material": "#91E3B7", "Supplier": "#C2FABC", "Alarm": "#FF4500"
-}
-
-# 繪製節點 (精細化尺寸比例校正)
-for node, data in EKG.nodes(data=True):
-    node_type = data.get("type", "Material")
-    
-    if node_type == "Alarm":
-        label = "⚠️ 異常心跳警報"
-        title = data.get("name", node)
-    else:
-        label = f"{node}\n({data.get('name')})" if "name" in data else node
-        title = f"類型: {node_type}\n代號: {node}"
-
-    if node in highlight_nodes:
-        color = color_map.get(node_type, "#97C2FC")
-        # 💥 優化點：顯著放大高亮警報節點 (55)，一般焦點節點維持 35
-        size = 55 if node_type == "Alarm" else 35
-        border_width = 3.5 if node_type == "Alarm" else 2.5
-        font_config = {"size": 15, "face": "Microsoft JhengHei", "strokeWidth": 3, "strokeColor": "#ffffff"}
-        if node_type == "Alarm":
-            font_config["color"] = "#FF4500"
-            font_config["size"] = 16
-    else:
-        # 💥 優化點：大幅弱化、淡化非高亮節點，縮小至 14，且使用 rgba 透明度
-        color = "rgba(225, 225, 225, 0.35)"
-        size = 14
-        border_width = 1
-        font_config = {"size": 9, "face": "Microsoft JhengHei", "color": "rgba(180, 180, 180, 0.4)"}
+    html_code = f"""
+    <div style="
+        background-color: {bg_color}; 
+        border-left: 6px solid {theme_color};
+        padding: 16px; 
+        border-radius: 8px; 
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    ">
+        <div>
+            <div style="font-size: 18px; font-weight: 800; color: {text_color}; margin-bottom: 4px;">
+                {status_text}
+            </div>
+            <div style="font-size: 13px; color: #64748b; font-weight: 500;">
+                HEARTBEAT MONITORING PATHWAY // CORE OS LAYER ACTIVE
+            </div>
+        </div>
         
-    pv_net.add_node(node, label=label, title=title, color=color, size=size, borderWidth=border_width, font=font_config)
+        <div style="display: flex; align-items: center; gap: 12px; margin-right: 10px;">
+            <span style="font-size: 12px; font-weight: 700; color: {theme_color}; font-family: monospace;">
+                PULSE RATE
+            </span>
+            <div class="pulse-container" style="position: relative; width: 24px; height: 24px;">
+                <div class="pulse-core" style="width: 14px; height: 14px; background-color: {theme_color}; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2;"></div>
+                <div class="pulse-ring" style="width: 24px; height: 24px; border: 3px solid {theme_color}; border-radius: 50%; position: absolute; top: 0; left: 0; box-sizing: border-box; animation: heartbeat {pulse_speed} infinite ease-in-out; z-index: 1;"></div>
+            </div>
+        </div>
+    </div>
 
-# 繪製連線
-for u, v, data in EKG.edges(data=True):
-    relation_label = data.get("relation", "")
-    if (u, v) in highlight_edges:
-        edge_color = "#FF4500" if relation_label == "triggers_alarm" else "#FB7E81"
-        edge_width = 4.0 if relation_label == "triggers_alarm" else 3.0
-        font_style = {"size": 12, "align": "top", "color": edge_color, "face": "Microsoft JhengHei"}
-    else:
-        # 💥 優化點：連非焦點連線也進行淡化
-        edge_color = "rgba(230, 230, 230, 0.25)"
-        edge_width = 0.8
-        font_style = {"size": 0, "align": "top", "color": "rgba(0,0,0,0)"}
-        
-    pv_net.add_edge(u, v, label=relation_label, width=edge_width, color=edge_color, font=font_style)
-
-# 設置物理引擎 (稍微拉開間距，給予大圓圈發揮空間)
-pv_net.set_options("""
-var options = {
-  "physics": {
-    "barnesHut": { "gravitationalConstant": -2600, "centralGravity": 0.12, "springLength": 200, "springConstant": 0.03, "damping": 0.28, "avoidOverlap": 1 },
-    "minVelocity": 0.75
-  },
-  "edges": { "smooth": { "type": "discrete", "forceDirection": "none" } }
-}
-""")
-
-try:
-    pv_net.save_graph("pyvis_graph.html")
-    with open("pyvis_graph.html", "r", encoding="utf-8") as f:
-        html_content = f.read()
-        
-    # 💥 【 Canvas 特效增強】加大警報圈半徑，加強脈搏擴散震盪幅度和粗細
-    heartbeat_css_js = f"""
-    <script>
-        function startHeartbeatEngine() {{
-            if (typeof network !== 'undefined' && network !== null) {{
-                var pulseDirection = 1;
-                var pulseScale = 0;
-                
-                var rawHighLights = "{js_highlight_nodes_string}";
-                var activeHighLights = rawHighLights ? rawHighLights.split(",") : [];
-                
-                network.on("beforeDrawing", function (ctx) {{
-                    // 💥 調整脈搏起伏範圍，讓擴散圈動能更明顯 (0 到 14 區間震盪)
-                    pulseScale += 0.22 * pulseDirection;
-                    if (pulseScale > 14 || pulseScale < 0) {{ pulseDirection *= -1; }}
-                    
-                    var allPositions = network.getPositions();
-                    
-                    for (var nodeId in allPositions) {{
-                        if (nodeId.indexOf("ALARM_") === 0 && activeHighLights.includes(nodeId)) {{
-                            var pos = allPositions[nodeId];
-                            if (pos) {{
-                                // 第一圈核心脈搏：線條加粗，顏色更飽和
-                                ctx.strokeStyle = 'rgba(255, 69, 0, 0.8)';
-                                ctx.lineWidth = 3.5;
-                                ctx.beginPath();
-                                // 基底半徑隨節點加大調整為 38
-                                ctx.arc(pos.x, pos.y, 38 + pulseScale, 0, 2 * Math.PI);
-                                ctx.stroke();
-                                
-                                // 第二圈外圍餘波：漣漪擴散更遠
-                                ctx.strokeStyle = 'rgba(255, 140, 0, 0.35)';
-                                ctx.lineWidth = 1.8;
-                                ctx.beginPath();
-                                ctx.arc(pos.x, pos.y, 44 + (pulseScale * 1.4), 0, 2 * Math.PI);
-                                ctx.stroke();
-                            }}
-                        }}
-                    }}
-                }});
-                
-                setInterval(function() {{ 
-                    try {{ network.redraw(); }} catch(e){{}} 
-                }}, 35); // 稍微加快重繪頻率 (35ms)，讓呼吸感更緊湊真實
-                
-                console.log("💓 強烈視覺化心跳引擎已就緒。");
-            }} else {{
-                setTimeout(startHeartbeatEngine, 150);
-            }}
+    <style>
+        @keyframes heartbeat {{
+            0% {{ transform: scale(0.4); opacity: 1; }}
+            80% {{ transform: scale(1.2); opacity: 0; }}
+            100% {{ transform: scale(1.2); opacity: 0; }}
         }}
-        window.addEventListener('load', startHeartbeatEngine);
-        setTimeout(startHeartbeatEngine, 400);
-    </script>
+    </style>
     """
-    html_content = html_content.replace("</body>", heartbeat_css_js + "</body>")
-    components.html(html_content, height=750)
-except Exception as e:
-    st.error(f"❌ 圖譜渲染失敗：{e}")
+    st.components.v1.html(html_code, height=95)
+
+# ==============================================================================
+# 3. 靜態集中式資料字典 (【徹底校正】修正 O1002 內的 alert_msg 錯置 Bug)
+# ==============================================================================
+DYNAMIC_UI_DATA = {
+    "O1001 (台灣電子 A 公司)": {
+        "order_id": "O1001",
+        "status_type": "danger",
+        "alert_msg": "關鍵庫存 M002 庫存嚴重不足！供應商交期間歇，已引發最左端 O1001 骨牌效應斷鏈風險！",
+        "pdca_status": "⚠️ **【PDCA 心跳警報】偵測到企業語意鏈邊界異常！自動啟動 S-Path 治理程序...**",
+        "pdca_logs": f"☁️ 心跳訊號定時循環觸發 ( {current_time} ) ：【C-Check】🚨 偵測到 M002 爆發點 -> 【A-Action】觸發 O1001 骨牌效應修改防禦機制。\n\n📂 Heartbeat 訊號定時循環觸發 ( 14:46:38 ) : [P-Plan] 持續觀察拓撲 -> [D-Do] 更新狀態圖層 -> [C-Check] 偵測邊界異常。",
+        
+        "n1_txt": "🟦 節點 [1/5]：客戶層面 (Customer Layer)\n   [名稱] 台灣電子 A 公司 \n   [狀態] 良好 (已下單)",
+        "n2_txt": "📦 節點 [2/5]：訂單層面 (Order Layer) \n   [單號] O1001 \n   [狀態] ⚠️ 多米諾骨牌效應普遍存在風險",
+        "n3_txt": "🏷️ 節點 [3/5]：產品展示層面 (Product Layer) \n   [品名] 高階控制模組 \n   [狀態] ❌ 受下游缺料波及",
+        "n4_txt": "🧩 節點 [4/5]：關鍵物料層 (Material Layer) \n   [料號] M002 核心晶片 \n   [狀態] 🚨 庫存嚴重不足 (交期嚴重)",
+        "n5_txt": "🏭 節點 [5/5]：供應商層面 (Supplier Layer) \n   [廠商] 大發晶圓廠 \n   [狀態] ⚠️ 供應商緊急照會 / 產能吃緊",
+        
+        "table_df": pd.DataFrame({
+            "節點類型": ["客戶", "訂單", "產品展示", "關鍵庫存", "供應商"],
+            "名稱/編號": ["台灣 A 公司", "O1001", "高階控制模組", "M002 核心晶片", "大發晶圓廠"],
+            "狀態說明": ["好的 (已下單)", "多米諾骨牌效應普遍存在風險", "受下游缺料波及", "庫存嚴重不足", "供應商緊急照會"],
+            "S-Path 建議行動": ["發送夜間預警通知", "啟動備用調度程序", "調整生產排程優先權", "尋找替代現貨料源", "與供應商緊急照會"]
+        })
+    },
+    "O1002 (凌雲科技)": {
+        "order_id": "O1002",
+        "status_type": "normal",
+        # 🌟【這裡終於改對了！】徹底消滅陰魂不散的 O1001 斷鏈風險字眼
+        "alert_msg": "該訂單關聯語意節點皆處於健康邊界，安全存量充足，無潛在斷鏈風險。",
+        "pdca_status": "✅ **【PDCA 心跳正常】語意網絡因果完整，結構強韌，目前無斷裂風險。**",
+        "pdca_logs": f"☁️ 心跳訊號定時循環觸發 ( {current_time} ) ：【C-Check】🟢 檢測全域變數 -> 【A-Action】狀態良好，無需介入變動。\n\n📂 Heartbeat 訊號定時循環觸發 ( 15:02:11 ) : [P-Plan] 全域路徑監控中 -> [D-Do] 語意鏈路一切穩定 -> [C-Check] 健康邊界覆蓋完成。",
+        
+        "n1_txt": "🟦 節點 [1/5]：客戶層面 (Customer Layer)\n   [名稱] 凌雲科技 \n   [狀態] 良好 (已下單)",
+        "n2_txt": "📦 節點 [2/5]：訂單層面 (Order Layer) \n   [單號] O1002 \n   [狀態] 🟢 正常 (依序處理中)",
+        "n3_txt": "🏷️ 節點 [3/5]：產品展示層面 (Product Layer) \n   [品名] 標準型感測器 \n   [狀態] 🟢 庫存充足",
+        "n4_txt": "🧩 節點 [4/5] : 關鍵物料層 (Material Layer) \n   [料號] M005 感測元件 \n   [狀態] 🟢 供應鏈穩定",
+        "n5_txt": "🏭 節點 [5/5]：供應商層面 (Supplier Layer) \n   [廠商] 日新電子 \n   [狀態] 🟢 正常供貨",
+        
+        "table_df": pd.DataFrame({
+            "節點類型": ["客戶", "訂單", "產品展示", "關鍵庫存", "供應商"],
+            "名稱/編號": ["凌雲科技", "O1002", "標準型感測器", "M005 感測元件", "日新電子"],
+            "狀態說明": ["好的 (已下單)", "正常 (依序處理中)", "庫存充足", "供應鏈穩定", "正常供貨"],
+            "S-Path 建議行動": ["標準自動化追蹤", "維持既定排程", "無需額外干預", "定期追蹤庫存", "自動維護夥伴關係"]
+        })
+    },
+    "請選擇訂單...": {
+        "order_id": "---",
+        "status_type": "idle",
+        "alert_msg": "請選擇一張訂單以開始進行因果治理推理。",
+        "pdca_status": "ℹ️ 系統等待指令中...",
+        "pdca_logs": "📋 系統處於閒置狀態。請選擇上方的語意數據鏈進行檢索。",
+        "n1_txt": "🟦 節點 [1/5]：客戶層面 (Customer Layer)\n   [名稱] 等待載入... \n   [狀態] ---",
+        "n2_txt": "📦 節點 [2/5]：訂單層面 (Order Layer)\n   [單號] --- \n   [狀態] 等待載入...",
+        "n3_txt": "🏷️ 節點 [3/5] : 產品展示層面 (Product Layer)\n   [品名] --- \n   [狀態] 等待載入...",
+        "n4_txt": "🧩 節點 [4/5]：關鍵物料層 (Material Layer)\n   [料號] --- \n   [狀態] 等待載入...",
+        "n5_txt": "🏭 節點 [5/5]：供應商層面 (Supplier Layer)\n   [廠商] --- \n   [狀態] 等待載入...",
+        "table_df": pd.DataFrame(columns=["節點類型", "名稱/編號", "狀態說明", "S-Path 建議行動"])
+    }
+}
+
+# ==============================================================================
+# 4. 控制台介面
+# ==============================================================================
+st.title("🔮 Crystal-Machine: 企業語意作業系統")
+st.subheader("🗂 語意資料鏈搜尋控制台")
+
+selected_order = st.selectbox(
+    "💡 請選擇渴望回溯推理的目標順序：",
+    options=["請選擇訂單...", "O1001 (台灣電子 A 公司)", "O1002 (凌雲科技)"],
+    index=1
+)
+
+st.write("---")
+data = DYNAMIC_UI_DATA[selected_order]
+
+# 🚀 區塊一：動態心跳與邊界診斷
+st.markdown(f"### 🚨 即時預警與治理因果推理路徑 (更新時間: {current_time})")
+render_heartbeat_panel(data["status_type"])
+
+# 利用 st.empty() 強制當場覆寫，雙重防護
+alert_text_placeholder = st.empty()
+alert_text_placeholder.markdown(f"**🧐 語意鏈邊界診斷：** {data['alert_msg']}")
+st.write("---")
+
+# 🚀 區塊二：微觀知識圖譜路徑追蹤
+st.markdown("<h3 style='font-weight:bold; color:#0f172a; margin-bottom:10px;'>🌐 目前知識圖譜路徑追蹤</h3>", unsafe_allow_html=True)
+graph_text_block = f"""
+📌 當前檢索語意對象：{data['order_id']}
+=========================================
+
+{data['n1_txt']}
+   ⬇️ (下單關係鏈結)
+
+{data['n2_txt']}
+   ⬇️ (需求產品鏈結)
+
+{data['n3_txt']}
+   ⬇️ (消耗關鍵料鏈結)
+
+{data['n4_txt']}
+   ⬇️ (上游供應鏈結)
+
+{data['n5_txt']}
+"""
+st.text_area(label="", value=graph_text_block.strip(), height=450, disabled=True, key=f"v_graph_{data['order_id']}")
+st.write("---")
+
+# 🚀 區塊三：S-Path 推薦狀態表格
+if selected_order != "請選擇訂單...":
+    st.markdown("### 📋 S-Path 推薦訂單段狀態表格")
+    st.dataframe(data["table_df"])
+    st.write("---")
+
+# 🚀 區塊四：PDCA 日誌
+st.markdown("### ⚙️ PDCA-心率監測與治理日誌")
+
+pdca_status_placeholder = st.empty()
+pdca_status_placeholder.markdown(data["pdca_status"])
+
+st.markdown("<h5 style='font-weight:bold; color:#334155; margin-top:15px; margin-bottom:5px;'>📝 系統自動化自動修改架構日誌 (PDCA日誌) ：</h5>", unsafe_allow_html=True)
+st.text_area(label="", value=data["pdca_logs"], height=130, disabled=True, key=f"v_logs_{data['order_id']}")
