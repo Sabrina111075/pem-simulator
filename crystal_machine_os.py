@@ -23,8 +23,8 @@ st.set_page_config(
 # 💡 3. 防止 Google 翻譯自作聰明
 st.markdown('<meta name="google" content="notranslate">', unsafe_allow_html=True)
 
-# 💡 4. 網頁自我監測：每 10 秒 網頁原生的動態重新整理
-st.markdown('<meta http-equiv="refresh" content="180">', unsafe_allow_html=True)
+# 💡 4. 網頁自我監測：每 1800 秒 網頁原生的動態重新整理
+st.markdown('<meta http-equiv="refresh" content="1800">', unsafe_allow_html=True)
 
 from datetime import datetime, timedelta, timezone
 
