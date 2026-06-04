@@ -1,11 +1,4 @@
-﻿# 💡 1. 這是防禦性偽裝：在 Streamlit 載入前，先在記憶體中建立一個假的 pyarrow 模組
-import sys
-from types import ModuleType
-if 'pyarrow' not in sys.modules:
-    sys.modules['pyarrow'] = ModuleType('pyarrow')
-
-# 💡 2. 這是你原本的導入區（現在它們能平安載入了）
-import streamlit as st
+﻿import streamlit as st
 import time
 import pandas as pd  
 import json
