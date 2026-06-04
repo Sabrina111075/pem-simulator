@@ -1,11 +1,9 @@
 matplotlib
-streamlit
 numpy
-pandas
+pandas==2.2.2
 pytz
 plotly
 networkx
 pyvis
-pandas==2.2.2
 pyarrow==16.0.0
 streamlit==1.35.0
