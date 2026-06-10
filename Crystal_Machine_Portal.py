@@ -285,75 +285,77 @@ if "LIVE MONITOR" in page_mode:
 # =====================================================================
 # 5. 靠最左邊對齊的獨立路由（直接覆蓋你檔案最底部）
 # =====================================================================
-# === 12 PIN DOCK 區塊渲染結束 ===
-    # === 12 PIN DOCK 資料封裝與表格組裝 ===
-    # 讀取暫存器與硬體腳位對應數據
-    pin_data = hc.get_pin_config(selected_volume) if hasattr(hc, 'get_pin_config') else []
-    
-    table_rows = ""
-    if pin_data:
-        for item in pin_data:
-            table_rows += f"""
-            <tr>
-                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='background-color: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight: bold;'>{item.get('pin_num', 'N/A')}</span></td>
-                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><b>{item.get('pin_name', 'N/A')}</b></td>
-                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'>{item.get('function', 'N/A')}</td>
-                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='color: #059669;'>● Active</span></td>
-            </tr>
-            """
-    else:
-        # 預備防呆機制：若無設定則顯示預設的 12-Pin 映射
-        for i in range(1, 13):
-            table_rows += f"""
-            <tr>
-                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='background-color: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight: bold;'>PIN {i}</span></td>
-                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><b>CH_{i}</b></td>
-                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'>工業現場信號通道 {i}</td>
-                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='color: #059669;'>● Active</span></td>
-            </tr>
-            """
-
-    # 將生成的 rows 塞進標準工業風表格外殼中
-    full_html_table = f"""
-    <table style="width:100%; border-collapse: collapse; font-family: sans-serif; text-align: left;">
-        <thead>
-            <tr style="background-color: #f8fafc;">
-                <th style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #64748b;">硬體腳位</th>
-                <th style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #64748b;">信號名稱</th>
-                <th style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #64748b;">物理映射功能</th>
-                <th style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #64748b;">當前狀態</th>
-            </tr>
-        </thead>
-        <tbody>
-            {table_rows}
-        </tbody>
-    </table>
-    """
-
-    # === 下方緊接著您原本就在的 HTML 強制渲染元件 ===
-   components.html(full_html_table, height=600, scrolling=True)
-
-# === 頁面 3: DEEPSEEK CORE 大模型推理 ===
-elif "DEEPSEEK CORE" in page_mode:
-    st.markdown(f"""
-    <div class='header-container'>
-        <div class='hex-header-text'>⬜ DEEPSEEK CORE 本地推理核心</div>
-        <div class='live-clock'>{current_timestamp}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-    <div class='panel-container'>
-        <div class='panel-title'>🌐 邊緣神經網路計算層 (Raspberry Pi 5 16GB)</div>
-        <div class='panel-desc'>
-            透過樹莓派 5 邊緣運算層直接調用 DeepSeek 離線大模型，完全保護工業現場與臨床病患隱私。<br>
-            當前系統已成功加載 <b>{selected_volume}</b> 的對應知識庫核心。
+elif "12 PIN DOCK" in page_mode:
+        st.markdown(f"""
+        <div class='header-container'>
+            <div class='hex-header-text'>⚡ POGO PIN 實體接口組態</div>
+            <div class='live-clock'>{current_timestamp}</div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-    # 初始化對話歷史紀錄
-    if "chat_response" not in st.session_state:
-        st.session_state.chat_response = ""
+        st.markdown("### ⚡ 底層 12-Pin 彈簧針物理硬體映射配置表")
 
-    user_query = st.text_input("输入您對當前工業/生理數據的臨床判斷：", key="deepseek_input")
+        # === 12 PIN DOCK 資料封裝與表格組裝 ===
+        my_hardcoded_dict = {
+            "PIN 1": "VCC (3.3V Power)", "PIN 2": "GND (Ground)",
+            "PIN 3": "ADC_CH1 (24-bit AT6901)", "PIN 4": "ADC_CH2 (24-bit AT6901)",
+            "PIN 5": "I2C_SCL (ESP32-S3)", "PIN 6": "I2C_SDA (ESP32-S3)",
+            "PIN 7": "GPIO_12", "PIN 8": "GPIO_13",
+            "PIN 9": "CAN_H (Motor)", "PIN 10": "CAN_L (Motor)",
+            "PIN 11": "GPIO_14", "PIN 12": "GPIO_15"
+        }
+        
+        table_rows = ""
+        for pin_num, definition in my_hardcoded_dict.items():
+            table_rows += f"""
+            <tr>
+                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='background-color: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight: bold;'>{pin_num}</span></td>
+                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><b>{definition}</b></td>
+                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'>核心邏輯實體通道映射</td>
+                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='color: #059669;'>● Active</span></td>
+            </tr>
+            """
+
+        full_html_table = f"""
+        <table style="width:100%; border-collapse: collapse; font-family: sans-serif; text-align: left;">
+            <thead>
+                <tr style="background-color: #f8fafc;">
+                    <th style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #64748b;">硬體腳位</th>
+                    <th style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #64748b;">信號與晶片組態定義</th>
+                    <th style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #64748b;">物理映射功能</th>
+                    <th style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #64748b;">當前狀態</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{table_rows}}
+            </tbody>
+        </table>
+        """.format(table_rows=table_rows)
+
+        # 使用獨立元件強制將表格渲染出來
+        components.html(full_html_table, height=500, scrolling=True)
+
+    # === 頁面 3: DEEPSEEK CORE 大模型推理 (注意：這裡必須有 4 個空格縮排！) ===
+    elif "DEEPSEEK CORE" in page_mode:
+        st.markdown(f"""
+        <div class='header-container'>
+            <div class='hex-header-text'>⬜ DEEPSEEK CORE 本地推理核心</div>
+            <div class='live-clock'>{current_timestamp}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown(f"""
+        <div class='panel-container'>
+            <div class='panel-title'>🌐 邊緣神經網路計算層 (Raspberry Pi 5 16GB)</div>
+            <div class='panel-desc'>
+                透過樹莓派 5 邊緣運算層直接調用 DeepSeek 離線大模型，完全保護工業現場與臨床病患隱私。<br>
+                當前系統已成功加載 <b>{selected_volume}</b> 的對應知識庫核心。
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # 初始化對話歷史紀錄
+        if "chat_response" not in st.session_state:
+            st.session_state.chat_response = ""
+
+        st.text_input("輸入您對當前工業/生理數據的臨床判斷：", key="deepseek_input")
