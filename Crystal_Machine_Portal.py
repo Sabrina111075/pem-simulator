@@ -285,51 +285,47 @@ if "LIVE MONITOR" in page_mode:
 # =====================================================================
 # 5. 靠最左邊對齊的獨立路由（直接覆蓋你檔案最底部）
 # =====================================================================
-elif "12 PIN DOCK" in page_mode:
-        st.markdown(f"""
-        <div class='header-container'>
-            <div class='hex-header-text'>⚡ POGO PIN 實體接口組態</div>
-            <div class='live-clock'>{current_timestamp}</div>
-        </div>
-        """, unsafe_allow_html=True)
+# === 12 PIN DOCK 區塊結束 ===
+    components.html(full_html_table, height=400, scrolling=True)
 
-        st.markdown("### ⚡ 底層 12-Pin 彈簧針物理硬體映射配置表")
-        
-        # ... (這裡放入您的字典定義內容) ...
-        
-        table_rows = ""
-        for pin_num, definition in my_hardcoded_dict.items():
-            table_rows += f"<tr><td style='padding: 8px;'>{pin_num}</td><td style='padding: 8px;'>{definition}</td></tr>"
-
-        full_html_table = f"""
-        <table style="width:100%; border: 1px solid #ddd; font-family: sans-serif;">
-            {table_rows}
-        </table>
-        """
-
-        # 這裡就是關鍵：使用 components.html 來渲染
-        components.html(full_html_table, height=400, scrolling=True)
-
-    # 這裡直接緊接著下一個判斷，不要有任何多餘的註解行
-# 這裡是正確的銜接點，確保沒有重複的 elif
-        components.html(full_html_table, height=400, scrolling=True)
-
-    # --- 頁面 3: DEEPSEEK CORE 大模型推理 ( 完美修復版 ) ---
+    # === DEEPSEEK CORE 區塊開始 ===
     elif "DEEPSEEK CORE" in page_mode:
         st.markdown(f"""
         <div class='header-container'>
             <div class='hex-header-text'>⬜ DEEPSEEK CORE 本地推理核心</div>
             <div class='live-clock'>{current_timestamp}</div>
         </div>
-        
-    # 使用工業風面板外框包裹提示，外觀更具整體科技感
-    st.markdown(f"""
-    <div class='panel-container'>
-        <div class='panel-title'>🤖 邊緣神經網路計算層 (Raspberry Pi 5 16GB)</div>
-        <div class='panel-desc'>
-            透過樹莓派 5 邊緣運算層直接調用 DeepSeek 離線大模型，完全保護工業現場與臨床病患隱私。<br>
-            當前系統已成功加載 <b>{selected_volume}</b> 的對應知識庫核心。
+        """, unsafe_allow_html=True)
+
+        st.markdown(f"""
+        <div class='panel-container'>
+            <div class='panel-title'>🌐 邊緣神經網路計算層</div>
+            <div class='panel-desc'>
+                當前系統已成功加載 <b>{selected_volume}</b> 之對應知識庫核心。
+            </div>
         </div>
+        """, unsafe_allow_html=True)
+
+    # --- 頁面 3: DEEPSEEK CORE 大模型推理 ---
+    elif "DEEPSEEK CORE" in page_mode:
+        # 這裡只做一次標題渲染
+        st.markdown(f"""
+        <div class='header-container'>
+            <div class='hex-header-text'>⬜ DEEPSEEK CORE 本地推理核心</div>
+            <div class='live-clock'>{current_timestamp}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # 這裡直接接著渲染面板內容
+        st.markdown(f"""
+        <div class='panel-container'>
+            <div class='panel-title'>🌐 邊緣神經網路計算層 (Raspberry Pi 5 16GB)</div>
+            <div class='panel-desc'>
+                透過樹莓派 5 邊緣運算層直接調用 DeepSeek 離線大模型，完全保護工業現場與臨床病患隱私。<br>
+                當前系統已成功加載 <b>{selected_volume}</b> 的對應知識庫核心：
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     </div>
     """, unsafe_allow_html=True)
     
