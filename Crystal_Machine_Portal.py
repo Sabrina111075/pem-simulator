@@ -295,7 +295,7 @@ elif "12 PIN DOCK" in page_mode:
 
         st.markdown("### ⚡ 底層 12-Pin 彈簧針物理硬體映射配置表")
 
-        # === 12 PIN DOCK 資料封裝與表格組裝 ===
+        # === 12 PIN DOCK 資料定義 ===
         my_hardcoded_dict = {
             "PIN 1": "VCC (3.3V Power)", "PIN 2": "GND (Ground)",
             "PIN 3": "ADC_CH1 (24-bit AT6901)", "PIN 4": "ADC_CH2 (24-bit AT6901)",
@@ -316,7 +316,8 @@ elif "12 PIN DOCK" in page_mode:
             </tr>
             """
 
-        full_html_table = f"""
+        # 用最安全、最原始的字串加號拼接，徹底繞過所有花括號解析地獄
+        html_start = """
         <table style="width:100%; border-collapse: collapse; font-family: sans-serif; text-align: left;">
             <thead>
                 <tr style="background-color: #f8fafc;">
@@ -327,15 +328,19 @@ elif "12 PIN DOCK" in page_mode:
                 </tr>
             </thead>
             <tbody>
-                {{table_rows}}
+        """
+        
+        html_end = """
             </tbody>
         </table>
-        """.format(table_rows=table_rows)
+        """
+        
+        full_html_table = html_start + table_rows + html_end
 
-        # 使用獨立元件強制將表格渲染出來
+        # 將完整的表格渲染出來
         components.html(full_html_table, height=500, scrolling=True)
 
-    # === 頁面 3: DEEPSEEK CORE 大模型推理 (注意：這裡必須有 4 個空格縮排！) ===
+    # === 頁面 3: DEEPSEEK CORE 大模型推理 ===
     elif "DEEPSEEK CORE" in page_mode:
         st.markdown(f"""
         <div class='header-container'>
@@ -354,7 +359,6 @@ elif "12 PIN DOCK" in page_mode:
         </div>
         """, unsafe_allow_html=True)
 
-        # 初始化對話歷史紀錄
         if "chat_response" not in st.session_state:
             st.session_state.chat_response = ""
 
