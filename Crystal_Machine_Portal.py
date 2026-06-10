@@ -285,8 +285,9 @@ if "LIVE MONITOR" in page_mode:
 # =====================================================================
 # 5. 靠最左邊對齊的獨立路由（直接覆蓋你檔案最底部）
 # =====================================================================
+# === DEEPSEEK CORE 區塊開始 ===
     elif "DEEPSEEK CORE" in page_mode:
-        # 單一區塊：標題
+        # 顯示標題區塊
         st.markdown(f"""
         <div class='header-container'>
             <div class='hex-header-text'>⬜ DEEPSEEK CORE 本地推理核心</div>
@@ -294,17 +295,16 @@ if "LIVE MONITOR" in page_mode:
         </div>
         """, unsafe_allow_html=True)
 
-        # 單一區塊：面板內容
+        # 顯示內容面板
         st.markdown(f"""
         <div class='panel-container'>
-            <div class='panel-title'>🌐 邊緣神經網路計算層</div>
+            <div class='panel-title'>🌐 邊緣神經網路計算層 (Raspberry Pi 5 16GB)</div>
             <div class='panel-desc'>
-                當前系統已成功加載 <b>{selected_volume}</b> 之對應知識庫核心。
+                透過樹莓派 5 邊緣運算層直接調用 DeepSeek 離線大模型，完全保護工業現場與臨床病患隱私。<br>
+                當前系統已成功加載 <b>{selected_volume}</b> 的對應知識庫核心：
             </div>
         </div>
         """, unsafe_allow_html=True)
-
-        # 這裡直接接著渲染面板內容
         st.markdown(f"""
         <div class='panel-container'>
             <div class='panel-title'>🌐 邊緣神經網路計算層 (Raspberry Pi 5 16GB)</div>
