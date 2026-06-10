@@ -333,13 +333,7 @@ elif "12 PIN DOCK" in page_mode:
         """
         
         st.markdown(full_html_table, unsafe_allow_html=True)
-
-# 👈 這樣下方的 elif 就會與上方的 elif 完全對齊，語法鎖鏈就不會斷掉了！
-elif "DEEPSEEK CORE" in page_mode:
-
-# 2. 真正將它渲染到 Streamlit 網頁上，並允許 HTML 解析
-st.markdown(full_html_table, unsafe_allow_html=True)
-
+    
 # --- 頁面 3：DEEPSEEK CORE 大模型推理（🛠️ 完美修復圖三排版與容器） ---
 elif "DEEPSEEK CORE" in page_mode:
     st.markdown(f"""
