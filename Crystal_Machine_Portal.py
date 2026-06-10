@@ -287,18 +287,18 @@ if "LIVE MONITOR" in page_mode:
 elif "12 PIN DOCK" in page_mode:
     st.markdown("""
     <div class='header-container'>
-        <div class='hex-header-text'>🔌 POGO PIN 實體接口組態</div>
+        <div class='hex-header-text'>⬜ POGO PIN 實體接口組態</div>
         <div class='live-clock'>{}</div>
     </div>
     """.format(current_timestamp), unsafe_allow_html=True)
-    
-    st.markdown("### 🔌 底層 12-Pin 彈簧針物理硬體映射配置表")
-    st.caption(f"目前正為首頁選定的【{selected_volume}】載入對應之底層暫存器與硬體腳位組態：")
-    
+
+    st.markdown("### ⬜ 底層 12-Pin 彈簧針物理硬體映射配置表")
+    st.caption(f"目前正為首頁選定的 【{selected_volume}】 載入對應之底層暫存器與硬體腳位組態：")
+
     my_hardcoded_dict = {}
     if "Vol. 7" in selected_volume:
         my_hardcoded_dict = {
-            "PIN 1": "VCC (3.3V Power)", "PIN 2": "GND (Ground)", 
+            "PIN 1": "VCC (3.3V Power)", "PIN 2": "GND (Ground)",
             "PIN 3": "ADC_CH1 (24-bit AT6901 Vol)", "PIN 4": "ADC_CH2 (24-bit AT6901 Cur)",
             "PIN 5": "I2C_SCL (Temp Sensor)", "PIN 6": "I2C_SDA (Temp Sensor)",
             "PIN 7": "GPIO_12 (Relay Control)", "PIN 8": "GPIO_13 (H2 Valve Ctrl)",
@@ -307,46 +307,47 @@ elif "12 PIN DOCK" in page_mode:
         }
     else:
         my_hardcoded_dict = {
-            "PIN 1": "VCC (5V Power)", "PIN 2": "GND (Ground)", 
+            "PIN 1": "VCC (5V Power)", "PIN 2": "GND (Ground)",
             "PIN 3": "UART_TX (Serial)", "PIN 4": "UART_RX (Serial)",
             "PIN 5": "I2C_SCL", "PIN 6": "I2C_SDA",
             "PIN 7": "GPIO_PWM_OUT", "PIN 8": "GPIO_ENCODER_A",
             "PIN 9": "GPIO_ENCODER_B", "PIN 10": "SPI_MOSI",
             "PIN 11": "SPI_MISO", "PIN 12": "SPI_CLK"
         }
-    
-# 這是您原本的迴圈（保持不動）
-table_rows = ""
-for pin_num, definition in my_hardcoded_dict.items():
-    table_rows += f"""
-    <tr>
-        <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='background-color: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-family: monospace;'>{pin_num}</span></td>
-        <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><b>{definition}</b></td>
-        <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'>物理彈簧針連接 (Pogo Pin)</td>
-        <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='color:#059669;'>● Active</span></td>
-    </tr>
+
+    table_rows = ""
+    for pin_num, definition in my_hardcoded_dict.items():
+        # 這裡的字串開頭與結尾的三引號必須完美成對
+        table_rows += f"""
+        <tr>
+            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='background-color: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-family: monospace;'>{pin_num}</span></td>
+            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><b>{definition}</b></td>
+            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'>物理彈簧針連接 (Pogo Pin)</td>
+            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='color:#059669;'>● Active</span></td>
+        </tr>
+        """
+
+    # 💡 關鍵：以下兩段必須跟上面的 table_rows 一樣，前方保持 4 個空格的縮排！
+    full_html_table = f"""
+    <table style="width:100%; border-collapse: collapse; font-family: sans-serif; text-align: left;">
+        <thead>
+            <tr style="background-color: #f8fafc;">
+                <th style="padding: 12px; border-bottom: 2px solid #cbd5e1;">腳位</th>
+                <th style="padding: 12px; border-bottom: 2px solid #cbd5e1;">硬體映射定義 (Hardware Mapping)</th>
+                <th style="padding: 12px; border-bottom: 2px solid #cbd5e1;">物理介面</th>
+                <th style="padding: 12px; border-bottom: 2px solid #cbd5e1;">狀態</th>
+            </tr>
+        </thead>
+        <tbody>
+            {table_rows}
+        </tbody>
+    </table>
     """
 
-# ==========================================
-# 💡 請在 for 迴圈下方「靠左對齊」加入以下這段修正程式碼：
-# ==========================================
+    st.markdown(full_html_table, unsafe_allow_html=True)
 
-# 1. 用 <table> 標籤把剛剛循環產生的所有 tr 包裹起來
-full_html_table = f"""
-<table style="width:100%; border-collapse: collapse; font-family: sans-serif; text-align: left;">
-    <thead>
-        <tr style="background-color: #f8fafc;">
-            <th style="padding: 12px; border-bottom: 2px solid #cbd5e1;">腳位</th>
-            <th style="padding: 12px; border-bottom: 2px solid #cbd5e1;">硬體映射定義 (Hardware Mapping)</th>
-            <th style="padding: 12px; border-bottom: 2px solid #cbd5e1;">物理介面</th>
-            <th style="padding: 12px; border-bottom: 2px solid #cbd5e1;">狀態</th>
-        </tr>
-    </thead>
-    <tbody>
-        {table_rows}
-    </tbody>
-</table>
-"""
+# 👈 這樣下方的 elif 就會與上方的 elif 完全對齊，語法鎖鏈就不會斷掉了！
+elif "DEEPSEEK CORE" in page_mode:
 
 # 2. 真正將它渲染到 Streamlit 網頁上，並允許 HTML 解析
 st.markdown(full_html_table, unsafe_allow_html=True)
