@@ -1,4 +1,4 @@
-﻿import streamlit as tf
+﻿import streamlit as st  # 修正：確認將 streamlit 正確導入為 st
 import datetime
 import pandas as pd
 import random
@@ -125,7 +125,6 @@ if sys_mode == "📊 LIVE MONITOR (實時設備看板)":
         
     st.write("")
     st.markdown("#### 🔄 24-bit 高精度信號即時特徵波形圖")
-    # 畫一個簡單的波形動態圖模擬模擬採集
     chart_data = pd.DataFrame(
         [random.uniform(0.5, 1.5) for _ in range(50)],
         columns=['ADC Raw Signal (V)']
@@ -160,7 +159,6 @@ elif sys_mode == "🧠 DEEPSEEK CORE (地端 AI 專家)":
     st.markdown("#### 📑 已加載專屬 Agent 技能卡 (Skill Card)")
     st.caption("✓ 臨床運動控制與健康照護提示詞   ✓ 生理指標異常自動診斷提示詞")
     
-    # 使用極高穩定度的 st.text_area 與 st.form 確保 Windows 7 舊瀏覽器相容性
     with st.form("ai_expert_form"):
         user_input = st.text_input("💬 請輸入對健康醫療或邊緣端硬體狀態的諮詢：", placeholder="例如：心率突發 110 BPM 且血氧降至 94% 時的處置 SOP？")
         submit_btn = st.form_submit_with_button("調用地端算力推理 (Run Edge Inference)")
