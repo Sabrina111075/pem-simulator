@@ -285,42 +285,54 @@ if "LIVE MONITOR" in page_mode:
 # 5. 靠最左邊對齊的獨立路由（直接覆蓋你檔案最底部）
 # =====================================================================
 elif "12 PIN DOCK" in page_mode:
-    # 這裡的每一行，都要比上面的 elif 多出「4個空格」的縮排
-    st.markdown("""
-    <div class='header-container'>
-        <div class='hex-header-text'>⬜ POGO PIN 實體接口組態</div>
-        <div class='live-clock'>{}</div>
-    </div>
-    """.format(current_timestamp), unsafe_allow_html=True)
+        st.markdown("""
+        <div class='header-container'>
+            <div class='hex-header-text'>⬜ POGO PIN 實體接口組態</div>
+            <div class='live-clock'>{}</div>
+        </div>
+        """.format(current_timestamp), unsafe_allow_html=True)
 
-    st.markdown("### ⬜ 底層 12-Pin 彈簧針物理硬體映射配置表")
-    st.caption(f"目前正為首頁選定的 【{selected_volume}】 載入對應之底層暫存器與硬體腳位組態：")
+        st.markdown("### ⬜ 底層 12-Pin 彈簧針物理硬體映射配置表")
+        st.caption(f"目前正為首頁選定的 【{selected_volume}】 載入對應之底層暫存器與硬體腳位組態：")
 
-    # (中間的字典建立邏輯保持不變，但記得也要確保它們都有向右縮排)
-    my_hardcoded_dict = {}
-    if "Vol. 7" in selected_volume:
-        my_hardcoded_dict = { ... }
-    else:
-        my_hardcoded_dict = { ... }
+        my_hardcoded_dict = {}
+        if "Vol. 7" in selected_volume:
+            my_hardcoded_dict = {
+                "PIN 1": "VCC (3.3V Power)", "PIN 2": "GND (Ground)",
+                "PIN 3": "ADC_CH1 (24-bit AT6901 Vol)", "PIN 4": "ADC_CH2 (24-bit AT6901 Cur)",
+                "PIN 5": "I2C_SCL (Temp Sensor)", "PIN 6": "I2C_SDA (Temp Sensor)",
+                "PIN 7": "GPIO_12 (Relay Control)", "PIN 8": "GPIO_13 (H2 Valve Ctrl)",
+                "PIN 9": "CAN_H (Bus)", "PIN 10": "CAN_L (Bus)",
+                "PIN 11": "GPIO_14 (Alert LED)", "PIN 12": "GPIO_15 (Emergency Stop)"
+            }
+        else:
+            my_hardcoded_dict = {
+                "PIN 1": "VCC (5V Power)", "PIN 2": "GND (Ground)",
+                "PIN 3": "UART_TX (Serial)", "PIN 4": "UART_RX (Serial)",
+                "PIN 5": "I2C_SCL", "PIN 6": "I2C_SDA",
+                "PIN 7": "GPIO_PWM_OUT", "PIN 8": "GPIO_ENCODER_A",
+                "PIN 9": "GPIO_ENCODER_B", "PIN 10": "SPI_MOSI",
+                "PIN 11": "SPI_MISO", "PIN 12": "SPI_CLK"
+            }
 
-    table_rows = ""
-    for pin_num, definition in my_hardcoded_dict.items():
-        table_rows += f"""
-        <tr>
-            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='background-color: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-family: monospace;'>{pin_num}</span></td>
-            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><b>{definition}</b></td>
-            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'>物理彈簧針連接 (Pogo Pin)</td>
-            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='color:#059669;'>● Active</span></td>
-        </tr>
+        table_rows = ""
+        for pin_num, definition in my_hardcoded_dict.items():
+            table_rows += f"""
+            <tr>
+                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='background-color: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-family: monospace;'>{pin_num}</span></td>
+                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><b>{definition}</b></td>
+                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'>物理彈簧針連接 (Pogo Pin)</td>
+                <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='color:#059669;'>● Active</span></td>
+            </tr>
+            """
+
+        full_html_table = f"""
+        <table style="width:100%; border-collapse: collapse; font-family: sans-serif; text-align: left;">
+            <tbody>{table_rows}</tbody>
+        </table>
         """
-
-    full_html_table = f"""
-    <table style="width:100%; border-collapse: collapse; font-family: sans-serif; text-align: left;">
-        <tbody>{table_rows}</tbody>
-    </table>
-    """
-    
-    st.markdown(full_html_table, unsafe_allow_html=True)
+        
+        st.markdown(full_html_table, unsafe_allow_html=True)
 
 # 👈 這樣下方的 elif 就會與上方的 elif 完全對齊，語法鎖鏈就不會斷掉了！
 elif "DEEPSEEK CORE" in page_mode:
