@@ -285,67 +285,30 @@ if "LIVE MONITOR" in page_mode:
 # =====================================================================
 # 5. 靠最左邊對齊的獨立路由（直接覆蓋你檔案最底部）
 # =====================================================================
-# === 頁面銜接區 ===
-    components.html(full_html_table, height=400, scrolling=True)
+# === 12 PIN DOCK 區塊渲染結束 ===
+    components.html(full_html_table, height=600, scrolling=True)
 
-    # === DEEPSEEK CORE 區塊開始 ===
-    elif "DEEPSEEK CORE" in page_mode:
-        st.markdown(f"""
-        <div class='header-container'>
-            <div class='hex-header-text'>⬜ DEEPSEEK CORE 本地推理核心</div>
-            <div class='live-clock'>{current_timestamp}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown(f"""
-        <div class='panel-container'>
-            <div class='panel-title'>🌐 邊緣神經網路計算層</div>
-            <div class='panel-desc'>
-                當前系統已成功加載 <b>{selected_volume}</b> 之對應知識庫核心。
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        # 顯示內容面板
-        st.markdown(f"""
-        <div class='panel-container'>
-            <div class='panel-title'>🌐 邊緣神經網路計算層 (Raspberry Pi 5 16GB)</div>
-            <div class='panel-desc'>
-                透過樹莓派 5 邊緣運算層直接調用 DeepSeek 離線大模型，完全保護工業現場與臨床病患隱私。<br>
-                當前系統已成功加載 <b>{selected_volume}</b> 的對應知識庫核心：
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown(f"""
-        <div class='panel-container'>
-            <div class='panel-title'>🌐 邊緣神經網路計算層 (Raspberry Pi 5 16GB)</div>
-            <div class='panel-desc'>
-                透過樹莓派 5 邊緣運算層直接調用 DeepSeek 離線大模型，完全保護工業現場與臨床病患隱私。<br>
-                當前系統已成功加載 <b>{selected_volume}</b> 的對應知識庫核心：
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+# === 頁面 3: DEEPSEEK CORE 大模型推理 ===
+elif "DEEPSEEK CORE" in page_mode:
+    st.markdown(f"""
+    <div class='header-container'>
+        <div class='hex-header-text'>⬜ DEEPSEEK CORE 本地推理核心</div>
+        <div class='live-clock'>{current_timestamp}</div>
     </div>
     """, unsafe_allow_html=True)
-    
+
+    st.markdown(f"""
+    <div class='panel-container'>
+        <div class='panel-title'>🌐 邊緣神經網路計算層 (Raspberry Pi 5 16GB)</div>
+        <div class='panel-desc'>
+            透過樹莓派 5 邊緣運算層直接調用 DeepSeek 離線大模型，完全保護工業現場與臨床病患隱私。<br>
+            當前系統已成功加載 <b>{selected_volume}</b> 的對應知識庫核心。
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 初始化對話歷史紀錄
     if "chat_response" not in st.session_state:
         st.session_state.chat_response = ""
-        
-    user_query = st.text_input(
-        "輸入您對當前工業/生理數據的臨床疑問：", 
-        placeholder="例如：若此領域數據曲線異常，應調校何種 Skill Agent 策略？"
-    )
-    
-    btn_key = f"ds_submit_{len(user_query)}"
-    
-    if st.button("送出至 Edge AI 進行推理", type="primary", key=btn_key):
-        if user_query:
-            with st.spinner("🧠 樹莓派 5 邊緣神經網路引擎計算中... 請稍候"):
-                time.sleep(1.2)
-                st.session_state.chat_response = f"【DeepSeek Edge AI 本地回覆】\n針對您在「{selected_volume}」中所提問的問題：「{user_query}」\n系統已自動匹配並調配 TAD-AGE 框架下對應的 Skill Card 知識庫進行比對。當前邊緣採樣鏈回傳正常，建議維持高頻監測，並持續觀測硬體底層 DOCK 的訊號反饋。"
-        else:
-            st.warning("⚠️ 請輸入您的疑問後再點擊送出。")
-            
-    if st.session_state.chat_response:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### 📋 邊緣推理結果：")
-        st.success(st.session_state.chat_response)
+
+    user_query = st.text_input("输入您對當前工業/生理數據的臨床判斷：", key="deepseek_input")
