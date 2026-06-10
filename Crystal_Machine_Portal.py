@@ -315,33 +315,41 @@ elif "12 PIN DOCK" in page_mode:
             "PIN 11": "SPI_MISO", "PIN 12": "SPI_CLK"
         }
     
-    table_rows = ""
-    for pin_num, definition in my_hardcoded_dict.items():
-        table_rows += f"""
-        <tr>
-            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='background-color: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-family: monospace;'>{pin_num}</span></td>
-            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><b>{definition}</b></td>
-            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'>物理彈簧針連接 (Pogo Pin)</td>
-            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='color:#059669;'>● Active</span></td>
-        </tr>
-        """
-        
-    html_table = f"""
-    <table style='width: 100%; border-collapse: collapse; margin-top: 15px; background-color: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-radius: 6px; overflow: hidden;'>
-        <thead>
-            <tr style='background-color: #0ea5e9; color: white; text-align: left;'>
-                <th style='padding: 12px; color: white;'>硬體腳位 (Pin Number)</th>
-                <th style='padding: 12px; color: white;'>當前功能映射 (Function Mapping)</th>
-                <th style='padding: 12px; color: white;'>物理介面類型 (Interface Type)</th>
-                <th style='padding: 12px; color: white;'>訊號狀態 (Signal Status)</th>
-            </tr>
-        </thead>
-        <tbody>
-            {table_rows}
-        </tbody>
-    </table>
+# 這是您原本的迴圈（保持不動）
+table_rows = ""
+for pin_num, definition in my_hardcoded_dict.items():
+    table_rows += f"""
+    <tr>
+        <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='background-color: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-family: monospace;'>{pin_num}</span></td>
+        <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><b>{definition}</b></td>
+        <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'>物理彈簧針連接 (Pogo Pin)</td>
+        <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='color:#059669;'>● Active</span></td>
+    </tr>
     """
-    st.markdown(html_table, unsafe_allow_html=True)
+
+# ==========================================
+# 💡 請在 for 迴圈下方「靠左對齊」加入以下這段修正程式碼：
+# ==========================================
+
+# 1. 用 <table> 標籤把剛剛循環產生的所有 tr 包裹起來
+full_html_table = f"""
+<table style="width:100%; border-collapse: collapse; font-family: sans-serif; text-align: left;">
+    <thead>
+        <tr style="background-color: #f8fafc;">
+            <th style="padding: 12px; border-bottom: 2px solid #cbd5e1;">腳位</th>
+            <th style="padding: 12px; border-bottom: 2px solid #cbd5e1;">硬體映射定義 (Hardware Mapping)</th>
+            <th style="padding: 12px; border-bottom: 2px solid #cbd5e1;">物理介面</th>
+            <th style="padding: 12px; border-bottom: 2px solid #cbd5e1;">狀態</th>
+        </tr>
+    </thead>
+    <tbody>
+        {table_rows}
+    </tbody>
+</table>
+"""
+
+# 2. 真正將它渲染到 Streamlit 網頁上，並允許 HTML 解析
+st.markdown(full_html_table, unsafe_allow_html=True)
 
 # --- 頁面 3：DEEPSEEK CORE 大模型推理（🛠️ 完美修復圖三排版與容器） ---
 elif "DEEPSEEK CORE" in page_mode:
