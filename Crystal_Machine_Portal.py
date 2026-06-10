@@ -295,7 +295,6 @@ elif "12 PIN DOCK" in page_mode:
 
         st.markdown("### ⚡ 底層 12-Pin 彈簧針物理硬體映射配置表")
 
-        # === 確保定義在最外層，絕對不會 NameError ===
         my_hardcoded_dict = {
             "PIN 1": "VCC (3.3V Power)", "PIN 2": "GND (Ground)",
             "PIN 3": "ADC_CH1 (24-bit AT6901)", "PIN 4": "ADC_CH2 (24-bit AT6901)",
@@ -334,13 +333,9 @@ elif "12 PIN DOCK" in page_mode:
         </table>
         """
         
-        # 這裡直接用剛剛建立的 final_rows，不碰觸任何可能有衝突的舊變數名
         full_html_table = html_start + final_rows + html_end
-
-        # 將完整的表格渲染出來
         components.html(full_html_table, height=500, scrolling=True)
 
-    # === 頁面 3: DEEPSEEK CORE 大模型推理 ===
     elif "DEEPSEEK CORE" in page_mode:
         st.markdown(f"""
         <div class='header-container'>
