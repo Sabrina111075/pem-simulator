@@ -285,9 +285,11 @@ if "LIVE MONITOR" in page_mode:
 # =====================================================================
 # 5. 靠最左邊對齊的獨立路由（直接覆蓋你檔案最底部）
 # =====================================================================
-# === DEEPSEEK CORE 區塊開始 ===
+# === 頁面銜接區 ===
+    components.html(full_html_table, height=400, scrolling=True)
+
+    # === DEEPSEEK CORE 區塊開始 ===
     elif "DEEPSEEK CORE" in page_mode:
-        # 顯示標題區塊
         st.markdown(f"""
         <div class='header-container'>
             <div class='hex-header-text'>⬜ DEEPSEEK CORE 本地推理核心</div>
@@ -295,6 +297,14 @@ if "LIVE MONITOR" in page_mode:
         </div>
         """, unsafe_allow_html=True)
 
+        st.markdown(f"""
+        <div class='panel-container'>
+            <div class='panel-title'>🌐 邊緣神經網路計算層</div>
+            <div class='panel-desc'>
+                當前系統已成功加載 <b>{selected_volume}</b> 之對應知識庫核心。
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         # 顯示內容面板
         st.markdown(f"""
         <div class='panel-container'>
