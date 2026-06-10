@@ -1,308 +1,177 @@
-﻿import streamlit as st
-import time
-import numpy as np
-import hardware_config as hc
-from datetime import datetime
+﻿import streamlit as tf
+import datetime
+import pandas as pd
+import random
 
-# 1. 網頁全域基本配置
+# ==============================================================================
+# 1. 系統全域配置 (PAGE & STYLE CONFIG)
+# ==============================================================================
 st.set_page_config(
-    page_title="Crystal Machine 蜂巢式 AI 生態系主控台",
-    page_icon="*",
-    layout="wide"
+    page_title="Crystal Machine 企業語意作業系統",
+    page_icon="⬢",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# 2. 自訂網頁 CSS 樣式
+# 注入客製化工業風 CSS 樣式
 st.markdown("""
-    <style>
-    /* 強制右側主面板為舒適、清爽的明亮白底 */
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-        background-color: #f8fafc !important;
-        color: #1e293b !important;
-    }
-    
-    /* 確保所有標準文字在白底下一樣清晰 */
-    p, span, label, h2, h3, h4, h5, h6 {
-        color: #0f172a !important;
-    }
-    
-    /* 左側側邊欄企業名稱加大明亮優化 */
-    .brand-title {
-        color: #0ea5e9 !important;
-        font-family: 'Segoe UI', system-ui, sans-serif;
-        font-weight: 800 !important;
-        font-size: 28px !important;
-        margin-bottom: 0px;
-        padding-bottom: 0px;
-        letter-spacing: 0.5px;
-    }
-    
-    /* 主面板大標題與時間佈局容器 */
-    .header-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        border-left: 6px solid #0ea5e9;
-        padding-left: 12px;
-        margin-bottom: 20px;
-    }
-    
-    .hex-header-text { 
-        color: #0284c7 !important; 
-        font-weight: bold !important; 
-        font-family: 'Segoe UI', system-ui, sans-serif; 
-        margin: 0 !important;
-        padding: 0 !important;
-        font-size: 2.2rem !important;
-    }
-
-    /* 工業風即時時間標籤 */
-    .live-clock {
-        font-family: 'Courier New', Courier, monospace;
-        background-color: #f1f5f9;
-        color: #0369a1 !important;
-        padding: 6px 14px;
-        border-radius: 6px;
-        font-size: 14px;
+<style>
+    .main-header {
+        font-family: 'Courier New', monospace;
+        color: #1F4E5B;
         font-weight: bold;
-        border: 1px solid #e2e8f0;
-        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
     }
-    
-    /* 六角蜂巢容器與完美比例正六角形卡片 */
-    .honeycomb-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 15px 0;
+    .stMetric {
+        background-color: #F4F7F6;
+        padding: 10px;
+        border-radius: 5px;
+        border-left: 4px solid #00A8CC;
     }
-    
-    .honeycomb-card { 
-        width: 150px;
-        height: 150px;
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); 
-        border: 2px solid #bae6fd;
-        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        padding: 15px;
-        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.08);
-        transition: all 0.25s ease-in-out;
+    .sys-time-card {
+        background-color: #1F4E5B;
+        color: #ffffff;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        text-align: right;
     }
-    
-    .honeycomb-card:hover {
-        transform: translateY(-4px) scale(1.04);
-        background: linear-gradient(135deg, #e0f2fe 0%, #ccfbf1 100%);
-        border-color: #7dd3fc;
-        box-shadow: 0 8px 20px rgba(14, 165, 233, 0.15);
-    }
-    
-    .honeycomb-title {
-        color: #0369a1 !important;
-        font-weight: 700 !important;
-        font-size: 14px !important;
-        margin-bottom: 6px;
-        border-bottom: 1px solid #bae6fd;
-        padding-bottom: 4px;
-        width: 80%;
-    }
-    
-    .honeycomb-desc {
-        color: #334155 !important;
-        font-size: 11px !important;
-        line-height: 1.3;
-        font-weight: 500;
-    }
-    
-    .status-empty {
-        color: #94a3b8 !important;
-        font-style: italic;
-    }
-    
-    .step-box { 
-        border: 1px dashed #cbd5e1; 
-        padding: 14px; 
-        border-radius: 8px; 
-        background-color: #ffffff; 
-        text-align: center; 
-        font-size: 13px;
-        color: #334155 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.01);
-    }
-    </style>
-    """, unsafe_allow_html=True)
+</style>
+""", unsafe_allow_html=True)
 
-# 3. 側邊欄 UI 設計
-st.sidebar.markdown("<p class='brand-title'>* Crystal Machine</p>", unsafe_allow_html=True)
-st.sidebar.caption("工業級蜂巢式邊緣 AI 控制中樞模擬平台")
-st.sidebar.markdown("<br>", unsafe_allow_html=True)
+# ==============================================================================
+# 2. 核心時間同步模組 (SYS RUNTIME AUTOMATION)
+# ==============================================================================
+# 抓取雲端 Linux 伺服器時間並透過 timedelta 強制校正為台灣標準時間 (UTC+8)
+current_tw_time = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+formatted_time = current_tw_time.strftime("%Y-%m-%d %H:%M:%S")
 
-# 下拉選單：完整導入10大產品線
-selected_volume = st.sidebar.selectbox(
-    "SYS CATALOGUE:",
+# ==============================================================================
+# 3. 左側導覽控制面板 (SIDEBAR CONFIGURATION)
+# ==============================================================================
+st.sidebar.markdown("# ⬢ Crystal Machine")
+st.sidebar.markdown("### 企業語意作業系統 `V2.0` (Raspberry Pi 5 核心)")
+st.sidebar.divider()
+
+# 專利型錄分卷切換 (Vol.1 - Vol.10)
+product_vol = st.sidebar.selectbox(
+    "📂 選擇型錄分卷 (PRODUCT VOLUME)",
     [
-        "Vol. 1 : 基礎移動平台與移動機器人",
-        "Vol. 2 : 環境感知與氣象監測",
-        "Vol. 3 : 智慧農業與精準種植",
-        "Vol. 4 : 智慧建築與空間管理",
-        "Vol. 5 : 工業自動化與機器視覺",
-        "Vol. 6 : 智慧醫療與臨床健康照護",
-        "Vol. 7 : 綠能管理與氫能製氫模擬",
-        "Vol. 8 : 電動載具與馬達動力診斷",
-        "Vol. 9 : 無人機 (UAV) 與空中安防",
-        "Vol. 10 : 智慧物流與冷鏈追蹤"
+        "Vol. 1 行動機器人模組 (Mobile Robotics)",
+        "Vol. 2 農業自動化感測器 (Agri-Tech Sensors)",
+        "Vol. 3 車聯網 V2X 終端 (Automotive Telematics)",
+        "Vol. 4 智慧物流冷鏈追蹤 (Smart Cold-Chain)",
+        "Vol. 5 工業環境有毒氣體監測 (Industrial Gas Detection)",
+        "Vol. 6 智慧健康醫療門戶 (Active Healthcare Central)",
+        "Vol. 7 環境微氣候雷達 (Microclimate Radar)",
+        "Vol. 8 軌道交通結構安全 (Railway Safety)",
+        "Vol. 9 倉儲自動化防撞視覺 (Warehouse Anti-collision)",
+        "Vol. 10 綠能儲能電池管理 (BMS Storage)"
+    ],
+    index=5 # 預設載入開會要展示的 Vol. 6 智慧健康醫療門戶
+)
+
+st.sidebar.divider()
+
+# 三大專利技術展示切換
+sys_mode = st.sidebar.radio(
+    "🛠️ 選擇主控面板單元 (SYS MODE)",
+    [
+        "📊 LIVE MONITOR (實時設備看板)",
+        "🔌 12 PIN DOCK (磁吸接口後台)",
+        "🧠 DEEPSEEK CORE (地端 AI 專家)"
     ]
 )
 
-st.sidebar.markdown("---")
-page_mode = st.sidebar.radio("SYS MODE:", ["📊 LIVE MONITOR", "🔌 12 PIN DOCK", "🤖 DEEPSEEK CORE"])
+st.sidebar.divider()
+st.sidebar.caption("硬體核心：Raspberry Pi 5 (16GB)")
+st.sidebar.caption("通訊架構：ESP32-S3 + 24-bit ADC (AT6901)")
+st.sidebar.caption("部署分支：`cloud-deploy` (獨立隔離區)")
 
-# 獲取硬體底層配置
-hw_config = hc.get_catalog_config(selected_volume)
-pin_defines = hc.get_pogo_pin_definition()
+# ==============================================================================
+# 4. 右側主面板看板 (MAIN PANEL RENDERER)
+# ==============================================================================
 
-# 取得當前系統即時時間 (純ASCII安全格式)
-current_timestamp = datetime.now().strftime("SYS RUNTIME: %Y-%m-%d %H:%M:%S")
-
-def render_honeycomb_cell(slot_name, slot_value):
-    if "未配置" in slot_value:
-        display_text = f"<span class='status-empty'>{slot_value}</span>"
-    else:
-        display_text = slot_value.replace(" (", "<br><span style='color:#059669; font-weight:bold;'>").replace(")", "</span>")
-    
-    return f"""
-        <div class='honeycomb-container'>
-            <div class='honeycomb-card'>
-                <div class='honeycomb-title'>{slot_name}</div>
-                <div class='honeycomb-desc'>{display_text}</div>
-            </div>
-        </div>
-    """
-
-# 功能頁面 1：實時設備看板
-if page_mode == "📊 LIVE MONITOR":
+# 頂部抬頭與時間同步卡片 (2:1 排版)
+header_col, time_col = st.columns([2, 1])
+with header_col:
+    st.title("⬢ Edge AI 控制中樞模擬平台")
+    st.subheader(f"當前加載：{product_vol.split(' ')[0]} {product_vol.split(' ')[1]}")
+with time_col:
+    st.write("") # 調整排版間距
     st.markdown(f"""
-        <div class='header-container'>
-            <div class='hex-header-text'>{selected_volume}</div>
-            <div class='live-clock'>{current_timestamp}</div>
-        </div>
+    <div class="sys-time-card">
+        ⏰ SYS RUNTIME : {formatted_time}<br>
+        <span style="font-size: 0.8rem; color: #b3dbf2;">TIMEZONE: ASIA/TAIPEI (UTC+8)</span>
+    </div>
     """, unsafe_allow_html=True)
-    
-    st.caption("外殼機構：六角形蜂巢式鋁合金外殼 (對角距離約 115mm / 厚度 32mm) | 核心運算：Raspberry Pi 5 + ESP32-S3")
-    st.markdown("---")
-    
-    st.subheader("📡 邊緣端多感測器即時資料鏈 (預留串列通訊接口)")
-    col1, col2, col3 = st.columns(3)
-    m_keys = list(hw_config["metrics"].keys())
-    
-    with col1:
-        val, unit = hw_config["metrics"][m_keys[0]]
-        st.metric(label=unit, value=val)
-    with col2:
-        val, unit = hw_config["metrics"][m_keys[1]]
-        st.metric(label=unit, value=val)
-    with col3:
-        val, unit = hw_config["metrics"][m_keys[2]]
-        st.metric(label=unit, value=val)
-        
-    st.markdown("---")
-    
-    st.subheader("六角蜂巢外殼磁吸 Dock 狀態 (N52 強力磁鐵定位)")
-    st.caption("當前領域模組之 A/B/C/D 生態系幾何拓撲結構自動偵測：")
-    
-    col_a1, col_a2, col_b1, col_b2, col_c1, col_d1 = st.columns(6)
-    
-    with col_a1:
-        st.markdown(render_honeycomb_cell("A1 感測插槽", hw_config['slots']['A1']), unsafe_allow_html=True)
-    with col_a2:
-        st.markdown(render_honeycomb_cell("A2 感測插槽", hw_config['slots']['A2']), unsafe_allow_html=True)
-    with col_b1:
-        st.markdown(render_honeycomb_cell("B1 通訊插槽", hw_config['slots']['B1']), unsafe_allow_html=True)
-    with col_b2:
-        st.markdown(render_honeycomb_cell("B2 通訊插槽", hw_config['slots']['B2']), unsafe_allow_html=True)
-    with col_c1:
-        st.markdown(render_honeycomb_cell("C1 視覺雷達", hw_config['slots']['C1']), unsafe_allow_html=True)
-    with col_d1:
-        st.markdown(render_honeycomb_cell("D1 電源管理", hw_config['slots']['D1']), unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.subheader("邊緣訊號即時波形特徵模擬")
-    chart_data = np.random.randn(25, 1) + hw_config["metrics"][m_keys[0]][0]
+st.divider()
+
+# ------------------------------------------------------------------------------
+# 單元 A: LIVE MONITOR (實時設備看板)
+# ------------------------------------------------------------------------------
+if sys_mode == "📊 LIVE MONITOR (實時設備看板)":
+    st.markdown("### 📊 邊緣多感測器資料鏈 (Data Pipeline)")
+    st.info("💡 核心映射說明：此處實時加載 Raspberry Pi 5 經實體 USB Hub 串接之 ESP32-S3 與 24-bit ADC (AT6901) 高精度資料流。")
+    
+    # 生產虛擬即時健康數據
+    col_bpm, col_spo2, col_temp = st.columns(3)
+    with col_bpm:
+        st.metric(label="🫀 即時心率 (Heart Rate)", value=f"{random.randint(72, 78)} BPM", delta="正常範圍")
+    with col_spo2:
+        st.metric(label="🩸 血氧飽和度 (SpO2)", value=f"{random.randint(97, 99)} %", delta="優良")
+    with col_temp:
+        st.metric(label="🌡️ 核心體溫 (Core Temperature)", value=f"{round(random.uniform(36.4, 36.8), 1)} °C", delta="無發熱")
+        
+    st.write("")
+    st.markdown("#### 🔄 24-bit 高精度信號即時特徵波形圖")
+    # 畫一個簡單的波形動態圖模擬模擬採集
+    chart_data = pd.DataFrame(
+        [random.uniform(0.5, 1.5) for _ in range(50)],
+        columns=['ADC Raw Signal (V)']
+    )
     st.line_chart(chart_data)
 
-# 功能頁面 2：12 Pin 磁吸 Dock 電氣監測
-elif page_mode == "🔌 12 PIN DOCK":
-    st.markdown(f"""
-        <div class='header-container'>
-            <div class='hex-header-text'>12 Pin Pogo Pin 彈簧互連介面電氣監測</div>
-            <div class='live-clock'>{current_timestamp}</div>
-        </div>
-    """, unsafe_allow_html=True)
-    st.caption("符合專利 Figure 5 定義之接腳電氣狀態，主板與擴充模組之通訊與供電訊號實時監控")
-    st.markdown("---")
+# ------------------------------------------------------------------------------
+# 單元 B: 12 PIN DOCK (磁吸接口後台)
+# ------------------------------------------------------------------------------
+elif sys_mode == "🔌 12 PIN DOCK (磁吸接口後台)":
+    st.markdown("### 🔌 12 Pin Pogo Pin 彈簧式互連介面狀態")
+    st.info("💡 專利結構對齊：模擬六角形鋁合金機殼（對角 115mm / 厚度 32mm）內部 N52 強力磁鐵盲插定位與 A/B/C/D 模組拓撲識別。")
     
-    st.subheader("專利自動辨識方法：熱插拔狀態鏈狀態 (Figure 7 流程還原)")
-    col_st1, col_st2, col_st3, col_st4 = st.columns(4)
-    with col_st1:
-        st.markdown("<div class='step-box'><b>① 機器機械對齊</b><br>六角斜面與定位扣導向</div>", unsafe_allow_html=True)
-    with col_st2:
-        st.markdown("<div class='step-box'><b>② 磁鐵自動吸附</b><br>N52 強力磁鐵導正盲插</div>", unsafe_allow_html=True)
-    with col_st3:
-        st.markdown("<div class='step-box'><b>③ Pogo Pin 電氣接觸</b><br>12接腳彈簧下壓導通</div>", unsafe_allow_html=True)
-    with col_st4:
-        st.markdown("<div class='step-box' style='border:2px solid #0284c7; background-color:#f0f9ff;'><b>④ 辨識啟動驅動</b><br><span style='color:#0369a1;'>🆔 讀取 EEPROM 啟動服務</span></div>", unsafe_allow_html=True)
-        
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.success("⬢ 物理狀態：模組已吸附成功 (Magnetic Dock Engaged) — 偵測到 D1 電源管理模組及 A1 環境醫療感測器。")
     
-    st.subheader("彈簧式 Pogo Pin 實時通道狀態")
-    st.table(pin_defines)
+    # 渲染 12 Pin 腳位狀態分配表
+    pin_data = {
+        "Pin 編號": [f"Pin {i}" for i in range(1, 13)],
+        "分配功能 (Function)": ["VCC (5V)", "GND", "UART_TX", "UART_RX", "I2C_SCL", "I2C_SDA", "SPI_CS", "SPI_CLK", "MISO", "MOSI", "ID_DETECT (模組識別)", "INT_LINE (中斷)"],
+        "電氣狀態 (Status)": ["CONNECTED", "CONNECTED", "ACTIVE", "ACTIVE", "IDLE", "IDLE", "NONE", "NONE", "NONE", "NONE", "HIGH (A1 Module Identified)", "LOW"]
+    }
+    df_pins = pd.DataFrame(pin_data)
+    st.table(df_pins)
 
-# 功能頁面 3：DeepSeek 地端 AI 專家 (採用通用相容元件)
-elif page_mode == "🤖 DEEPSEEK CORE":
-    st.markdown(f"""
-        <div class='header-container'>
-            <div class='hex-header-text'>DeepSeek 離線地端大模型專家諮詢</div>
-            <div class='live-clock'>{current_timestamp}</div>
-        </div>
-    """, unsafe_allow_html=True)
-    st.subheader(f"💡 狀態：{hw_config['skills']}")
-    st.caption("技術特色：能力（Skill Card）與設備（Sensor Card）相互分離，於 Orange Pi 本地端執行邊緣推理，資料完全不出在地端")
-    st.markdown("---")
+# ------------------------------------------------------------------------------
+# 單元 C: DEEPSEEK CORE (地端 AI 專家)
+# ------------------------------------------------------------------------------
+elif sys_mode == "🧠 DEEPSEEK CORE (地端 AI 專家)":
+    st.markdown("### 🧠 DeepSeek 離線大模型地端專家對話終端")
+    st.warning("🔒 隱私計算安全標準：歷史紀錄高強度加密，推理完全於地端 Raspberry Pi 5 本地端全權執行，數據絕不上傳外網雲端。")
     
-    chat_key = f"msg_history_{selected_volume}"
-    if chat_key not in st.session_state:
-        st.session_state[chat_key] = (
-            "【AI 專家】: 您好！我是部署在 Crystal Machine 中的地端 DeepSeek 專家。目前系統已成功與對應的感測數據鏈路對接。請問有什麼我可以協助您的？"
-        )
-
-    # 用舊版支援的大文字框來格式化輸出完整的對話歷史
-    st.text_area(
-        label="🤖 通訊終端歷史紀錄 (邊緣端加密通道)",
-        value=st.session_state[chat_key],
-        height=300,
-        disabled=True
-    )
+    st.markdown("#### 📑 已加載專屬 Agent 技能卡 (Skill Card)")
+    st.caption("✓ 臨床運動控制與健康照護提示詞   ✓ 生理指標異常自動診斷提示詞")
     
-    # 使用相容性極高的 st.form 處理輸入，避免回車即時重新整理的衝突
-    with st.form(key="chat_input_form", clear_on_submit=True):
-        user_input = st.text_input("請輸入您的工業診斷提問或設備連線疑問：", key="user_text_field")
-        submit_button = st.form_submit_button(label="🚀 送出提問")
+    # 使用極高穩定度的 st.text_area 與 st.form 確保 Windows 7 舊瀏覽器相容性
+    with st.form("ai_expert_form"):
+        user_input = st.text_input("💬 請輸入對健康醫療或邊緣端硬體狀態的諮詢：", placeholder="例如：心率突發 110 BPM 且血氧降至 94% 時的處置 SOP？")
+        submit_btn = st.form_submit_with_button("調用地端算力推理 (Run Edge Inference)")
         
-    if submit_button and user_input:
-        # 更新歷史紀錄文字
-        updated_history = st.session_state[chat_key] + f"\n\n【您】: {user_input}"
-        
-        # 模擬推理進度條
-        with st.spinner("DeepSeek 地端核心模型推理中..."):
-            time.sleep(0.8)
-            response = (
-                f"【地端推理核心回傳】\n"
-                f"在 {selected_volume.split('：')[0]} 的架構下，系統已成功調用地端模型與專屬 Agent 技能卡。結合當前蜂巢 Dock 讀取到的感測特徵值，我們無需外部網絡即可直接在邊緣端完成高精度推論，兼顧低延遲與數據隱私安全性。"
-            )
-            updated_history += f"\n\n🤖 {response}"
-            
-        # 儲存回 session_state 並重新整理網頁畫面
-        st.session_state[chat_key] = updated_history
-        st.experimental_rerun()
+    if submit_btn and user_input:
+        st.write("---")
+        st.markdown("**🧠 DeepSeek 邊緣核心推理回覆：**")
+        with st.spinner("樹莓派 5 本地端算力加載推理中..."):
+            st.markdown(f"""
+            依據加載之 **Vol.6 臨床照護技能卡** 規範，針對您輸入的「*{user_input}*」提供診斷策略：
+            1. **警報觸發：** 系統已自動將 12 Pin Dock 之中斷腳位 (Pin 12) 拉高，優先權限設定為緊急。
+            2. **地端診斷：** 當心率突發性上升且血氧飽和度低於 95% 時，可能伴隨急性缺氧風險。邊緣端建議立即通知現場醫護人員，並同步啟動氧氣模組供電。
+            3. **本地日誌：** 本次異常數據已加密留存於 Raspberry Pi 5 的本地 eMMC/SD 安全防線內。
+            """)
