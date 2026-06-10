@@ -234,7 +234,7 @@ def render_honeycomb_cell(slot_name, slot_value):
 # =====================================================================
 
 # --- 頁面 1：實時設備看板 ---
-if page_mode == "📊 LIVE MONITOR":
+if "LIVE MONITOR" in page_mode:
     st.markdown(f"""
     <div class='header-container'>
         <div class='hex-header-text'>{selected_volume}</div>
@@ -281,18 +281,70 @@ if page_mode == "📊 LIVE MONITOR":
     chart_data = np.vstack((wave_data, wave_data_2)).T
     st.line_chart(chart_data)
 
-# --- 頁面 2：12 PIN DOCK 介面 ---
-elif page_mode == "🔌 12 PIN DOCK":
-    st.markdown(f"""
+# =====================================================================
+# 5. 靠最左邊對齊的獨立路由（直接覆蓋你檔案最底部）
+# =====================================================================
+elif "12 PIN DOCK" in page_mode:
+    st.markdown("""
     <div class='header-container'>
-        <div class='hex-header-text'>POGO PIN 實體接口組態</div>
-        <div class='live-clock'>{current_timestamp}</div>
+        <div class='hex-header-text'>🔌 POGO PIN 實體接口組態</div>
+        <div class='live-clock'>{}</div>
     </div>
-    """, unsafe_allow_html=True)
-    st.info("硬體底層 12-Pin 彈簧針物理硬體映射配置檢視中...")
+    """.format(current_timestamp), unsafe_allow_html=True)
+    
+    st.markdown("### 🔌 底層 12-Pin 彈簧針物理硬體映射配置表")
+    st.caption(f"目前正為首頁選定的【{selected_volume}】載入對應之底層暫存器與硬體腳位組態：")
+    
+    my_hardcoded_dict = {}
+    if "Vol. 7" in selected_volume:
+        my_hardcoded_dict = {
+            "PIN 1": "VCC (3.3V Power)", "PIN 2": "GND (Ground)", 
+            "PIN 3": "ADC_CH1 (24-bit AT6901 Vol)", "PIN 4": "ADC_CH2 (24-bit AT6901 Cur)",
+            "PIN 5": "I2C_SCL (Temp Sensor)", "PIN 6": "I2C_SDA (Temp Sensor)",
+            "PIN 7": "GPIO_12 (Relay Control)", "PIN 8": "GPIO_13 (H2 Valve Ctrl)",
+            "PIN 9": "CAN_H (Bus)", "PIN 10": "CAN_L (Bus)",
+            "PIN 11": "GPIO_14 (Alert LED)", "PIN 12": "GPIO_15 (Emergency Stop)"
+        }
+    else:
+        my_hardcoded_dict = {
+            "PIN 1": "VCC (5V Power)", "PIN 2": "GND (Ground)", 
+            "PIN 3": "UART_TX (Serial)", "PIN 4": "UART_RX (Serial)",
+            "PIN 5": "I2C_SCL", "PIN 6": "I2C_SDA",
+            "PIN 7": "GPIO_PWM_OUT", "PIN 8": "GPIO_ENCODER_A",
+            "PIN 9": "GPIO_ENCODER_B", "PIN 10": "SPI_MOSI",
+            "PIN 11": "SPI_MISO", "PIN 12": "SPI_CLK"
+        }
+    
+    table_rows = ""
+    for pin_num, definition in my_hardcoded_dict.items():
+        table_rows += f"""
+        <tr>
+            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='background-color: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-family: monospace;'>{pin_num}</span></td>
+            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><b>{definition}</b></td>
+            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'>物理彈簧針連接 (Pogo Pin)</td>
+            <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='color:#059669;'>● Active</span></td>
+        </tr>
+        """
+        
+    html_table = f"""
+    <table style='width: 100%; border-collapse: collapse; margin-top: 15px; background-color: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-radius: 6px; overflow: hidden;'>
+        <thead>
+            <tr style='background-color: #0ea5e9; color: white; text-align: left;'>
+                <th style='padding: 12px; color: white;'>硬體腳位 (Pin Number)</th>
+                <th style='padding: 12px; color: white;'>當前功能映射 (Function Mapping)</th>
+                <th style='padding: 12px; color: white;'>物理介面類型 (Interface Type)</th>
+                <th style='padding: 12px; color: white;'>訊號狀態 (Signal Status)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {table_rows}
+        </tbody>
+    </table>
+    """
+    st.markdown(html_table, unsafe_allow_html=True)
 
 # --- 頁面 3：DEEPSEEK CORE 大模型推理（🛠️ 完美修復圖三排版與容器） ---
-elif page_mode == "🧠 DEEPSEEK CORE":
+elif "DEEPSEEK CORE" in page_mode:
     st.markdown(f"""
     <div class='header-container'>
         <div class='hex-header-text'>🧠 DEEPSEEK CORE 本地推理核心</div>
