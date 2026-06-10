@@ -336,7 +336,7 @@ elif "12 PIN DOCK" in page_mode:
         full_html_table = html_start + final_rows + html_end
         components.html(full_html_table, height=500, scrolling=True)
 
-    elif "DEEPSEEK CORE" in page_mode:
+elif "DEEPSEEK CORE" in page_mode:
         st.markdown(f"""
         <div class='header-container'>
             <div class='hex-header-text'>⬜ DEEPSEEK CORE 本地推理核心</div>
