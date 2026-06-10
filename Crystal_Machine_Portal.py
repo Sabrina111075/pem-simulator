@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 注入客製化工業風 CSS 樣式
+# 注入客製化工業風 CSS 與 蜂巢圖專用樣式
 st.markdown("""
 <style>
     .main-header {
@@ -35,13 +35,46 @@ st.markdown("""
         font-family: 'Courier New', monospace;
         text-align: right;
     }
+    /* 蜂巢圖視覺優化 */
+    .honeycomb-container {
+        background-color: #0F2537;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #00A8CC;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .honeycomb-title {
+        color: #00A8CC;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+    }
+    .node-active {
+        background-color: #00A8CC;
+        color: #0F2537;
+        font-weight: bold;
+        padding: 12px;
+        border-radius: 6px;
+        border: 2px solid #ffffff;
+        text-align: center;
+    }
+    .node-center {
+        background-color: #1F4E5B;
+        color: #ffffff;
+        font-weight: bold;
+        padding: 15px;
+        border-radius: 6px;
+        border: 2px solid #00A8CC;
+        text-align: center;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
 # 2. 核心時間同步模組 (SYS RUNTIME AUTOMATION)
 # ==============================================================================
-# 抓取雲端 Linux 伺服器時間並透過 timedelta 強制校正為台灣標準時間 (UTC+8)
 current_tw_time = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
 formatted_time = current_tw_time.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -84,14 +117,13 @@ sys_mode = st.sidebar.radio(
 
 st.sidebar.divider()
 st.sidebar.caption("硬體核心：Raspberry Pi 5 (16GB)")
-st.sidebar.caption("通訊架喚：ESP32-S3 + 24-bit ADC (AT6901)")
+st.sidebar.caption("通訊架構：ESP32-S3 + 24-bit ADC (AT6901)")
 st.sidebar.caption("部署分支：`cloud-deploy` (獨立隔離區)")
 
 # ==============================================================================
 # 4. 右側主面板看板 (MAIN PANEL RENDERER)
 # ==============================================================================
 
-# 擷取目前選中的分卷名稱
 vol_title = product_vol.split(" ")[1] + " " + product_vol.split(" ")[2]
 
 # 頂部抬頭與時間同步卡片 (2:1 排版)
@@ -110,16 +142,50 @@ with time_col:
 
 st.divider()
 
+# ==============================================================================
+# ✨ 核心加回：漂亮的六角型蜂巢拓撲形狀顯示 (HONEYCOMB HARDWARE TOPOLOGY)
+# ==============================================================================
+st.markdown('<div class="honeycomb-container">', unsafe_allow_html=True)
+st.markdown(f'<div class="honeycomb-title">⬢ 蜂巢式拓撲硬體互連架構即時映射 (對角 115mm 工業鋁合金外殼)</div>', unsafe_allow_html=True)
+
+# 建立 3 行網格來模擬六角形拓撲結構
+row1_col1, row1_col2 = st.columns(2)
+row2_col1, row2_col2, row2_col3 = st.columns([1, 1.2, 1])
+row3_col1, row3_col2 = st.columns(2)
+
+with row1_col1:
+    st.markdown('<div class="node-active">⬢ C1 視覺雷達模組<br><span style="font-size:0.75rem;">(Camera / LiDAR)</span></div>', unsafe_allow_html=True)
+with row1_col2:
+    st.markdown('<div class="node-active">⬢ B1 遠程通訊模組<br><span style="font-size:0.75rem;">(LoRa / 5G)</span></div>', unsafe_allow_html=True)
+
+with row2_col1:
+    # 這裡會根據左側下拉選單，動態點亮目前的 A1 模組型態！
+    st.markdown(f'<div class="node-active" style="border: 2px solid #FFD700;">⬢ A1 當前加載模組<br><span style="font-size:0.75rem; color:#0F2537; font-weight:bold;">({vol_title})</span></div>', unsafe_allow_html=True)
+with row2_col2:
+    st.markdown('<div class="node-center">🧠 樹莓派 5 核心<br><span style="font-size:0.8rem; color:#00A8CC;">(DeepSeek AI Core)</span></div>', unsafe_allow_html=True)
+with row2_col3:
+    st.markdown('<div class="node-active">⬢ B2 短距通訊模組<br><span style="font-size:0.75rem;">(Wi-Fi 6 / UWB)</span></div>', unsafe_allow_html=True)
+
+with row3_col1:
+    st.markdown('<div class="node-active">⬢ A2 姿態定位模組<br><span style="font-size:0.75rem;">(IMU / GPS)</span></div>', unsafe_allow_html=True)
+with row3_col2:
+    st.markdown('<div class="node-active">⬢ D1 智慧電源模組<br><span style="font-size:0.75rem;">(BMS Battery)</span></div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
+st.divider()
+
+# ==============================================================================
+# 5. 三大單元分頁渲染 (SYS MODE ROUTER)
+# ==============================================================================
+
 # ------------------------------------------------------------------------------
-# 單元 A: LIVE MONITOR (實時設備看板) -> 已整合左側下拉選單聯動邏輯
+# 單元 A: LIVE MONITOR (實時設備看板)
 # ------------------------------------------------------------------------------
 if sys_mode == "📊 LIVE MONITOR (實時設備看板)":
     st.markdown(f"### 📊 邊緣感測器資料鏈 — {vol_title}")
     st.info(f"💡 核心映射說明：目前主控台已切換至【{product_vol}】，此處實時渲染 Raspberry Pi 5 經 12 Pin 磁吸介面傳輸之高精度數據流。")
     
-    # 根據左側下拉選單 (product_vol) 的切換，動態改變展示的 Metric 標籤與數值
     col1, col2, col3 = st.columns(3)
-    
     if "Vol. 6" in product_vol:
         with col1:
             st.metric(label="🫀 即時心率 (Heart Rate)", value=f"{random.randint(72, 78)} BPM", delta="正常範圍")
@@ -135,7 +201,6 @@ if sys_mode == "📊 LIVE MONITOR (實時設備看板)":
         with col3:
             st.metric(label="🌡️ 環境溫度 (Temp)", value=f"{round(random.uniform(24.5, 25.2), 1)} °C", delta="常溫")
     else:
-        # 其他分卷的通用動態泛型數據
         with col1:
             st.metric(label="⚡ 模組通道 A 電壓", value=f"{round(random.uniform(3.2, 3.4), 2)} V", delta="穩壓輸出")
         with col2:
@@ -160,7 +225,6 @@ elif sys_mode == "🔌 12 PIN DOCK (磁吸接口後台)":
     
     st.success(f"⬢ 物理狀態：磁吸成功 (Magnetic Dock Engaged) — 控制中樞已為 【{product_vol}】 配發硬體線路與暫存器定址。")
     
-    # 渲染 12 Pin 腳位狀態分配表
     pin_data = {
         "Pin 編號": [f"Pin {i}" for i in range(1, 13)],
         "分配功能 (Function)": ["VCC (5V)", "GND", "UART_TX", "UART_RX", "I2C_SCL", "I2C_SDA", "SPI_CS", "SPI_CLK", "MISO", "MOSI", "ID_DETECT (模組識別)", "INT_LINE (中斷)"],
@@ -170,7 +234,7 @@ elif sys_mode == "🔌 12 PIN DOCK (磁吸接口後台)":
     st.table(df_pins)
 
 # ------------------------------------------------------------------------------
-# 單元 C: DEEPSEEK CORE (地端 AI 專家) -> 已修正 st 拚寫紅字
+# 單元 C: DEEPSEEK CORE (地端 AI 專家) -> 徹底根除 ID 衝突報錯
 # ------------------------------------------------------------------------------
 elif sys_mode == "🧠 DEEPSEEK CORE (地端 AI 專家)":
     st.markdown("### 🧠 DeepSeek 離線大模型地端專家對話終端")
@@ -179,15 +243,15 @@ elif sys_mode == "🧠 DEEPSEEK CORE (地端 AI 專家)":
     st.markdown("#### 📑 已依據型錄自動加載專屬 Agent 技能卡")
     st.caption(f"✓ 已就緒：{vol_title} 核心控制 Prompt 專家卡片")
     
-    with st.form("ai_expert_form"):
-        user_input = st.text_input("💬 請輸入對健康醫療或邊緣端硬體狀態的諮詢：", placeholder="例如：心率突發 110 BPM 且血氧降至 94% 時的處置 SOP？")
-        submit_btn = st.form_submit_with_button("調用地端算力推理 (Run Edge Inference)")
+    # 關鍵修正：透過為 form 顯式加上唯一的 key，以及為 submit_button 加上獨一無二的 key 來絕殺 DuplicateWidgetID 錯誤
+    with st.form(key="deepseek_chat_form"):
+        user_input = st.text_input("💬 請輸入對健康醫療或邊緣端硬體狀態的諮詢：", placeholder="例如：心率突發 110 BPM 且血氧降至 94% 時的處置 SOP？", key="ds_user_input")
+        submit_btn = st.form_submit_with_button(label="調用地端算力推理 (Run Edge Inference)", key="ds_submit_btn")
         
     if submit_btn and user_input:
         st.write("---")
         st.markdown("**🧠 DeepSeek 邊緣核心推理回覆：**")
         with st.spinner("樹莓派 5 本地端算力加載推理中..."):
-            # 修正：確認使用正確的 st.markdown 語法，消除原本的 KeyError 報錯
             st.markdown(f"""
             依據加載之 **{vol_title} 專家知識庫** 規範，針對您輸入的「*{user_input}*」提供邊緣端整合診斷：
             1. **狀態判定：** 系統檢測到當前運作單元為 `{product_vol}`，已將 12 Pin Dock 之中斷腳位 (Pin 12) 優先權限拉至最高。
