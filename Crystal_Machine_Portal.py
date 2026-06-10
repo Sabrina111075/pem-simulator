@@ -295,7 +295,7 @@ elif "12 PIN DOCK" in page_mode:
 
         st.markdown("### ⚡ 底層 12-Pin 彈簧針物理硬體映射配置表")
 
-        # === 12 PIN DOCK 資料定義 ===
+        # === 確保定義在最外層，絕對不會 NameError ===
         my_hardcoded_dict = {
             "PIN 1": "VCC (3.3V Power)", "PIN 2": "GND (Ground)",
             "PIN 3": "ADC_CH1 (24-bit AT6901)", "PIN 4": "ADC_CH2 (24-bit AT6901)",
@@ -305,9 +305,9 @@ elif "12 PIN DOCK" in page_mode:
             "PIN 11": "GPIO_14", "PIN 12": "GPIO_15"
         }
         
-        table_rows = ""
+        final_rows = ""
         for pin_num, definition in my_hardcoded_dict.items():
-            table_rows += f"""
+            final_rows += f"""
             <tr>
                 <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><span style='background-color: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight: bold;'>{pin_num}</span></td>
                 <td style='padding: 12px; border-bottom: 1px solid #e2e8f0;'><b>{definition}</b></td>
@@ -316,7 +316,6 @@ elif "12 PIN DOCK" in page_mode:
             </tr>
             """
 
-        # 用最安全、最原始的字串加號拼接，徹底繞過所有花括號解析地獄
         html_start = """
         <table style="width:100%; border-collapse: collapse; font-family: sans-serif; text-align: left;">
             <thead>
@@ -335,7 +334,8 @@ elif "12 PIN DOCK" in page_mode:
         </table>
         """
         
-        full_html_table = html_start + table_rows + html_end
+        # 這裡直接用剛剛建立的 final_rows，不碰觸任何可能有衝突的舊變數名
+        full_html_table = html_start + final_rows + html_end
 
         # 將完整的表格渲染出來
         components.html(full_html_table, height=500, scrolling=True)
