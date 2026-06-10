@@ -1,4 +1,5 @@
-﻿import streamlit as st
+import streamlit.components.v1 as components
+import streamlit as st
 import time
 import numpy as np
 import hardware_config as hc
@@ -332,7 +333,8 @@ elif "12 PIN DOCK" in page_mode:
         </table>
         """
         
-        st.markdown(full_html_table, unsafe_allow_html=True)
+        # 使用 components.html 強制渲染
+components.html(full_html_table, height=600, scrolling=True)
     
 # --- 頁面 3：DEEPSEEK CORE 大模型推理（🛠️ 完美修復圖三排版與容器） ---
 elif "DEEPSEEK CORE" in page_mode:
