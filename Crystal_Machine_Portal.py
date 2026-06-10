@@ -139,15 +139,18 @@ with right_panel:
 
     user_query = st.text_input("輸入您對生理數據的臨床疑問：", placeholder="例如：若長者心率驟降至50且IMU震幅異常，應觸發何種通報流程？")
     
-    if st.button("送出至 Edge AI 進行推理", type="primary"):
-        if user_query:
-            st.session_state.loading = True
-            with st.spinner("樹莓派 5 邊緣神經網路引擎計算中..."):
-                time.sleep(1.5)  # 模擬本地硬體推理延遲
-                st.session_state.chat_response = f"【DeepSeek Edge AI 本地回覆】\n針對您詢問的問題：「{user_query}」\n基於當前系統載入的 Skill Card (醫療 Agent 知識庫)，當偵測到此複合型異常時，中央核心會立即下達指令給 B1 通訊模組，跳過雲端直接透過 LoRa 發射緊急廣播求救訊號，並同步啟動 C1 相機進行即時姿態辨識，判斷是否倒地。此決策完全於本地端 30ms 內完成。"
-            st.session_state.loading = False
-        else:
-            st.warning("請先輸入您的問題後再點擊送出。")
+    # 加上動態 key 綁定（利用已有的 selected_vol 或 user_query 的長度來確保唯一性，避免前端暫存衝突）
+btn_key = f"deepseek_submit_btn_{len(user_query)}"
+
+if st.button("送出至 Edge AI 進行推理", type="primary", key=btn_key):
+    if user_query:
+        st.session_state.loading = True
+        with st.spinner("樹莓派 5 邊緣神經網路引擎計算中..."):
+            time.sleep(1.5)  # 模擬本地硬體推理延遲
+            st.session_state.chat_response = f"【DeepSeek Edge AI 本地回覆】\n針對您詢問的問題：「{user_query}」\n基於當前系統載入的 Skill Card（醫療 Agent 知識庫），當偵測到此複合型異常時，..."
+        st.session_state.loading = False
+    else:
+        st.warning("請輸入您的問題後再點擊送出。")
 
     # 顯示回應區塊
     if st.session_state.chat_response:
