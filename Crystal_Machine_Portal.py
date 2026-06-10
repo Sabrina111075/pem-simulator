@@ -285,11 +285,8 @@ if "LIVE MONITOR" in page_mode:
 # =====================================================================
 # 5. 靠最左邊對齊的獨立路由（直接覆蓋你檔案最底部）
 # =====================================================================
-# === 12 PIN DOCK 區塊結束 ===
-    components.html(full_html_table, height=400, scrolling=True)
-
-    # === DEEPSEEK CORE 區塊開始 ===
     elif "DEEPSEEK CORE" in page_mode:
+        # 單一區塊：標題
         st.markdown(f"""
         <div class='header-container'>
             <div class='hex-header-text'>⬜ DEEPSEEK CORE 本地推理核心</div>
@@ -297,22 +294,13 @@ if "LIVE MONITOR" in page_mode:
         </div>
         """, unsafe_allow_html=True)
 
+        # 單一區塊：面板內容
         st.markdown(f"""
         <div class='panel-container'>
             <div class='panel-title'>🌐 邊緣神經網路計算層</div>
             <div class='panel-desc'>
                 當前系統已成功加載 <b>{selected_volume}</b> 之對應知識庫核心。
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # --- 頁面 3: DEEPSEEK CORE 大模型推理 ---
-    elif "DEEPSEEK CORE" in page_mode:
-        # 這裡只做一次標題渲染
-        st.markdown(f"""
-        <div class='header-container'>
-            <div class='hex-header-text'>⬜ DEEPSEEK CORE 本地推理核心</div>
-            <div class='live-clock'>{current_timestamp}</div>
         </div>
         """, unsafe_allow_html=True)
 
