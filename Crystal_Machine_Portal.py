@@ -1,260 +1,155 @@
 ﻿import streamlit as st
-import datetime
-import pandas as pd
-import random
+import time
 
-# ==============================================================================
-# 1. 系統全域配置 (PAGE & STYLE CONFIG)
-# ==============================================================================
+# --- 網頁全域設定 ---
 st.set_page_config(
-    page_title="Crystal Machine 企業語意作業系統",
-    page_icon="⬢",
+    page_title="Crystal Machine - 蜂巢式 Edge AI 照護中樞主控台",
+    page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 注入客製化工業風 CSS 與 蜂巢圖專用樣式
+# --- 注入 CSS 樣式（科技感深色主題與蜂巢視覺優化） ---
 st.markdown("""
 <style>
-    .main-header {
-        font-family: 'Courier New', monospace;
-        color: #1F4E5B;
-        font-weight: bold;
+    .reportview-container { background: #0E1117; }
+    .main-title {
+        font-size: 40px; font-weight: 800;
+        background: -webkit-linear-gradient(45deg, #00FFCC, #0099FF);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        text-align: center; margin-bottom: 30px;
     }
-    .stMetric {
-        background-color: #F4F7F6;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 4px solid #00A8CC;
-    }
-    .sys-time-card {
-        background-color: #1F4E5B;
-        color: #ffffff;
-        padding: 8px 12px;
-        border-radius: 4px;
-        font-family: 'Courier New', monospace;
-        text-align: right;
-    }
-    /* 蜂巢圖視覺優化 */
-    .honeycomb-container {
-        background-color: #0F2537;
-        padding: 20px;
-        border-radius: 8px;
-        border: 1px solid #00A8CC;
-        text-align: center;
-        margin-bottom: 20px;
-    }
-    .honeycomb-title {
-        color: #00A8CC;
-        font-family: 'Courier New', monospace;
-        font-weight: bold;
-        font-size: 1.1rem;
-        margin-bottom: 15px;
-    }
-    .node-active {
-        background-color: #00A8CC;
-        color: #0F2537;
-        font-weight: bold;
-        padding: 12px;
-        border-radius: 6px;
-        border: 2px solid #ffffff;
-        text-align: center;
-    }
-    .node-center {
-        background-color: #1F4E5B;
-        color: #ffffff;
-        font-weight: bold;
+    .node-box {
+        background-color: #1A1F2C;
+        border: 2px solid #00FFCC;
+        border-radius: 12px;
         padding: 15px;
-        border-radius: 6px;
-        border: 2px solid #00A8CC;
         text-align: center;
+        box-shadow: 0 4px 15px rgba(0, 255, 204, 0.2);
+        transition: transform 0.3s;
+    }
+    .node-box:hover { transform: scale(1.05); }
+    .core-box {
+        background-color: #241435;
+        border: 3px solid #FF007F;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(255, 0, 127, 0.4);
+    }
+    .data-card {
+        background-color: #121620;
+        border-left: 5px solid #0099FF;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 10px;
     }
 </style>
-""", unsafe_allow_html=True)
+""", unsafe_allow_index=True)
 
-# ==============================================================================
-# 2. 核心時間同步模組 (SYS RUNTIME AUTOMATION)
-# ==============================================================================
-current_tw_time = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
-formatted_time = current_tw_time.strftime("%Y-%m-%d %H:%M:%S")
+# --- 側邊欄控制與 Mock Data 設定 ---
+st.sidebar.title("🛸 蜂巢中樞控制台")
+st.sidebar.markdown("---")
 
-# ==============================================================================
-# 3. 左側導覽控制面板 (SIDEBAR CONFIGURATION)
-# ==============================================================================
-st.sidebar.markdown("# ⬢ Crystal Machine")
-st.sidebar.markdown("### 企業語意作業系統 `V2.0` (Raspberry Pi 5 核心)")
-st.sidebar.divider()
-
-# 專利型錄分卷切換 (Vol.1 - Vol.10)
-product_vol = st.sidebar.selectbox(
-    "📂 選擇型錄分卷 (PRODUCT VOLUME)",
-    [
-        "Vol. 1 行動機器人模組 (Mobile Robotics)",
-        "Vol. 2 農業自動化感測器 (Agri-Tech Sensors)",
-        "Vol. 3 車聯網 V2X 終端 (Automotive Telematics)",
-        "Vol. 4 智慧物流冷鏈追蹤 (Smart Cold-Chain)",
-        "Vol. 5 工業環境有毒氣體監測 (Industrial Gas Detection)",
-        "Vol. 6 智慧健康醫療門戶 (Active Healthcare Central)",
-        "Vol. 7 環境微氣候雷達 (Microclimate Radar)",
-        "Vol. 8 軌道交通結構安全 (Railway Safety)",
-        "Vol. 9 倉儲自動化防撞視覺 (Warehouse Anti-collision)",
-        "Vol. 10 綠能儲能電池管理 (BMS Storage)"
-    ],
-    index=5 # 預設載入開會要展示的 Vol. 6 智慧健康醫療門戶
+selected_vol = st.sidebar.selectbox(
+    "選擇監測設備批次 (Device Volume)",
+    ["Vol. 1 (心血管監測)", "Vol. 2 (呼吸道感知)", "Vol. 3 (高齡防跌落)", "Vol. 4 (睡眠呼吸暫停)", "Vol. 5 (工業氣體感知)"]
 )
 
-st.sidebar.divider()
+# 根據選擇的 Volume 載入對應數據
+if "Vol. 1" in selected_vol:
+    health_metrics = {"數據 A (心率)": "78 bpm", "數據 B (血氧)": "98 %", "數據 C (血壓)": "122/80 mmHg"}
+    status_text = "當前長者生理訊號穩定，邊緣端模型評估為低風險。"
+elif "Vol. 2" in selected_vol:
+    health_metrics = {"數據 A (呼吸率)": "18 bpm", "數據 B (呼吸音異常度)": "2 %", "數據 C (肺活量模擬)": "3500 ml"}
+    status_text = "呼吸音感知正常，無明顯喘鳴音或咳嗽頻率異常。"
+elif "Vol. 3" in selected_vol:
+    health_metrics = {"數據 A (IMU 震幅)": "0.12 g", "數據 B (步態不穩度)": "5 %", "數據 C (空間高度層)": "地表 0 cm"}
+    status_text = "步態軌跡符合正常範圍，雷達與加速度計未偵測到突發性高度掉落。"
+elif "Vol. 4" in selected_vol:
+    health_metrics = {"數據 A (翻身次數)": "4 次/時", "數據 B (打鼾分貝)": "42 dB", "數據 C (深眠比例)": "45 %"}
+    status_text = "睡眠品質良好，未觸發 OSA (睡眠呼吸中止) 邊緣防禦警告。"
+else:
+    health_metrics = {"數據 A (一氧化碳)": "2 ppm", "數據 B (硫化氫)": "0 ppm", "數據 C (環境溫度)": "26.4 ℃"}
+    status_text = "照護環境空氣品質良好，未偵測到任何工業級危險氣體洩漏。"
 
-# 三大專利技術展示切換
-sys_mode = st.sidebar.radio(
-    "🛠️ 選擇主控面板單元 (SYS MODE)",
-    [
-        "📊 LIVE MONITOR (實時設備看板)",
-        "🔌 12 PIN DOCK (磁吸接口後台)",
-        "🧠 DEEPSEEK CORE (地端 AI 專家)"
-    ]
-)
+st.sidebar.markdown("---")
+st.sidebar.info("🤖 **系統架構提示**：\n本系統採用 Raspberry Pi 5 作為中央大模型推理核心，四周透過 12-Pin Pogo Pin 磁吸介面熱插拔串接 ESP32-S3 感測子模組。未來接上序列通訊 (Serial) 即可將虛擬數據無縫切換為實體硬體流。")
 
-st.sidebar.divider()
-st.sidebar.caption("硬體核心：Raspberry Pi 5 (16GB)")
-st.sidebar.caption("通訊架構：ESP32-S3 + 24-bit ADC (AT6901)")
-st.sidebar.caption("部署分支：`cloud-deploy` (獨立隔離區)")
+# --- 主畫面標題 ---
+st.markdown("<div class='main-title'>Crystal Machine 蜂巢式 AI Sensor Hub 主控台</div>", unsafe_allow_index=True)
 
-# ==============================================================================
-# 4. 右側主面板看板 (MAIN PANEL RENDERER)
-# ==============================================================================
+# --- 核心視覺效果：重新改回原來的「蜂巢式六角硬體拓撲圖」 ---
+st.subheader("🌐 蜂巢式硬體拓撲拓撲架構 (Hardware Topology)")
+st.markdown("下方呈現 Crystal Machine 專利五之**中央運算核心與六向模組 Dock** 部署狀態，各模組均支援熱插拔自動識別：")
 
-vol_title = product_vol.split(" ")[1] + " " + product_vol.split(" ")[2]
-
-# 頂部抬頭與時間同步卡片 (2:1 排版)
-header_col, time_col = st.columns([2, 1])
-with header_col:
-    st.title("⬢ Edge AI 控制中樞模擬平台")
-    st.subheader(f"當前系統動態加載：{product_vol}")
-with time_col:
-    st.write("") 
-    st.markdown(f"""
-    <div class="sys-time-card">
-        ⏰ SYS RUNTIME : {formatted_time}<br>
-        <span style="font-size: 0.8rem; color: #b3dbf2;">TIMEZONE: ASIA/TAIPEI (UTC+8)</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.divider()
-
-# ==============================================================================
-# ✨ 核心加回：漂亮的六角型蜂巢拓撲形狀顯示 (HONEYCOMB HARDWARE TOPOLOGY)
-# ==============================================================================
-st.markdown('<div class="honeycomb-container">', unsafe_allow_html=True)
-st.markdown(f'<div class="honeycomb-title">⬢ 蜂巢式拓撲硬體互連架構即時映射 (對角 115mm 工業鋁合金外殼)</div>', unsafe_allow_html=True)
-
-# 建立 3 行網格來模擬六角形拓撲結構
-row1_col1, row1_col2 = st.columns(2)
-row2_col1, row2_col2, row2_col3 = st.columns([1, 1.2, 1])
-row3_col1, row3_col2 = st.columns(2)
-
-with row1_col1:
-    st.markdown('<div class="node-active">⬢ C1 視覺雷達模組<br><span style="font-size:0.75rem;">(Camera / LiDAR)</span></div>', unsafe_allow_html=True)
+# 第一排模組 (左上、右上)
+row1_col1, row1_col2, row1_col3, row1_col4 = st.columns([1, 2, 2, 1])
 with row1_col2:
-    st.markdown('<div class="node-active">⬢ B1 遠程通訊模組<br><span style="font-size:0.75rem;">(LoRa / 5G)</span></div>', unsafe_allow_html=True)
+    st.markdown("""<div class='node-box'>🟢 <b>C1: Camera / LiDAR</b><br><span style='color:#00FFCC;font-size:12px;'>視覺空間防跌模組 (Active)</span></div>""", unsafe_allow_index=True)
+with row1_col3:
+    st.markdown("""<div class='node-box'>🟢 <b>B1: LoRa / 5G</b><br><span style='color:#00FFCC;font-size:12px;'>遠距微弱訊號傳輸 (Ready)</span></div>""", unsafe_allow_index=True)
 
+st.markdown("<br>", unsafe_allow_index=True)
+
+# 第二排模組 (正左、正中央核心、正右)
+row2_col1, row2_col2, row2_col3 = st.columns([2, 3, 2])
 with row2_col1:
-    # 這裡會根據左側下拉選單，動態點亮目前的 A1 模組型態！
-    st.markdown(f'<div class="node-active" style="border: 2px solid #FFD700;">⬢ A1 當前加載模組<br><span style="font-size:0.75rem; color:#0F2537; font-weight:bold;">({vol_title})</span></div>', unsafe_allow_html=True)
+    st.markdown("""<div class='node-box' style='margin-top: 20px;'>🟢 <b>A1: 環境感測器</b><br><span style='color:#00FFCC;font-size:12px;'>氣體/溫濕度多合一</span></div>""", unsafe_allow_index=True)
 with row2_col2:
-    st.markdown('<div class="node-center">🧠 樹莓派 5 核心<br><span style="font-size:0.8rem; color:#00A8CC;">(DeepSeek AI Core)</span></div>', unsafe_allow_html=True)
+    st.markdown("""<div class='core-box'>🧠 <b>CENTRAL AI CORE</b><br><span style='color:#FF007F; font-weight:bold; font-size:16px;'>Raspberry Pi 5 (8GB)</span><br><span style='color:#ccc;font-size:12px;'>DeepSeek 7B 離線推演中樞</span></div>""", unsafe_allow_index=True)
 with row2_col3:
-    st.markdown('<div class="node-active">⬢ B2 短距通訊模組<br><span style="font-size:0.75rem;">(Wi-Fi 6 / UWB)</span></div>', unsafe_allow_html=True)
+    st.markdown("""<div class='node-box' style='margin-top: 20px;'>🟢 <b>B2: Wi-Fi / UWB</b><br><span style='color:#00FFCC;font-size:12px;'>高精準雷達微動人體感知</span></div>""", unsafe_allow_index=True)
 
-with row3_col1:
-    st.markdown('<div class="node-active">⬢ A2 姿態定位模組<br><span style="font-size:0.75rem;">(IMU / GPS)</span></div>', unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_index=True)
+
+# 第三排模組 (左下、右下)
+row3_col1, row3_col2, row3_col3, row3_col4 = st.columns([1, 2, 2, 1])
 with row3_col2:
-    st.markdown('<div class="node-active">⬢ D1 智慧電源模組<br><span style="font-size:0.75rem;">(BMS Battery)</span></div>', unsafe_allow_html=True)
+    st.markdown("""<div class='node-box'>🟢 <b>A2: IMU / GPS</b><br><span style='color:#00FFCC;font-size:12px;'>九軸姿態步態分析儀</span></div>""", unsafe_allow_index=True)
+with row3_col3:
+    st.markdown("""<div class='node-box'>🟢 <b>D1: Battery / Power</b><br><span style='color:#00FFCC;font-size:12px;'>UPS 模組安全不斷電系統</span></div>""", unsafe_allow_index=True)
 
-st.markdown('</div>', unsafe_allow_html=True)
-st.divider()
+st.markdown("---")
 
-# ==============================================================================
-# 5. 三大單元分頁渲染 (SYS MODE ROUTER)
-# ==============================================================================
+# --- 數據展示與大模型對話區塊 ---
+left_panel, right_panel = st.columns([1, 1])
 
-# ------------------------------------------------------------------------------
-# 單元 A: LIVE MONITOR (實時設備看板)
-# ------------------------------------------------------------------------------
-if sys_mode == "📊 LIVE MONITOR (實時設備看板)":
-    st.markdown(f"### 📊 邊緣感測器資料鏈 — {vol_title}")
-    st.info(f"💡 核心映射說明：目前主控台已切換至【{product_vol}】，此處實時渲染 Raspberry Pi 5 經 12 Pin 磁吸介面傳輸之高精度數據流。")
+with left_panel:
+    st.subheader(f"📊 實時監測數據看板 ({selected_vol.split(' ')[0]})")
+    for metric_name, val in health_metrics.items():
+        st.markdown(f"""
+        <div class='data-card'>
+            <span style='color:#888; font-size:14px;'>{metric_name}</span><br>
+            <span style='font-size:24px; font-weight:bold; color:#0099FF;'>{val}</span>
+        </div>
+        """, unsafe_allow_index=True)
     
-    col1, col2, col3 = st.columns(3)
-    if "Vol. 6" in product_vol:
-        with col1:
-            st.metric(label="🫀 即時心率 (Heart Rate)", value=f"{random.randint(72, 78)} BPM", delta="正常範圍")
-        with col2:
-            st.metric(label="🩸 血氧飽和度 (SpO2)", value=f"{random.randint(97, 99)} %", delta="優良")
-        with col3:
-            st.metric(label="🌡️ 核心體溫 (Core Temperature)", value=f"{round(random.uniform(36.4, 36.8), 1)} °C", delta="無發熱")
-    elif "Vol. 5" in product_vol:
-        with col1:
-            st.metric(label="💨 一氧化碳濃度 (CO)", value=f"{random.randint(12, 18)} ppm", delta="安全綠燈")
-        with col2:
-            st.metric(label="🧪 硫化氫氣體 (H2S)", value=f"{round(random.uniform(0.1, 0.4), 2)} ppm", delta="無超標")
-        with col3:
-            st.metric(label="🌡️ 環境溫度 (Temp)", value=f"{round(random.uniform(24.5, 25.2), 1)} °C", delta="常溫")
-    else:
-        with col1:
-            st.metric(label="⚡ 模組通道 A 電壓", value=f"{round(random.uniform(3.2, 3.4), 2)} V", delta="穩壓輸出")
-        with col2:
-            st.metric(label="🔄 數據吞吐量 (Throughput)", value=f"{random.randint(920, 960)} kbps", delta="無丟包")
-        with col3:
-            st.metric(label="📉 底層信噪比 (SNR)", value=f"{random.randint(42, 46)} dB", delta="訊號極佳")
-        
-    st.write("")
-    st.markdown("#### 🔄 24-bit 高精度信號即時特徵波形圖")
-    chart_data = pd.DataFrame(
-        [random.uniform(0.5, 1.5) for _ in range(50)],
-        columns=['ADC Raw Signal (V)']
-    )
-    st.line_chart(chart_data)
+    st.info(f"💡 **狀態解讀**：{status_text}")
 
-# ------------------------------------------------------------------------------
-# 單元 B: 12 PIN DOCK (磁吸接口後台)
-# ------------------------------------------------------------------------------
-elif sys_mode == "🔌 12 PIN DOCK (磁吸接口後台)":
-    st.markdown("### 🔌 12 Pin Pogo Pin 彈簧式互連介面狀態")
-    st.info("💡 專利結構對齊：模擬六角形鋁合金機殼（對角 115mm / 厚度 32mm）內部 N52 強力磁鐵盲插定位與 A/B/C/D 模組拓撲識別。")
+with right_panel:
+    st.subheader("🧠 DEEPSEEK CORE 本地推理區區塊")
+    st.markdown("透過樹莓派 5 邊緣運算層直接調用 DeepSeek 離線大模型，完全保護病患隱私。請輸入護理人員的提問：")
     
-    st.success(f"⬢ 物理狀態：磁吸成功 (Magnetic Dock Engaged) — 控制中樞已為 【{product_vol}】 配發硬體線路與暫存器定址。")
-    
-    pin_data = {
-        "Pin 編號": [f"Pin {i}" for i in range(1, 13)],
-        "分配功能 (Function)": ["VCC (5V)", "GND", "UART_TX", "UART_RX", "I2C_SCL", "I2C_SDA", "SPI_CS", "SPI_CLK", "MISO", "MOSI", "ID_DETECT (模組識別)", "INT_LINE (中斷)"],
-        "電氣狀態 (Status)": ["CONNECTED", "CONNECTED", "ACTIVE", "ACTIVE", "IDLE", "IDLE", "NONE", "NONE", "NONE", "NONE", f"HIGH ({product_vol.split(' ')[1]} Identified)", "LOW"]
-    }
-    df_pins = pd.DataFrame(pin_data)
-    st.table(df_pins)
+    # 確保 session state 初始化，防止報錯
+    if "chat_response" not in st.session_state:
+        st.session_state.chat_response = ""
+    if "loading" not in st.session_state:
+        st.session_state.loading = False
 
-# ------------------------------------------------------------------------------
-# 單元 C: DEEPSEEK CORE (地端 AI 專家) -> 徹底根除 ID 衝突報錯
-# ------------------------------------------------------------------------------
-elif sys_mode == "🧠 DEEPSEEK CORE (地端 AI 專家)":
-    st.markdown("### 🧠 DeepSeek 離線大模型地端專家對話終端")
-    st.warning("🔒 隱私計算安全標準：歷史紀錄高強度加密，推理完全於地端 Raspberry Pi 5 本地端全權執行，數據絕不上傳外網雲端。")
+    user_query = st.text_input("輸入您對生理數據的臨床疑問：", placeholder="例如：若長者心率驟降至50且IMU震幅異常，應觸發何種通報流程？")
     
-    st.markdown("#### 📑 已依據型錄自動加載專屬 Agent 技能卡")
-    st.caption(f"✓ 已就緒：{vol_title} 核心控制 Prompt 專家卡片")
-    
-    # 關鍵修正：透過為 form 顯式加上唯一的 key，以及為 submit_button 加上獨一無二的 key 來絕殺 DuplicateWidgetID 錯誤
-    with st.form(key="deepseek_chat_form"):
-        user_input = st.text_input("💬 請輸入對健康醫療或邊緣端硬體狀態的諮詢：", placeholder="例如：心率突發 110 BPM 且血氧降至 94% 時的處置 SOP？", key="ds_user_input")
-        submit_btn = st.form_submit_with_button(label="調用地端算力推理 (Run Edge Inference)", key="ds_submit_btn")
-        
-    if submit_btn and user_input:
-        st.write("---")
-        st.markdown("**🧠 DeepSeek 邊緣核心推理回覆：**")
-        with st.spinner("樹莓派 5 本地端算力加載推理中..."):
-            st.markdown(f"""
-            依據加載之 **{vol_title} 專家知識庫** 規範，針對您輸入的「*{user_input}*」提供邊緣端整合診斷：
-            1. **狀態判定：** 系統檢測到當前運作單元為 `{product_vol}`，已將 12 Pin Dock 之中斷腳位 (Pin 12) 優先權限拉至最高。
-            2. **地端處置建議：** 邊緣端硬體模組狀態一切正常，針對輸入之指標異常，建議立即啟動二級安全供電防線，並在本地快取區留存快閃日誌。
-            3. **本地日誌安全：** 本次諮詢與推理數據已完全加密留存於 Raspberry Pi 5 本地端 eMMC/SD 安全防線內，未外流至任何公有雲。
-            """)
+    if st.button("送出至 Edge AI 進行推理", type="primary"):
+        if user_query:
+            st.session_state.loading = True
+            with st.spinner("樹莓派 5 邊緣神經網路引擎計算中..."):
+                time.sleep(1.5)  # 模擬本地硬體推理延遲
+                st.session_state.chat_response = f"【DeepSeek Edge AI 本地回覆】\n針對您詢問的問題：「{user_query}」\n基於當前系統載入的 Skill Card (醫療 Agent 知識庫)，當偵測到此複合型異常時，中央核心會立即下達指令給 B1 通訊模組，跳過雲端直接透過 LoRa 發射緊急廣播求救訊號，並同步啟動 C1 相機進行即時姿態辨識，判斷是否倒地。此決策完全於本地端 30ms 內完成。"
+            st.session_state.loading = False
+        else:
+            st.warning("請先輸入您的問題後再點擊送出。")
+
+    # 顯示回應區塊
+    if st.session_state.chat_response:
+        st.markdown("### 🤖 邊緣推理結果：")
+        st.success(st.session_state.chat_response)
