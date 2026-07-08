@@ -1,39 +1,35 @@
-﻿import numpy as np
+﻿import streamlit as st
+import numpy as np
 import pandas as pd
 import time
 
+# --- 頁面基本配置 ---
+st.set_page_config(page_title="NaBH4 氫燃料電池數位雙生系統", layout="wide")
+
 class NaBH4_FuelCell_Twin:
     def __init__(self):
-        # 物理與電化學常數
-        self.R = 8.314        # 理想氣體常數 J/(mol*K)
-        self.F = 96485        # 法拉第常數 C/mol
-        
-        # 燃料電池基本參數 (以 3 kW 堆疊為基準設計)
-        self.A_cell = 200     # 電極有效面積 cm^2
-        self.n_cells = 45     # 電池堆疊單元數
-        self.i_0 = 0.005      # 交換電流密度 A/cm^2
-        self.alpha_a = 0.5    # 陽極電荷轉移係數
-        self.alpha_c = 0.5    # 陰極電荷轉移係數
-        self.n_e = 2          # 每個氫分子反應轉移電子數 (H2 -> 2H+ + 2e-)
-        self.E_eq = 1.229     # 平衡電位 V
-        self.R_internal = 0.003 # 內部歐姆電阻 Ohm
+        self.R = 8.314        # J/(mol*K)
+        self.F = 96485        # C/mol
+        self.A_cell = 200     # cm^2
+        self.n_cells = 45     # 45芯電堆
+        self.i_0 = 0.005      # A/cm^2
+        self.alpha_a = 0.5
+        self.alpha_c = 0.5
+        self.n_e = 2
+        self.E_eq = 1.229     # V
+        self.R_internal = 0.003 # Ohm
         
     def simulate_hydrogen_generation(self, flow_rate, concentration, temp, prev_clogging_factor=0.0):
-        """
-        1. 動態產氫模組 (依據系統圖與計算公式)
-        """
-        # 基礎轉化率受溫度與觸媒狀態(結塊因子)影響
-        base_eta = 0.90 if temp >= 25 and temp <= 35 else 0.82
-        eta = base_eta * (1.0 - prev_clogging_factor) # 結塊會降低有效轉化率
+        # 基礎轉化率
+        base_eta = 0.90 if 25 <= temp <= 35 else 0.82
+        eta = base_eta * (1.0 - prev_clogging_factor)
         
         # 產氫量預測公式: 2.37 * Q * C * eta (Nm3/h)
         h2_flow_nm3 = 2.37 * flow_rate * (concentration / 100.0) * eta
-        # 換算為質量流量 (kg/h), 1 Nm3 H2 約等於 0.0899 kg
         h2_flow_kg = h2_flow_nm3 * 0.0899
-        # 換算為摩爾流量 (mol/s)
         h2_flow_mol_s = (h2_flow_kg * 1000 / 2.016) / 3600.0
         
-        # 副產品 NaBO2 生成量 (1 mol NaBH4 產生 1 mol NaBO2 與 4 mol H2)
+        # 副產品 NaBO2 生成量
         nabo2_flow_mol_s = h2_flow_mol_s / 4.0
         nabo2_flow_kg_h = (nabo2_flow_mol_s * 65.8) * 3600.0 / 1000.0
         
@@ -44,99 +40,110 @@ class NaBH4_FuelCell_Twin:
             "actual_eta": eta
         }
 
-    def solve_butler_volmer_overpotential(self, i_cell, T_k):
-        """
-        2. 電化學核心: 透過巴特勒-福爾默方程式逆向求解過電位 (Activation Overpotential)
-        i = i_0 * [exp(alpha_a*n*F*eta/RT) - exp(-alpha_c*n*F*eta/RT)]
-        當過電位較大時，可採用簡化數值疊代求解
-        """
-        if i_cell <= 0:
+    def solve_butler_volmer_overpotential(self, i_density, T_k):
+        if i_density <= 0:
             return 0.0
-        
-        # 使用牛頓法或二分法精準求解 Butler-Volmer 方程式中的 eta
         eta_guess = 0.05
         for _ in range(10):
             f_val = self.i_0 * (np.exp((self.alpha_a * self.n_e * self.F * eta_guess) / (self.R * T_k)) - \
-                                np.exp((-self.alpha_c * self.n_e * self.F * eta_guess) / (self.R * T_k))) - i_cell
-            # 微分項
+                                np.exp((-self.alpha_c * self.n_e * self.F * eta_guess) / (self.R * T_k))) - i_density
             df_val = self.i_0 * ((self.alpha_a * self.n_e * self.F / (self.R * T_k)) * np.exp((self.alpha_a * self.n_e * self.F * eta_guess) / (self.R * T_k)) + \
                                  (self.alpha_c * self.n_e * self.F / (self.R * T_k)) * np.exp((-self.alpha_c * self.n_e * self.F * eta_guess) / (self.R * T_k)))
             eta_guess = eta_guess - f_val / df_val
         return max(0.0, eta_guess)
 
     def simulate_fuel_cell(self, h2_available_mol_s, target_power_w, temp_c):
-        """
-        3. 燃料電池發電模組
-        """
         T_k = temp_c + 273.15
-        # 根據目標功率估算所需電流 (假設單電池電壓約 0.7V)
         estimated_voltage = 0.7 * self.n_cells
         target_current = target_power_w / estimated_voltage if target_power_w > 0 else 0.0
-        
-        # 檢查氫氣供應量是否充足 (法拉第定律: I = 2 * F * n_H2)
         max_current_from_h2 = (h2_available_mol_s * self.n_e * self.F) / self.n_cells
         
-        # 實際運作電流不能超過氫氣供應極限
-        actual_current = min(target_current, max_current_from_h2 * 0.95) # 留 5% 緩衝避免氣體乾涸
-        i_density = actual_current / self.A_cell # 電流密度 A/cm^2
+        actual_current = min(target_current, max_current_from_h2 * 0.95)
+        i_density = actual_current / self.A_cell
         
-        # 計算各項電壓損失
-        eta_act = self.solve_butler_volmer_overpotential(i_density, T_k) # 活化極化損失 (Butler-Volmer)
-        eta_ohmic = i_density * self.R_internal # 歐姆極化損失
+        eta_act = self.solve_butler_volmer_overpotential(i_density, T_k)
+        eta_ohmic = i_density * self.R_internal
         
-        # 單電池電壓與堆疊總電壓
         v_cell = self.E_eq - eta_act - eta_ohmic
         v_stack = v_cell * self.n_cells
         actual_power = v_stack * actual_current
-        
-        h2_consumed_mol_s = (actual_current * self.n_cells) / (self.n_e * self.F)
         
         return {
             "current_a": actual_current,
             "v_cell_v": v_cell,
             "v_stack_v": v_stack,
-            "output_power_w": actual_power,
-            "h2_utilization": (h2_consumed_mol_s / h2_available_mol_s * 100) if h2_available_mol_s > 0 else 0
+            "output_power_w": actual_power
         }
 
-# --- 執行場景動態模擬測試 ---
-if __name__ == "__main__":
-    twin = NaBH4_FuelCell_Twin()
+# --- Streamlit 介面渲染 ---
+st.title("🧪 NaBH₄ 即時產氫與燃料電池發電數位雙生模擬系統")
+st.caption("基於 TAD-AGE 模擬架構 ＆ Butler-Volmer 電化學動力學核心")
+
+# 1. 側邊控制欄 (工藝參數輸入)
+st.sidebar.header("🎛️ 工藝參數調功與控制")
+flow_rate = st.sidebar.slider("進料流量 Q (L/h)", 1.0, 10.0, 5.0, 0.5)
+concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", 5.0, 25.0, 20.0, 1.0)
+temperature = st.sidebar.slider("反應床操作溫度 (°C)", 10.0, 50.0, 30.0, 1.0)
+
+# 應用場景選擇
+scenario = st.sidebar.selectbox("🎯 模擬應用場景負載", [
+    "3 kW 移動式災害救援電源箱", 
+    "長航時無人機 / 機器人 (1.5 kW)", 
+    "冷鏈物流醫療冷藏箱備援 (800 W)"
+])
+
+# 根據場景設定基礎功率需求
+if "3 kW" in scenario:
+    base_load = [500, 1200, 2000, 3000, 3200, 3000, 1500, 800, 500, 500]
+elif "無人機" in scenario:
+    base_load = [300, 800, 1200, 1500, 1500, 1400, 1000, 500, 300, 300]
+else:
+    base_load = [200, 500, 800, 800, 800, 600, 400, 200, 200, 200]
+
+# 2. 模擬計算核心執行
+twin = NaBH4_FuelCell_Twin()
+clogging_factor = 0.0
+results = []
+
+for t, target_w in enumerate(base_load):
+    h2_res = twin.simulate_hydrogen_generation(flow_rate, concentration, temperature, clogging_factor)
+    fc_res = twin.simulate_fuel_cell(h2_res["h2_flow_mol_s"], target_w, temperature)
     
-    # 設置場景：災害救援移動式電源箱 (動態負載模擬 10 秒)
-    print("【TAD-AGE 數位雙生模擬啟動：3kW 行動備援電源箱場景】\n")
-    
-    # 輸入控制參數 (對應製氫端與環境)
-    flow_rate = 5.0        # L/h (實務黃金進料量)
-    concentration = 20.0  # 20 wt%
-    temperature = 30.0    # 30°C 最佳操作溫度
-    clogging_factor = 0.0 # 初始無結晶堵塞
-    
-    # 動態需求負載 (瓦特) - 模擬負載突波
-    load_profiles = [500, 1200, 2000, 3000, 3200, 3000, 1500, 800, 500, 500]
-    
-    history = []
-    
-    for t, target_w in enumerate(load_profiles):
-        # 1. 產生氫氣
-        h2_res = twin.simulate_hydrogen_generation(flow_rate, concentration, temperature, clogging_factor)
+    # 副產品累積與反饋
+    if h2_res["nabo2_flow_kg_h"] > 0.4:
+        clogging_factor += 0.012  # 模擬結晶累積
         
-        # 2. 導入燃料電池發電
-        fc_res = twin.simulate_fuel_cell(h2_res["h2_flow_mol_s"], target_w, temperature)
-        
-        # 3. 副產品累積與反饋模擬 (若結晶累積，會導致下一個時步的 clogging_factor 上升)
-        # 實務中，若及時排液未做好，NaBO2 濃度過高會引發結晶堵塞
-        if h2_res["nabo2_flow_kg_h"] > 0.4:
-            clogging_factor += 0.015 # 模擬未及時沖洗反應床的催化劑衰減
-            
-        print(f"時間節點 {t+1}s | 目標需求: {target_w}W")
-        print(f"  -> 即時產氫: {h2_res['h2_flow_nm3']:.3f} Nm3/h | 轉化率: {h2_res['actual_eta']*100:.1f}%")
-        print(f"  -> 燃料電池輸出: {fc_res['output_power_w']/1000:.2f} kW | 電池堆電壓: {fc_res['v_stack_v']:.1f} V | 電流: {fc_res['current_a']:.1f} A")
-        print(f"  -> 副產品 NaBO2 速率: {h2_res['nabo2_flow_kg_h']:.3f} kg/h | 觸媒床結塊因子: {clogging_factor*100:.1f}%")
-        
-        if fc_res['output_power_w'] < target_w * 0.95:
-            print("  ⚠️ [警報] 產氫量供應不足或電池達到極限，輸出功率受限！")
-        if clogging_factor > 0.1:
-            print("  🚨 [維護提示] 副產品偏硼酸鈉累積過多，請啟動反沖洗液與排液模組！")
-        print("-" * 70)
-        time.sleep(0.5)
+    results.append({
+        "秒數(s)": t + 1,
+        "負載需求(W)": target_w,
+        "即時產氫量(Nm3/h)": round(h2_res["h2_flow_nm3"], 3),
+        "電堆輸出(W)": round(fc_res["output_power_w"], 1),
+        "電堆電壓(V)": round(fc_res["v_stack_v"], 1),
+        "操作電流(A)": round(fc_res["current_a"], 1),
+        "NaBO2生成速率(kg/h)": round(h2_res["nabo2_flow_kg_h"], 3),
+        "觸媒床結塊率(%)": round(clogging_factor * 100, 1)
+    })
+
+df_res = pd.DataFrame(results)
+
+# 3. 數據儀表板呈現
+latest = results[-1]
+m1, m2, m3 = st.columns(3)
+with m1:
+    st.metric("當前穩定產氫量", f"{df_res['即時產氫量(Nm3/h)'].max()} Nm³/h", "Fe-Co-Ni 催化")
+with m2:
+    st.metric("燃料電池最大輸出功率", f"{df_res['電堆輸出(W)'].max() / 1000:.2f} kW", f"對應場景：{scenario}")
+with m3:
+    st.metric("末端副產品結塊風險因子", f"{df_res['觸媒床結塊率(%)'].max()}%", "偏硼酸鈉累積" if df_res['觸媒床結塊率(%)'].max() > 10 else "安全")
+
+# 警報提示
+if df_res['觸媒床結塊率(%)'].max() > 10:
+    st.error("🚨 [系統警報] 副產品 NaBO₂ 累積速率過快，觸媒床結塊風險偏高！請確認自動化調功或啟動反沖洗液排液模組！")
+
+st.subheader("📊 瞬態功率動態響應追蹤 (Load Profile)")
+# 折線圖比較：需求功率 vs 實際輸出功率
+chart_data = df_res[["秒數(s)", "負載需求(W)", "電堆輸出(W)"]].set_index("秒數(s)")
+st.line_chart(chart_data)
+
+st.subheader("📋 數位雙生實時數據流水線 (Data Pipeline)")
+st.dataframe(df_res, use_container_width=True)
