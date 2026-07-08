@@ -107,35 +107,35 @@ scenario_key = st.sidebar.selectbox("請選擇系統佈署場景", [
 ])
 
 # 利用 info 容器在下方動態顯示對應場景的詳細工業細節與功率
-if "1. 無人機" in scenario:
-    # UAV/Robot 等級: 起飛爬升、巡航、懸停降落 [功率範圍: 200W - 2kW]
+if "01" in scenario_key:
+    st.sidebar.info("📋 **等級**: UAV/Robot\n\n⚡ **額定功率**: 1.5 kW\n\n✈️ **特點**: 長航時無人機、巡檢機器人")
     base_load = [400, 1500, 1500, 1200, 1100, 1100, 1100, 1200, 800, 400]
-elif "2. 通訊基地台" in scenario:
-    # Station 等級: 斷電瞬間湧浪電流、日間尖峰、夜間離峰 [功率範圍: 3kW - 10kW]
+elif "02" in scenario_key:
+    st.sidebar.info("📋 **等級**: Station\n\n⚡ **額定功率**: 3.0 kW\n\n📶 **特點**: 基地台、斷電瞬間湧浪、尖離峰模擬")
     base_load = [3000, 3500, 3200, 3000, 2800, 2500, 2500, 2800, 3000, 3000]
-elif "3. 災害救援" in scenario:
-    # Field Box 等級: 抽水泵啟動、全載照明、衛星通訊調度 [功率範圍: 1kW - 3kW]
+elif "03" in scenario_key:
+    st.sidebar.info("📋 **等級**: Field Box\n\n⚡ **額定功率**: 3.0 kW\n\n🚑 **特點**: 救災抽水泵啟動、全載照明、衛星通訊")
     base_load = [500, 3000, 3000, 2500, 2000, 2000, 1500, 1200, 800, 500]
-elif "4. 軍用 / 野外" in scenario:
-    # Field Box 等級: 野戰通訊、雷達小站、低紅外線低噪運行 [功率範圍: 1kW - 3kW]
+elif "04" in scenario_key:
+    st.sidebar.info("📋 **等級**: Field Box\n\n⚡ **額定功率**: 2.0 kW\n\n🪖 **特點**: 野戰通訊、低紅外線、低噪隱蔽運行")
     base_load = [1000, 1200, 2000, 2000, 1800, 1500, 1500, 1200, 1000, 1000]
-elif "5. 船舶 / 海上" in scenario:
-    # Station 等級: 海上浮標、資料站、小型無人船交替負載 [功率範圍: 3kW - 10kW]
+elif "05" in scenario_key:
+    st.sidebar.info("📋 **等級**: Station\n\n⚡ **額定功率**: 5.0 kW\n\n⚓ **特點**: 海上浮標、資料觀測站、交替負載")
     base_load = [2000, 4000, 5000, 5000, 4500, 3500, 3000, 2500, 2000, 2000]
-elif "6. 冷鏈物流" in scenario:
-    # Portable 等級: 疫苗/血液運輸、移動式冷凍櫃壓縮機間歇啟動 [功率範圍: 500W - 1kW]
+elif "06" in scenario_key:
+    st.sidebar.info("📋 **等級**: Portable\n\n⚡ **額定功率**: 800 W\n\n❄️ **特點**: 疫苗/血液運輸、醫療冷藏壓縮機間歇啟動")
     base_load = [200, 800, 800, 400, 400, 800, 400, 400, 200, 200]
-elif "7. 偏遠地區" in scenario:
-    # Station 等級: 空雨天/夜間備援、與太陽能互補之高功率發電 [功率範圍: 3kW - 10kW]
+elif "07" in scenario_key:
+    st.sidebar.info("📋 **等級**: Station\n\n⚡ **額定功率**: 10.0 kW\n\n☀️ **特點**: 與太陽能互補之高功率夜間微電網備援")
     base_load = [5000, 8000, 10000, 10000, 9000, 8000, 6000, 4000, 3000, 2000]
-elif "8. 小型載具" in scenario:
-    # Vehicle Assist 等級: 電動機車增程、無人搬運車爬坡加速 [功率範圍: 1kW - 5kW]
+elif "08" in scenario_key:
+    st.sidebar.info("📋 **等級**: Vehicle Assist\n\n⚡ **額定功率**: 4.0 kW\n\n🛵 **特點**: 電動機車增程、無人搬運車(AGV)爬坡加速")
     base_load = [1000, 3000, 4000, 4000, 3500, 2500, 2000, 1500, 1000, 500]
-elif "9. 教育 / 展示" in scenario:
-    # Demo 等級: 大學實驗室、能源展示館之定額安全負載 [功率範圍: 50W - 200W]
+elif "09" in scenario_key:
+    st.sidebar.info("📋 **等級**: Demo\n\n⚡ **額定功率**: 150 W\n\n🎓 **特點**: 大學實驗室、能源展示館定額安全負載")
     base_load = [50, 100, 150, 150, 150, 120, 100, 100, 80, 50]
 else:
-    # 10. 國防秘密掩體: 長時備援、突發通訊負載 [功率範圍: 3kW - 10kW]
+    st.sidebar.info("📋 **等級**: Station\n\n⚡ **額定功率**: 6.0 kW\n\n🛡️ **特點**: 國防秘密掩體長時備援、突發防衛通訊負載")
     base_load = [4000, 4500, 6000, 6000, 5500, 5000, 4500, 4000, 4000, 4000]
 
 # --- 3. 模擬計算核心執行 ---
