@@ -2,16 +2,27 @@
 import numpy as np
 import pandas as pd
 import datetime
-import pytz  # 用於精準鎖定台灣時區
+import pytz
 
-# --- 頁面基本配置 ---
+# --- 頁面基本配置與側邊欄寬度/捲軸優化 (CSS 注入) ---
 st.set_page_config(page_title="NaBH4 氫燃料電池數位雙生系統", layout="wide")
 
-# --- 1. 標題優化（移除豆腐字）與台灣即時時間 ---
-# 使用 LaTeX 語法 $NaBH_4$ 代替下標字，根絕方塊字問題
+# 透過 CSS 擴大側邊欄寬度，並優化滾動條操作流暢度
+st.markdown(
+    """
+    <style>
+    [data-testid="stSidebar"] {
+        min-width: 360px;
+        max-width: 360px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# --- 1. 標題與台灣即時時間 ---
 st.markdown("# 🧪 $NaBH_4$ 即時產氫與燃料電池發電數位雙生模擬系統")
 
-# 獲取並顯示即時台灣時間
 tw_tz = pytz.timezone('Asia/Taipei')
 now_tw = datetime.datetime.now(tw_tz).strftime('%Y年%m月%d日 %H:%M:%S')
 st.caption(f"📊 基於 TAD-AGE 模擬架構 ＆ Butler-Volmer 電化學動力學核心 | **目前台灣時間 (即時)：{now_tw}**")
@@ -19,16 +30,16 @@ st.write("---")
 
 class NaBH4_FuelCell_Twin:
     def __init__(self):
-        self.R = 8.314        # J/(mol*K)
-        self.F = 96485        # C/mol
-        self.A_cell = 200     # cm^2
-        self.n_cells = 45     # 45芯電堆
-        self.i_0 = 0.005      # A/cm^2
+        self.R = 8.314        
+        self.F = 96485        
+        self.A_cell = 200     
+        self.n_cells = 45     
+        self.i_0 = 0.005      
         self.alpha_a = 0.5
         self.alpha_c = 0.5
         self.n_e = 2
-        self.E_eq = 1.229     # V
-        self.R_internal = 0.003 # Ohm
+        self.E_eq = 1.229     
+        self.R_internal = 0.003 
         
     def simulate_hydrogen_generation(self, flow_rate, concentration, temp, prev_clogging_factor=0.0):
         base_eta = 0.90 if 25 <= temp <= 35 else 0.82
@@ -83,7 +94,7 @@ class NaBH4_FuelCell_Twin:
             "output_power_w": actual_power
         }
 
-# --- 2. 側邊控制欄優化（縮短下拉選單長度，根絕視窗遮擋） ---
+# --- 2. 側邊控制欄與 10 大完整佈置場景 ---
 st.sidebar.header("🎛️ 工藝參數調功與控制")
 flow_rate = st.sidebar.slider("進料流量 Q (L/h)", 1.0, 10.0, 5.0, 0.5)
 concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", 5.0, 25.0, 20.0, 1.0)
@@ -92,7 +103,6 @@ temperature = st.sidebar.slider("反應床操作溫度 (°C)", 10.0, 50.0, 30.0,
 st.sidebar.write("---")
 st.sidebar.header("🎯 模擬應用場景負載")
 
-# 精簡選單文字，讓下拉清單能完全被側邊欄包容
 scenario_key = st.sidebar.selectbox("請選擇系統佈署場景", [
     "場景 01：無人機 / 機器人長時間供電",
     "場景 02：通訊基地台備援電源",
@@ -106,7 +116,7 @@ scenario_key = st.sidebar.selectbox("請選擇系統佈署場景", [
     "場景 10：國防秘密掩體 / 長時備援"
 ])
 
-# 利用 info 容器在下方動態顯示對應場景的詳細工業細節與功率
+# 精準硬編碼 10 個獨立分支，絕不漏掉任何一個
 if "01" in scenario_key:
     st.sidebar.info("📋 **等級**: UAV/Robot\n\n⚡ **額定功率**: 1.5 kW\n\n✈️ **特點**: 長航時無人機、巡檢機器人")
     base_load = [400, 1500, 1500, 1200, 1100, 1100, 1100, 1200, 800, 400]
@@ -134,9 +144,11 @@ elif "08" in scenario_key:
 elif "09" in scenario_key:
     st.sidebar.info("📋 **等級**: Demo\n\n⚡ **額定功率**: 150 W\n\n🎓 **特點**: 大學實驗室、能源展示館定額安全負載")
     base_load = [50, 100, 150, 150, 150, 120, 100, 100, 80, 50]
-else:
+elif "10" in scenario_key:
     st.sidebar.info("📋 **等級**: Station\n\n⚡ **額定功率**: 6.0 kW\n\n🛡️ **特點**: 國防秘密掩體長時備援、突發防衛通訊負載")
     base_load = [4000, 4500, 6000, 6000, 5500, 5000, 4500, 4000, 4000, 4000]
+else:
+    base_load = [500, 500, 500, 500, 500, 500, 500, 500, 500, 500]
 
 # --- 3. 模擬計算核心執行 ---
 twin = NaBH4_FuelCell_Twin()
@@ -168,7 +180,7 @@ m1, m2, m3 = st.columns(3)
 with m1:
     st.metric("當前穩定產氫量", f"{df_res['即時產氫量(Nm3/h)'].max()} Nm³/h", "Fe-Co-Ni 催化")
 with m2:
-    st.metric("燃料電池最大輸出功率", f"{df_res['電堆輸出(W)'].max() / 1000:.2f} kW", f"對應場景：{scenario_key.split('：')[0]}")
+    st.metric("燃料電池最大輸出功率", f"{df_res['電堆輸出(W)'].max() / 1000:.2f} kW", f"對應：{scenario_key.split('：')[0]}")
 with m3:
     st.metric("末端副產品結塊風險因子", f"{df_res['觸媒床結塊率(%)'].max()}%", "偏硼酸鈉累積" if df_res['觸媒床結塊率(%)'].max() > 10 else "安全")
 
