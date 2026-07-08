@@ -1,10 +1,21 @@
 ﻿import streamlit as st
 import numpy as np
 import pandas as pd
-import time
+import datetime
+import pytz  # 用於精準鎖定台灣時區
 
 # --- 頁面基本配置 ---
 st.set_page_config(page_title="NaBH4 氫燃料電池數位雙生系統", layout="wide")
+
+# --- 1. 標題優化（移除豆腐字）與台灣即時時間 ---
+# 使用 LaTeX 語法 $NaBH_4$ 代替下標字，根絕方塊字問題
+st.markdown("# 🧪 $NaBH_4$ 即時產氫與燃料電池發電數位雙生模擬系統")
+
+# 獲取並顯示即時台灣時間
+tw_tz = pytz.timezone('Asia/Taipei')
+now_tw = datetime.datetime.now(tw_tz).strftime('%Y年%m月%d日 %H:%M:%S')
+st.caption(f"📊 基於 TAD-AGE 模擬架構 ＆ Butler-Volmer 電化學動力學核心 | **目前台灣時間 (即時)：{now_tw}**")
+st.write("---")
 
 class NaBH4_FuelCell_Twin:
     def __init__(self):
@@ -20,16 +31,13 @@ class NaBH4_FuelCell_Twin:
         self.R_internal = 0.003 # Ohm
         
     def simulate_hydrogen_generation(self, flow_rate, concentration, temp, prev_clogging_factor=0.0):
-        # 基礎轉化率
         base_eta = 0.90 if 25 <= temp <= 35 else 0.82
         eta = base_eta * (1.0 - prev_clogging_factor)
         
-        # 產氫量預測公式: 2.37 * Q * C * eta (Nm3/h)
         h2_flow_nm3 = 2.37 * flow_rate * (concentration / 100.0) * eta
         h2_flow_kg = h2_flow_nm3 * 0.0899
         h2_flow_mol_s = (h2_flow_kg * 1000 / 2.016) / 3600.0
         
-        # 副產品 NaBO2 生成量
         nabo2_flow_mol_s = h2_flow_mol_s / 4.0
         nabo2_flow_kg_h = (nabo2_flow_mol_s * 65.8) * 3600.0 / 1000.0
         
@@ -75,72 +83,62 @@ class NaBH4_FuelCell_Twin:
             "output_power_w": actual_power
         }
 
-# --- Streamlit 介面渲染 ---
-st.title("🧪 NaBH₄ 即時產氫與燃料電池發電數位雙生模擬系統")
-st.caption("基於 TAD-AGE 模擬架構 ＆ Butler-Volmer 電化學動力學核心")
-
-# 1. 側邊控制欄 (工藝參數輸入)
+# --- 2. 側邊控制欄優化（縮短下拉選單長度，根絕視窗遮擋） ---
 st.sidebar.header("🎛️ 工藝參數調功與控制")
 flow_rate = st.sidebar.slider("進料流量 Q (L/h)", 1.0, 10.0, 5.0, 0.5)
 concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", 5.0, 25.0, 20.0, 1.0)
 temperature = st.sidebar.slider("反應床操作溫度 (°C)", 10.0, 50.0, 30.0, 1.0)
 
-# --- 應用場景選擇（升級為 10 大典型應用場景總覽） ---
+st.sidebar.write("---")
 st.sidebar.header("🎯 模擬應用場景負載")
-scenario = st.sidebar.selectbox("請選擇系統佈署場景", [
-    "1. 無人機 / 機器人長時間供電 (UAV/Robot - 1.5kW)",
-    "2. 通訊基地台備援電源 (Station - 3kW)",
-    "3. 災害救援移動式電源箱 (Field Box - 3kW)",
-    "4. 軍用 / 野外任務低噪音電源 (Field Box - 2kW)",
-    "5. 船舶 / 海上設備供電 (Station - 5kW)",
-    "6. 冷鏈物流 / 醫療冷藏箱備援 (Portable - 800W)",
-    "7. 偏遠地區微電網備援 (Station - 10kW)",
-    "8. 小型載具增程器 (Vehicle Assist - 4kW)",
-    "9. 教育 / 展示 / 研究平台 (Demo - 150W)",
-    "10. 國防秘密掩體 / 長時備援 (Station - 6kW)"
+
+# 精簡選單文字，讓下拉清單能完全被側邊欄包容
+scenario_key = st.sidebar.selectbox("請選擇系統佈署場景", [
+    "場景 01：無人機 / 機器人長時間供電",
+    "場景 02：通訊基地台備援電源",
+    "場景 03：災害救援移動式電源箱",
+    "場景 04：軍用 / 野外任務低噪音電源",
+    "場景 05：船舶 / 海上設備供電",
+    "場景 06：冷鏈物流 / 醫療冷藏箱備援",
+    "場景 07：偏遠地區微電網備援",
+    "場景 08：小型載具增程器",
+    "場景 09：教育 / 展示 / 研究平台",
+    "場景 10：國防秘密掩體 / 長時備援"
 ])
 
-# 根據 10 大場景的功率範圍與操作特性，定義 10 個時間節點的動態 Load Profile (W)
-if "1. 無人機" in scenario:
-    # UAV/Robot 等級: 起飛爬升、巡航、懸停降落 [功率範圍: 200W - 2kW]
+# 利用 info 容器在下方動態顯示對應場景的詳細工業細節與功率
+if "01" in scenario_key:
+    st.sidebar.info("📋 **等級**: UAV/Robot\n\n⚡ **額定功率**: 1.5 kW\n\n✈️ **特點**: 長航時無人機、巡檢機器人")
     base_load = [400, 1500, 1500, 1200, 1100, 1100, 1100, 1200, 800, 400]
-elif "2. 通訊基地台" in scenario:
-    # Station 等級: 斷電瞬間湧浪電流、日間尖峰、夜間離峰 [功率範圍: 3kW - 10kW]
+elif "02" in scenario_key:
+    st.sidebar.info("📋 **等級**: Station\n\n⚡ **額定功率**: 3.0 kW\n\n📶 **特點**: 基地台、斷電瞬間湧浪、尖離峰模擬")
     base_load = [3000, 3500, 3200, 3000, 2800, 2500, 2500, 2800, 3000, 3000]
-elif "3. 災害救援" in scenario:
-    # Field Box 等級: 抽水泵啟動、全載照明、衛星通訊調度 [功率範圍: 1kW - 3kW]
+elif "03" in scenario_key:
+    st.sidebar.info("📋 **等級**: Field Box\n\n⚡ **額定功率**: 3.0 kW\n\n🚑 **特點**: 救災抽水泵啟動、全載照明、衛星通訊")
     base_load = [500, 3000, 3000, 2500, 2000, 2000, 1500, 1200, 800, 500]
-elif "4. 軍用 / 野外" in scenario:
-    # Field Box 等級: 野戰通訊、雷達小站、低紅外線低噪運行 [功率範圍: 1kW - 3kW]
+elif "04" in scenario_key:
+    st.sidebar.info("📋 **等級**: Field Box\n\n⚡ **額定功率**: 2.0 kW\n\n🪖 **特點**: 野戰通訊、低紅外線、低噪隱蔽運行")
     base_load = [1000, 1200, 2000, 2000, 1800, 1500, 1500, 1200, 1000, 1000]
-elif "5. 船舶 / 海上" in scenario:
-    # Station 等級: 海上浮標、資料站、小型無人船交替負載 [功率範圍: 3kW - 10kW]
+elif "05" in scenario_key:
+    st.sidebar.info("📋 **等級**: Station\n\n⚡ **額定功率**: 5.0 kW\n\n⚓ **特點**: 海上浮標、資料觀測站、交替負載")
     base_load = [2000, 4000, 5000, 5000, 4500, 3500, 3000, 2500, 2000, 2000]
-elif "6. 冷鏈物流" in scenario:
-    # Portable 等級: 疫苗/血液運輸、移動式冷凍櫃壓縮機間歇啟動 [功率範圍: 500W - 1kW]
+elif "06" in scenario_key:
+    st.sidebar.info("📋 **等級**: Portable\n\n⚡ **額定功率**: 800 W\n\n❄️ **特點**: 疫苗/血液運輸、醫療冷藏壓縮機間歇啟動")
     base_load = [200, 800, 800, 400, 400, 800, 400, 400, 200, 200]
-elif "7. 偏遠地區" in scenario:
-    # Station 等級: 空雨天/夜間備援、與太陽能互補之高功率發電 [功率範圍: 3kW - 10kW]
+elif "07" in scenario_key:
+    st.sidebar.info("📋 **等級**: Station\n\n⚡ **額定功率**: 10.0 kW\n\n☀️ **特點**: 與太陽能互補之高功率夜間微電網備援")
     base_load = [5000, 8000, 10000, 10000, 9000, 8000, 6000, 4000, 3000, 2000]
-elif "8. 小型載具" in scenario:
-    # Vehicle Assist 等級: 電動機車增程、無人搬運車爬坡加速 [功率範圍: 1kW - 5kW]
+elif "08" in scenario_key:
+    st.sidebar.info("📋 **等級**: Vehicle Assist\n\n⚡ **額定功率**: 4.0 kW\n\n🛵 **特點**: 電動機車增程、無人搬運車(AGV)爬坡加速")
     base_load = [1000, 3000, 4000, 4000, 3500, 2500, 2000, 1500, 1000, 500]
-elif "9. 教育 / 展示" in scenario:
-    # Demo 等級: 大學實驗室、能源展示館之定額安全負載 [功率範圍: 50W - 200W]
+elif "09" in scenario_key:
+    st.sidebar.info("📋 **等級**: Demo\n\n⚡ **額定功率**: 150 W\n\n🎓 **特點**: 大學實驗室、能源展示館定額安全負載")
     base_load = [50, 100, 150, 150, 150, 120, 100, 100, 80, 50]
 else:
-    # 10. 國防秘密掩體: 長時備援、突發通訊負載 [功率範圍: 3kW - 10kW]
+    st.sidebar.info("📋 **等級**: Station\n\n⚡ **額定功率**: 6.0 kW\n\n🛡️ **特點**: 國防秘密掩體長時備援、突發防衛通訊負載")
     base_load = [4000, 4500, 6000, 6000, 5500, 5000, 4500, 4000, 4000, 4000]
 
-# 根據場景設定基礎功率需求
-if "3 kW" in scenario:
-    base_load = [500, 1200, 2000, 3000, 3200, 3000, 1500, 800, 500, 500]
-elif "無人機" in scenario:
-    base_load = [300, 800, 1200, 1500, 1500, 1400, 1000, 500, 300, 300]
-else:
-    base_load = [200, 500, 800, 800, 800, 600, 400, 200, 200, 200]
-
-# 2. 模擬計算核心執行
+# --- 3. 模擬計算核心執行 ---
 twin = NaBH4_FuelCell_Twin()
 clogging_factor = 0.0
 results = []
@@ -149,9 +147,8 @@ for t, target_w in enumerate(base_load):
     h2_res = twin.simulate_hydrogen_generation(flow_rate, concentration, temperature, clogging_factor)
     fc_res = twin.simulate_fuel_cell(h2_res["h2_flow_mol_s"], target_w, temperature)
     
-    # 副產品累積與反饋
     if h2_res["nabo2_flow_kg_h"] > 0.4:
-        clogging_factor += 0.012  # 模擬結晶累積
+        clogging_factor += 0.012  
         
     results.append({
         "秒數(s)": t + 1,
@@ -166,22 +163,19 @@ for t, target_w in enumerate(base_load):
 
 df_res = pd.DataFrame(results)
 
-# 3. 數據儀表板呈現
-latest = results[-1]
+# --- 4. 數據儀表板呈現 ---
 m1, m2, m3 = st.columns(3)
 with m1:
     st.metric("當前穩定產氫量", f"{df_res['即時產氫量(Nm3/h)'].max()} Nm³/h", "Fe-Co-Ni 催化")
 with m2:
-    st.metric("燃料電池最大輸出功率", f"{df_res['電堆輸出(W)'].max() / 1000:.2f} kW", f"對應場景：{scenario}")
+    st.metric("燃料電池最大輸出功率", f"{df_res['電堆輸出(W)'].max() / 1000:.2f} kW", f"對應場景：{scenario_key.split('：')[0]}")
 with m3:
     st.metric("末端副產品結塊風險因子", f"{df_res['觸媒床結塊率(%)'].max()}%", "偏硼酸鈉累積" if df_res['觸媒床結塊率(%)'].max() > 10 else "安全")
 
-# 警報提示
 if df_res['觸媒床結塊率(%)'].max() > 10:
     st.error("🚨 [系統警報] 副產品 NaBO₂ 累積速率過快，觸媒床結塊風險偏高！請確認自動化調功或啟動反沖洗液排液模組！")
 
 st.subheader("📊 瞬態功率動態響應追蹤 (Load Profile)")
-# 折線圖比較：需求功率 vs 實際輸出功率
 chart_data = df_res[["秒數(s)", "負載需求(W)", "電堆輸出(W)"]].set_index("秒數(s)")
 st.line_chart(chart_data)
 
