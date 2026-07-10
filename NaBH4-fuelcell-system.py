@@ -20,8 +20,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- 1. 頂部企業品牌與台灣即時時間 ---
-st.markdown("# 🧪 $NaBH_4$ 硼氫化鈉產氫與燃料電池發電數位模擬系統")
+# --- 1. 標題與台灣即時時間 ---
+st.markdown("# 🧪 $NaBH_4$ 即時產氫與燃料電池發電數位雙生模擬系統")
 
 tw_tz = pytz.timezone('Asia/Taipei')
 now_tw = datetime.datetime.now(tw_tz).strftime('%Y年%m月%d日 %H:%M:%S')
@@ -89,19 +89,12 @@ class NaBH4_FuelCell_Twin:
         
         return {
             "current_a": actual_current,
-            "i_density": i_density,
             "v_cell_v": v_cell,
             "v_stack_v": v_stack,
-            "output_power_w": actual_power,
-            "eta_act": eta_act,
-            "eta_ohmic": eta_ohmic
+            "output_power_w": actual_power
         }
 
-# --- 2. 側邊控制欄與 Crystal Machine 企業品牌識別 ---
-st.sidebar.markdown("## 🏢 Crystal Machine")
-st.sidebar.caption("💡 氫能與新能源數位雙生控制台 | v2.1")
-st.sidebar.write("---")
-
+# --- 2. 側邊控制欄與 10 大完整佈置場景 ---
 st.sidebar.header("🎛️ 工藝參數調功與控制")
 flow_rate = st.sidebar.slider("進料流量 Q (L/h)", 1.0, 10.0, 5.0, 0.5)
 concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", 5.0, 25.0, 20.0, 1.0)
@@ -123,6 +116,7 @@ scenario_key = st.sidebar.selectbox("請選擇系統佈署場景", [
     "場景 10：國防秘密掩體 / 長時備援"
 ])
 
+# 精準硬編碼 10 個獨立分支，絕不漏掉任何一個
 if "01" in scenario_key:
     st.sidebar.info("📋 **等級**: UAV/Robot\n\n⚡ **額定功率**: 1.5 kW\n\n✈️ **特點**: 長航時無人機、巡檢機器人")
     base_load = [400, 1500, 1500, 1200, 1100, 1100, 1100, 1200, 800, 400]
@@ -153,6 +147,8 @@ elif "09" in scenario_key:
 elif "10" in scenario_key:
     st.sidebar.info("📋 **等級**: Station\n\n⚡ **額定功率**: 6.0 kW\n\n🛡️ **特點**: 國防秘密掩體長時備援、突發防衛通訊負載")
     base_load = [4000, 4500, 6000, 6000, 5500, 5000, 4500, 4000, 4000, 4000]
+else:
+    base_load = [500, 500, 500, 500, 500, 500, 500, 500, 500, 500]
 
 # --- 3. 模擬計算核心執行 ---
 twin = NaBH4_FuelCell_Twin()
@@ -173,9 +169,6 @@ for t, target_w in enumerate(base_load):
         "電堆輸出(W)": round(fc_res["output_power_w"], 1),
         "電堆電壓(V)": round(fc_res["v_stack_v"], 1),
         "操作電流(A)": round(fc_res["current_a"], 1),
-        "電流密度(A/cm2)": round(fc_res["i_density"], 3),
-        "活化極化損失(V)": round(fc_res["eta_act"], 3),
-        "歐姆極化損失(V)": round(fc_res["eta_ohmic"], 3),
         "NaBO2生成速率(kg/h)": round(h2_res["nabo2_flow_kg_h"], 3),
         "觸媒床結塊率(%)": round(clogging_factor * 100, 1)
     })
@@ -193,6 +186,13 @@ with m3:
 
 if df_res['觸媒床結塊率(%)'].max() > 10:
     st.error("🚨 [系統警報] 副產品 NaBO₂ 累積速率過快，觸媒床結塊風險偏高！請確認自動化調功或啟動反沖洗液排液模組！")
+
+st.subheader("📊 瞬態功率動態響應追蹤 (Load Profile)")
+chart_data = df_res[["秒數(s)", "負載需求(W)", "電堆輸出(W)"]].set_index("秒數(s)")
+st.line_chart(chart_data)
+
+st.subheader("📋 數位雙生實時數據流水線 (Data Pipeline)")
+st.dataframe(df_res, use_container_width=True)
 
 st.write("---")
 
