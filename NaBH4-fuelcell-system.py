@@ -3,9 +3,11 @@ import numpy as np
 import pandas as pd
 import datetime
 import pytz
-if 'flow_rate' not in locals(): flow_rate = 5.0
-if 'concentration' not in locals(): concentration = 20.0
-if 'temperature' not in locals(): temperature = 30.0
+flow_rate = 5.0
+
+concentration = 20.0
+
+temperature = 30.0
 
 # --- 頁面基本配置與側邊欄寬度/捲軸優化 (CSS 注入) ---
 st.set_page_config(page_title="NaBH4 氫燃料電池數位雙生系統", layout="wide")
@@ -60,9 +62,10 @@ st.sidebar.markdown("**副產品副效應管理**")
 enable_autowash = st.sidebar.toggle("啟用自動化防結塊反沖洗", value=False)
 
 st.sidebar.header("⚙️ 工藝參數調功與控制")
-flow_rate = st.sidebar.slider("進料流量 Q (L/h)", min_value=1.0, max_value=10.0, value=5.0, step=0.5)
-concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", min_value=5.0, max_value=25.0, value=20.0, step=1.0)
-temperature = st.sidebar.slider("反應床操作溫度 (°C)", min_value=10.0, max_value=50.0, value=30.0, step=1.0)
+
+flow_rate = st.sidebar.slider("進料流量 Q (L/h)", min_value=1.0, max_value=10.0, value=float(flow_rate), step=0.5)
+concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", min_value=5.0, max_value=25.0, value=float(concentration), step=1.0)
+temperature = st.sidebar.slider("反應床操作溫度 (°C)", min_value=10.0, max_value=50.0, value=float(temperature), step=1.0)
 
 if enable_autowash:
     wash_interval = st.sidebar.number_input("反沖洗週期 (分鐘)", min_value=5, max_value=60, value=15, step=5)
