@@ -76,12 +76,8 @@ temperature = st.sidebar.slider("反應床操作溫度 (°C)", min_value=10.0, m
 # 底部邊界線，準備對接下方的完整佈置場景
 st.sidebar.markdown("<hr style='border: 0; border-top: 1px solid #E5E7EB; margin-top: 20px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
-
 # ==============================================================================
-# 【核心類別宣告】核心計算邏輯完全保留您的原始實作，絕不動到任何參數
-# ==============================================================================
-# ==============================================================================
-# 【核心類別宣告】核心計算邏輯與牛頓迭代法（確保縮排 100% 正確，對接第 213 行）
+# 【核心類別宣告】修正回傳鍵值以完全對接下半部資料流水線（解決 Line 225 KeyError）
 # ==============================================================================
 class NaBH4_FuelCell_Twin:
     def __init__(self):
@@ -135,19 +131,21 @@ class NaBH4_FuelCell_Twin:
         # 計算實際電流
         actual_current = min(target_current, max_current_from_h2 * 0.95)
         
-        # 補齊後半段需要的電化學輸出字典
         i_density = actual_current / self.A_cell if actual_current > 0 else 0.0
         eta_act = self.solve_butler_volmer_overpotential(i_density, T_k)
         
+        # 單電池與總堆電壓
         v_cell = self.E_eq - eta_act - (actual_current * self.R_internal) if actual_current > 0 else self.E_eq
-        v_stack = v_cell * self.n_cells
-        output_power_w = v_stack * actual_current
+        v_stack_v = v_cell * self.n_cells  # 🎯 改為 v_stack_v 對接第 225 行
+        output_power_w = v_stack_v * actual_current
         
+        # 💡 將所有可能的命名習慣統統塞進字典，確保下半部怎麼撈都不會噴 KeyError
         return {
             "current": actual_current,
             "v_cell": v_cell,
-            "v_stack": v_stack,
-            "output_power_w": output_power_w
+            "v_stack": v_stack_v,
+            "v_stack_v": v_stack_v,          # 🎯 滿足 fc_res["v_stack_v"]
+            "output_power_w": output_power_w # 🎯 滿足 fc_res["output_power_w"]
         }
 
 # ⚙️ 重新實例化模型
