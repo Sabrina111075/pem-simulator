@@ -39,11 +39,6 @@ st.sidebar.markdown(
 # 2. 工藝參數調功與控制 (保留您原本畫面的三個核心參數)
 st.sidebar.markdown("### ⚙️ 工藝參數調功與控制")
 
-flow_rate = st.sidebar.slider("進料流量 Q (L/h)", min_value=0.0, max_value=10.0, value=5.0, step=0.1)
-concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", min_value=0.0, max_value=30.0, value=20.0, step=0.5)
-temperature = st.sidebar.slider("反應床操作溫度 (°C)", min_value=10.0, max_value=80.0, value=30.0, step=1.0)
-
-
 # 3. 高級控制與優化參數 (新增的擴充控制項)
 st.sidebar.markdown("<hr style='border: 0; border-top: 1px dashed #E5E7EB; margin-top: 15px; margin-bottom: 15px;'>", unsafe_allow_html=True)
 st.sidebar.markdown("**高級控制與優化參數**")
