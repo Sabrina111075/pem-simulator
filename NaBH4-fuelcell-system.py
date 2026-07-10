@@ -187,10 +187,6 @@ with m3:
 if df_res['觸媒床結塊率(%)'].max() > 10:
     st.error("🚨 [系統警報] 副產品 NaBO₂ 累積速率過快，觸媒床結塊風險偏高！請確認自動化調功或啟動反沖洗液排液模組！")
 
-st.subheader("📊 瞬態功率動態響應追蹤 (Load Profile)")
-chart_data = df_res[["秒數(s)", "負載需求(W)", "電堆輸出(W)"]].set_index("秒數(s)")
-st.line_chart(chart_data)
-
 st.write("---")
 
 # --- 5. 權威性架構：專業 Tab 分頁排版 ---
