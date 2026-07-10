@@ -191,9 +191,6 @@ st.subheader("📊 瞬態功率動態響應追蹤 (Load Profile)")
 chart_data = df_res[["秒數(s)", "負載需求(W)", "電堆輸出(W)"]].set_index("秒數(s)")
 st.line_chart(chart_data)
 
-st.subheader("📋 數位雙生實時數據流水線 (Data Pipeline)")
-st.dataframe(df_res, use_container_width=True)
-
 st.write("---")
 
 # --- 5. 權威性架構：專業 Tab 分頁排版 ---
