@@ -3,6 +3,13 @@ import numpy as np
 import pandas as pd
 import datetime
 import pytz
+# ==========================================
+# 核心變數初始化（防止後續實例化發生 NameError）
+# ==========================================
+if 'flow_rate' not in locals(): flow_rate = 5.0
+if 'concentration' not in locals(): concentration = 20.0
+if 'temperature' not in locals(): temperature = 30.0
+# ==========================================
 
 # --- 頁面基本配置與側邊欄寬度/捲軸優化 (CSS 注入) ---
 st.set_page_config(page_title="NaBH4 氫燃料電池數位雙生系統", layout="wide")
@@ -49,7 +56,6 @@ catalyst_type = st.sidebar.selectbox(
 
 # 反應床壓力
 system_pressure = st.sidebar.slider("反應床操作壓力 (bar)", min_value=1.0, max_value=10.0, value=1.0, step=0.2)
-
 
 # 4. 副產品副效應管理 (針對 NaBO₂ 累積警報的控制項)
 st.sidebar.markdown("<hr style='border: 0; border-top: 1px dashed #E5E7EB; margin-top: 15px; margin-bottom: 15px;'>", unsafe_allow_html=True)
