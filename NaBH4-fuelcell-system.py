@@ -11,7 +11,7 @@ import pytz
 # 1. 網頁全域配置 (強制更新識別標記 V3.7)
 # ==========================================
 st.set_page_config(
-    page_title="NaBH4硼氫化鈉/燃料電池智慧監控系統 V3.7",
+    page_title="NaBH4硼氫化鈉與燃料電池智慧監控系統",
     page_icon="⚡",
     layout="wide"
 )
@@ -35,7 +35,7 @@ SCENARIOS = {
 # ==========================================
 # 3. 側邊欄 (Sidebar) 介面控制中心
 # ==========================================
-st.sidebar.markdown("# [ Crystal Machine ]")
+st.sidebar.markdown("#  Crystal Machine ")
 st.sidebar.markdown("### 前瞻綠能與動力系統實驗室")
 st.sidebar.markdown("---")
 
