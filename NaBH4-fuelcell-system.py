@@ -20,69 +20,60 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- 1. 頂部企業品牌與台灣即時時間 ---
-st.markdown("# 🧪 $NaBH_4$ 硼氫化鈉產氫與燃料電池發電數位模擬系統")
+# ==============================================================================
+# 【一次性覆蓋區塊】左側側邊欄：Crystal Machine 品牌與工藝參數控制 (含原有與擴充)
+# ==============================================================================
 
-import streamlit as st
-
-# ==========================================
-# 左側側邊欄 (Sidebar) 設置
-# ==========================================
-
-# 1. 公司名稱與品牌展示
+# 1. 側邊欄最上方：公司品牌名稱
 st.sidebar.markdown(
     """
-    <div style='text-align: center; padding-bottom: 20px;'>
-        <h2 style='color: #1E3A8A; font-family: "Arial Black", sans-serif; margin-bottom: 5px;'>Crystal Machine</h2>
-        <p style='color: #6B7280; font-size: 0.9em;'>先進能源數位雙生系統</p>
-        <hr style='margin-top: 10px; margin-bottom: 20px;'>
+    <div style='text-align: center; padding-top: 10px; padding-bottom: 5px;'>
+        <h2 style='color: #1E3A8A; font-family: "Arial Black", sans-serif; margin-bottom: 0px; font-size: 28px;'>Crystal Machine</h2>
+        <p style='color: #6B7280; font-size: 14px; margin-top: 5px;'>先進能源數位雙生系統</p>
+        <hr style='margin-top: 10px; margin-bottom: 15px; border: 0; border-top: 1px solid #E5E7EB;'>
     </div>
     """, 
     unsafe_allow_html=True
 )
 
-# 2. 工藝參數調功與控制
-st.sidebar.subheader("⚙️ 工藝參數調功與控制")
+# 2. 工藝參數調功與控制 (保留您原本畫面的三個核心參數)
+st.sidebar.markdown("### ⚙️ 工藝參數調功與控制")
 
-# --- 原有參數 ---
 flow_rate = st.sidebar.slider("進料流量 Q (L/h)", min_value=0.0, max_value=10.0, value=5.0, step=0.1)
 concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", min_value=0.0, max_value=30.0, value=20.0, step=0.5)
 temperature = st.sidebar.slider("反應床操作溫度 (°C)", min_value=10.0, max_value=80.0, value=30.0, step=1.0)
 
-# --- 新增擴充參數與功能 ---
-st.sidebar.markdown("---") # 分隔線
+
+# 3. 高級控制與優化參數 (新增的擴充控制項)
+st.sidebar.markdown("<hr style='border: 0; border-top: 1px dashed #E5E7EB; margin-top: 15px; margin-bottom: 15px;'>", unsafe_allow_html=True)
 st.sidebar.markdown("**高級控制與優化參數**")
 
-# 新增：催化劑類型選擇（可影響後端動力學模型的常數）
+# 催化劑選擇
 catalyst_type = st.sidebar.selectbox(
     "催化劑體系選擇",
     ["Fe-Co-Ni 催化劑", "Ru-based 催化劑", "Pt-based 催化劑"],
     index=0
 )
 
-# 新增：系統壓力控制
+# 反應床壓力
 system_pressure = st.sidebar.slider("反應床操作壓力 (bar)", min_value=1.0, max_value=10.0, value=1.0, step=0.2)
 
-# 新增：針對 NaBO₂ 累積與結塊的自動反沖洗控制功能
+
+# 4. 副產品副效應管理 (針對 NaBO₂ 累積警報的控制項)
+st.sidebar.markdown("<hr style='border: 0; border-top: 1px dashed #E5E7EB; margin-top: 15px; margin-bottom: 15px;'>", unsafe_allow_html=True)
 st.sidebar.markdown("**副產品副效應管理**")
+
 enable_autowash = st.sidebar.toggle("啟用自動化防結塊反沖洗", value=False)
 
 if enable_autowash:
     wash_interval = st.sidebar.number_input("反沖洗週期 (分鐘)", min_value=5, max_value=60, value=15, step=5)
 else:
-    # 手動觸發按鈕
     trigger_wash = st.sidebar.button("🚨 立即啟動手動反沖洗液模組")
     if trigger_wash:
-        st.sidebar.success("已向硬體/模擬核心發送反沖洗指令！")
+        st.sidebar.success("已向模擬核心發送反沖洗指令！")
 
-
-# ==========================================
-# 模擬應用場景負載 (原有下半部分)
-# ==========================================
-st.sidebar.markdown("---")
-st.sidebar.subheader("🎯 模擬應用場景負載")
-# 您原本的場景選擇程式碼...
-# scenario = st.sidebar.selectbox("請選擇系統佈署場景", ["場景 02：通訊基地台備援電源", ...])
+# 底部邊界線，完美銜接您原本下方的「模擬應用場景負載」
+st.sidebar.markdown("<hr style='border: 0; border-top: 1px solid #E5E7EB; margin-top: 20px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
 # --- 2. 側邊控制欄與 10 大完整佈置場景 ---
 st.sidebar.header("🎛️ 工藝參數調功與控制")
