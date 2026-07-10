@@ -11,7 +11,7 @@ import pytz
 # 1. 網頁全域配置 (強制更新識別標記 V3.7)
 # ==========================================
 st.set_page_config(
-    page_title="NaBH4 數位雙生智慧監控系統 V3.7",
+    page_title="NaBH4硼氫化鈉/燃料電池智慧監控系統 V3.7",
     page_icon="⚡",
     layout="wide"
 )
