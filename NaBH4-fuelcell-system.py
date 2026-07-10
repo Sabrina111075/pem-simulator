@@ -221,9 +221,8 @@ else:
 
 # --- 3. 模擬計算核心執行 ---
 twin = NaBH4_FuelCell_Twin()
-# 建立與前端側邊欄新參數（催化劑、壓力）的真實物理連動
-        clogging_factor = 0.0
-        gen_res = twin.simulate_hydrogen_generation(
+    clogging_factor = 0.0
+    gen_res = twin.simulate_hydrogen_generation(
             flow_rate, 
             concentration, 
             temperature, 
