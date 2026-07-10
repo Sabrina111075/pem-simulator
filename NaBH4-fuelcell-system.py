@@ -11,7 +11,7 @@ import pytz
 # 1. 網頁全域配置
 # ==========================================
 st.set_page_config(
-    page_title="NaBH4 數位雙生實時模擬系統 V3.3",
+    page_title="硼氫化鈉與燃料電池智慧監控系統",
     page_icon="⚡",
     layout="wide"
 )
@@ -121,7 +121,6 @@ current_taiwan_time = datetime.now(taipei_tz).strftime('%Y-%m-%d %H:%M:%S')
 # ==========================================
 st.title("🧪 NaBH₄ 燃料電池數位雙生智慧監控系統")
 st.markdown(f"🧬 **基於 TAD-AGE 模擬架構 & Butler-Volmer 電化學動力學核心** | ⏱️ **目前台灣時間：{current_taiwan_time}**")
-st.caption(f"🤖 目前智慧代理整合情境：{selected_scen} | {scen_default['desc']}")
 
 st.markdown("### 📡 實時數據連動監測站")
 m1, m2, m3, m4 = st.columns(4)
