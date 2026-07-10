@@ -9,13 +9,13 @@ import time
 # 1. 網頁全域配置
 # ==========================================
 st.set_page_config(
-    page_title="NaBH4 數位雙生實時模擬系統 V3.0",
+    page_title="NaBH4 數位雙生實時模擬系統 V3.1",
     page_icon="⚡",
     layout="wide"
 )
 
 # ==========================================
-# 2. 10 大應用場景特徵資料庫 (放至側邊欄)
+# 2. 10 大應用場景特徵資料庫
 # ==========================================
 SCENARIOS = {
     "1. 智能倉儲自動搬運車 (AGV / AMR)": {"temp": 45.0, "conc": 15.0, "flow": 25.0, "i0": 0.0020, "desc": "中溫環境，高頻率起停，要求長效穩定的產氫與電力輸出。"},
@@ -36,21 +36,18 @@ SCENARIOS = {
 st.sidebar.markdown("## 🏢 前瞻綠能與動力系統實驗室")
 st.sidebar.markdown("---")
 
-# A. 全域應用場景選擇
 st.sidebar.subheader("🌟 應用場景選擇")
 selected_scen = st.sidebar.selectbox("切換場景預設特徵參數：", list(SCENARIOS.keys()))
 scen_default = SCENARIOS[selected_scen]
 
 st.sidebar.markdown("---")
 
-# B. 工藝參數調功與控制
 st.sidebar.subheader("🎮 工藝參數調功與控制")
 with st.sidebar.expander("🛠️ 反應床與流體進料系統", expanded=True):
     flow_rate = st.slider("進料流量 (mL/min)", 5.0, 300.0, float(scen_default['flow']), 5.0)
     concentration = st.slider("NaBH4 溶液濃度 (wt%)", 5.0, 35.0, float(scen_default['conc']), 1.0)
     reactor_temp = st.slider("反應床操作溫度 (°C)", 15.0, 90.0, float(scen_default['temp']), 1.0)
 
-# C. 電化學核心工程參數
 st.sidebar.subheader("⚙️ 電池核心電化學參數")
 with st.sidebar.expander("🔬 內部極化特性設定", expanded=False):
     e_thermo = st.number_input("理論熱力學電勢 (V)", 1.20, 1.80, 1.64, 0.01)
@@ -65,21 +62,20 @@ class DBFCDigitalTwin:
     def __init__(self):
         self.R = 8.314
         self.F = 96485
-        self.n = 8 # 8電子反應
+        self.n = 8 
         
     def calculate_metrics(self, temp, conc, flow):
-        # 依據 Arrhenius 方程式估算反應速率常數
-        k_arrhenius = np.exp(-4200 / (self.R * (temp + 273.15))) * 2.2e6
-        # 產氫量 (L/min) = k * 濃度比 * 流量(L/min) * 4(化學計量數)
+        # 阿瑞尼斯模型修正：使產氫速率(L/min)符合標準電堆物理尺度
+        k_arrhenius = np.exp(-3800 / (self.R * (temp + 273.15))) * 3.5e4
         h2_rate = k_arrhenius * (conc / 100.0) * (flow / 1000.0) * 4.0
-        # 產氫量動態決定電池的極限電流密度 (供應越足，極限電流越高)
-        dynamic_i_limit = 0.4 + (h2_rate * 0.45)
+        # 產氫速率動態決定電池極限電流密度 i_lim (A/cm²)
+        dynamic_i_limit = 0.5 + (h2_rate * 0.65)
         return h2_rate, dynamic_i_limit
 
     def generate_polarization_data(self, e_thermo, i_0, r_int, alpha, temp, i_limit):
         T_k = temp + 273.15
-        # 建立安全的電流密度掃描區間，絕不超過或等於極限電流，防止 log(0) 崩潰
-        i_scan = np.linspace(0.001, min(i_limit * 0.98, 2.5), 60)
+        # 防止掃描點超越極限電流
+        i_scan = np.linspace(0.001, min(i_limit * 0.96, 2.5), 60)
         
         v_cell_list = []
         p_density_list = []
@@ -88,12 +84,12 @@ class DBFCDigitalTwin:
         eta_conc_list = []
         
         for i in i_scan:
-            # 活化過電勢 (Tafel 安全邊界防錯處理)
+            # 活化損失
             eta_act = (self.R * T_k / (alpha * self.n * self.F)) * np.log(max(i / i_0, 1.001))
             # 歐姆損失
             eta_ohmic = i * r_int
-            # 濃差損失 (加上防爆護欄，避免 log 出現負數或零)
-            ratio = min(i / i_limit, 0.999)
+            # 濃差損失防呆
+            ratio = min(i / i_limit, 0.995)
             eta_conc = - (self.R * T_k / (alpha * self.n * self.F)) * np.log(1.0 - ratio)
             
             v_cell = e_thermo - eta_act - eta_ohmic - eta_conc
@@ -120,47 +116,56 @@ h2_rate, i_limit_dynamic = twin.calculate_metrics(reactor_temp, concentration, f
 df_polar = twin.generate_polarization_data(e_thermo, i_0, r_int, alpha, reactor_temp, i_limit_dynamic)
 
 # ==========================================
-# 5. 主網頁可視化面板
+# 5. 主畫面呈現
 # ==========================================
 st.title("🧪 NaBH₄ 燃料電池數位雙生智慧監控系統")
 st.caption(f"🤖 目前智慧代理整合情境：{selected_scen} | {scen_default['desc']}")
 
-# 實時資料方塊 (Linked Data Blocks)
 st.markdown("### 📡 實時數據連動監測站")
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("📊 催化反應床產氫速率", f"{h2_rate:.3f} L/min", delta=f"流量影響: +{flow_rate/10:.1f}%")
 m2.metric("🔋 動態極限電流密度 (i_lim)", f"{i_limit_dynamic:.2f} A/cm²", delta="與產氫量實時聯動")
-m3.metric("🎯 系統最大輸出功率面", f"{df_polar['Power'].max():.1f} mW/cm²")
+m3.metric("🎯 系統最大輸出功率點", f"{df_polar['Power'].max():.1f} mW/cm²")
 m4.metric("📈 反應床預估轉化效率", f"{min(99.5, 65.0 + reactor_temp*0.38 + concentration*0.2):.1f} %")
 
 st.markdown("---")
 
-# 建立分頁標籤 (Tabs) 優化版面展示
 tab1, tab2, tab3 = st.tabs([
     "📈 電化學動力學分析 (極化曲線)", 
     "⏱️ 瞬態功率動態響應追蹤", 
     "🧬 數位雙生實時數據流水線"
 ])
 
-# ---- TAB 1: 極化曲線與動力學分解 ----
+# ---- TAB 1: 極化曲線 (修正雙軸安全語法) ----
 with tab1:
     col1, col2 = st.columns(2)
     
     with col1:
         st.subheader("⚡ 電池電氣特性聯動曲線 (V-I / P-I)")
-        # 使用官方特製的輔助雙軸函數，完全杜絕 ValueError 崩潰問題
-        fig_iv = make_subplots(specs=[[{"secondary_y": True}]])
-        fig_iv.add_trace(go.Scatter(x=df_polar['Current_Density'], y=df_polar['Voltage'], name="單體電勢 (V)", line=dict(color='royalblue', width=3.5)), secondary_y=False)
-        fig_iv.add_trace(go.Scatter(x=df_polar['Current_Density'], y=df_polar['Power'], name="功率密度 (mW/cm²)", line=dict(color='orange', width=3.5, dash='dash')), secondary_y=True)
         
+        # 改用最底層 100% 不崩潰的雙軸定義方式
+        fig_iv = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        # 綁定左軸 (secondary_y=False)
+        fig_iv.add_trace(
+            go.Scatter(x=df_polar['Current_Density'], y=df_polar['Voltage'], name="單體電勢 (V)", line=dict(color='royalblue', width=3.5)),
+            secondary_y=False
+        )
+        # 綁定右軸 (secondary_y=True)
+        fig_iv.add_trace(
+            go.Scatter(x=df_polar['Current_Density'], y=df_polar['Power'], name="功率密度 (mW/cm²)", line=dict(color='orange', width=3.5, dash='dash')),
+            secondary_y=True
+        )
+        
+        # 直接在 layout 中統一定義雙軸，不呼叫 update_yaxes 規避底層 ValueError bug
         fig_iv.update_layout(
-            xaxis_title="電流密度 Current Density (mA/cm²)",
+            xaxis=dict(title="電流密度 Current Density (mA/cm²)"),
+            yaxis=dict(title="電勢 Voltage (V)", titlefont=dict(color="royalblue"), tickfont=dict(color="royalblue")),
+            yaxis2=dict(title="功率密度 Power (mW/cm²)", titlefont=dict(color="orange"), tickfont=dict(color="orange"), overlaying="y", side="right"),
             hovermode="x unified",
             legend=dict(x=0.05, y=0.1),
             margin=dict(l=20, r=20, t=30, b=20)
         )
-        fig_iv.update_yaxes(title_text="電勢 Voltage (V)", titlefont=dict(color="royalblue"), tickfont=dict(color="royalblue"), secondary_y=False)
-        fig_iv.update_yaxes(title_text="功率密度 Power (mW/cm²)", titlefont=dict(color="orange"), tickfont=dict(color="orange"), secondary_y=True)
         st.plotly_chart(fig_iv, use_container_width=True)
         
     with col2:
@@ -171,8 +176,8 @@ with tab1:
         fig_loss.add_trace(go.Scatter(x=df_polar['Current_Density'], y=df_polar['Concentration'], name="濃差損失 (Concentration)", line=dict(color='#5f27cd', width=2, dash='dashdot')))
         
         fig_loss.update_layout(
-            xaxis_title="電流密度 (mA/cm²)",
-            yaxis_title="過電勢損失 Overpotential (V)",
+            xaxis=dict(title="電流密度 (mA/cm²)"),
+            yaxis=dict(title="過電勢損失 Overpotential (V)"),
             hovermode="x unified",
             legend=dict(x=0.05, y=0.85),
             margin=dict(l=20, r=20, t=30, b=20)
@@ -182,28 +187,23 @@ with tab1:
 # ---- TAB 2: 瞬態功率動態響應追蹤 ----
 with tab2:
     st.subheader("⏱️ 負載階躍變化下的瞬態響應 (Transient Response)")
-    st.markdown("模擬工藝參數變動時，系統從 **操作點A** 階躍切換至 **操作點B** 的氫氣建立時間與電壓回復動態。")
     
-    # 建立瞬態時間序列數據
     t_steps = np.linspace(0, 30, 100)
-    # 建立動態目標功率線
     target_power = np.where(t_steps < 10, 200, np.where(t_steps < 20, 450, 300))
-    # 模擬一階延遲(反應床滯後效應)
     actual_power = []
     current_p = 200.0
-    for i, tp in enumerate(target_power):
-        # 反應床溫度越高，滯後時間越短(響應越快)
+    for tp in target_power:
         tau = max(1.0, 5.0 - (reactor_temp / 20.0))
         current_p += (tp - current_p) * (0.3 / tau)
-        actual_power.append(current_p * (h2_rate / (h2_rate + 0.1))) # 受限於實際產氫量
+        actual_power.append(current_p * (h2_rate / (h2_rate + 0.1)))
         
     fig_transient = go.Figure()
     fig_transient.add_trace(go.Scatter(x=t_steps, y=target_power, name="負載需求功率 (Target)", line=dict(color='#dee2e6', width=2, dash='dash')))
     fig_transient.add_trace(go.Scatter(x=t_steps, y=actual_power, name="數位雙生實時輸出 (Actual)", line=dict(color='#ee5253', width=3)))
     
     fig_transient.update_layout(
-        xaxis_title="模擬時間 Time (Seconds)",
-        yaxis_title="系統輸出功率 (W)",
+        xaxis=dict(title="模擬時間 Time (Seconds)"),
+        yaxis=dict(title="系統輸出功率 (W)"),
         hovermode="x unified",
         height=400
     )
@@ -213,7 +213,6 @@ with tab2:
 with tab3:
     st.subheader("🧬 虛實融合虛擬感測器數據串流 (Virtual Telemetry Pipeline)")
     
-    # 動態產生與工藝參數高度相關的實時串流數據
     np.random.seed(int(time.time()) % 100)
     pipeline_data = {
         "虛擬感測器節點 (Telemetry Node)": [
@@ -241,5 +240,4 @@ with tab3:
     
     df_pipeline = pd.DataFrame(pipeline_data)
     st.table(df_pipeline)
-    
-    st.success("🔄 數位雙生流水線已同步鏈接！當前工藝參數已 100% 動態映射至上方虛擬儀表板。")
+    st.success("🔄 數位雙生流水線已同步鏈接！")
