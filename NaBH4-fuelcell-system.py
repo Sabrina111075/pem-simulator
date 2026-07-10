@@ -36,9 +36,6 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-# 2. 工藝參數調功與控制 (保留您原本畫面的三個核心參數)
-st.sidebar.markdown("### ⚙️ 工藝參數調功與控制")
-
 # 3. 高級控制與優化參數 (新增的擴充控制項)
 st.sidebar.markdown("<hr style='border: 0; border-top: 1px dashed #E5E7EB; margin-top: 15px; margin-bottom: 15px;'>", unsafe_allow_html=True)
 st.sidebar.markdown("**高級控制與優化參數**")
