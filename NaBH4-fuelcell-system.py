@@ -11,7 +11,7 @@ import pytz
 # 1. 網頁全域配置
 # ==========================================
 st.set_page_config(
-    page_title="NaBH4 數位雙生實時模擬系統 V3.4",
+    page_title="NaBH4 數位雙生智慧監控系統 V3.5",
     page_icon="⚡",
     layout="wide"
 )
@@ -23,7 +23,7 @@ SCENARIOS = {
     "1. 智能倉儲自動搬運車 (AGV / AMR)": {"temp": 45.0, "conc": 15.0, "flow": 25.0, "i0": 0.0020, "desc": "中溫環境，高頻率起停，要求長效穩定的產氫與電力輸出。"},
     "2. 長航時工業級無人機 (UAV)": {"temp": 35.0, "conc": 25.0, "flow": 40.0, "i0": 0.0008, "desc": "高濃度燃料以減輕系統重量，產氫需求隨操作高度動態調整。"},
     "3. 偏遠離島微電網後備電源": {"temp": 65.0, "conc": 12.0, "flow": 120.0, "i0": 0.0050, "desc": "大型化系統，高流量連續工作，熱管理與系統發熱量大。"},
-    "4. 國防可攜式單兵作戰裝裝備": {"temp": 25.0, "conc": 20.0, "flow": 10.0, "i0": 0.0005, "desc": "低溫環境啟動較慢，動力學受限，需精確控制微步進進料。"},
+    "4. 國防可攜式單兵作戰裝備": {"temp": 25.0, "conc": 20.0, "flow": 10.0, "i0": 0.0005, "desc": "低溫環境啟動較慢，動力學受限，需精確控制微步進進料。"},
     "5. 海洋觀測浮標與水下無人載具": {"temp": 20.0, "conc": 18.0, "flow": 15.0, "i0": 0.0004, "desc": "環境低溫高壓，反應床主動熱控制是維持高效產氫的關鍵。"},
     "6. 5G 通訊基地台緊急備援系統": {"temp": 55.0, "conc": 15.0, "flow": 80.0, "i0": 0.0030, "desc": "標準定功率長時輸出，系統自動補足動態氫氣壓。"},
     "7. 野外緊急醫療行動工作站": {"temp": 40.0, "conc": 10.0, "flow": 35.0, "i0": 0.0015, "desc": "模組化快速更換燃料設計，著重電氣防護與極高可靠度。"},
@@ -68,11 +68,8 @@ class DBFCDigitalTwin:
         self.n = 8 
         
     def calculate_metrics(self, temp, conc, flow):
-        # 修正反應速率尺度常數，使最大產氫率落在真實物理合理的 1.5 ~ 15.8 L/min 區間
         k_arrhenius = np.exp(-3800 / (self.R * (temp + 273.15))) * 350.0
         h2_rate = k_arrhenius * (conc / 100.0) * (flow / 1000.0) * 4.0
-        
-        # 修正動態電流密度聯動關係，使其符合真實燃料電池工況 (1.0 ~ 3.5 A/cm2)
         dynamic_i_limit = 0.5 + (h2_rate * 0.18)
         return h2_rate, dynamic_i_limit
 
@@ -127,10 +124,49 @@ st.markdown(f"**核心技術：基於 TAD-AGE 模擬架構 & Butler-Volmer 電�
 st.markdown(f"**目前台灣時間 (Taipei Time)：{current_taiwan_time}**")
 st.caption(f"情境特徵模式：{selected_scen} | {scen_default['desc']}")
 
+# 🚨 ==========================================
+# 🧠 新增：TAD-AGE 智慧診斷與安全連鎖告警中心
+# ==========================================
+st.markdown("---")
+st.subheader("[ 🧠 TAD-AGE 專家系統：實時安全診斷面板 ]")
+
+# 進行多維度安全邊界判定
+alerts = []
+is_critical = False
+
+if flow_rate >= 200.0:
+    alerts.append(f"⚠️ [工藝高危告警] 燃料進料流量過高 ({flow_rate} mL/min)！反應床面臨溢流與觸媒淹沒風險，請評估調低進料。")
+    is_critical = True
+elif flow_rate >= 120.0:
+    alerts.append(f"💡 [工藝預警] 進料流量偏高 ({flow_rate} mL/min)，產氫速率加劇，注意排氣端壓力。")
+
+if reactor_temp >= 75.0:
+    alerts.append(f"⚠️ [熱管理告警] 反應床溫度偏高 ({reactor_temp} °C)！可能加速副反應或導致副產物偏硼酸鈉結晶固化。")
+    is_critical = True
+
+if i_limit_dynamic > 3.0:
+    alerts.append(f"⚠️ [電化學告警] 動態極限電流密度 ({i_limit_dynamic:.2f} A/cm2) 逼近材料極限！局部濃差極化可能導致電堆瞬間跳脫。")
+
+# 渲染告警訊息
+if alerts:
+    for alert in alerts:
+        if "⚠️" in alert:
+            st.error(alert)
+        else:
+            st.warning(alert)
+else:
+    st.success("🟢 系統安全評估：TAD-AGE 未偵測到任何工藝異常。所有子系統工況、流體通道壓力與電化學極化特性皆處於健康安全邊界之內。")
+
+# ==========================================
+# 📡 實時數據連動監測站
+# ==========================================
 st.markdown("---")
 st.subheader("[ 📡 實時數據連動監測站 ]")
 m1, m2, m3, m4 = st.columns(4)
-m1.metric("催化反應床產氫速率", f"{h2_rate:.3f} L/min", delta=f"流量反饋: +{flow_rate/10:.1f}%")
+
+# 若處於危險工况，指標顏色與狀態動態連動
+status_delta = " [ ⚠ 高負載 ]" if is_critical else " [ 🟢 穩定 ]"
+m1.metric("催化反應床產氫速率", f"{h2_rate:.3f} L/min", delta=f"流量反饋: +{flow_rate/10:.1f}%" + status_delta, delta_color="inverse" if is_critical else "normal")
 m2.metric("動態極限電流密度 (i_lim)", f"{i_limit_dynamic:.2f} A/cm2", delta="與產氫量實時解耦")
 m3.metric("系統最大輸出功率點", f"{df_polar['Power'].max():.1f} mW/cm2")
 m4.metric("反應床預估轉化效率", f"{min(99.5, 65.0 + reactor_temp*0.38 + concentration*0.2):.1f} %")
@@ -222,10 +258,10 @@ with tab3:
         ],
         "健康度狀態 (Health Status)": [
             "[ 正常運作中 ]",
-            "[ 壓力穩定 ]" if h2_rate > 0.5 else "[ 壓力偏低 ]",
+            "[ 壓力高危告警 ]" if flow_rate >= 200.0 else ("[ 壓力穩定 ]" if h2_rate > 0.5 else "[ 壓力偏低 ]"),
             "[ 鹼性特徵正常 ]",
             "[ 功耗符合預期 ]",
-            "[ 主動散熱跟隨中 ]" if reactor_temp < 75 else "[ 高溫警戒中 ]"
+            "[ 高溫警戒中 ]" if reactor_temp >= 75 else "[ 主動散熱跟隨中 ]"
         ]
     }
     
