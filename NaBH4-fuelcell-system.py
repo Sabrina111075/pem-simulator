@@ -80,6 +80,9 @@ st.sidebar.markdown("<hr style='border: 0; border-top: 1px solid #E5E7EB; margin
 # ==============================================================================
 # 【核心類別宣告】核心計算邏輯完全保留您的原始實作，絕不動到任何參數
 # ==============================================================================
+# ==============================================================================
+# 【核心類別宣告】核心計算邏輯與牛頓迭代法（確保縮排 100% 正確，對接第 213 行）
+# ==============================================================================
 class NaBH4_FuelCell_Twin:
     def __init__(self):
         self.R = 8.314
@@ -123,7 +126,7 @@ class NaBH4_FuelCell_Twin:
             eta_guess = eta_guess - f_val / df_val
         return max(0.0, eta_guess)
 
-def simulate_fuel_cell(self, h2_available_mol_s, target_power_w, temp_c):
+    def simulate_fuel_cell(self, h2_available_mol_s, target_power_w, temp_c):
         T_k = temp_c + 273.15
         estimated_voltage = 0.7 * self.n_cells
         target_current = target_power_w / estimated_voltage if target_power_w > 0 else 0.0
@@ -132,11 +135,10 @@ def simulate_fuel_cell(self, h2_available_mol_s, target_power_w, temp_c):
         # 計算實際電流
         actual_current = min(target_current, max_current_from_h2 * 0.95)
         
-        # 💡 補齊後半段需要的電化學輸出字典，對接第 206 行
+        # 補齊後半段需要的電化學輸出字典
         i_density = actual_current / self.A_cell if actual_current > 0 else 0.0
         eta_act = self.solve_butler_volmer_overpotential(i_density, T_k)
         
-        # 單電池電壓與總堆電壓計算
         v_cell = self.E_eq - eta_act - (actual_current * self.R_internal) if actual_current > 0 else self.E_eq
         v_stack = v_cell * self.n_cells
         output_power_w = v_stack * actual_current
@@ -145,10 +147,10 @@ def simulate_fuel_cell(self, h2_available_mol_s, target_power_w, temp_c):
             "current": actual_current,
             "v_cell": v_cell,
             "v_stack": v_stack,
-            "output_power_w": output_power_w  # 🎯 讓第 206 行順利抓到數值！
+            "output_power_w": output_power_w
         }
 
-# ⚙️ 實例化模型（此時變數與類別皆已定義，絕對不會發生 NameError）
+# ⚙️ 重新實例化模型
 twin = NaBH4_FuelCell_Twin()
 
 # ==============================================================================
