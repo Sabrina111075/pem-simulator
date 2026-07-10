@@ -20,8 +20,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- 1. 標題與台灣即時時間 ---
-st.markdown("# 🧪 $NaBH_4$ 即時產氫與燃料電池發電數位雙生模擬系統")
+# --- 1. 頂部企業品牌與台灣即時時間 ---
+st.markdown("# 🧪 $NaBH_4$ 硼氫化鈉產氫與燃料電池發電數位模擬系統")
 
 tw_tz = pytz.timezone('Asia/Taipei')
 now_tw = datetime.datetime.now(tw_tz).strftime('%Y年%m月%d日 %H:%M:%S')
