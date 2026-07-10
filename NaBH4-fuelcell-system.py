@@ -221,15 +221,15 @@ else:
 
 # --- 3. 模擬計算核心執行 ---
 twin = NaBH4_FuelCell_Twin()
-    clogging_factor = 0.0
-    gen_res = twin.simulate_hydrogen_generation(
-            flow_rate, 
-            concentration, 
-            temperature, 
-            clogging_factor, 
-            catalyst_type, 
-            system_pressure
-        )
+clogging_factor = 0.0
+gen_res = twin.simulate_hydrogen_generation(
+        flow_rate, 
+        concentration, 
+        temperature, 
+        clogging_factor, 
+        catalyst_type, 
+        system_pressure
+    )
     
     if h2_res["nabo2_flow_kg_h"] > 0.4:
         clogging_factor += 0.012  
