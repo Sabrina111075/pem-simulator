@@ -9,7 +9,7 @@ import time
 # 1. 網頁全域配置
 # ==========================================
 st.set_page_config(
-    page_title="NaBH4 數位雙生實時模擬系統 V3.1",
+    page_title="NaBH4 數位雙生實時模擬系統 V3.2",
     page_icon="⚡",
     layout="wide"
 )
@@ -65,16 +65,14 @@ class DBFCDigitalTwin:
         self.n = 8 
         
     def calculate_metrics(self, temp, conc, flow):
-        # 阿瑞尼斯模型修正：使產氫速率(L/min)符合標準電堆物理尺度
+        # 修正反應速率尺度，讓產氫率與極限電流維持物理合理性
         k_arrhenius = np.exp(-3800 / (self.R * (temp + 273.15))) * 3.5e4
         h2_rate = k_arrhenius * (conc / 100.0) * (flow / 1000.0) * 4.0
-        # 產氫速率動態決定電池極限電流密度 i_lim (A/cm²)
         dynamic_i_limit = 0.5 + (h2_rate * 0.65)
         return h2_rate, dynamic_i_limit
 
     def generate_polarization_data(self, e_thermo, i_0, r_int, alpha, temp, i_limit):
         T_k = temp + 273.15
-        # 防止掃描點超越極限電流
         i_scan = np.linspace(0.001, min(i_limit * 0.96, 2.5), 60)
         
         v_cell_list = []
@@ -88,7 +86,7 @@ class DBFCDigitalTwin:
             eta_act = (self.R * T_k / (alpha * self.n * self.F)) * np.log(max(i / i_0, 1.001))
             # 歐姆損失
             eta_ohmic = i * r_int
-            # 濃差損失防呆
+            # 濃差損失
             ratio = min(i / i_limit, 0.995)
             eta_conc = - (self.R * T_k / (alpha * self.n * self.F)) * np.log(1.0 - ratio)
             
@@ -97,13 +95,13 @@ class DBFCDigitalTwin:
                 v_cell = 0.0
                 
             v_cell_list.append(v_cell)
-            p_density_list.append(v_cell * i * 1000.0) # mW/cm²
+            p_density_list.append(v_cell * i * 1000.0)
             eta_act_list.append(eta_act)
             eta_ohmic_list.append(eta_ohmic)
             eta_conc_list.append(eta_conc)
             
         return pd.DataFrame({
-            'Current_Density': i_scan * 1000.0, # mA/cm²
+            'Current_Density': i_scan * 1000.0, 
             'Voltage': v_cell_list,
             'Power': p_density_list,
             'Activation': eta_act_list,
@@ -136,36 +134,33 @@ tab1, tab2, tab3 = st.tabs([
     "🧬 數位雙生實時數據流水線"
 ])
 
-# ---- TAB 1: 極化曲線 (修正雙軸安全語法) ----
+# ---- TAB 1: 極化曲線 (全面採用上下子圖架構，永久免疫相容性錯誤) ----
 with tab1:
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("⚡ 電池電氣特性聯動曲線 (V-I / P-I)")
+        st.subheader("⚡ 電池電氣特性聯動曲線")
         
-        # 改用最底層 100% 不崩潰的雙軸定義方式
-        fig_iv = make_subplots(specs=[[{"secondary_y": True}]])
+        # 使用最穩固、不依賴雙 Y 軸配置的上下雙子圖架構
+        fig_iv = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.15)
         
-        # 綁定左軸 (secondary_y=False)
+        # 第一層：電勢曲線
         fig_iv.add_trace(
             go.Scatter(x=df_polar['Current_Density'], y=df_polar['Voltage'], name="單體電勢 (V)", line=dict(color='royalblue', width=3.5)),
-            secondary_y=False
+            row=1, col=1
         )
-        # 綁定右軸 (secondary_y=True)
+        # 第二層：功率曲線
         fig_iv.add_trace(
             go.Scatter(x=df_polar['Current_Density'], y=df_polar['Power'], name="功率密度 (mW/cm²)", line=dict(color='orange', width=3.5, dash='dash')),
-            secondary_y=True
+            row=2, col=1
         )
         
-        # 直接在 layout 中統一定義雙軸，不呼叫 update_yaxes 規避底層 ValueError bug
-        fig_iv.update_layout(
-            xaxis=dict(title="電流密度 Current Density (mA/cm²)"),
-            yaxis=dict(title="電勢 Voltage (V)", titlefont=dict(color="royalblue"), tickfont=dict(color="royalblue")),
-            yaxis2=dict(title="功率密度 Power (mW/cm²)", titlefont=dict(color="orange"), tickfont=dict(color="orange"), overlaying="y", side="right"),
-            hovermode="x unified",
-            legend=dict(x=0.05, y=0.1),
-            margin=dict(l=20, r=20, t=30, b=20)
-        )
+        # 採用最通用的 layout 屬性更新，絕不調用引發崩潰的字典嵌套
+        fig_iv.update_layout(height=500, hovermode="x unified", showlegend=True)
+        fig_iv.update_xaxes(title_text="電流密度 Current Density (mA/cm²)", row=2, col=1)
+        fig_iv.update_yaxes(title_text="電勢 (V)", row=1, col=1)
+        fig_iv.update_yaxes(title_text="功率 (mW/cm²)", row=2, col=1)
+        
         st.plotly_chart(fig_iv, use_container_width=True)
         
     with col2:
@@ -176,12 +171,13 @@ with tab1:
         fig_loss.add_trace(go.Scatter(x=df_polar['Current_Density'], y=df_polar['Concentration'], name="濃差損失 (Concentration)", line=dict(color='#5f27cd', width=2, dash='dashdot')))
         
         fig_loss.update_layout(
-            xaxis=dict(title="電流密度 (mA/cm²)"),
-            yaxis=dict(title="過電勢損失 Overpotential (V)"),
             hovermode="x unified",
-            legend=dict(x=0.05, y=0.85),
-            margin=dict(l=20, r=20, t=30, b=20)
+            showlegend=True,
+            height=500
         )
+        fig_loss.update_xaxes(title_text="電流密度 (mA/cm²)")
+        fig_loss.update_yaxes(title_text="過電勢損失 Overpotential (V)")
+        
         st.plotly_chart(fig_loss, use_container_width=True)
 
 # ---- TAB 2: 瞬態功率動態響應追蹤 ----
@@ -201,12 +197,10 @@ with tab2:
     fig_transient.add_trace(go.Scatter(x=t_steps, y=target_power, name="負載需求功率 (Target)", line=dict(color='#dee2e6', width=2, dash='dash')))
     fig_transient.add_trace(go.Scatter(x=t_steps, y=actual_power, name="數位雙生實時輸出 (Actual)", line=dict(color='#ee5253', width=3)))
     
-    fig_transient.update_layout(
-        xaxis=dict(title="模擬時間 Time (Seconds)"),
-        yaxis=dict(title="系統輸出功率 (W)"),
-        hovermode="x unified",
-        height=400
-    )
+    fig_transient.update_layout(hovermode="x unified", height=400)
+    fig_transient.update_xaxes(title_text="模擬時間 Time (Seconds)")
+    fig_transient.update_yaxes(title_text="系統輸出功率 (W)")
+    
     st.plotly_chart(fig_transient, use_container_width=True)
 
 # ---- TAB 3: 數位雙生實時數據流水線 ----
@@ -240,4 +234,4 @@ with tab3:
     
     df_pipeline = pd.DataFrame(pipeline_data)
     st.table(df_pipeline)
-    st.success("🔄 數位雙生流水線已同步鏈接！")
+    st.success("🔄 數位雙生流水線已成功建立並穩定運行中！")
