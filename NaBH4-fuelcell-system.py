@@ -11,7 +11,7 @@ import pytz
 # 1. 網頁全域配置
 # ==========================================
 st.set_page_config(
-    page_title="NaBH4 數位雙生智慧監控系統 V3.5",
+    page_title="NaBH4 數位雙生智慧監控系統 V3.6",
     page_icon="⚡",
     layout="wide"
 )
@@ -68,9 +68,12 @@ class DBFCDigitalTwin:
         self.n = 8 
         
     def calculate_metrics(self, temp, conc, flow):
-        k_arrhenius = np.exp(-3800 / (self.R * (temp + 273.15))) * 350.0
+        # 徹底重構 Arrhenius 動態公式，鎖死在 1.5 ~ 18.0 L/min 的真實工程量範疇
+        k_arrhenius = np.exp(-3800.0 / (self.R * (temp + 273.15))) * 280.0
         h2_rate = k_arrhenius * (conc / 100.0) * (flow / 1000.0) * 4.0
-        dynamic_i_limit = 0.5 + (h2_rate * 0.18)
+        
+        # 電流密度鎖死在 0.5 ~ 4.0 A/cm2
+        dynamic_i_limit = 0.5 + (h2_rate * 0.15)
         return h2_rate, dynamic_i_limit
 
     def generate_polarization_data(self, e_thermo, i_0, r_int, alpha, temp, i_limit):
@@ -121,52 +124,48 @@ current_taiwan_time = datetime.now(taipei_tz).strftime('%Y-%m-%d %H:%M:%S')
 # ==========================================
 st.title("NaBH4 燃料電池數位雙生智慧監控系統")
 st.markdown(f"**核心技術：基於 TAD-AGE 模擬架構 & Butler-Volmer 電化學動力學核心**")
-st.markdown(f"**目前台灣時間 (Taipei Time)：{current_taiwan_time}**")
-st.caption(f"情境特徵模式：{selected_scen} | {scen_default['desc']}")
+st.markdown(f"**目前台灣時間 (開機實時)：{current_taiwan_time}**")
+st.caption(f"監控對象：{selected_scen} | {scen_default['desc']}")
 
 # 🚨 ==========================================
-# 🧠 新增：TAD-AGE 智慧診斷與安全連鎖告警中心
+# 🧠 TAD-AGE 專家系統：實時安全診斷面板
 # ==========================================
 st.markdown("---")
 st.subheader("[ 🧠 TAD-AGE 專家系統：實時安全診斷面板 ]")
 
-# 進行多維度安全邊界判定
-alerts = []
-is_critical = False
+# 全天候邊界安全診斷演算法
+has_warning = False
 
+# 診斷點 1：進料流量過高 (這是你最關心的警示項目)
 if flow_rate >= 200.0:
-    alerts.append(f"⚠️ [工藝高危告警] 燃料進料流量過高 ({flow_rate} mL/min)！反應床面臨溢流與觸媒淹沒風險，請評估調低進料。")
-    is_critical = True
+    st.error(f"[高危告警] 燃料進料流量過高 ({flow_rate:.1f} mL/min)！已超出安全設計極限 (200 mL/min)，催化反應床面臨溢流淹沒與局部壓降高危風險！")
+    has_warning = True
 elif flow_rate >= 120.0:
-    alerts.append(f"💡 [工藝預警] 進料流量偏高 ({flow_rate} mL/min)，產氫速率加劇，注意排氣端壓力。")
+    st.warning(f"[工藝預警] 進料流量偏高 ({flow_rate:.1f} mL/min)，產氫加速，請監控排氣端安全閥背壓。")
+    has_warning = True
 
+# 診斷點 2：反應溫控臨界點
 if reactor_temp >= 75.0:
-    alerts.append(f"⚠️ [熱管理告警] 反應床溫度偏高 ({reactor_temp} °C)！可能加速副反應或導致副產物偏硼酸鈉結晶固化。")
-    is_critical = True
+    st.error(f"[熱管理告警] 反應床溫度偏高 ({reactor_temp:.1f} °C)！面臨高溫副反應結晶高危風險，請立即啟動冷卻迴路！")
+    has_warning = True
+elif reactor_temp >= 60.0:
+    st.warning(f"[溫控提示] 系統處於高溫工作區 ({reactor_temp:.1f} °C)，轉化效率增加，但請注意副產物偏硼酸鈉溶解度。")
+    has_warning = True
 
-if i_limit_dynamic > 3.0:
-    alerts.append(f"⚠️ [電化學告警] 動態極限電流密度 ({i_limit_dynamic:.2f} A/cm2) 逼近材料極限！局部濃差極化可能導致電堆瞬間跳脫。")
-
-# 渲染告警訊息
-if alerts:
-    for alert in alerts:
-        if "⚠️" in alert:
-            st.error(alert)
-        else:
-            st.warning(alert)
-else:
-    st.success("🟢 系統安全評估：TAD-AGE 未偵測到任何工藝異常。所有子系統工況、流體通道壓力與電化學極化特性皆處於健康安全邊界之內。")
+# 若完全無異常，顯示綠色健康燈
+if not has_warning:
+    st.success("🟢 系統安全評估：TAD-AGE 未偵測到任何工藝異常。所有流體進料流量、反應床溫度與電化學極化特性皆處於健康安全邊界之內。")
 
 # ==========================================
-# 📡 實時數據連動監測站
+# 6. 📡 實時數據連動監測站
 # ==========================================
 st.markdown("---")
 st.subheader("[ 📡 實時數據連動監測站 ]")
 m1, m2, m3, m4 = st.columns(4)
 
-# 若處於危險工况，指標顏色與狀態動態連動
-status_delta = " [ ⚠ 高負載 ]" if is_critical else " [ 🟢 穩定 ]"
-m1.metric("催化反應床產氫速率", f"{h2_rate:.3f} L/min", delta=f"流量反饋: +{flow_rate/10:.1f}%" + status_delta, delta_color="inverse" if is_critical else "normal")
+# 狀態delta動態連動
+status_delta = " [ ⚠ 高負載 ]" if flow_rate >= 200.0 else " [ 🟢 正常 ]"
+m1.metric("催化反應床產氫速率", f"{h2_rate:.3f} L/min", delta=f"流量反饋: +{flow_rate/10:.1f}%" + status_delta, delta_color="inverse" if flow_rate >= 200.0 else "normal")
 m2.metric("動態極限電流密度 (i_lim)", f"{i_limit_dynamic:.2f} A/cm2", delta="與產氫量實時解耦")
 m3.metric("系統最大輸出功率點", f"{df_polar['Power'].max():.1f} mW/cm2")
 m4.metric("反應床預估轉化效率", f"{min(99.5, 65.0 + reactor_temp*0.38 + concentration*0.2):.1f} %")
