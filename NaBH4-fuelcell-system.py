@@ -3,11 +3,6 @@ import numpy as np
 import pandas as pd
 import datetime
 import pytz
-flow_rate = 5.0
-
-concentration = 20.0
-
-temperature = 30.0
 
 # --- 頁面基本配置與側邊欄寬度/捲軸優化 (CSS 注入) ---
 st.set_page_config(page_title="NaBH4 氫燃料電池數位雙生系統", layout="wide")
@@ -25,10 +20,17 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# --- 1. 頂部企業品牌與台灣即時時間 ---
+st.markdown("# 📊 $NaBH_4$ 硼氫化鈉產氫與燃料電池發電數位模擬系統")
+
+tw_tz = pytz.timezone('Asia/Taipei')
+now_tw = datetime.datetime.now(tw_tz).strftime('%Y年%m月%d日 %H:%M:%S')
+st.caption(f"📊 基於 TAD-AGE 模擬架構 & Butler-Volmer 電化學動力學核心 | ⏰ 目前台灣時間 (即時)：{now_tw}")
 st.write("---")
 
+
 # ==============================================================================
-# 【全域統合區塊】左側側邊欄：從品牌、高級控制到工藝參數（必須在 class 實例化前宣告）
+# 【全域統合區塊】左側側邊欄：從品牌、高級控制到工藝參數（確保先定義變數，再實例化 twin）
 # ==============================================================================
 
 # 1. 側邊欄最上方：公司品牌名稱
@@ -64,7 +66,7 @@ else:
     if trigger_wash:
         st.sidebar.success("已向模擬核心發送反沖洗指令！")
 
-# 4. 工藝參數調功與控制（三大基礎變數，提早在這裡宣告指派！）
+# 4. 工藝參數調功與控制
 st.sidebar.markdown("<hr style='border: 0; border-top: 1px dashed #E5E7EB; margin-top: 15px; margin-bottom: 15px;'>", unsafe_allow_html=True)
 st.sidebar.header("⚙️ 工藝參數調功與控制")
 flow_rate = st.sidebar.slider("進料流量 Q (L/h)", min_value=1.0, max_value=10.0, value=5.0, step=0.5)
@@ -74,9 +76,69 @@ temperature = st.sidebar.slider("反應床操作溫度 (°C)", min_value=10.0, m
 # 底部邊界線，準備對接下方的完整佈置場景
 st.sidebar.markdown("<hr style='border: 0; border-top: 1px solid #E5E7EB; margin-top: 20px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
+
 # ==============================================================================
-# 【宣告結束】以下原本後半段的 class 定義、twin = NaBH4_FuelCell_Twin() 與 10 大場景完全不動
+# 【核心類別宣告】核心計算邏輯完全保留您的原始實作，絕不動到任何參數
 # ==============================================================================
+class NaBH4_FuelCell_Twin:
+    def __init__(self):
+        self.R = 8.314
+        self.F = 96485
+        self.A_cell = 200
+        self.n_cells = 45
+        self.i_0 = 0.005
+        self.alpha_a = 0.5
+        self.alpha_c = 0.5
+        self.n_e = 2
+        self.E_eq = 1.229
+        self.R_internal = 0.003
+
+    def simulate_hydrogen_generation(self, flow_rate, concentration, temp, prev_clogging_factor=0.0):
+        base_eta = 0.90 if 25 <= temp <= 35 else 0.82
+        eta = base_eta * (1.0 - prev_clogging_factor)
+        
+        h2_flow_nm3 = 2.37 * flow_rate * (concentration / 100.0) * eta
+        h2_flow_kg = h2_flow_nm3 * 0.0899
+        h2_flow_mol_s = (h2_flow_kg * 1000 / 2.016) / 3600.0
+        
+        nabo2_flow_mol_s = h2_flow_mol_s / 4.0
+        nabo2_flow_kg_h = (nabo2_flow_mol_s * 65.8) * 3600.0 / 1000.0
+        
+        return {
+            "h2_flow_nm3": h2_flow_nm3,
+            "h2_flow_mol_s": h2_flow_mol_s,
+            "nabo2_flow_kg_h": nabo2_flow_kg_h,
+            "actual_eta": eta
+        }
+
+    def solve_butler_volmer_overpotential(self, i_density, T_k):
+        if i_density <= 0:
+            return 0.0
+        eta_guess = 0.05
+        for _ in range(10):
+            f_val = self.i_0 * (np.exp((self.alpha_a * self.n_e * self.F * eta_guess) / (self.R * T_k)) - \
+                    np.exp((-self.alpha_c * self.n_e * self.F * eta_guess) / (self.R * T_k))) - i_density
+            df_val = self.i_0 * ((self.alpha_a * self.n_e * self.F / (self.R * T_k)) * np.exp((self.alpha_a * self.n_e * self.F * eta_guess) / (self.R * T_k)) + \
+                     (self.alpha_c * self.n_e * self.F / (self.R * T_k)) * np.exp((-self.alpha_c * self.n_e * self.F * eta_guess) / (self.R * T_k)))
+            eta_guess = eta_guess - f_val / df_val
+        return max(0.0, eta_guess)
+
+    def simulate_fuel_cell(self, h2_available_mol_s, target_power_w, temp_c):
+        T_k = temp_c + 273.15
+        estimated_voltage = 0.7 * self.n_cells
+        target_current = target_power_w / estimated_voltage if target_power_w > 0 else 0.0
+        max_current_from_h2 = (h2_available_mol_s * self.n_e * self.F) / self.n_cells
+        
+        actual_current = min(target_current, max_current_from_h2 * 0.95)
+        return actual_current
+
+# ⚙️ 實例化模型（此時變數與類別皆已定義，絕對不會發生 NameError）
+twin = NaBH4_FuelCell_Twin()
+
+# ==============================================================================
+# 【覆蓋結束】下方緊接著您原本的「# --- 2. 側邊控制欄與 10 大完整佈置場景 ---」
+# ==============================================================================
+
 # --- 2. 側邊控制欄與 10 大完整佈置場景 ---
 scenario_key = st.sidebar.selectbox("請選擇系統佈署場景", [
     "場景 01：無人機 / 機器人長時間供電",
