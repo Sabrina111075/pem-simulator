@@ -3,13 +3,9 @@ import numpy as np
 import pandas as pd
 import datetime
 import pytz
-# ==========================================
-# 核心變數初始化（防止後續實例化發生 NameError）
-# ==========================================
 if 'flow_rate' not in locals(): flow_rate = 5.0
 if 'concentration' not in locals(): concentration = 20.0
 if 'temperature' not in locals(): temperature = 30.0
-# ==========================================
 
 # --- 頁面基本配置與側邊欄寬度/捲軸優化 (CSS 注入) ---
 st.set_page_config(page_title="NaBH4 氫燃料電池數位雙生系統", layout="wide")
