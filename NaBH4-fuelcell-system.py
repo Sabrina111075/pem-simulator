@@ -57,10 +57,12 @@ st.sidebar.markdown("**副產品副效應管理**")
 
 enable_autowash = st.sidebar.toggle("啟用自動化防結塊反沖洗", value=False)
 
-st.sidebar.header("🎛️ 工藝參數調功與控制")
-flow_rate = st.sidebar.slider("進料流量 Q (L/h)", 1.0, 10.0, 5.0, 0.5)
-concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", 5.0, 25.0, 20.0, 1.0)
-temperature = st.sidebar.slider("反應床操作溫度 (°C)", 10.0, 50.0, 30.0, 1.0)
+st.sidebar.header("⚙️ 工藝參數調功與控制")
+
+# 📢 請將這三行精準替換，加上 min_value, max_value, value, step
+flow_rate = st.sidebar.slider("進料流量 Q (L/h)", min_value=1.0, max_value=10.0, value=5.0, step=0.5)
+concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", min_value=5.0, max_value=25.0, value=20.0, step=1.0)
+temperature = st.sidebar.slider("反應床操作溫度 (°C)", min_value=10.0, max_value=50.0, value=30.0, step=1.0)
 
 if enable_autowash:
     wash_interval = st.sidebar.number_input("反沖洗週期 (分鐘)", min_value=5, max_value=60, value=15, step=5)
