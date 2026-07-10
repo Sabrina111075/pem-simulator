@@ -3,157 +3,243 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import time
 
 # ==========================================
 # 1. 網頁全域配置
 # ==========================================
 st.set_page_config(
-    page_title="NaBH4 數位雙生模擬系統 V2.0",
-    page_icon="🧪",
+    page_title="NaBH4 數位雙生實時模擬系統 V3.0",
+    page_icon="⚡",
     layout="wide"
 )
 
-# 自定義 CSS 優化介面
-st.markdown("""
-    <style>
-    .main { background-color: #f8f9fa; }
-    .stMetric { background-color: #ffffff; border-radius: 10px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    </style>
-    """, unsafe_allow_html=True)
-
 # ==========================================
-# 2. 定義場景與初始數據
+# 2. 10 大應用場景特徵資料庫 (放至側邊欄)
 # ==========================================
 SCENARIOS = {
-    "1. 智能倉儲自動搬運車 (AGV)": {"temp": 45, "conc": 15, "flow": 25, "i0": 0.002, "desc": "中溫環境，要求長效穩定的產氫與電力輸出。"},
-    "2. 長航時工業級無人機 (UAV)": {"temp": 35, "conc": 25, "flow": 40, "i0": 0.0008, "desc": "高濃度燃料以減輕重量，產氫需求隨高度動態調整。"},
-    "3. 偏遠離島微電網後備電源": {"temp": 65, "conc": 12, "flow": 120, "i0": 0.005, "desc": "大型化系統，高流量連續工作，發熱量大。"},
-    "4. 國防可攜式單兵作戰裝備": {"temp": 25, "conc": 20, "flow": 10, "i0": 0.0005, "desc": "低溫環境，啟動慢，需精確控制進料。"},
-    "5. 海洋觀測浮標 (水下載具)": {"temp": 20, "conc": 18, "flow": 15, "i0": 0.0004, "desc": "低溫高壓，反應床溫度控制是關鍵。"},
-    "6. 5G 通訊基地台備援系統": {"temp": 55, "conc": 15, "flow": 80, "i0": 0.003, "desc": "標準定功率輸出，自動補足氫氣壓。"},
-    "7. 野外緊急醫療行動站": {"temp": 40, "conc": 10, "flow": 35, "i0": 0.0015, "desc": "模組化快速更換燃料，著重可靠度。"},
-    "8. 綠能製氫加氫站負載調節": {"temp": 70, "conc": 30, "flow": 250, "i0": 0.008, "desc": "極限輸出，產氫量與發電量需精確聯動。"},
-    "9. 極地科考站維生系統": {"temp": 30, "conc": 22, "flow": 20, "i0": 0.0006, "desc": "低外部溫度，依賴電池廢熱維持反應床運轉。"},
-    "10. 航天輔助動力單元 (APU)": {"temp": 75, "conc": 28, "flow": 150, "i0": 0.010, "desc": "高性能、高壓力控制，系統參數皆在極限區。"}
+    "1. 智能倉儲自動搬運車 (AGV / AMR)": {"temp": 45.0, "conc": 15.0, "flow": 25.0, "i0": 0.0020, "desc": "中溫環境，高頻率起停，要求長效穩定的產氫與電力輸出。"},
+    "2. 長航時工業級無人機 (UAV)": {"temp": 35.0, "conc": 25.0, "flow": 40.0, "i0": 0.0008, "desc": "高濃度燃料以減輕系統重量，產氫需求隨操作高度動態調整。"},
+    "3. 偏遠離島微電網後備電源": {"temp": 65.0, "conc": 12.0, "flow": 120.0, "i0": 0.0050, "desc": "大型化系統，高流量連續工作，熱管理與系統發熱量大。"},
+    "4. 國防可攜式單兵作戰裝備": {"temp": 25.0, "conc": 20.0, "flow": 10.0, "i0": 0.0005, "desc": "低溫環境啟動較慢，動力學受限，需精確控制微步進進料。"},
+    "5. 海洋觀測浮標與水下無人載具": {"temp": 20.0, "conc": 18.0, "flow": 15.0, "i0": 0.0004, "desc": "環境低溫高壓，反應床主動熱控制是維持高效產氫的關鍵。"},
+    "6. 5G 通訊基地台緊急備援系統": {"temp": 55.0, "conc": 15.0, "flow": 80.0, "i0": 0.0030, "desc": "標準定功率長時輸出，系統自動補足動態氫氣壓。"},
+    "7. 野外緊急醫療行動工作站": {"temp": 40.0, "conc": 10.0, "flow": 35.0, "i0": 0.0015, "desc": "模組化快速更換燃料設計，著重電氣防護與極高可靠度。"},
+    "8. 綠能製氫加氫站負載動態調節": {"temp": 70.0, "conc": 30.0, "flow": 250.0, "i0": 0.0080, "desc": "極限大功率輸出，產氫速率與多組電堆發電量需高精確度聯動。"},
+    "9. 極地科考站極端低溫維生系統": {"temp": 30.0, "conc": 22.0, "flow": 20.0, "i0": 0.0006, "desc": "外部零下低溫，高度依賴電池本體放電廢熱進行自加熱循環。"},
+    "10. 航天輔助動力單元 (APU)": {"temp": 75.0, "conc": 28.0, "flow": 150.0, "i0": 0.0100, "desc": "高技術指標操作，催化反應全開，歐姆阻抗降至極限。"}
 }
 
 # ==========================================
-# 3. 側邊欄設計 (Sidebar)
+# 3. 側邊欄 (Sidebar) 介面控制中心
 # ==========================================
 st.sidebar.markdown("## 🏢 前瞻綠能與動力系統實驗室")
 st.sidebar.markdown("---")
 
-# A. 場景選擇
+# A. 全域應用場景選擇
 st.sidebar.subheader("🌟 應用場景選擇")
-selected_scen = st.sidebar.selectbox("切換場景預設值：", list(SCENARIOS.keys()))
+selected_scen = st.sidebar.selectbox("切換場景預設特徵參數：", list(SCENARIOS.keys()))
 scen_default = SCENARIOS[selected_scen]
 
-# B. 工藝參數 (Process Control)
-st.sidebar.subheader("🎮 工藝參數與控制")
-with st.sidebar.expander("進料與熱管理系統", expanded=True):
-    flow_rate = st.slider("進料流量 (mL/min)", 1, 300, scen_default['flow'])
-    concentration = st.slider("NaBH4 溶液濃度 (wt%)", 5, 35, scen_default['conc'])
-    reactor_temp = st.slider("反應床操作溫度 (°C)", 10, 90, scen_default['temp'])
+st.sidebar.markdown("---")
 
-# C. 工程參數 (Electrical Params)
-st.sidebar.subheader("⚙️ 電池核心工程參數")
-with st.sidebar.expander("電化學特性設定"):
-    e_thermo = st.number_input("理論電勢 (V)", 1.20, 1.80, 1.64)
-    i_0 = st.number_input("交換電流密度 i₀ (A/cm²)", 0.0001, 0.05, scen_default['i0'], format="%.4f")
-    r_int = st.slider("內阻 R_int (Ω·cm²)", 0.01, 1.0, 0.15)
-    alpha = st.slider("電荷傳遞係數 α", 0.1, 0.9, 0.5)
+# B. 工藝參數調功與控制
+st.sidebar.subheader("🎮 工藝參數調功與控制")
+with st.sidebar.expander("🛠️ 反應床與流體進料系統", expanded=True):
+    flow_rate = st.slider("進料流量 (mL/min)", 5.0, 300.0, float(scen_default['flow']), 5.0)
+    concentration = st.slider("NaBH4 溶液濃度 (wt%)", 5.0, 35.0, float(scen_default['conc']), 1.0)
+    reactor_temp = st.slider("反應床操作溫度 (°C)", 15.0, 90.0, float(scen_default['temp']), 1.0)
+
+# C. 電化學核心工程參數
+st.sidebar.subheader("⚙️ 電池核心電化學參數")
+with st.sidebar.expander("🔬 內部極化特性設定", expanded=False):
+    e_thermo = st.number_input("理論熱力學電勢 (V)", 1.20, 1.80, 1.64, 0.01)
+    i_0 = st.number_input("交換電流密度 i₀ (A/cm²)", 0.0001, 0.0500, float(scen_default['i0']), format="%.4f")
+    r_int = st.slider("內部歐姆電阻 R_int (Ω·cm²)", 0.01, 1.50, 0.15, 0.01)
+    alpha = st.slider("電荷傳遞係數 α", 0.1, 0.9, 0.5, 0.05)
 
 # ==========================================
-# 4. 核心物理模型 (產氫量與電化學聯動)
+# 4. 數位雙生核心物理與動態聯動模型
 # ==========================================
-def calculate_system():
-    # 1. 產氫速率計算 (簡化動力學模型)
-    # 假設 NaBH4 + 2H2O -> NaBO2 + 4H2
-    # 產氫率正比於 溫度(Arrhenius) * 濃度 * 流量
-    k_temp = np.exp(-4000 / (8.314 * (reactor_temp + 273.15))) * 1.5e6
-    h2_prod_rate = k_temp * (concentration / 100) * (flow_rate / 1000) * 4 # L/min
-    
-    # 2. 聯動：氫氣供應量決定了電池的「極限電流密度 i_limit」
-    # 氫氣越多，擴散損失越小
-    i_limit_dynamic = 0.5 + (h2_prod_rate * 0.8) # 簡單動態關聯
-    
-    # 3. 極化曲線計算
-    i_range = np.linspace(0.001, min(i_limit_dynamic - 0.01, 2.5), 50)
-    v_cell = []
-    p_density = []
-    
-    T_k = reactor_temp + 273.15
-    for i in i_range:
-        # 活化損失 (Butler-Volmer 簡化)
-        eta_act = (8.314 * T_k / (alpha * 8 * 96485)) * np.log(i / i_0)
-        # 歐姆損失
-        eta_ohmic = i * r_int
-        # 濃差損失
-        eta_conc = - (8.314 * T_k / (alpha * 8 * 96485)) * np.log(1 - i / i_limit_dynamic)
+class DBFCDigitalTwin:
+    def __init__(self):
+        self.R = 8.314
+        self.F = 96485
+        self.n = 8 # 8電子反應
         
-        v = e_thermo - eta_act - eta_ohmic - eta_conc
-        v = max(0, v)
-        v_cell.append(v)
-        p_density.append(v * i * 1000) # mW/cm²
+    def calculate_metrics(self, temp, conc, flow):
+        # 依據 Arrhenius 方程式估算反應速率常數
+        k_arrhenius = np.exp(-4200 / (self.R * (temp + 273.15))) * 2.2e6
+        # 產氫量 (L/min) = k * 濃度比 * 流量(L/min) * 4(化學計量數)
+        h2_rate = k_arrhenius * (conc / 100.0) * (flow / 1000.0) * 4.0
+        # 產氫量動態決定電池的極限電流密度 (供應越足，極限電流越高)
+        dynamic_i_limit = 0.4 + (h2_rate * 0.45)
+        return h2_rate, dynamic_i_limit
+
+    def generate_polarization_data(self, e_thermo, i_0, r_int, alpha, temp, i_limit):
+        T_k = temp + 273.15
+        # 建立安全的電流密度掃描區間，絕不超過或等於極限電流，防止 log(0) 崩潰
+        i_scan = np.linspace(0.001, min(i_limit * 0.98, 2.5), 60)
         
-    return h2_prod_rate, i_limit_dynamic, i_range*1000, v_cell, p_density
+        v_cell_list = []
+        p_density_list = []
+        eta_act_list = []
+        eta_ohmic_list = []
+        eta_conc_list = []
+        
+        for i in i_scan:
+            # 活化過電勢 (Tafel 安全邊界防錯處理)
+            eta_act = (self.R * T_k / (alpha * self.n * self.F)) * np.log(max(i / i_0, 1.001))
+            # 歐姆損失
+            eta_ohmic = i * r_int
+            # 濃差損失 (加上防爆護欄，避免 log 出現負數或零)
+            ratio = min(i / i_limit, 0.999)
+            eta_conc = - (self.R * T_k / (alpha * self.n * self.F)) * np.log(1.0 - ratio)
+            
+            v_cell = e_thermo - eta_act - eta_ohmic - eta_conc
+            if v_cell < 0: 
+                v_cell = 0.0
+                
+            v_cell_list.append(v_cell)
+            p_density_list.append(v_cell * i * 1000.0) # mW/cm²
+            eta_act_list.append(eta_act)
+            eta_ohmic_list.append(eta_ohmic)
+            eta_conc_list.append(eta_conc)
+            
+        return pd.DataFrame({
+            'Current_Density': i_scan * 1000.0, # mA/cm²
+            'Voltage': v_cell_list,
+            'Power': p_density_list,
+            'Activation': eta_act_list,
+            'Ohmic': eta_ohmic_list,
+            'Concentration': eta_conc_list
+        })
 
-h2_rate, i_lim, i_plot, v_plot, p_plot = calculate_system()
+twin = DBFCDigitalTwin()
+h2_rate, i_limit_dynamic = twin.calculate_metrics(reactor_temp, concentration, flow_rate)
+df_polar = twin.generate_polarization_data(e_thermo, i_0, r_int, alpha, reactor_temp, i_limit_dynamic)
 
 # ==========================================
-# 5. 主畫面呈現
+# 5. 主網頁可視化面板
 # ==========================================
-st.title("⚡ NaBH₄ 燃料電池數位雙生控制台")
-st.info(f"📋 **場景說明：** {scen_default['desc']}")
+st.title("🧪 NaBH₄ 燃料電池數位雙生智慧監控系統")
+st.caption(f"🤖 目前智慧代理整合情境：{selected_scen} | {scen_default['desc']}")
 
-# A. 資料方塊 (Metrics)
+# 實時資料方塊 (Linked Data Blocks)
+st.markdown("### 📡 實時數據連動監測站")
 m1, m2, m3, m4 = st.columns(4)
-m1.metric("產氫速率 (H₂)", f"{h2_rate:.3f} L/min", delta="即時流量")
-m2.metric("極限電流密度", f"{i_lim:.2f} A/cm²", delta="氫氣聯動")
-m3.metric("最大功率點", f"{max(p_plot):.1f} mW/cm²")
-m4.metric("反應床效率", f"{min(98.0, 70 + reactor_temp/3):.1f} %")
+m1.metric("📊 催化反應床產氫速率", f"{h2_rate:.3f} L/min", delta=f"流量影響: +{flow_rate/10:.1f}%")
+m2.metric("🔋 動態極限電流密度 (i_lim)", f"{i_limit_dynamic:.2f} A/cm²", delta="與產氫量實時聯動")
+m3.metric("🎯 系統最大輸出功率面", f"{df_polar['Power'].max():.1f} mW/cm²")
+m4.metric("📈 反應床預估轉化效率", f"{min(99.5, 65.0 + reactor_temp*0.38 + concentration*0.2):.1f} %")
 
 st.markdown("---")
 
-# B. 圖表分佈
-col_left, col_right = st.columns([1, 1])
+# 建立分頁標籤 (Tabs) 優化版面展示
+tab1, tab2, tab3 = st.tabs([
+    "📈 電化學動力學分析 (極化曲線)", 
+    "⏱️ 瞬態功率動態響應追蹤", 
+    "🧬 數位雙生實時數據流水線"
+])
 
-with col_left:
-    # 1. 產氫聯動分析圖
-    st.subheader("💧 反應床產氫影響分析")
-    # 生成多維度聯動數據
-    temps = np.linspace(20, 80, 10)
-    # 模擬固定濃度與流量下，溫度對產氫的影響
-    h2_impact = [np.exp(-4000 / (8.314 * (t + 273.15))) * 1.5e6 * (concentration / 100) * (flow_rate / 1000) * 4 for t in temps]
+# ---- TAB 1: 極化曲線與動力學分解 ----
+with tab1:
+    col1, col2 = st.columns(2)
     
-    fig_h2 = go.Figure()
-    fig_h2.add_trace(go.Scatter(x=temps, y=h2_impact, mode='lines+markers', name='產氫趨勢', line=dict(color='#00d1b2', width=4)))
-    fig_h2.add_vline(x=reactor_temp, line_dash="dash", line_color="red", annotation_text="目前操作點")
-    fig_h2.update_layout(title="反應溫度 vs 產氫速率", xaxis_title="溫度 (°C)", yaxis_title="H2 Rate (L/min)", height=400)
-    st.plotly_chart(fig_h2, use_container_width=True)
+    with col1:
+        st.subheader("⚡ 電池電氣特性聯動曲線 (V-I / P-I)")
+        # 使用官方特製的輔助雙軸函數，完全杜絕 ValueError 崩潰問題
+        fig_iv = make_subplots(specs=[[{"secondary_y": True}]])
+        fig_iv.add_trace(go.Scatter(x=df_polar['Current_Density'], y=df_polar['Voltage'], name="單體電勢 (V)", line=dict(color='royalblue', width=3.5)), secondary_y=False)
+        fig_iv.add_trace(go.Scatter(x=df_polar['Current_Density'], y=df_polar['Power'], name="功率密度 (mW/cm²)", line=dict(color='orange', width=3.5, dash='dash')), secondary_y=True)
+        
+        fig_iv.update_layout(
+            xaxis_title="電流密度 Current Density (mA/cm²)",
+            hovermode="x unified",
+            legend=dict(x=0.05, y=0.1),
+            margin=dict(l=20, r=20, t=30, b=20)
+        )
+        fig_iv.update_yaxes(title_text="電勢 Voltage (V)", titlefont=dict(color="royalblue"), tickfont=dict(color="royalblue"), secondary_y=False)
+        fig_iv.update_yaxes(title_text="功率密度 Power (mW/cm²)", titlefont=dict(color="orange"), tickfont=dict(color="orange"), secondary_y=True)
+        st.plotly_chart(fig_iv, use_container_width=True)
+        
+    with col2:
+        st.subheader("📉 三大核心過電勢(損失)動態拆解")
+        fig_loss = go.Figure()
+        fig_loss.add_trace(go.Scatter(x=df_polar['Current_Density'], y=df_polar['Activation'], name="活化損失 (Activation)", line=dict(color='#ff9f43', width=2)))
+        fig_loss.add_trace(go.Scatter(x=df_polar['Current_Density'], y=df_polar['Ohmic'], name="歐姆損失 (Ohmic)", line=dict(color='#10ac84', width=2, dash='dot')))
+        fig_loss.add_trace(go.Scatter(x=df_polar['Current_Density'], y=df_polar['Concentration'], name="濃差損失 (Concentration)", line=dict(color='#5f27cd', width=2, dash='dashdot')))
+        
+        fig_loss.update_layout(
+            xaxis_title="電流密度 (mA/cm²)",
+            yaxis_title="過電勢損失 Overpotential (V)",
+            hovermode="x unified",
+            legend=dict(x=0.05, y=0.85),
+            margin=dict(l=20, r=20, t=30, b=20)
+        )
+        st.plotly_chart(fig_loss, use_container_width=True)
 
-with col_right:
-    # 2. 電池性能極化圖
-    st.subheader("📈 電池極化性能 (V-I)")
-    fig_iv = go.Figure()
-    fig_iv.add_trace(go.Scatter(x=i_plot, y=v_plot, name="電壓 (V)", line=dict(color='royalblue', width=3)))
-    fig_iv.add_trace(go.Scatter(x=i_plot, y=p_plot, name="功率 (mW/cm²)", yaxis="y2", line=dict(color='orange', width=3)))
+# ---- TAB 2: 瞬態功率動態響應追蹤 ----
+with tab2:
+    st.subheader("⏱️ 負載階躍變化下的瞬態響應 (Transient Response)")
+    st.markdown("模擬工藝參數變動時，系統從 **操作點A** 階躍切換至 **操作點B** 的氫氣建立時間與電壓回復動態。")
     
-    fig_iv.update_layout(
-        title="電氣特性聯動曲線",
-        xaxis_title="電流密度 (mA/cm²)",
-        yaxis=dict(title="電壓 (V)", titlefont=dict(color="royalblue"), tickfont=dict(color="royalblue")),
-        yaxis2=dict(title="功率密度 (mW/cm²)", titlefont=dict(color="orange"), tickfont=dict(color="orange"), anchor="x", overlaying="y", side="right"),
-        height=400,
-        legend=dict(x=0.1, y=0.1),
-        hovermode="x unified"
+    # 建立瞬態時間序列數據
+    t_steps = np.linspace(0, 30, 100)
+    # 建立動態目標功率線
+    target_power = np.where(t_steps < 10, 200, np.where(t_steps < 20, 450, 300))
+    # 模擬一階延遲(反應床滯後效應)
+    actual_power = []
+    current_p = 200.0
+    for i, tp in enumerate(target_power):
+        # 反應床溫度越高，滯後時間越短(響應越快)
+        tau = max(1.0, 5.0 - (reactor_temp / 20.0))
+        current_p += (tp - current_p) * (0.3 / tau)
+        actual_power.append(current_p * (h2_rate / (h2_rate + 0.1))) # 受限於實際產氫量
+        
+    fig_transient = go.Figure()
+    fig_transient.add_trace(go.Scatter(x=t_steps, y=target_power, name="負載需求功率 (Target)", line=dict(color='#dee2e6', width=2, dash='dash')))
+    fig_transient.add_trace(go.Scatter(x=t_steps, y=actual_power, name="數位雙生實時輸出 (Actual)", line=dict(color='#ee5253', width=3)))
+    
+    fig_transient.update_layout(
+        xaxis_title="模擬時間 Time (Seconds)",
+        yaxis_title="系統輸出功率 (W)",
+        hovermode="x unified",
+        height=400
     )
-    st.plotly_chart(fig_iv, use_container_width=True)
+    st.plotly_chart(fig_transient, use_container_width=True)
 
-# C. 參數解釋表
-with st.expander("📚 系統熱力學與流體力學參數說明"):
-    st.write("""
-    - **產氫速率 (L/min)**: 基於 Arrhenius 方程式，反應速度隨溫度上升呈指數級增加。
-    - **進料流量**: 影響 NaBH4 溶液與催化劑反應床的接觸時間。
-    - **聯動機制**: 當產氫量不足時，系統會自動下調『極限電流密度』，模擬氫氣供應不足導致的濃差極化現象。
-    """)
+# ---- TAB 3: 數位雙生實時數據流水線 ----
+with tab3:
+    st.subheader("🧬 虛實融合虛擬感測器數據串流 (Virtual Telemetry Pipeline)")
+    
+    # 動態產生與工藝參數高度相關的實時串流數據
+    np.random.seed(int(time.time()) % 100)
+    pipeline_data = {
+        "虛擬感測器節點 (Telemetry Node)": [
+            "陽極進料控制閥反饋 (Anode Inlet Valve %)",
+            "反應床氫氣出口壓力 (Reactor H2 Pressure, bar)",
+            "電堆陰極流道 pH 值 (Cathode pH Sensor)",
+            "燃料循環泵內部功耗 (Circulation Pump Power, W)",
+            "散熱風扇動態 PWM 輸出 (Cooling Fan PWM)"
+        ],
+        "實時量測值 (Live Value)": [
+            f"{min(100.0, flow_rate / 3.0 + np.random.normal(0, 0.5)):.2f} %",
+            f"{1.0 + (h2_rate * 0.15) + np.random.normal(0, 0.02):.3f} bar",
+            f"{13.2 - (concentration * 0.04) + np.random.normal(0, 0.05):.2f}",
+            f"{12.5 + (flow_rate * 0.08):.1f} W",
+            f"{max(10, min(100, int(reactor_temp * 1.1)))} %"
+        ],
+        "健康度狀態 (Health Status)": [
+            "🟢 正常運作中",
+            "🟢 壓力穩定" if h2_rate > 0.5 else "🟡 壓力偏低",
+            "🟢 鹼性特徵正常",
+            "🟢 功耗符合預期",
+            "🟢 主動散熱跟隨中" if reactor_temp < 75 else "🔥 高溫警戒中"
+        ]
+    }
+    
+    df_pipeline = pd.DataFrame(pipeline_data)
+    st.table(df_pipeline)
+    
+    st.success("🔄 數位雙生流水線已同步鏈接！當前工藝參數已 100% 動態映射至上方虛擬儀表板。")
