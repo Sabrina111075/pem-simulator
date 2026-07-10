@@ -123,14 +123,30 @@ class NaBH4_FuelCell_Twin:
             eta_guess = eta_guess - f_val / df_val
         return max(0.0, eta_guess)
 
-    def simulate_fuel_cell(self, h2_available_mol_s, target_power_w, temp_c):
+def simulate_fuel_cell(self, h2_available_mol_s, target_power_w, temp_c):
         T_k = temp_c + 273.15
         estimated_voltage = 0.7 * self.n_cells
         target_current = target_power_w / estimated_voltage if target_power_w > 0 else 0.0
         max_current_from_h2 = (h2_available_mol_s * self.n_e * self.F) / self.n_cells
         
+        # 計算實際電流
         actual_current = min(target_current, max_current_from_h2 * 0.95)
-        return actual_current
+        
+        # 💡 補齊後半段需要的電化學輸出字典，對接第 206 行
+        i_density = actual_current / self.A_cell if actual_current > 0 else 0.0
+        eta_act = self.solve_butler_volmer_overpotential(i_density, T_k)
+        
+        # 單電池電壓與總堆電壓計算
+        v_cell = self.E_eq - eta_act - (actual_current * self.R_internal) if actual_current > 0 else self.E_eq
+        v_stack = v_cell * self.n_cells
+        output_power_w = v_stack * actual_current
+        
+        return {
+            "current": actual_current,
+            "v_cell": v_cell,
+            "v_stack": v_stack,
+            "output_power_w": output_power_w  # 🎯 讓第 206 行順利抓到數值！
+        }
 
 # ⚙️ 實例化模型（此時變數與類別皆已定義，絕對不會發生 NameError）
 twin = NaBH4_FuelCell_Twin()
