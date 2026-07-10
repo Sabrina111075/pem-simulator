@@ -57,6 +57,11 @@ st.sidebar.markdown("**副產品副效應管理**")
 
 enable_autowash = st.sidebar.toggle("啟用自動化防結塊反沖洗", value=False)
 
+st.sidebar.header("🎛️ 工藝參數調功與控制")
+flow_rate = st.sidebar.slider("進料流量 Q (L/h)", 1.0, 10.0, 5.0, 0.5)
+concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", 5.0, 25.0, 20.0, 1.0)
+temperature = st.sidebar.slider("反應床操作溫度 (°C)", 10.0, 50.0, 30.0, 1.0)
+
 if enable_autowash:
     wash_interval = st.sidebar.number_input("反沖洗週期 (分鐘)", min_value=5, max_value=60, value=15, step=5)
 else:
@@ -67,15 +72,10 @@ else:
 # 底部邊界線，完美銜接您原本下方的「模擬應用場景負載」
 st.sidebar.markdown("<hr style='border: 0; border-top: 1px solid #E5E7EB; margin-top: 20px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
-# --- 2. 側邊控制欄與 10 大完整佈置場景 ---
-st.sidebar.header("🎛️ 工藝參數調功與控制")
-flow_rate = st.sidebar.slider("進料流量 Q (L/h)", 1.0, 10.0, 5.0, 0.5)
-concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", 5.0, 25.0, 20.0, 1.0)
-temperature = st.sidebar.slider("反應床操作溫度 (°C)", 10.0, 50.0, 30.0, 1.0)
-
 st.sidebar.write("---")
 st.sidebar.header("🎯 模擬應用場景負載")
 
+# --- 2. 側邊控制欄與 10 大完整佈置場景 ---
 scenario_key = st.sidebar.selectbox("請選擇系統佈署場景", [
     "場景 01：無人機 / 機器人長時間供電",
     "場景 02：通訊基地台備援電源",
