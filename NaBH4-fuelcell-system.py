@@ -92,9 +92,22 @@ class NaBH4_FuelCell_Twin:
         self.E_eq = 1.229
         self.R_internal = 0.003
 
-    def simulate_hydrogen_generation(self, flow_rate, concentration, temp, prev_clogging_factor=0.0):
+def simulate_hydrogen_generation(self, flow_rate, concentration, temp, prev_clogging_factor=0.0, catalyst_type="Fe-Co-Ni 催化劑", system_pressure=1.0):
+        # 1. 根據催化劑體系賦予不同的效率倍率 (貴金屬效益較高)
+        cat_multiplier = 1.0
+        if "Ru-based" in catalyst_type:
+            cat_multiplier = 1.08
+        elif "Pt-based" in catalyst_type:
+            cat_multiplier = 1.12
+            
+        # 2. 根據壓力微調效率 (操作壓力微幅增加有助於氣體產出穩定，過高則略降)
+        pressure_effect = 1.0 + (system_pressure - 1.0) * 0.015 if system_pressure <= 5.0 else 1.06 - (system_pressure - 5.0) * 0.01
+        
         base_eta = 0.90 if 25 <= temp <= 35 else 0.82
-        eta = base_eta * (1.0 - prev_clogging_factor)
+        # 統合催化劑與壓力效應
+        eta = base_eta * (1.0 - prev_clogging_factor) * cat_multiplier * pressure_effect
+        # 限制最高效率不超過 98%
+        eta = min(0.98, eta)
         
         h2_flow_nm3 = 2.37 * flow_rate * (concentration / 100.0) * eta
         h2_flow_kg = h2_flow_nm3 * 0.0899
@@ -208,12 +221,16 @@ else:
 
 # --- 3. 模擬計算核心執行 ---
 twin = NaBH4_FuelCell_Twin()
-clogging_factor = 0.0
-results = []
-
-for t, target_w in enumerate(base_load):
-    h2_res = twin.simulate_hydrogen_generation(flow_rate, concentration, temperature, clogging_factor)
-    fc_res = twin.simulate_fuel_cell(h2_res["h2_flow_mol_s"], target_w, temperature)
+# 建立與前端側邊欄新參數（催化劑、壓力）的真實物理連動
+        clogging_factor = 0.0
+        gen_res = twin.simulate_hydrogen_generation(
+            flow_rate, 
+            concentration, 
+            temperature, 
+            clogging_factor, 
+            catalyst_type, 
+            system_pressure
+        )
     
     if h2_res["nabo2_flow_kg_h"] > 0.4:
         clogging_factor += 0.012  
