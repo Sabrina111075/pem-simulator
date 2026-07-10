@@ -25,8 +25,10 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+st.write("---")
+
 # ==============================================================================
-# 【一次性覆蓋區塊】左側側邊欄：Crystal Machine 品牌與工藝參數控制 (含原有與擴充)
+# 【全域統合區塊】左側側邊欄：從品牌、高級控制到工藝參數（必須在 class 實例化前宣告）
 # ==============================================================================
 
 # 1. 側邊欄最上方：公司品牌名稱
@@ -41,31 +43,19 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-# 3. 高級控制與優化參數 (新增的擴充控制項)
-st.sidebar.markdown("<hr style='border: 0; border-top: 1px dashed #E5E7EB; margin-top: 15px; margin-bottom: 15px;'>", unsafe_allow_html=True)
+# 2. 高級控制與優化參數
 st.sidebar.markdown("**高級控制與優化參數**")
-
-# 催化劑選擇
 catalyst_type = st.sidebar.selectbox(
     "催化劑體系選擇",
     ["Fe-Co-Ni 催化劑", "Ru-based 催化劑", "Pt-based 催化劑"],
     index=0
 )
-
-# 反應床壓力
 system_pressure = st.sidebar.slider("反應床操作壓力 (bar)", min_value=1.0, max_value=10.0, value=1.0, step=0.2)
 
-# 4. 副產品副效應管理 (針對 NaBO₂ 累積警報的控制項)
+# 3. 副產品副效應管理
 st.sidebar.markdown("<hr style='border: 0; border-top: 1px dashed #E5E7EB; margin-top: 15px; margin-bottom: 15px;'>", unsafe_allow_html=True)
 st.sidebar.markdown("**副產品副效應管理**")
-
 enable_autowash = st.sidebar.toggle("啟用自動化防結塊反沖洗", value=False)
-
-st.sidebar.header("⚙️ 工藝參數調功與控制")
-
-flow_rate = st.sidebar.slider("進料流量 Q (L/h)", min_value=1.0, max_value=10.0, value=float(flow_rate), step=0.5)
-concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", min_value=5.0, max_value=25.0, value=float(concentration), step=1.0)
-temperature = st.sidebar.slider("反應床操作溫度 (°C)", min_value=10.0, max_value=50.0, value=float(temperature), step=1.0)
 
 if enable_autowash:
     wash_interval = st.sidebar.number_input("反沖洗週期 (分鐘)", min_value=5, max_value=60, value=15, step=5)
@@ -74,12 +64,19 @@ else:
     if trigger_wash:
         st.sidebar.success("已向模擬核心發送反沖洗指令！")
 
-# 底部邊界線，完美銜接您原本下方的「模擬應用場景負載」
+# 4. 工藝參數調功與控制（三大基礎變數，提早在這裡宣告指派！）
+st.sidebar.markdown("<hr style='border: 0; border-top: 1px dashed #E5E7EB; margin-top: 15px; margin-bottom: 15px;'>", unsafe_allow_html=True)
+st.sidebar.header("⚙️ 工藝參數調功與控制")
+flow_rate = st.sidebar.slider("進料流量 Q (L/h)", min_value=1.0, max_value=10.0, value=5.0, step=0.5)
+concentration = st.sidebar.slider("NaBH₄ 溶液濃度 (wt%)", min_value=5.0, max_value=25.0, value=20.0, step=1.0)
+temperature = st.sidebar.slider("反應床操作溫度 (°C)", min_value=10.0, max_value=50.0, value=30.0, step=1.0)
+
+# 底部邊界線，準備對接下方的完整佈置場景
 st.sidebar.markdown("<hr style='border: 0; border-top: 1px solid #E5E7EB; margin-top: 20px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
-st.sidebar.write("---")
-st.sidebar.header("🎯 模擬應用場景負載")
-
+# ==============================================================================
+# 【宣告結束】以下原本後半段的 class 定義、twin = NaBH4_FuelCell_Twin() 與 10 大場景完全不動
+# ==============================================================================
 # --- 2. 側邊控制欄與 10 大完整佈置場景 ---
 scenario_key = st.sidebar.selectbox("請選擇系統佈署場景", [
     "場景 01：無人機 / 機器人長時間供電",
