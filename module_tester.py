@@ -1,5 +1,6 @@
 ﻿import time
 import json
+import io
 import numpy as np
 import pandas as pd
 from datetime import datetime, timezone, timedelta
@@ -21,10 +22,9 @@ st.set_page_config(
 # 2. 核心評分與數據處理類別 (KPI Engine)
 # ==========================================
 class SupplyChainModuleTester:
-    def __init__(self, module_name, module_type, vendor=""):
+    def __init__(self, module_name, module_type):
         self.module_name = module_name
         self.module_type = module_type
-        self.vendor = vendor
         self.raw_data = None
         self.kpi_results = {}
 
@@ -64,14 +64,12 @@ class SupplyChainModuleTester:
 
         total_base_score = score_latency + score_stability + score_power + score_integration
 
-        # 使用原生 UTC+8 時間
         now_tw = datetime.now(TAIWAN_TZ).strftime("%Y-%m-%d %H:%M:%S (UTC+8)")
 
         self.kpi_results = {
             "platform": "Crystal Machine OS",
             "module_name": self.module_name,
             "module_type": self.module_type,
-            "vendor": self.vendor,
             "test_time": now_tw,
             "metrics": {
                 "avg_latency_ms": round(float(avg_latency), 2),
@@ -101,7 +99,6 @@ def main():
     st.sidebar.header("⚙️ 模組參數設定")
     module_name = st.sidebar.text_input("模組名稱 / 型號", "RGBD_Camera_X1")
     module_type = st.sidebar.selectbox("模組類別", ["感測模組", "夾爪/靈巧手", "馬達/關節", "控制/通訊", "AI運算", "電源/BMS"])
-    vendor = st.sidebar.text_input("供應商名稱", "Crystal Tech")
     samples = st.sidebar.slider("採集點數 (Samples)", 50, 500, 150)
 
     # 主畫面標題與台灣標準時間 (UTC+8)
@@ -112,7 +109,7 @@ def main():
     st.caption("具身智能 LingBot-VLA 2.0 前置：模組本體性能評估系統 (50分制)")
     st.divider()
 
-    tester = SupplyChainModuleTester(module_name, module_type, vendor)
+    tester = SupplyChainModuleTester(module_name, module_type)
 
     # 觸發測試按鈕
     if st.button("🚀 開始模組自動化測試 (Run Test)", type="primary"):
@@ -131,7 +128,7 @@ def main():
 
         st.divider()
 
-        # 雙欄版面：圖表與 JSON 資料卡
+        # 雙欄版面：圖表與 Excel 資料表
         left_col, right_col = st.columns([3, 2])
 
         with left_col:
@@ -139,15 +136,54 @@ def main():
             st.line_chart(df[['voltage_v', 'latency_ms']])
 
         with right_col:
-            st.subheader("📋 標準模組 JSON 資料卡")
-            st.json(results)
+            st.subheader("📊 標準模組數據卡 (Excel格式)")
             
-            json_str = json.dumps(results, ensure_ascii=False, indent=4)
+            # 將結果攤平成 Pandas DataFrame 方便 Excel 檢視
+            flat_data = {
+                "項目 (Item)": [
+                    "開發平台 (Platform)",
+                    "模組名稱 (Module Name)",
+                    "模組類別 (Module Type)",
+                    "測試時間 (Test Time)",
+                    "平均延遲 (Avg Latency)",
+                    "波形雜訊/標準差 (Voltage Std)",
+                    "平均功耗 (Avg Power)",
+                    "延遲得分 (Latency Score)",
+                    "穩定度得分 (Stability Score)",
+                    "功耗得分 (Power Score)",
+                    "系統整合得分 (Integration Score)",
+                    "本體總得分 (Total Score / 50)"
+                ],
+                "數值 (Value)": [
+                    results["platform"],
+                    results["module_name"],
+                    results["module_type"],
+                    results["test_time"],
+                    f"{results['metrics']['avg_latency_ms']} ms",
+                    results['metrics']['voltage_std'],
+                    f"{results['metrics']['avg_power_w']} W",
+                    f"{results['scores']['latency_score']} / 15",
+                    f"{results['scores']['stability_score']} / 15",
+                    f"{results['scores']['power_score']} / 10",
+                    f"{results['scores']['integration_score']} / 10",
+                    f"{results['scores']['total_base_score_50']} / 50"
+                ]
+            }
+            summary_df = pd.DataFrame(flat_data)
+            
+            # 畫面上直接預覽表格
+            st.dataframe(summary_df, hide_index=True, use_container_width=True)
+            
+            # 轉換為帶 BOM 的 CSV/Excel 相容檔（解決中文字開檔亂碼問題）
+            csv_buffer = io.BytesIO()
+            # 加入 UTF-8-SIG 標頭，確保 Windows Excel 開啟不會亂碼
+            csv_data = summary_df.to_csv(index=False, encoding='utf-8-sig')
+            
             st.download_button(
-                label="📥 下載 JSON 資料卡",
-                data=json_str,
-                file_name=f"CrystalMachine_DataCard_{module_name}.json",
-                mime="application/json"
+                label="📥 下載 Excel / CSV 標準測試資料卡",
+                data=csv_data,
+                file_name=f"CrystalMachine_DataCard_{module_name}.csv",
+                mime="text/csv"
             )
 
 if __name__ == "__main__":
