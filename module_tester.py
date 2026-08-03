@@ -2,9 +2,11 @@
 import json
 import numpy as np
 import pandas as pd
-from datetime import datetime
-import pytz
+from datetime import datetime, timezone, timedelta
 import streamlit as st
+
+# 定義台灣標準時間 (UTC+8)
+TAIWAN_TZ = timezone(timedelta(hours=8))
 
 # ==========================================
 # 1. 頁面基本配置 (Streamlit UI)
@@ -62,9 +64,8 @@ class SupplyChainModuleTester:
 
         total_base_score = score_latency + score_stability + score_power + score_integration
 
-        # 取得台灣時間標籤
-        tw_tz = pytz.timezone('Asia/Taipei')
-        now_tw = datetime.now(tw_tz).strftime("%Y-%m-%d %H:%M:%S (UTC+8)")
+        # 使用原生 UTC+8 時間
+        now_tw = datetime.now(TAIWAN_TZ).strftime("%Y-%m-%d %H:%M:%S (UTC+8)")
 
         self.kpi_results = {
             "platform": "Crystal Machine OS",
@@ -106,9 +107,7 @@ def main():
     # 主畫面標題與台灣標準時間 (UTC+8)
     st.title("🤖 供應鏈模組標準測試平台 (MVP)")
     
-    tw_tz = pytz.timezone('Asia/Taipei')
-    tw_time_str = datetime.now(tw_tz).strftime("%Y-%m-%d %H:%M:%S (Asia/Taipei)")
-    
+    tw_time_str = datetime.now(TAIWAN_TZ).strftime("%Y-%m-%d %H:%M:%S (Asia/Taipei)")
     st.markdown(f"**系統測試時間（台灣標準時間）：** `{tw_time_str}`")
     st.caption("具身智能 LingBot-VLA 2.0 前置：模組本體性能評估系統 (50分制)")
     st.divider()
