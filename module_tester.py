@@ -18,7 +18,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 注入輕量 CSS，修復左側邊欄底部被卡住、無法拉到底的問題
+# 注入輕量 CSS，修復左側邊欄底部被卡住問題
 st.markdown("""
     <style>
         [data-testid="stSidebarUserContent"] {
@@ -27,21 +27,38 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 預設支援的測試模組清單對照表
-PRESET_MODULES = {
-    "RGBD_Camera_X1 (深度攝影機)": {"name": "RGBD_Camera_X1", "type": "感測模組"},
-    "LiDAR_3D_P1 (3D光學雷達)": {"name": "LiDAR_3D_P1", "type": "感測模組"},
-    "Joint_Motor_42 (關節伺服馬達)": {"name": "Joint_Motor_42", "type": "馬達/關節"},
-    "Servo_Actuator_80 (高扭力致動器)": {"name": "Servo_Actuator_80", "type": "馬達/關節"},
-    "Dexterous_Hand_G1 (靈巧手模組)": {"name": "Dexterous_Hand_G1", "type": "夾爪/靈巧手"},
-    "Parallel_Gripper_V2 (二指平行夾爪)": {"name": "Parallel_Gripper_V2", "type": "夾爪/靈巧手"},
-    "Jetson_Orin_Nano (AI運算板)": {"name": "Jetson_Orin_Nano", "type": "AI運算"},
-    "Edge_AI_Accelerator_A1 (邊緣加速卡)": {"name": "Edge_AI_Accelerator_A1", "type": "AI運算"},
-    "CAN_Bus_Gateway_C1 (CAN通訊網關)": {"name": "CAN_Bus_Gateway_C1", "type": "控制/通訊"},
-    "EtherCAT_Master_E1 (EtherCAT控制器)": {"name": "EtherCAT_Master_E1", "type": "控制/通訊"},
-    "BMS_Module_24V (24V電池管理)": {"name": "BMS_Module_24V", "type": "電源/BMS"},
-    "Power_Board_48V (48V主電源板)": {"name": "Power_Board_48V", "type": "電源/BMS"},
-    "✏️ 自訂模組 (Custom Input)": {"name": "", "type": "感測模組"}
+# 兩級聯動資料結構：6 大類別 -> 具體模組對照表
+CATEGORY_MODULE_MAP = {
+    "📷 感測模組": {
+        "RGBD_Camera_X1 (深度攝影機)": "RGBD_Camera_X1",
+        "LiDAR_3D_P1 (3D光學雷達)": "LiDAR_3D_P1",
+        "✏️ 自訂感測模組": "CUSTOM"
+    },
+    "🦾 馬達 / 關節": {
+        "Joint_Motor_42 (關節伺服馬達)": "Joint_Motor_42",
+        "Servo_Actuator_80 (高扭力致動器)": "Servo_Actuator_80",
+        "✏️ 自訂馬達/關節": "CUSTOM"
+    },
+    "🖐️ 夾爪 / 靈巧手": {
+        "Dexterous_Hand_G1 (靈巧手模組)": "Dexterous_Hand_G1",
+        "Parallel_Gripper_V2 (二指平行夾爪)": "Parallel_Gripper_V2",
+        "✏️ 自訂夾爪/靈巧手": "CUSTOM"
+    },
+    "🧠 AI 運算": {
+        "Jetson_Orin_Nano (AI運算板)": "Jetson_Orin_Nano",
+        "Edge_AI_Accelerator_A1 (邊緣加速卡)": "Edge_AI_Accelerator_A1",
+        "✏️ 自訂AI運算單元": "CUSTOM"
+    },
+    "📡 控制 / 通訊": {
+        "CAN_Bus_Gateway_C1 (CAN通訊網關)": "CAN_Bus_Gateway_C1",
+        "EtherCAT_Master_E1 (EtherCAT控制器)": "EtherCAT_Master_E1",
+        "✏️ 自訂控制/通訊模組": "CUSTOM"
+    },
+    "⚡ 電源 / BMS": {
+        "BMS_Module_24V (24V電池管理)": "BMS_Module_24V",
+        "Power_Board_48V (48V主電源板)": "Power_Board_48V",
+        "✏️ 自訂電源模組": "CUSTOM"
+    }
 }
 
 # ==========================================
@@ -123,23 +140,31 @@ def main():
     
     st.sidebar.header("⚙️ 模組參數設定")
     
-    # 快捷選擇預設模組
-    selected_preset = st.sidebar.selectbox(
-        "選擇測試模組範本",
-        list(PRESET_MODULES.keys())
+    # 兩級聯動區塊 1：選擇 6 大類別
+    selected_category = st.sidebar.selectbox(
+        "1. 選擇模組類別 (Category)",
+        list(CATEGORY_MODULE_MAP.keys())
     )
     
-    preset_info = PRESET_MODULES[selected_preset]
-    
-    # 若選擇自訂，才允許自由輸入名稱
-    if selected_preset == "✏️ 自訂模組 (Custom Input)":
-        module_name = st.sidebar.text_input("輸入模組名稱 / 型號", "Custom_Sensor_01")
-        module_type = st.sidebar.selectbox("模組類別", ["感測模組", "夾爪/靈巧手", "馬達/關節", "控制/通訊", "AI運算", "電源/BMS"])
-    else:
-        module_name = preset_info["name"]
-        module_type = preset_info["type"]
-        st.sidebar.info(f"**模組型號：** `{module_name}`\n\n**所屬類別：** `{module_type}`")
+    # 清理類別名稱（移除圖示），用於資料寫入
+    clean_category_type = selected_category.split(" ")[1] if " " in selected_category else selected_category
 
+    # 兩級聯動區塊 2：根據類別動態載入該類別的模組
+    available_modules = CATEGORY_MODULE_MAP[selected_category]
+    selected_module_label = st.sidebar.selectbox(
+        "2. 選擇測試模組 (Module)",
+        list(available_modules.keys())
+    )
+    
+    # 判斷是否選擇自訂
+    module_code = available_modules[selected_module_label]
+    if module_code == "CUSTOM":
+        module_name = st.sidebar.text_input("輸入自訂模組名稱 / 型號", "Custom_Device_01")
+    else:
+        module_name = module_code
+        st.sidebar.info(f"**選定型號：** `{module_name}`\n\n**所屬類別：** `{clean_category_type}`")
+
+    module_type = clean_category_type
     samples = st.sidebar.slider("採集點數 (Samples)", 50, 500, 150)
 
     # 主畫面標題與台灣標準時間 (UTC+8)
