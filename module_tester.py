@@ -3,13 +3,14 @@ import json
 import numpy as np
 import pandas as pd
 from datetime import datetime
+import pytz
 import streamlit as st
 
 # ==========================================
 # 1. 頁面基本配置 (Streamlit UI)
 # ==========================================
 st.set_page_config(
-    page_title="供應鏈模組標準測試平台",
+    page_title="Crystal Machine | 供應鏈模組標準測試平台",
     page_icon="🤖",
     layout="wide"
 )
@@ -61,11 +62,16 @@ class SupplyChainModuleTester:
 
         total_base_score = score_latency + score_stability + score_power + score_integration
 
+        # 取得台灣時間標籤
+        tw_tz = pytz.timezone('Asia/Taipei')
+        now_tw = datetime.now(tw_tz).strftime("%Y-%m-%d %H:%M:%S (UTC+8)")
+
         self.kpi_results = {
+            "platform": "Crystal Machine OS",
             "module_name": self.module_name,
             "module_type": self.module_type,
             "vendor": self.vendor,
-            "test_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "test_time": now_tw,
             "metrics": {
                 "avg_latency_ms": round(float(avg_latency), 2),
                 "voltage_std": round(float(std_voltage), 4),
@@ -86,16 +92,26 @@ class SupplyChainModuleTester:
 # 3. Streamlit 網頁主渲染區塊
 # ==========================================
 def main():
-    st.title("🤖 供應鏈模組標準測試平台 (MVP)")
-    st.caption("具身智能 LingBot-VLA 2.0 前置：模組本體性能評估系統 (50分制)")
-    st.divider()
-
-    # 側邊欄：設定參數
+    # 側邊欄：開發平台品牌名稱與參數設定
+    st.sidebar.markdown("## 💎 **Crystal Machine**")
+    st.sidebar.caption("具身智能供應鏈測試平台 v1.0")
+    st.sidebar.divider()
+    
     st.sidebar.header("⚙️ 模組參數設定")
     module_name = st.sidebar.text_input("模組名稱 / 型號", "RGBD_Camera_X1")
     module_type = st.sidebar.selectbox("模組類別", ["感測模組", "夾爪/靈巧手", "馬達/關節", "控制/通訊", "AI運算", "電源/BMS"])
     vendor = st.sidebar.text_input("供應商名稱", "Crystal Tech")
     samples = st.sidebar.slider("採集點數 (Samples)", 50, 500, 150)
+
+    # 主畫面標題與台灣標準時間 (UTC+8)
+    st.title("🤖 供應鏈模組標準測試平台 (MVP)")
+    
+    tw_tz = pytz.timezone('Asia/Taipei')
+    tw_time_str = datetime.now(tw_tz).strftime("%Y-%m-%d %H:%M:%S (Asia/Taipei)")
+    
+    st.markdown(f"**系統測試時間（台灣標準時間）：** `{tw_time_str}`")
+    st.caption("具身智能 LingBot-VLA 2.0 前置：模組本體性能評估系統 (50分制)")
+    st.divider()
 
     tester = SupplyChainModuleTester(module_name, module_type, vendor)
 
@@ -127,12 +143,11 @@ def main():
             st.subheader("📋 標準模組 JSON 資料卡")
             st.json(results)
             
-            # 下載按鈕
             json_str = json.dumps(results, ensure_ascii=False, indent=4)
             st.download_button(
                 label="📥 下載 JSON 資料卡",
                 data=json_str,
-                file_name=f"DataCard_{module_name}.json",
+                file_name=f"CrystalMachine_DataCard_{module_name}.json",
                 mime="application/json"
             )
 
