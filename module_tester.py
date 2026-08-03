@@ -3,15 +3,21 @@ import json
 import numpy as np
 import pandas as pd
 from datetime import datetime
+import streamlit as st
 
 # ==========================================
-# 1. 核心評分與數據處理類別 (KPI Engine)
+# 1. 頁面基本配置 (Streamlit UI)
+# ==========================================
+st.set_page_config(
+    page_title="供應鏈模組標準測試平台",
+    page_icon="🤖",
+    layout="wide"
+)
+
+# ==========================================
+# 2. 核心評分與數據處理類別 (KPI Engine)
 # ==========================================
 class SupplyChainModuleTester:
-    """
-    供應鏈模組標準測試平台 - 輕量版 KPI 評分引擎
-    負責計算模組本體基本性能 (滿分 50 分)
-    """
     def __init__(self, module_name, module_type, vendor=""):
         self.module_name = module_name
         self.module_type = module_type
@@ -20,18 +26,14 @@ class SupplyChainModuleTester:
         self.kpi_results = {}
 
     def generate_simulated_data(self, samples=100, noise_level=0.05):
-        """
-        模擬測試資料（適合無實體硬體連線時測試 UI 與邏輯）
-        """
         np.random.seed(int(time.time()))
-        base_signal = np.sin(np.linspace(0, 4 * np.pi, samples)) * 10 + 24.0  # 模擬 24V 基準訊號
+        base_signal = np.sin(np.linspace(0, 4 * np.pi, samples)) * 10 + 24.0
         noise = np.random.normal(0, noise_level, samples)
         
-        # 模擬採集到的電壓、電流與延遲數據
         timestamps = [time.time() + i * 0.01 for i in range(samples)]
         voltage = base_signal + noise
         current = np.random.uniform(0.5, 2.5, samples)
-        latency_ms = np.random.normal(15.0, 2.0, samples) # 平均延遲 15ms
+        latency_ms = np.random.normal(15.0, 2.0, samples)
 
         self.raw_data = pd.DataFrame({
             'timestamp': timestamps,
@@ -42,37 +44,19 @@ class SupplyChainModuleTester:
         return self.raw_data
 
     def calculate_kpi(self):
-        """
-        計算模組本體性能指標與評分（50分制）
-        """
         if self.raw_data is None:
-            raise ValueError("尚未匯入或產生任何測試數據！")
+            return None
 
         df = self.raw_data
         
-        # 1. 延遲指標 (15分)
         avg_latency = df['latency_ms'].mean()
-        if avg_latency < 10:
-            score_latency = 15.0
-        elif avg_latency < 20:
-            score_latency = 12.0
-        else:
-            score_latency = 8.0
+        score_latency = 15.0 if avg_latency < 10 else (12.0 if avg_latency < 20 else 8.0)
 
-        # 2. 訊號穩定性/標準差指標 (15分)
         std_voltage = df['voltage_v'].std()
-        if std_voltage < 0.1:
-            score_stability = 15.0
-        elif std_voltage < 0.5:
-            score_stability = 11.0
-        else:
-            score_stability = 6.0
+        score_stability = 15.0 if std_voltage < 0.1 else (11.0 if std_voltage < 0.5 else 6.0)
 
-        # 3. 平均功耗 P = V * I (10分)
         avg_power = (df['voltage_v'] * df['current_a']).mean()
         score_power = 10.0 if avg_power < 50.0 else 7.0
-
-        # 4. 基礎整合與合規性 (10分 - 預設滿分，後續可改為勾選項)
         score_integration = 10.0
 
         total_base_score = score_latency + score_stability + score_power + score_integration
@@ -97,56 +81,60 @@ class SupplyChainModuleTester:
         }
         return self.kpi_results
 
-    def export_data_card_json(self, filename=None):
-        """匯出為標準模組 JSON 資料卡"""
-        if not self.kpi_results:
-            self.calculate_kpi()
-        
-        if filename is None:
-            filename = f"DataCard_{self.module_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(self.kpi_results, f, ensure_ascii=False, indent=4)
-        
-        print(f"已成功匯出標準資料卡：{filename}")
-        return filename
-
 
 # ==========================================
-# 2. 本地測試 & 未來 Streamlit 整合入口
+# 3. Streamlit 網頁主渲染區塊
 # ==========================================
-def run_local_cli_test():
-    """
-    當前在 Local 環境下運行的 CLI 測試流程
-    """
-    print("=== 供應鏈模組標準測試平台 (Local MVP) ===")
-    
-    # 建立模組測試實例
-    tester = SupplyChainModuleTester(
-        module_name="RGBD_Camera_X1", 
-        module_type="感測模組", 
-        vendor="Crystal Tech"
-    )
+def main():
+    st.title("🤖 供應鏈模組標準測試平台 (MVP)")
+    st.caption("具身智能 LingBot-VLA 2.0 前置：模組本體性能評估系統 (50分制)")
+    st.divider()
 
-    print("\n1. 正在模擬採集感測器數據...")
-    df = tester.generate_simulated_data(samples=200)
-    print(f"   採集完成，共 {len(df)} 筆數據。數據預覽：")
-    print(df.head(3))
+    # 側邊欄：設定參數
+    st.sidebar.header("⚙️ 模組參數設定")
+    module_name = st.sidebar.text_input("模組名稱 / 型號", "RGBD_Camera_X1")
+    module_type = st.sidebar.selectbox("模組類別", ["感測模組", "夾爪/靈巧手", "馬達/關節", "控制/通訊", "AI運算", "電源/BMS"])
+    vendor = st.sidebar.text_input("供應商名稱", "Crystal Tech")
+    samples = st.sidebar.slider("採集點數 (Samples)", 50, 500, 150)
 
-    print("\n2. 正在計算 50 分制模組本體 KPI...")
-    results = tester.calculate_kpi()
-    
-    print("\n3. 評估結果摘要：")
-    print(f"   - 模組名稱: {results['module_name']}")
-    print(f"   - 平均延遲: {results['metrics']['avg_latency_ms']} ms")
-    print(f"   - 訊號波幅標準差: {results['metrics']['voltage_std']}")
-    print(f"   - 平均功耗: {results['metrics']['avg_power_w']} W")
-    print(f"   - 模組本體總得分: {results['scores']['total_base_score_50']} / 50 分")
+    tester = SupplyChainModuleTester(module_name, module_type, vendor)
 
-    print("\n4. 匯出標準 JSON 資料卡...")
-    tester.export_data_card_json("local_test_datacard.json")
+    # 觸發測試按鈕
+    if st.button("🚀 開始模組自動化測試 (Run Test)", type="primary"):
+        with st.spinner("正在進行模組資料採集與 KPI 計算..."):
+            df = tester.generate_simulated_data(samples=samples)
+            results = tester.calculate_kpi()
 
+        st.success("測試完成！已生成模組本體評估數據。")
+
+        # Key Metrics 顯示
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("平均延遲", f"{results['metrics']['avg_latency_ms']} ms")
+        col2.metric("波形標準差 (雜訊)", f"{results['metrics']['voltage_std']}")
+        col3.metric("平均功耗", f"{results['metrics']['avg_power_w']} W")
+        col4.metric("本體總得分 (滿分50)", f"{results['scores']['total_base_score_50']} 分")
+
+        st.divider()
+
+        # 雙欄版面：圖表與 JSON 資料卡
+        left_col, right_col = st.columns([3, 2])
+
+        with left_col:
+            st.subheader("📊 採集波形與實時數據")
+            st.line_chart(df[['voltage_v', 'latency_ms']])
+
+        with right_col:
+            st.subheader("📋 標準模組 JSON 資料卡")
+            st.json(results)
+            
+            # 下載按鈕
+            json_str = json.dumps(results, ensure_ascii=False, indent=4)
+            st.download_button(
+                label="📥 下載 JSON 資料卡",
+                data=json_str,
+                file_name=f"DataCard_{module_name}.json",
+                mime="application/json"
+            )
 
 if __name__ == "__main__":
-    # 在本地執行 py 檔時會執行這個測試
-    run_local_cli_test()
+    main()
