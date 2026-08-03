@@ -27,6 +27,23 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# 預設支援的測試模組清單對照表
+PRESET_MODULES = {
+    "RGBD_Camera_X1 (深度攝影機)": {"name": "RGBD_Camera_X1", "type": "感測模組"},
+    "LiDAR_3D_P1 (3D光學雷達)": {"name": "LiDAR_3D_P1", "type": "感測模組"},
+    "Joint_Motor_42 (關節伺服馬達)": {"name": "Joint_Motor_42", "type": "馬達/關節"},
+    "Servo_Actuator_80 (高扭力致動器)": {"name": "Servo_Actuator_80", "type": "馬達/關節"},
+    "Dexterous_Hand_G1 (靈巧手模組)": {"name": "Dexterous_Hand_G1", "type": "夾爪/靈巧手"},
+    "Parallel_Gripper_V2 (二指平行夾爪)": {"name": "Parallel_Gripper_V2", "type": "夾爪/靈巧手"},
+    "Jetson_Orin_Nano (AI運算板)": {"name": "Jetson_Orin_Nano", "type": "AI運算"},
+    "Edge_AI_Accelerator_A1 (邊緣加速卡)": {"name": "Edge_AI_Accelerator_A1", "type": "AI運算"},
+    "CAN_Bus_Gateway_C1 (CAN通訊網關)": {"name": "CAN_Bus_Gateway_C1", "type": "控制/通訊"},
+    "EtherCAT_Master_E1 (EtherCAT控制器)": {"name": "EtherCAT_Master_E1", "type": "控制/通訊"},
+    "BMS_Module_24V (24V電池管理)": {"name": "BMS_Module_24V", "type": "電源/BMS"},
+    "Power_Board_48V (48V主電源板)": {"name": "Power_Board_48V", "type": "電源/BMS"},
+    "✏️ 自訂模組 (Custom Input)": {"name": "", "type": "感測模組"}
+}
+
 # ==========================================
 # 2. 核心評分與數據處理類別 (KPI Engine)
 # ==========================================
@@ -100,14 +117,29 @@ class SupplyChainModuleTester:
 # 3. Streamlit 網頁主渲染區塊
 # ==========================================
 def main():
-    # 側邊欄：開發平台品牌名稱與參數設定
     st.sidebar.markdown("## 💎 **Crystal Machine**")
     st.sidebar.caption("具身智能供應鏈測試平台 v1.0")
     st.sidebar.divider()
     
     st.sidebar.header("⚙️ 模組參數設定")
-    module_name = st.sidebar.text_input("模組名稱 / 型號", "RGBD_Camera_X1")
-    module_type = st.sidebar.selectbox("模組類別", ["感測模組", "夾爪/靈巧手", "馬達/關節", "控制/通訊", "AI運算", "電源/BMS"])
+    
+    # 快捷選擇預設模組
+    selected_preset = st.sidebar.selectbox(
+        "選擇測試模組範本",
+        list(PRESET_MODULES.keys())
+    )
+    
+    preset_info = PRESET_MODULES[selected_preset]
+    
+    # 若選擇自訂，才允許自由輸入名稱
+    if selected_preset == "✏️ 自訂模組 (Custom Input)":
+        module_name = st.sidebar.text_input("輸入模組名稱 / 型號", "Custom_Sensor_01")
+        module_type = st.sidebar.selectbox("模組類別", ["感測模組", "夾爪/靈巧手", "馬達/關節", "控制/通訊", "AI運算", "電源/BMS"])
+    else:
+        module_name = preset_info["name"]
+        module_type = preset_info["type"]
+        st.sidebar.info(f"**模組型號：** `{module_name}`\n\n**所屬類別：** `{module_type}`")
+
     samples = st.sidebar.slider("採集點數 (Samples)", 50, 500, 150)
 
     # 主畫面標題與台灣標準時間 (UTC+8)
@@ -120,15 +152,13 @@ def main():
 
     tester = SupplyChainModuleTester(module_name, module_type)
 
-    # 觸發測試按鈕
     if st.button("🚀 開始模組自動化測試 (Run Test)", type="primary"):
-        with st.spinner("正在進行模組資料採集與 KPI 計算..."):
+        with st.spinner(f"正在對 [{module_name}] 進行數據採集與分析..."):
             df = tester.generate_simulated_data(samples=samples)
             results = tester.calculate_kpi()
 
-        st.success("測試完成！已生成模組本體評估數據。")
+        st.success(f"測試完成！已生成 [{module_name}] 模組本體評估數據。")
 
-        # Key Metrics 顯示區塊
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("平均延遲", f"{results['metrics']['avg_latency_ms']} ms")
         col2.metric("波形標準差 (雜訊)", f"{results['metrics']['voltage_std']}")
@@ -137,13 +167,13 @@ def main():
 
         st.divider()
 
-        # 上層獨立區塊：採集波形與實時數據 (全寬高畫質呈現)
+        # 上層獨立區塊：波形圖
         st.subheader("📊 採集波形與實時數據")
         st.line_chart(df[['voltage_v', 'latency_ms']], use_container_width=True)
 
         st.divider()
 
-        # 下層獨立區塊：標準模組數據卡與下載
+        # 下層獨立區塊：數據表與下載
         st.subheader("📋 標準模組數據卡 (Excel格式)")
         
         flat_data = {
@@ -178,14 +208,12 @@ def main():
         }
         summary_df = pd.DataFrame(flat_data)
         
-        # 繪製乾淨大方的表格
         st.dataframe(summary_df, hide_index=True, use_container_width=True)
         
-        # 轉換為帶 BOM 的 CSV/Excel 相容檔
         csv_data = summary_df.to_csv(index=False, encoding='utf-8-sig')
         
         st.download_button(
-            label="📥 下載 Excel / CSV 標準測試資料卡",
+            label=f"📥 下載 [{module_name}] 標準測試資料卡 (Excel/CSV)",
             data=csv_data,
             file_name=f"CrystalMachine_DataCard_{module_name}.csv",
             mime="text/csv",
