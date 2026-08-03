@@ -140,23 +140,21 @@ def main():
     
     st.sidebar.header("⚙️ 模組參數設定")
     
-    # 兩級聯動區塊 1：選擇 6 大類別
+    # 兩級聯動區塊 1
     selected_category = st.sidebar.selectbox(
         "1. 選擇模組類別 (Category)",
         list(CATEGORY_MODULE_MAP.keys())
     )
     
-    # 清理類別名稱（移除圖示），用於資料寫入
     clean_category_type = selected_category.split(" ")[1] if " " in selected_category else selected_category
 
-    # 兩級聯動區塊 2：根據類別動態載入該類別的模組
+    # 兩級聯動區塊 2
     available_modules = CATEGORY_MODULE_MAP[selected_category]
     selected_module_label = st.sidebar.selectbox(
         "2. 選擇測試模組 (Module)",
         list(available_modules.keys())
     )
     
-    # 判斷是否選擇自訂
     module_code = available_modules[selected_module_label]
     if module_code == "CUSTOM":
         module_name = st.sidebar.text_input("輸入自訂模組名稱 / 型號", "Custom_Device_01")
@@ -235,13 +233,17 @@ def main():
         
         st.dataframe(summary_df, hide_index=True, use_container_width=True)
         
-        csv_data = summary_df.to_csv(index=False, encoding='utf-8-sig')
-        
+        # 核心修復：直接將 DataFrame 生成為真正的二進位 .xlsx 檔
+        excel_buffer = io.BytesIO()
+        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+            summary_df.to_excel(writer, index=False, sheet_name='模組評估報告')
+        excel_data = excel_buffer.getvalue()
+
         st.download_button(
-            label=f"📥 下載 [{module_name}] 標準測試資料卡 (Excel/CSV)",
-            data=csv_data,
-            file_name=f"CrystalMachine_DataCard_{module_name}.csv",
-            mime="text/csv",
+            label=f"📥 下載 [{module_name}] 標準測試資料卡 (.xlsx)",
+            data=excel_data,
+            file_name=f"CrystalMachine_DataCard_{module_name}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             type="secondary"
         )
 
