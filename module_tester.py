@@ -10,13 +10,22 @@ import streamlit as st
 TAIWAN_TZ = timezone(timedelta(hours=8))
 
 # ==========================================
-# 1. 頁面基本配置 (Streamlit UI)
+# 1. 頁面基本配置與 CSS 樣式微調 (Streamlit UI)
 # ==========================================
 st.set_page_config(
     page_title="Crystal Machine | 供應鏈模組標準測試平台",
     page_icon="🤖",
     layout="wide"
 )
+
+# 注入輕量 CSS，修復左側邊欄底部被卡住、無法拉到底的問題
+st.markdown("""
+    <style>
+        [data-testid="stSidebarUserContent"] {
+            padding-bottom: 80px;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # ==========================================
 # 2. 核心評分與數據處理類別 (KPI Engine)
@@ -119,7 +128,7 @@ def main():
 
         st.success("測試完成！已生成模組本體評估數據。")
 
-        # Key Metrics 顯示
+        # Key Metrics 顯示區塊
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("平均延遲", f"{results['metrics']['avg_latency_ms']} ms")
         col2.metric("波形標準差 (雜訊)", f"{results['metrics']['voltage_std']}")
@@ -128,63 +137,60 @@ def main():
 
         st.divider()
 
-        # 雙欄版面：圖表與 Excel 資料表
-        left_col, right_col = st.columns([3, 2])
+        # 上層獨立區塊：採集波形與實時數據 (全寬高畫質呈現)
+        st.subheader("📊 採集波形與實時數據")
+        st.line_chart(df[['voltage_v', 'latency_ms']], use_container_width=True)
 
-        with left_col:
-            st.subheader("📊 採集波形與實時數據")
-            st.line_chart(df[['voltage_v', 'latency_ms']])
+        st.divider()
 
-        with right_col:
-            st.subheader("📊 標準模組數據卡 (Excel格式)")
-            
-            # 將結果攤平成 Pandas DataFrame 方便 Excel 檢視
-            flat_data = {
-                "項目 (Item)": [
-                    "開發平台 (Platform)",
-                    "模組名稱 (Module Name)",
-                    "模組類別 (Module Type)",
-                    "測試時間 (Test Time)",
-                    "平均延遲 (Avg Latency)",
-                    "波形雜訊/標準差 (Voltage Std)",
-                    "平均功耗 (Avg Power)",
-                    "延遲得分 (Latency Score)",
-                    "穩定度得分 (Stability Score)",
-                    "功耗得分 (Power Score)",
-                    "系統整合得分 (Integration Score)",
-                    "本體總得分 (Total Score / 50)"
-                ],
-                "數值 (Value)": [
-                    results["platform"],
-                    results["module_name"],
-                    results["module_type"],
-                    results["test_time"],
-                    f"{results['metrics']['avg_latency_ms']} ms",
-                    results['metrics']['voltage_std'],
-                    f"{results['metrics']['avg_power_w']} W",
-                    f"{results['scores']['latency_score']} / 15",
-                    f"{results['scores']['stability_score']} / 15",
-                    f"{results['scores']['power_score']} / 10",
-                    f"{results['scores']['integration_score']} / 10",
-                    f"{results['scores']['total_base_score_50']} / 50"
-                ]
-            }
-            summary_df = pd.DataFrame(flat_data)
-            
-            # 畫面上直接預覽表格
-            st.dataframe(summary_df, hide_index=True, use_container_width=True)
-            
-            # 轉換為帶 BOM 的 CSV/Excel 相容檔（解決中文字開檔亂碼問題）
-            csv_buffer = io.BytesIO()
-            # 加入 UTF-8-SIG 標頭，確保 Windows Excel 開啟不會亂碼
-            csv_data = summary_df.to_csv(index=False, encoding='utf-8-sig')
-            
-            st.download_button(
-                label="📥 下載 Excel / CSV 標準測試資料卡",
-                data=csv_data,
-                file_name=f"CrystalMachine_DataCard_{module_name}.csv",
-                mime="text/csv"
-            )
+        # 下層獨立區塊：標準模組數據卡與下載
+        st.subheader("📋 標準模組數據卡 (Excel格式)")
+        
+        flat_data = {
+            "項目 (Item)": [
+                "開發平台 (Platform)",
+                "模組名稱 (Module Name)",
+                "模組類別 (Module Type)",
+                "測試時間 (Test Time)",
+                "平均延遲 (Avg Latency)",
+                "波形雜訊/標準差 (Voltage Std)",
+                "平均功耗 (Avg Power)",
+                "延遲得分 (Latency Score)",
+                "穩定度得分 (Stability Score)",
+                "功耗得分 (Power Score)",
+                "系統整合得分 (Integration Score)",
+                "本體總得分 (Total Score / 50)"
+            ],
+            "數值 (Value)": [
+                results["platform"],
+                results["module_name"],
+                results["module_type"],
+                results["test_time"],
+                f"{results['metrics']['avg_latency_ms']} ms",
+                results['metrics']['voltage_std'],
+                f"{results['metrics']['avg_power_w']} W",
+                f"{results['scores']['latency_score']} / 15",
+                f"{results['scores']['stability_score']} / 15",
+                f"{results['scores']['power_score']} / 10",
+                f"{results['scores']['integration_score']} / 10",
+                f"{results['scores']['total_base_score_50']} / 50"
+            ]
+        }
+        summary_df = pd.DataFrame(flat_data)
+        
+        # 繪製乾淨大方的表格
+        st.dataframe(summary_df, hide_index=True, use_container_width=True)
+        
+        # 轉換為帶 BOM 的 CSV/Excel 相容檔
+        csv_data = summary_df.to_csv(index=False, encoding='utf-8-sig')
+        
+        st.download_button(
+            label="📥 下載 Excel / CSV 標準測試資料卡",
+            data=csv_data,
+            file_name=f"CrystalMachine_DataCard_{module_name}.csv",
+            mime="text/csv",
+            type="secondary"
+        )
 
 if __name__ == "__main__":
     main()
