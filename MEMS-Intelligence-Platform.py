@@ -60,8 +60,9 @@ SENSOR_DB = {
     }
 }
 
-st.set_page_config(page_title="MEMS Simulation Platform", layout="wide")
-st.title("🛸 MEMS Intelligence Platform - 智慧模擬平台")
+st.set_page_config(page_title="Crystal Machine MEMS Platform", layout="wide")
+st.title("🛸 Crystal Machine MEMS Intelligence Platform - 模擬平台")
+st.caption("基於 Windows 7 本地開發驗證 ➔ GitHub / Streamlit 3.11 雲端部署架構")
 
 # ==========================================
 # 2. 側邊欄控制：選擇感測器與調整環境參數
@@ -147,19 +148,32 @@ with col2:
     st.caption("💡 綠線為融合後的角度。您可以試著調整側邊欄的 Alpha 值，觀察它是如何平衡陀螺儀的動態響應與加速度計的長期穩定。")
 
 # ==========================================
-# 5. 優化後的規格看板呈現 (拒絕崩潰的原始 JSON)
+# 5. 優化後的規格看板呈現 (修飾擁擠版，增加柔和色塊)
 # ==========================================
 st.divider()
 st.subheader("📋 平台底層標準化規格數據 (Digital Library View)")
 
-# A. 用頂部卡片展示核心身份資料
-m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-m_col1.metric("感測器 ID", f"CM-{selected_sensor.split('_')[-1]}")
-m_col2.metric("製造商 (Vendor)", spec["manufacturer"])
-m_col3.metric("元件型號 (Part Number)", selected_sensor.split("_")[-1])
-m_col4.metric("目前運行頻率 (ODR)", f"{fs} Hz")
-
-st.markdown(f"**應用分級定位**：`{spec['level']}`")
+# 使用帶有柔和灰色/藍色邊框背景的 container
+with st.container(border=True):
+    m_col1, m_col2, m_col3 = st.columns([1, 1.5, 1])
+    
+    # 將資訊合理分配，給予足夠的橫向擴展空間，避免文字縮寫
+    m_col1.markdown(f"**感測器 ID**<br><span style='font-size: 20px; font-weight: bold; color: #1E3A8A;'>CM-{selected_sensor.split('_')[-1]}</span>", unsafe_allow_html=True)
+    m_col2.markdown(f"**製造商 (Vendor)**<br><span style='font-size: 20px; font-weight: bold; color: #1E3A8A;'>{spec['manufacturer']}</span>", unsafe_allow_html=True)
+    m_col3.markdown(f"**元件型號 (Part Number)**<br><span style='font-size: 20px; font-weight: bold; color: #1E3A8A;'>{selected_sensor.split('_')[-1]}</span>", unsafe_allow_html=True)
+    
+    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+    
+    m_col4, m_col5 = st.columns([2.5, 1])
+    # 使用柔和的淺綠色底色方塊來強調應用分級
+    m_col4.markdown(f"""
+    <div style='background-color: #E0F2FE; padding: 10px 15px; border-radius: 6px; border-left: 5px solid #0284C7;'>
+        <span style='color: #0369A1; font-weight: bold;'>🎯 應用分級定位：</span>
+        <span style='color: #0C4A6E;'>{spec['level']}</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    m_col5.markdown(f"**運行頻率 (ODR)**<br><span style='font-size: 20px; font-weight: bold; color: #1E3A8A;'>{fs} Hz</span>", unsafe_allow_html=True)
 
 # B. 將複雜的模型參數整理成 scannable 的對照表格
 st.markdown("### 🔍 靜態物理與誤差注入模型參數對照")
@@ -188,5 +202,5 @@ spec_data = {
 }
 
 df_spec = pd.DataFrame(spec_data)
-st.table(df_spec) # 使用 Streamlit 漂亮的靜態表格渲染
+st.table(df_spec)
 st.caption("⚙️ 狀態提示：Digital Library 封裝解析成功，模擬器正在即時注入上述物理誤差。")
