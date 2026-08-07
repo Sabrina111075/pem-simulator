@@ -4,9 +4,9 @@ import pandas as pd
 from scipy import signal
 
 # ==========================================
-# 1. MEMS Digital Library 欄位標準化資料庫 (大幅擴充版)
+# 1. MEMS Digital Library 欄位標準化資料庫 (極致完整版)
 # ==========================================
-# 納入全球主流 IMU 元件規格參數，支援消費級、工業級與高精度導航級型號
+# 納入全球主流 IMU 元件規格參數，支援消費級、工業級與高精度航太導航級型號
 SENSOR_DB = {
     "BOSCH_BMI270": {
         "manufacturer": "BOSCH",
@@ -21,7 +21,7 @@ SENSOR_DB = {
     "TDK_ICM-42688-P": {
         "manufacturer": "TDK InvenSense",
         "level": "消費級/人形機器人 (高精準配置)",
-        "accel_noise_density": 0.00007,  # g/√Hz (低噪)
+        "accel_noise_density": 0.00007,  # g/√Hz
         "gyro_noise_density": 0.0028,    # dps/√Hz
         "accel_bias": 0.01,              # g
         "gyro_bias": 0.05,               # dps
@@ -31,8 +31,8 @@ SENSOR_DB = {
     "ANALOG_DEVICES_ADIS16488": {
         "manufacturer": "Analog Devices",
         "level": "戰術級/工業級高精度診斷 (高成本)",
-        "accel_noise_density": 0.000016, # g/√Hz (極低噪)
-        "gyro_noise_density": 0.00015,   # dps/√Hz (超高穩定度)
+        "accel_noise_density": 0.000016, # g/√Hz
+        "gyro_noise_density": 0.00015,   # dps/√Hz
         "accel_bias": 0.002,             # g
         "gyro_bias": 0.008,              # dps
         "range_accel": "±40g",
@@ -57,6 +57,26 @@ SENSOR_DB = {
         "gyro_bias": 0.15,               # dps
         "range_accel": "±16g",
         "range_gyro": "±2000dps"
+    },
+    "STM_LSM6DSV16X": {
+        "manufacturer": "STMicroelectronics",
+        "level": "消費級/智慧終端/邊緣 AI 核心級",
+        "accel_noise_density": 0.000075, # g/√Hz
+        "gyro_noise_density": 0.0038,    # dps/√Hz
+        "accel_bias": 0.012,             # g
+        "gyro_bias": 0.06,               # dps
+        "range_accel": "±16g",
+        "range_gyro": "±2000dps"
+    },
+    "HONEYWELL_HG4930": {
+        "manufacturer": "Honeywell",
+        "level": "導航級/高精導引/航太防衛級 (頂級管制元件)",
+        "accel_noise_density": 0.000005, # g/√Hz (極低噪聲)
+        "gyro_noise_density": 0.00004,   # dps/√Hz (超高精準)
+        "accel_bias": 0.0002,            # g
+        "gyro_bias": 0.001,              # dps
+        "range_accel": "±20g",
+        "range_gyro": "±400dps"
     }
 }
 
@@ -67,7 +87,7 @@ st.caption("本地開發驗證 ➔ GitHub / Streamlit 3.11 雲端部署架構")
 # ==========================================
 # 2. 側邊欄控制：選擇感測器與調整環境參數
 # ==========================================
-st.sidebar.header("🛠️ 平台參數設定")
+st.sidebar.header("🛠️ Crystal Machine 平台參數設定")
 
 # 選擇感測器型號
 selected_sensor = st.sidebar.selectbox("選擇 MEMS 感測器元件", list(SENSOR_DB.keys()))
@@ -157,7 +177,6 @@ st.subheader("📋 平台底層標準化規格數據 (Digital Library View)")
 with st.container(border=True):
     m_col1, m_col2, m_col3 = st.columns([1, 1.5, 1])
     
-    # 將資訊合理分配，給予足夠的橫向擴展空間，避免文字縮寫
     m_col1.markdown(f"**感測器 ID**<br><span style='font-size: 20px; font-weight: bold; color: #1E3A8A;'>CM-{selected_sensor.split('_')[-1]}</span>", unsafe_allow_html=True)
     m_col2.markdown(f"**製造商 (Vendor)**<br><span style='font-size: 20px; font-weight: bold; color: #1E3A8A;'>{spec['manufacturer']}</span>", unsafe_allow_html=True)
     m_col3.markdown(f"**元件型號 (Part Number)**<br><span style='font-size: 20px; font-weight: bold; color: #1E3A8A;'>{selected_sensor.split('_')[-1]}</span>", unsafe_allow_html=True)
@@ -165,7 +184,6 @@ with st.container(border=True):
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
     
     m_col4, m_col5 = st.columns([2.5, 1])
-    # 使用柔和的淺綠色底色方塊來強調應用分級
     m_col4.markdown(f"""
     <div style='background-color: #E0F2FE; padding: 10px 15px; border-radius: 6px; border-left: 5px solid #0284C7;'>
         <span style='color: #0369A1; font-weight: bold;'>🎯 應用分級定位：</span>
@@ -175,7 +193,7 @@ with st.container(border=True):
     
     m_col5.markdown(f"**運行頻率 (ODR)**<br><span style='font-size: 20px; font-weight: bold; color: #1E3A8A;'>{fs} Hz</span>", unsafe_allow_html=True)
 
-# B. 將複雜的模型參數整理成 scannable 的對照表格
+# B. 將複雜的模型參數整理成對照表格
 st.markdown("### 🔍 靜態物理與誤差注入模型參數對照")
 
 spec_data = {
