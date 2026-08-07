@@ -54,3 +54,20 @@ SENSOR_DB = {
         "range_gyro": "±2000dps"
     }
 }
+
+# 顯示當前元件的標準化資料架構 (Digital Library View)
+st.divider()
+st.subheader("📋 平台底層標準化規格數據 (Digital Library View)")
+st.json({
+    "Sensor_ID": f"CrystalMachine_{selected_sensor}_V1.0",
+    "Manufacturer": spec["manufacturer"],
+    "Part_Number": selected_sensor.split("_")[-1],
+    "Classification_Level": spec["level"],
+    "Hardware_Limits": {"Full_Scale_Accel": spec["range_accel"], "Full_Scale_Gyro": spec["range_gyro"]},
+    "Configured_ODR_Hz": fs,
+    "Injected_Error_Model": {
+        "Static_Bias": {"Accel_g": spec["accel_bias"], "Gyro_dps": spec["gyro_bias"]},
+        "Stochastic_Noise_Density": {"Accel_g_rHz": spec["accel_noise_density"], "Gyro_dps_rHz": spec["gyro_noise_density"]}
+    },
+    "Status": "Simulation Active"
+})
