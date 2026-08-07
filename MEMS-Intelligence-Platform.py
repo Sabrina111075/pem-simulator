@@ -61,8 +61,7 @@ SENSOR_DB = {
 }
 
 st.set_page_config(page_title="MEMS Simulation Platform", layout="wide")
-st.title("🛸 MEMS Intelligence Platform - 模擬平台")
-st.caption("基於 Windows 7 本地開發驗證 ➔ GitHub / Streamlit 3.11 雲端部署架構")
+st.title("🛸 MEMS Intelligence Platform - 智慧模擬平台")
 
 # ==========================================
 # 2. 側邊欄控制：選擇感測器與調整環境參數
@@ -96,35 +95,24 @@ t = np.linspace(0, duration, int(fs * duration), endpoint=False)
 dt = 1.0 / fs
 
 # A. 生成理想軌跡 (運動幾何模型)
-# 假設平台在做局部的俯仰角 (Pitch) 正弦擺動
 true_angle = 20.0 * np.sin(2 * np.pi * motion_freq * t)  # 理想角度 (度)
-
-# 根據物理公式求出理想的角速度 (陀螺儀輸入) 與 加速度 (加速度計輸入)
-# 角速度為角度的一階微分
 true_gyro = 20.0 * (2 * np.pi * motion_freq) * np.cos(2 * np.pi * motion_freq * t) 
-# 簡化加速度計模型：重力加速度 g 在傾斜角下的分量
 true_accel = np.sin(np.radians(true_angle)) 
 
 # B. 動態模型與誤差注入 (Error Injection)
-# 1. 陀螺儀誤差注入：零偏 + 白雜訊 + 隨機遊走(漂移)
 gyro_white_noise = np.random.normal(0, spec["gyro_noise_density"] * np.sqrt(fs), len(t)) * noise_multiplier
-gyro_drift = np.cumsum(np.random.normal(0, 0.01, len(t))) * drift_multiplier # 隨機遊走
+gyro_drift = np.cumsum(np.random.normal(0, 0.01, len(t))) * drift_multiplier
 sim_gyro = true_gyro + spec["gyro_bias"] + gyro_white_noise + gyro_drift
 
-# 2. 加速度計誤差注入：零偏 + 白雜訊
 accel_white_noise = np.random.normal(0, spec["accel_noise_density"] * np.sqrt(fs), len(t)) * noise_multiplier
 sim_accel = true_accel + spec["accel_bias"] + accel_white_noise
 
-# C. 融合引擎 (Sensor Fusion Engine) - 一階互補濾波器
-# 透過加速度計估算角度： theta_accel = arcsin(ax)
-# 為了避免雜訊干擾，使用 clip 限制邊界
+# C. 融合引擎 (Sensor Fusion Engine)
 est_angle_accel = np.degrees(np.arcsin(np.clip(sim_accel, -1.0, 1.0)))
-
 est_angle = np.zeros(len(t))
-est_angle[0] = est_angle_accel[0]  # 初始狀態
+est_angle[0] = est_angle_accel[0]
 
 for k in range(1, len(t)):
-    # 互補濾波公式： 高通(陀螺儀積分) + 低通(加速度計基準)
     est_angle[k] = alpha * (est_angle[k-1] + sim_gyro[k] * dt) + (1 - alpha) * est_angle_accel[k]
 
 # ==========================================
@@ -158,19 +146,47 @@ with col2:
     st.line_chart(fusion_df)
     st.caption("💡 綠線為融合後的角度。您可以試著調整側邊欄的 Alpha 值，觀察它是如何平衡陀螺儀的動態響應與加速度計的長期穩定。")
 
-# 顯示當前元件的標準化資料架構 (Digital Library View)
+# ==========================================
+# 5. 優化後的規格看板呈現 (拒絕崩潰的原始 JSON)
+# ==========================================
 st.divider()
 st.subheader("📋 平台底層標準化規格數據 (Digital Library View)")
-st.json({
-    "Sensor_ID": f"CrystalMachine_{selected_sensor}_V1.0",
-    "Manufacturer": spec["manufacturer"],
-    "Part_Number": selected_sensor.split("_")[-1],
-    "Classification_Level": spec["level"],
-    "Hardware_Limits": {"Full_Scale_Accel": spec["range_accel"], "Full_Scale_Gyro": spec["range_gyro"]},
-    "Configured_ODR_Hz": fs,
-    "Injected_Error_Model": {
-        "Static_Bias": {"Accel_g": spec["accel_bias"], "Gyro_dps": spec["gyro_bias"]},
-        "Stochastic_Noise_Density": {"Accel_g_rHz": spec["accel_noise_density"], "Gyro_dps_rHz": spec["gyro_noise_density"]}
-    },
-    "Status": "Simulation Active"
-})
+
+# A. 用頂部卡片展示核心身份資料
+m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+m_col1.metric("感測器 ID", f"CM-{selected_sensor.split('_')[-1]}")
+m_col2.metric("製造商 (Vendor)", spec["manufacturer"])
+m_col3.metric("元件型號 (Part Number)", selected_sensor.split("_")[-1])
+m_col4.metric("目前運行頻率 (ODR)", f"{fs} Hz")
+
+st.markdown(f"**應用分級定位**：`{spec['level']}`")
+
+# B. 將複雜的模型參數整理成 scannable 的對照表格
+st.markdown("### 🔍 靜態物理與誤差注入模型參數對照")
+
+spec_data = {
+    "參數類別": [
+        "物理硬體極限 (Hardware Limits)", "物理硬體極限 (Hardware Limits)", 
+        "靜態零偏誤差 (Static Bias)", "靜態零偏誤差 (Static Bias)", 
+        "隨機雜訊密度 (Stochastic Noise)", "隨機雜訊密度 (Stochastic Noise)"
+    ],
+    "感測軸向": [
+        "加速度計 (Accelerometer)", "陀螺儀 (Gyroscope)", 
+        "加速度計 (Accelerometer)", "陀螺儀 (Gyroscope)", 
+        "加速度計 (Accelerometer)", "陀螺儀 (Gyroscope)"
+    ],
+    "標準化參數名稱": [
+        "Full_Scale_Range_Accel", "Full_Scale_Range_Gyro", 
+        "Accel_Static_Bias (b_a)", "Gyro_Static_Bias (b_w)", 
+        "Accel_Noise_Density (n_a)", "Gyro_Noise_Density (n_w)"
+    ],
+    "設定值": [
+        spec["range_accel"], spec["range_gyro"], 
+        f"{spec['accel_bias']} g", f"{spec['gyro_bias']} dps", 
+        f"{spec['accel_noise_density']} g/√Hz", f"{spec['gyro_noise_density']} dps/√Hz"
+    ]
+}
+
+df_spec = pd.DataFrame(spec_data)
+st.table(df_spec) # 使用 Streamlit 漂亮的靜態表格渲染
+st.caption("⚙️ 狀態提示：Digital Library 封裝解析成功，模擬器正在即時注入上述物理誤差。")
