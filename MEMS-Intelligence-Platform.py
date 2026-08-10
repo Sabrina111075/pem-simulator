@@ -81,13 +81,13 @@ SENSOR_DB = {
 }
 
 st.set_page_config(page_title="Crystal Machine MEMS Platform", layout="wide")
-st.title("🛸 Crystal Machine MEMS Intelligence Platform - 智慧模擬平台")
+st.title("🛸 MEMS Intelligence Platform - 微機電系統智慧模擬平台")
 st.caption("本地開發驗證 ➔ GitHub / Streamlit 3.11 雲端部署架構")
 
 # ==========================================
 # 2. 側邊欄控制：選擇感測器與調整環境參數
 # ==========================================
-st.sidebar.header("🛠️ 平台參數設定")
+st.sidebar.header("🛠️ Crystal Machine 平台參數設定")
 
 # 選擇感測器型號
 selected_sensor = st.sidebar.selectbox("選擇 MEMS 感測器元件", list(SENSOR_DB.keys()))
