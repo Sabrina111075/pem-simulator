@@ -82,7 +82,7 @@ SENSOR_DB = {
 
 st.set_page_config(page_title="Crystal Machine MEMS Platform", layout="wide")
 st.title("🛸 Crystal Machine MEMS Intelligence Platform - 智慧模擬平台")
-st.caption("本地開發驗證 ➔ GitHub / Streamlit 3.11 雲端部署架構")
+st.caption("⏱️ 系統即時同步：2026-08-11 11:03:39 (台北標準時間 TST)")
 
 # ==========================================
 # 2. 側邊欄控制：選擇感測器與調整環境參數
@@ -141,21 +141,16 @@ est_angle[0] = est_angle_accel[0]
 
 # C. 雙演算法解算核心
 if fusion_mode == "一階互補濾波 (Complementary Filter)":
-    # 互補濾波解算
     for k in range(1, len(t)):
         est_angle[k] = alpha * (est_angle[k-1] + sim_gyro[k] * dt) + (1 - alpha) * est_angle_accel[k]
 else:
-    # 2階卡爾曼濾波器：狀態量 x = [角度, 陀螺儀零偏]
-    # 自動連結底層元件 Digital Library 規格進行動態協方差配置
     Q_angle = q_tune
     Q_gyro_bias = 0.003 * drift_multiplier
     R_angle = (spec["accel_noise_density"] * np.sqrt(fs) * noise_multiplier) ** 2
 
-    # 狀態初始化
     x = np.array([est_angle_accel[0], spec["gyro_bias"]]).reshape(2, 1)
     P = np.eye(2) * 0.1
 
-    # 狀態轉移矩陣 A，測量矩陣 H
     A = np.array([[1.0, -dt],
                   [0.0, 1.0]])
     H = np.array([[1.0, 0.0]])
@@ -165,17 +160,15 @@ else:
     R = np.array([[R_angle]])
 
     for k in range(1, len(t)):
-        # 1. 預測步驟 (Predict)
         u = sim_gyro[k]
         x = np.dot(A, x)
         x[0, 0] += u * dt
         P = np.dot(np.dot(A, P), A.T) + Q
         
-        # 2. 更新步驟 (Update)
         z = est_angle_accel[k]
-        y = z - np.dot(H, x)  # 測量殘差
+        y = z - np.dot(H, x)  
         S = np.dot(np.dot(H, P), H.T) + R
-        K = np.dot(P, H.T) / S  # 卡爾曼增益
+        K = np.dot(P, H.T) / S  
         
         x = x + K * y
         P = np.dot((np.eye(2) - np.dot(K, H)), P)
@@ -190,7 +183,6 @@ rmse = np.sqrt(np.mean((est_angle - true_angle) ** 2))
 # ==========================================
 st.subheader(f"📊 {selected_sensor} 元件模擬與動態融合結果")
 
-# 即時核心性能 KPI 卡片 (讓畫面一目了然)
 kpi1, kpi2, kpi3 = st.columns(3)
 kpi1.metric("當前解算引擎", fusion_mode.split(" ")[0])
 kpi2.metric("真實運動均方根誤差 (RMSE)", f"{rmse:.3f} 度", delta=f"{'- 優異' if rmse < 1.5 else '- 雜訊發散'}", delta_color="inverse")
