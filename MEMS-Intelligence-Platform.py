@@ -40,42 +40,42 @@ def generate_simulation_data(sensor_id, odr, duration, motion_freq, noise_amp, w
 # ==========================================
 st.sidebar.markdown("## ⚙️ Crystal Machine 平台\n參數設定")
 
-# 補齊七家廠商元件選單
+# 嚴格對齊 PDF 規格書的七家廠商選單名稱
 sensor_display = st.sidebar.selectbox(
     "選擇 MEMS 感測器元件",
     [
+        "亞德諾半導體 (ADI) - ADIS16488",
+        "羅伯特博世感測科技 (BOSCH) - BMI270",
+        "東電化應美盛 (TDK InvenSense) - ICM-42688-P",
         "芯動聯科 (InnoMotion) - ICM-20689",
-        "博世 (BOSCH) - BMI270",
-        "意法半導體 (STMicroelectronics) - LSM6DSOX",
-        "應美盛 (TDK InvenSense) - ICM-42688-P",
-        "亞德諾 (Analog Devices) - ADIS16470",
-        "村田製作所 (Murata) - SCC2130",
-        "恩智浦 (NXP) - FXOS8700CQ"
+        "啟明創感 (QST) - QMI8658C",
+        "意法半導體 (STMicroelectronics) - LSM6DSV16X",
+        "漢威聯合 (Honeywell) - HG4930"
     ]
 )
 
-# 七家廠商的底層資料庫映射邏輯
-if "ICM-20689" in sensor_display:
-    sensor_id, vendor, part_num, app_tier = "CM-ICM-20689", "芯動聯科 (InnoMotion)", "ICM-20689", "工業級/車載級/無人機穩定系統"
-    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±16g", "±2000dps", "0.015 g", "0.07 dps", "9e-05 g/√Hz", "0.004 dps/√Hz"
+# 根據 PDF 規格書一對一精準對齊資料庫參數
+if "ADIS16488" in sensor_display:
+    sensor_id, vendor, part_num, app_tier = "CM-ADIS16488", "亞德諾半導體 (ADI)", "ADIS16488", "戰術級 / 工業級高精度"
+    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±40g", "±2000dps", "0.002 g", "0.008 dps", "16 μg/√Hz", "0.00015 dps/√Hz"
 elif "BMI270" in sensor_display:
-    sensor_id, vendor, part_num, app_tier = "CM-BMI270", "BOSCH", "BMI270", "消費級/人形機器人 (低成本方案)"
-    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±8g", "±2000dps", "0.020 g", "0.08 dps", "160 μg/灎Hz", "0.007 dps/√Hz"
-elif "LSM6DSOX" in sensor_display:
-    sensor_id, vendor, part_num, app_tier = "CM-LSM6DSOX", "STMicroelectronics", "LSM6DSOX", "消費級/智慧穿戴/機器人關節估計"
-    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±16g", "±2000dps", "0.018 g", "0.075 dps", "75 μg/√Hz", "0.005 dps/√Hz"
+    sensor_id, vendor, part_num, app_tier = "CM-BMI270", "羅伯特博世感測科技 (BOSCH)", "BMI270", "消費級 / 輕量工業級"
+    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±16g", "±2000dps", "0.02 g", "0.1 dps", "160 μg/√Hz", "0.007 dps/√Hz"
 elif "ICM-42688-P" in sensor_display:
-    sensor_id, vendor, part_num, app_tier = "CM-ICM42688P", "TDK InvenSense", "ICM-42688-P", "工業級/高精度無人載具/防手震平衡"
-    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±16g", "±2000dps", "0.012 g", "0.05 dps", "65 μg/√Hz", "0.0028 dps/√Hz"
-elif "ADIS16470" in sensor_display:
-    sensor_id, vendor, part_num, app_tier = "CM-ADIS16470", "Analog Devices", "ADIS16470", "戰術級/精準導航與工業自動化"
-    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±40g", "±2000dps", "0.005 g", "0.008 dps", "16 μg/√Hz", "0.002 dps/√Hz"
-elif "SCC2130" in sensor_display:
-    sensor_id, vendor, part_num, app_tier = "CM-SCC2130", "Murata", "SCC2130", "車載安全級/主動車身穩定控制系統"
-    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±6g", "±125dps", "0.008 g", "0.02 dps", "50 μg/√Hz", "0.0015 dps/√Hz"
+    sensor_id, vendor, part_num, app_tier = "CM-ICM42688P", "東電化應美盛 (TDK InvenSense)", "ICM-42688-P", "消費級 / 高級控制級"
+    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±16g", "±2000dps", "0.01 g", "0.05 dps", "70 μg/√Hz", "0.0028 dps/√Hz"
+elif "ICM-20689" in sensor_display:
+    sensor_id, vendor, part_num, app_tier = "CM-ICM-20689", "芯動聯科 (InnoMotion)", "ICM-20689", "工業級 / 高級車載級"
+    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±16g", "±2000dps", "0.015 g", "0.07 dps", "90 μg/√Hz", "0.004 dps/√Hz"
+elif "QMI8658C" in sensor_display:
+    sensor_id, vendor, part_num, app_tier = "CM-QMI8658C", "啟明創感 (QST)", "QMI8658C", "消費級 / 低成本級"
+    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±16g", "±2000dps", "0.03 g", "0.15 dps", "220 μg/√Hz", "0.012 dps/√Hz"
+elif "LSM6DSV16X" in sensor_display:
+    sensor_id, vendor, part_num, app_tier = "CM-LSM6DSV16X", "意法半導體 (STMicroelectronics)", "LSM6DSV16X", "消費級 / 邊緣 AI 級"
+    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±16g", "±2000dps", "0.012 g", "0.06 dps", "75 μg/√Hz", "0.0038 dps/√Hz"
 else:
-    sensor_id, vendor, part_num, app_tier = "CM-FXOS8700", "NXP", "FXOS8700CQ", "消費級/低功耗物聯網節點"
-    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±8g", "N/A (僅加速度計+地磁)", "0.025 g", "N/A", "126 μg/√Hz", "N/A"
+    sensor_id, vendor, part_num, app_tier = "CM-HG4930", "漢威聯合 (Honeywell)", "HG4930", "導航級 / 航太防衛級"
+    acc_rng, gyro_rng, b_a, b_w, n_a, n_w = "±20g", "±400dps", "0.0002 g", "0.001 dps", "5 μg/√Hz", "0.00004 dps/√Hz"
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("## 🧬 融合引擎演算法切換")
@@ -101,7 +101,7 @@ alpha = st.sidebar.slider("互補濾波器權重 (Alpha)", min_value=0.0, max_va
 
 
 # ==========================================
-# 右側主面板：置頂規格庫與滿版工整布局
+# 右側主面板布局
 # ==========================================
 st.markdown("# 📊 MEMS Intelligence Platform - 微機電系統智慧平台")
 
@@ -114,11 +114,10 @@ t, gyro_output, accel_angle, comp_angle, ideal_angle, rmse = generate_simulation
 )
 
 # ------------------------------------------
-# 【第一層：頂層】Digital Library View (放大字體、應用分級加色高亮)
+# 【第一層：頂層】Digital Library View
 # ------------------------------------------
 st.markdown("### 💼 平台底層標準化規格數據 (Digital Library View)")
 
-# 放大字體至 18px，並將應用分級加上明顯的橘紅色高亮標籤背景
 st.markdown(f"""
 <div style="background-color: #eef5fc; padding: 22px; border-radius: 8px; border-left: 6px solid #1c7ed6; margin-bottom: 20px;">
     <table style="width:100%; border:none; background:none; font-size:18px; color:#1c7ed6; border-collapse: separate; border-spacing: 0 12px;">
@@ -141,7 +140,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ------------------------------------------
-# 參數對照表拉長對齊 (改用 st.dataframe 達成滿版工整效果)
+# 規格對照表滿版左右拉長對齊
 # ------------------------------------------
 st.markdown("#### 🔍 靜態物理與誤差注入模型參數對照")
 
@@ -154,7 +153,6 @@ df_spec = pd.DataFrame([
     {"參數類別": "隨機雜訊密度", "感測軸向": "陀螺儀", "標準化參數名稱": "Gyro_Noise_Density (n_w)", "設定值": n_w}
 ])
 
-# use_container_width=True 會強迫表格自動左右拉長對齊容器邊緣
 st.dataframe(df_spec, use_container_width=True, hide_index=True)
 st.caption("⚙️ 狀態提示：Digital Library 矩陣參數動態注入成功，雙濾波架構就緒。")
 
@@ -163,7 +161,7 @@ st.markdown("---")
 # ------------------------------------------
 # 【第二層：中層】即時效能指標看板 (KPIs Panel)
 # ------------------------------------------
-st.markdown(f"### 📉 {sensor_display.split(' - ')[0]} 元件模擬與動態融合結果")
+st.markdown(f"### 📉 {vendor} 元件模擬與動態融合結果")
 
 col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
 with col_kpi1:
