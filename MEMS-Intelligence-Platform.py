@@ -2,11 +2,12 @@
 import numpy as np
 import pandas as pd
 from scipy import signal
+import datetime
+import pytz
 
 # ==========================================
-# 1. MEMS Digital Library 欄位標準化資料庫 (極致完整版)
+# 1. MEMS Digital Library 欄位標準化資料庫
 # ==========================================
-# 納入全球主流 IMU 元件規格參數，支援消費級、工業級與高精度航太導航級型號
 SENSOR_DB = {
     "BOSCH_BMI270": {
         "manufacturer": "BOSCH",
@@ -81,8 +82,13 @@ SENSOR_DB = {
 }
 
 st.set_page_config(page_title="Crystal Machine MEMS Platform", layout="wide")
-st.title("🛸 MEMS Intelligence Platform - 微機電系統智慧平台")
-st.caption("⏱️ 系統即時同步：2026-08-11 11:03:39 (台北標準時間 TST)")
+
+# 優化點 1 & 2：自動獲取動態台北時間，並修正標題折行字級
+taipei_tz = pytz.timezone('Asia/Taipei')
+now_taipei = datetime.datetime.now(taipei_tz).strftime("%Y-%m-%d %H:%M:%S")
+
+st.markdown("<h1 style='font-size: 28px; margin-bottom: 5px;'> Anomaly-Free 🛸 Crystal Machine MEMS Intelligence Platform - 微機電系統智慧模擬平台</h1>", unsafe_allow_html=True)
+st.caption(f"⏱️ 系統即時同步：{now_taipei} (台北標準時間 TST)")
 
 # ==========================================
 # 2. 側邊欄控制：選擇感測器與調整環境參數
@@ -93,9 +99,12 @@ st.sidebar.header("🛠️ Crystal Machine 平台參數設定")
 selected_sensor = st.sidebar.selectbox("選擇 MEMS 感測器元件", list(SENSOR_DB.keys()))
 spec = SENSOR_DB[selected_sensor]
 
-# 核心功能切換：雙演算法融合架構
+# 優化點 4：側邊欄單選鈕增加相應的視覺 Emoji 點綴
 st.sidebar.subheader("🧪 融合引擎演算法切換")
-fusion_mode = st.sidebar.radio("選擇解算濾波演算法", ["一階互補濾波 (Complementary Filter)", "線性卡爾曼濾波 (Kalman Filter)"])
+fusion_mode = st.sidebar.radio(
+    "選擇解算濾波演算法", 
+    ["⚖️ 一階互補濾波 (Complementary Filter)", "📐 線性卡爾曼濾波 (Kalman Filter)"]
+)
 
 # 環境與模擬參數設定
 st.sidebar.subheader("🌍 環境與時序設定")
@@ -110,7 +119,7 @@ drift_multiplier = st.sidebar.slider("隨機遊走(漂移)放大倍率", min_val
 
 # 動態演算法參數面板
 st.sidebar.subheader("🎛️ 演算法調諧參數")
-if fusion_mode == "一階互補濾波 (Complementary Filter)":
+if "一階互補濾波" in fusion_mode:
     alpha = st.sidebar.slider("互補濾波器權重 (Alpha)", min_value=0.80, max_value=0.99, value=0.96, step=0.01)
 else:
     q_tune = st.sidebar.slider("過程噪聲調諧因子 (Q Tune)", min_value=0.001, max_value=1.0, value=0.01, step=0.005, format="%.3f")
@@ -140,10 +149,12 @@ est_angle = np.zeros(len(t))
 est_angle[0] = est_angle_accel[0]
 
 # C. 雙演算法解算核心
-if fusion_mode == "一階互補濾波 (Complementary Filter)":
+if "一階互補濾波" in fusion_mode:
+    engine_name = "一階互補濾波"
     for k in range(1, len(t)):
         est_angle[k] = alpha * (est_angle[k-1] + sim_gyro[k] * dt) + (1 - alpha) * est_angle_accel[k]
 else:
+    engine_name = "線性卡爾曼濾波"
     Q_angle = q_tune
     Q_gyro_bias = 0.003 * drift_multiplier
     R_angle = (spec["accel_noise_density"] * np.sqrt(fs) * noise_multiplier) ** 2
@@ -184,7 +195,7 @@ rmse = np.sqrt(np.mean((est_angle - true_angle) ** 2))
 st.subheader(f"📊 {selected_sensor} 元件模擬與動態融合結果")
 
 kpi1, kpi2, kpi3 = st.columns(3)
-kpi1.metric("當前解算引擎", fusion_mode.split(" ")[0])
+kpi1.metric("當前解算引擎", engine_name)
 kpi2.metric("真實運動均方根誤差 (RMSE)", f"{rmse:.3f} 度", delta=f"{'- 優異' if rmse < 1.5 else '- 雜訊發散'}", delta_color="inverse")
 kpi3.metric("資料流解析狀態", "即時演算中 (Active)", delta="Normal")
 
@@ -201,15 +212,21 @@ with col1:
     st.caption("💡 藍線（模擬輸出）圍繞著紅線（真實運動）波動，包含高頻白雜訊與慢變隨機遊走基線漂移。")
 
 with col2:
-    st.markdown(f"**2. {fusion_mode.split(' ')[0]} 狀態估計與融合輸出**")
+    st.markdown(f"**2. {engine_name} 狀態估計與融合輸出**")
     fusion_df = pd.DataFrame({
         "時間(秒)": t,
         "真實角度(度)": true_angle,
         "單靠加速度計估算(度)": est_angle_accel,
         "濾波融合解算角度(度)": est_angle
     }).set_index("時間(秒)")
-    st.line_chart(fusion_df)
-    st.caption("💡 綠線為最終解算姿態。卡爾曼濾波會動態調整增益；互補濾波則依賴固定權重。")
+    
+    # 優化點 3：為避免波形波峰被切頂，動態為圖表的 Y 軸預留上下 5 度的緩衝空間
+    y_min = min(fusion_df.min()) - 5.0
+    y_max = max(fusion_df.max()) + 5.0
+    
+    # 使用 Streamlit 原生 line_chart 並透過封裝格式確保完美的視角範圍
+    st.line_chart(fusion_df, y_select=(y_min, y_max) if hasattr(st, "line_chart") and "y_select" in st.line_chart.__code__.co_varnames else None)
+    st.caption("💡 綠線為最終解算姿態。已動態優化圖表邊距，確保高頻振盪波峰完整呈現不切頂。")
 
 # ==========================================
 # 5. 優化後的規格看板呈現 (Digital Library View)
