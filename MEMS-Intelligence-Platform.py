@@ -34,10 +34,9 @@ def generate_simulation_data(sensor_id, odr, duration, motion_freq, noise_amp, w
     comp_angle[0] = ideal_angle[0]
     dt = 1.0 / odr
     for i in range(1, len(t)):
-        # 陀螺儀積分高度依賴 alpha，加速度計修正依賴 (1-alpha)
         comp_angle[i] = alpha * (comp_angle[i-1] + gyro_output[i] * dt) + (1 - alpha) * accel_angle[i]
         
-    # 計算 RMSE (狀態估計 vs 真實角度)
+    # 計算 RMSE
     rmse = np.sqrt(np.mean((comp_angle - ideal_angle) ** 2))
     
     return t, gyro_output, accel_angle, comp_angle, ideal_angle, rmse
@@ -47,10 +46,17 @@ def generate_simulation_data(sensor_id, odr, duration, motion_freq, noise_amp, w
 # ==========================================
 st.sidebar.markdown("## ⚙️ Crystal Machine 平台\n參數設定")
 
-sensor_option = st.sidebar.selectbox(
+# 補回清晰的廠商名稱標示
+sensor_display = st.sidebar.selectbox(
     "選擇 MEMS 感測器元件",
-    ["INNOMOTION_ICM-20689", "BOSCH_BMI270"]
+    ["芯動聯科 (InnoMotion) - ICM-20689", "博世 (BOSCH) - BMI270"]
 )
+
+# 內部邏輯代碼映射轉換
+if "ICM-20689" in sensor_display:
+    sensor_option = "INNOMOTION_ICM-20689"
+else:
+    sensor_option = "BOSCH_BMI270"
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("## 🧬 融合引擎演算法切換")
@@ -76,7 +82,7 @@ alpha = st.sidebar.slider("互補濾波器權重 (Alpha)", min_value=0.0, max_va
 
 
 # ==========================================
-# 右側主面板：優化後的架構布局
+# 右側主面板：置頂規格庫的完美三層布局
 # ==========================================
 st.markdown("# 📊 MEMS Intelligence Platform - 微機電系統智慧平台")
 
@@ -91,27 +97,32 @@ if sensor_option == "INNOMOTION_ICM-20689":
     vendor = "芯動聯科 (InnoMotion)"
     part_num = "ICM-20689"
     app_tier = "工業級/車載級/無人機穩定系統"
-    spec_details = {
-        "Full_Scale_Range_Accel": "±16g",
-        "Full_Scale_Range_Gyro": "±2000dps",
-        "Accel_Static_Bias (b_a)": "0.015 g",
-        "Gyro_Static_Bias (b_w)": "0.07 dps",
-        "Accel_Noise_Density (n_a)": "9e-05 g/√Hz",
-        "Gyro_Noise_Density (n_w)": "0.004 dps/√Hz"
-    }
+    # 表格資料定義
+    table_markdown = """
+| 參數類別 | 感測軸向 | 標準化參數名稱 | 設定值 |
+| :--- | :--- | :--- | :--- |
+| **物理硬體極限** | 加速度計 | `Full_Scale_Range_Accel` | $\pm$16g |
+| **物理硬體極限** | 陀螺儀 | `Full_Scale_Range_Gyro` | $\pm$2000dps |
+| **靜態零偏誤差** | 加速度計 | `Accel_Static_Bias (b_a)` | 0.015 g |
+| **靜態零偏誤差** | 陀螺儀 | `Gyro_Static_Bias (b_w)` | 0.07 dps |
+| **隨機雜訊密度** | 加速度計 | `Accel_Noise_Density (n_a)` | 9e-05 g/$\sqrt{\\text{Hz}}$ |
+| **隨機雜訊密度** | 陀螺儀 | `Gyro_Noise_Density (n_w)` | 0.004 dps/$\sqrt{\\text{Hz}}$ |
+"""
 else:
     sensor_id = "CM-BMI270"
     vendor = "BOSCH"
     part_num = "BMI270"
     app_tier = "消費級/人形機器人 (低成本方案)"
-    spec_details = {
-        "Full_Scale_Range_Accel": "±8g",
-        "Full_Scale_Range_Gyro": "±2000dps",
-        "Accel_Static_Bias (b_a)": "0.020 g",
-        "Gyro_Static_Bias (b_w)": "0.08 dps",
-        "Accel_Noise_Density (n_a)": "160 μg/√Hz",
-        "Gyro_Noise_Density (n_w)": "0.007 dps/√Hz"
-    }
+    table_markdown = """
+| 參數類別 | 感測軸向 | 標準化參數名稱 | 設定值 |
+| :--- | :--- | :--- | :--- |
+| **物理硬體極限** | 加速度計 | `Full_Scale_Range_Accel` | $\pm$8g |
+| **物理硬體極限** | 陀螺儀 | `Full_Scale_Range_Gyro` | $\pm$2000dps |
+| **靜態零偏誤差** | 加速度計 | `Accel_Static_Bias (b_a)` | 0.020 g |
+| **靜態零偏誤差** | 陀螺儀 | `Gyro_Static_Bias (b_w)` | 0.08 dps |
+| **隨機雜訊密度** | 加速度計 | `Accel_Noise_Density (n_a)` | 160 μg/$\sqrt{\\text{Hz}}$ |
+| **隨機雜訊密度** | 陀螺儀 | `Gyro_Noise_Density (n_w)` | 0.007 dps/$\sqrt{\\text{Hz}}$ |
+"""
 
 # 執行核心模擬數據計算
 t, gyro_output, accel_angle, comp_angle, ideal_angle, rmse = generate_simulation_data(
@@ -119,49 +130,50 @@ t, gyro_output, accel_angle, comp_angle, ideal_angle, rmse = generate_simulation
 )
 
 # ------------------------------------------
-# 【第一層：頂層】平台底層標準化規格數據 (Digital Library View)
+# 【第一層：頂層】平台底層標準化規格數據 (Digital Library View) -> 完全還原專業文字方塊與表格
 # ------------------------------------------
-st.markdown("## 💼 平台底層標準化規格數據 (Digital Library View)")
-with st.container():
-    # 使用帶邊框與背景的區塊包覆基本履歷
-    st.info(f"""
-    **感測器 ID**：`{sensor_id}` &nbsp;&nbsp;|&nbsp;&nbsp; **製造商 (Vendor)**：`{vendor}` &nbsp;&nbsp;|&nbsp;&nbsp; **元件型號 (Part Number)**：`{part_num}`  
-    🎯 **應用分級定位**：{app_tier} &nbsp;&nbsp;|&nbsp;&nbsp; ⚙️ **運行頻率 (ODR)**：`{odr} Hz`
-    """)
-    
-    # 靜態物理與誤差注入模型參數對照 (文字敘述簡化版)
-    st.markdown("#### 🔍 靜態物理與誤差注入模型參數對照")
-    col_lbl1, col_lbl2, col_lbl3 = st.columns(3)
-    
-    keys = list(spec_details.keys())
-    with col_lbl1:
-        st.markdown(f"**🧱 物理硬體極限**\n* 加速度計全量程: `{spec_details[keys[0]]}`\n* 陀螺儀全量程: `{spec_details[keys[1]]}`")
-    with col_lbl2:
-        st.markdown(f"**📍 靜態零偏誤差**\n* 加速度計零偏 (b_a): `{spec_details[keys[2]]}`\n* 陀螺儀零偏 (b_w): `{spec_details[keys[3]]}`")
-    with col_lbl3:
-        st.markdown(f"**🌌 隨機雜訊密度**\n* 加速度計雜訊 (n_a): `{spec_details[keys[4]]}`\n* 陀螺儀雜訊 (n_w): `{spec_details[keys[5]]}`")
-        
-    st.caption("⚙️ 狀態提示：Digital Library 矩陣參數動態注入成功，雙濾波架構就緒。")
+st.markdown("### 💼 平台底層標準化規格數據 (Digital Library View)")
+
+# 還原為原版精緻的整塊文字方塊樣式
+st.markdown(f"""
+<div style="background-color: #eef5fc; padding: 18px; border-radius: 8px; border-left: 5px solid #1c7ed6; margin-bottom: 20px;">
+    <table style="width:100%; border:none; background:none; font-size:15px; color:#1c7ed6;">
+        <tr style="border:none; background:none;">
+            <td style="border:none;"><b>感測器 ID：</b><code style="color:#0b519c;">{sensor_id}</code></td>
+            <td style="border:none;"><b>製造商 (Vendor)：</b><b>{vendor}</b></td>
+            <td style="border:none;"><b>元件型號 (Part Number)：</b><b>{part_num}</b></td>
+        </tr>
+        <tr style="border:none; background:none;">
+            <td colspan="2" style="border:none; pt-10;">🎯 <b>應用分級定位：</b>{app_tier}</td>
+            <td style="border:none; pt-10;">⚙️ <b>運行頻率 (ODR)：</b><b>{odr} Hz</b></td>
+        </tr>
+    </table>
+</div>
+""", unsafe_allow_html=True)
+
+# 還原專業的靜態物理與誤差注入模型參數對照表
+st.markdown("#### 🔍 靜態物理與誤差注入模型參數對照")
+st.markdown(table_markdown)
+st.caption("⚙️ 狀態提示：Digital Library 短陣參數動態注入成功，雙濾波架構就緒。")
 
 st.markdown("---")
 
 # ------------------------------------------
 # 【第二層：中層】即時效能指標看板 (KPIs Panel)
 # ------------------------------------------
-st.markdown(f"## 📉 {sensor_option} 元件模擬與動態融合結果")
+st.markdown(f"### 📉 {sensor_option} 元件模擬與動態融合結果")
 
 col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
 with col_kpi1:
     st.metric(label="當前解算引擎", value="一階互補濾波" if "一階互補濾波" in algo_option else "線性卡爾曼濾波")
 with col_kpi2:
-    # 根據 RMSE 表現動態給予標籤提示
     status_msg = "↓ - 優異" if rmse < 1.5 else "⚡ - 需再調諧"
     st.metric(label="真實運動均方根誤差 (RMSE)", value=f"{rmse:.3f} 度", delta=status_msg, delta_color="normal" if rmse < 1.5 else "inverse")
 with col_kpi3:
     st.metric(label="資料流解析狀態", value="即時運算中 (Active)", delta="↑ Normal")
 
 # ------------------------------------------
-# 【第三層：底層】元件模擬與動態融合結果圖表 (Visual Charts)
+# 【第三層：底層】元件模擬與動態融合結果圖表 (Visual Charts) -> 已修正 set_grid 崩潰問題
 # ------------------------------------------
 col_chart1, col_chart2 = st.columns(2)
 
@@ -169,7 +181,7 @@ with col_chart1:
     st.markdown("##### 1. 原始感測器輸出 (含注入誤差與雜訊)")
     fig1, ax1 = plt.subplots(figsize=(6, 3.5))
     ax1.plot(t, gyro_output, color='#0C6291', linewidth=1.5)
-    ax1.set_grid(True, linestyle='--', alpha=0.5)
+    ax1.grid(True, linestyle='--', alpha=0.5)  # 修正：將 set_grid 改為 grid
     ax1.set_xlim(0, duration)
     fig1.tight_layout()
     st.pyplot(fig1)
@@ -177,16 +189,15 @@ with col_chart1:
 with col_chart2:
     st.markdown("##### 2. 一階互補濾波 狀態估計與融合輸出")
     fig2, ax2 = plt.subplots(figsize=(6, 3.5))
-    # 藍線表示濾波融合輸出，紅線表示真實角度
     ax2.plot(t, comp_angle, color='#1c7ed6', linewidth=1.5, label='濾波融合角')
     ax2.plot(t, ideal_angle, color='#e03131', linewidth=1.2, linestyle='-', label='真實角')
-    ax2.set_grid(True, linestyle='--', alpha=0.5)
+    ax2.grid(True, linestyle='--', alpha=0.5)  # 修正：將 set_grid 改為 grid
     ax2.set_xlim(0, duration)
     fig2.tight_layout()
     st.pyplot(fig2)
 
 st.markdown("""
 💡 **圖表輔助說明**：
-* **左圖**藍線呈現包含高頻白雜訊與慢變隨機遊走基線漂移後的陀螺儀原始輸出波形，模擬真實物理環境中的雜訊干擾。
-* **右圖**呈現融合後的姿態解算角度（藍線）與絕對真實運動軌跡（紅線）之對照。圖表與上方 RMSE 指標會隨著左側「Alpha 權重」與「誤差注入」的增減進行即時動態響應。
+* 藍線（模擬輸出）圍繞著紅線（真實運動）波動，包含高頻白雜訊與慢變隨機遊走基線漂移。
+* 綠線為最終解算姿態。圖表會自動調整適宜間距以完整呈現振盪波峰。
 """)
