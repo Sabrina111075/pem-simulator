@@ -82,7 +82,7 @@ SENSOR_DB = {
 
 st.set_page_config(page_title="Crystal Machine MEMS Platform", layout="wide")
 
-# 🔥 核心修正點：移除 pytz，改用 Python 內建的 timezone 與 timedelta 來手動指派台北時區 (UTC+8)
+# 內建時區指派台北標準時間
 tz_taipei = datetime.timezone(datetime.timedelta(hours=8))
 now_taipei = datetime.datetime.now(tz_taipei).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -209,11 +209,9 @@ with col2:
         "濾波融合解算角度(度)": est_angle
     }).set_index("時間(秒)")
     
-    y_min = float(min(fusion_df.min()) - 5.0)
-    y_max = float(max(fusion_df.max()) + 5.0)
-    
-    st.line_chart(fusion_df, y_select=(y_min, y_max) if hasattr(st, "line_chart") and "y_select" in st.line_chart.__code__.co_varnames else None)
-    st.caption("💡 綠線為最終解算姿態。已動態優化圖表邊距，確保高頻振盪波峰完整呈現不切頂。")
+    # 修正點：移除導致出錯的 y_select 參數，回歸原生安全的 line_chart 渲染
+    st.line_chart(fusion_df)
+    st.caption("💡 綠線為最終解算姿態。圖表會自動調整適宜間距以完整呈現振盪波峰。")
 
 # ==========================================
 # 5. 優化後的規格看板呈現 (Digital Library View)
