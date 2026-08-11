@@ -108,7 +108,6 @@ st.markdown("# 📊 MEMS Intelligence Platform - 微機電系統智慧平台")
 from zoneinfo import ZoneInfo
 
 current_time = datetime.datetime.now(ZoneInfo("Asia/Taipei")).strftime("%Y-%m-%d %H:%M:%S")
-st.caption(f"⏱️ 系統即時同步：{now_taipei} (台北標準時間 TST)")
 st.markdown("---")
 
 t, gyro_output, accel_angle, comp_angle, ideal_angle, rmse = generate_simulation_data(
