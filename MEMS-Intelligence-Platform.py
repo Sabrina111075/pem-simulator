@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 from scipy import signal
 import datetime
-import pytz
 
 # ==========================================
 # 1. MEMS Digital Library 欄位標準化資料庫
@@ -83,11 +82,11 @@ SENSOR_DB = {
 
 st.set_page_config(page_title="Crystal Machine MEMS Platform", layout="wide")
 
-# 優化點 1 & 2：自動獲取動態台北時間，並修正標題折行字級
-taipei_tz = pytz.timezone('Asia/Taipei')
-now_taipei = datetime.datetime.now(taipei_tz).strftime("%Y-%m-%d %H:%M:%S")
+# 🔥 核心修正點：移除 pytz，改用 Python 內建的 timezone 與 timedelta 來手動指派台北時區 (UTC+8)
+tz_taipei = datetime.timezone(datetime.timedelta(hours=8))
+now_taipei = datetime.datetime.now(tz_taipei).strftime("%Y-%m-%d %H:%M:%S")
 
-st.markdown("<h1 style='font-size: 28px; margin-bottom: 5px;'> Anomaly-Free 🛸 Crystal Machine MEMS Intelligence Platform - 微機電系統智慧模擬平台</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='font-size: 28px; margin-bottom: 5px;'>🛸 Crystal Machine MEMS Intelligence Platform - 微機電系統智慧模擬平台</h1>", unsafe_allow_html=True)
 st.caption(f"⏱️ 系統即時同步：{now_taipei} (台北標準時間 TST)")
 
 # ==========================================
@@ -95,29 +94,24 @@ st.caption(f"⏱️ 系統即時同步：{now_taipei} (台北標準時間 TST)")
 # ==========================================
 st.sidebar.header("🛠️ Crystal Machine 平台參數設定")
 
-# 選擇感測器型號
 selected_sensor = st.sidebar.selectbox("選擇 MEMS 感測器元件", list(SENSOR_DB.keys()))
 spec = SENSOR_DB[selected_sensor]
 
-# 優化點 4：側邊欄單選鈕增加相應的視覺 Emoji 點綴
 st.sidebar.subheader("🧪 融合引擎演算法切換")
 fusion_mode = st.sidebar.radio(
     "選擇解算濾波演算法", 
     ["⚖️ 一階互補濾波 (Complementary Filter)", "📐 線性卡爾曼濾波 (Kalman Filter)"]
 )
 
-# 環境與模擬參數設定
 st.sidebar.subheader("🌍 環境與時序設定")
 fs = st.sidebar.slider("取樣頻率 ODR (Hz)", min_value=50, max_value=200, value=100, step=10)
 duration = st.sidebar.slider("模擬時長 (秒)", min_value=2, max_value=10, value=5)
 motion_freq = st.sidebar.slider("虛擬運動頻率 (Hz)", min_value=0.5, max_value=3.0, value=1.0, step=0.5)
 
-# 誤差注入微調
 st.sidebar.subheader("⚠️ 誤差注入乘數")
 noise_multiplier = st.sidebar.slider("雜訊放大倍率", min_value=1.0, max_value=10.0, value=1.0, step=0.5)
 drift_multiplier = st.sidebar.slider("隨機遊走(漂移)放大倍率", min_value=0.0, max_value=5.0, value=1.0, step=0.5)
 
-# 動態演算法參數面板
 st.sidebar.subheader("🎛️ 演算法調諧參數")
 if "一階互補濾波" in fusion_mode:
     alpha = st.sidebar.slider("互補濾波器權重 (Alpha)", min_value=0.80, max_value=0.99, value=0.96, step=0.01)
@@ -130,12 +124,10 @@ else:
 t = np.linspace(0, duration, int(fs * duration), endpoint=False)
 dt = 1.0 / fs
 
-# A. 生成理想軌跡
 true_angle = 20.0 * np.sin(2 * np.pi * motion_freq * t)  
 true_gyro = 20.0 * (2 * np.pi * motion_freq) * np.cos(2 * np.pi * motion_freq * t) 
 true_accel = np.sin(np.radians(true_angle)) 
 
-# B. 動態模型與誤差注入
 gyro_white_noise = np.random.normal(0, spec["gyro_noise_density"] * np.sqrt(fs), len(t)) * noise_multiplier
 gyro_drift = np.cumsum(np.random.normal(0, 0.01, len(t))) * drift_multiplier
 sim_gyro = true_gyro + spec["gyro_bias"] + gyro_white_noise + gyro_drift
@@ -143,12 +135,10 @@ sim_gyro = true_gyro + spec["gyro_bias"] + gyro_white_noise + gyro_drift
 accel_white_noise = np.random.normal(0, spec["accel_noise_density"] * np.sqrt(fs), len(t)) * noise_multiplier
 sim_accel = true_accel + spec["accel_bias"] + accel_white_noise
 
-# 透過加速度計粗估角度基準
 est_angle_accel = np.degrees(np.arcsin(np.clip(sim_accel, -1.0, 1.0)))
 est_angle = np.zeros(len(t))
 est_angle[0] = est_angle_accel[0]
 
-# C. 雙演算法解算核心
 if "一階互補濾波" in fusion_mode:
     engine_name = "一階互補濾波"
     for k in range(1, len(t)):
@@ -186,7 +176,6 @@ else:
         
         est_angle[k] = x[0, 0]
 
-# D. 量化性能評估指標 (KPIs 計算)
 rmse = np.sqrt(np.mean((est_angle - true_angle) ** 2))
 
 # ==========================================
@@ -220,11 +209,9 @@ with col2:
         "濾波融合解算角度(度)": est_angle
     }).set_index("時間(秒)")
     
-    # 優化點 3：為避免波形波峰被切頂，動態為圖表的 Y 軸預留上下 5 度的緩衝空間
-    y_min = min(fusion_df.min()) - 5.0
-    y_max = max(fusion_df.max()) + 5.0
+    y_min = float(min(fusion_df.min()) - 5.0)
+    y_max = float(max(fusion_df.max()) + 5.0)
     
-    # 使用 Streamlit 原生 line_chart 並透過封裝格式確保完美的視角範圍
     st.line_chart(fusion_df, y_select=(y_min, y_max) if hasattr(st, "line_chart") and "y_select" in st.line_chart.__code__.co_varnames else None)
     st.caption("💡 綠線為最終解算姿態。已動態優化圖表邊距，確保高頻振盪波峰完整呈現不切頂。")
 
