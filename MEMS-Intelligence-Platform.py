@@ -104,11 +104,11 @@ alpha = st.sidebar.slider("互補濾波器權重 (Alpha)", min_value=0.0, max_va
 # 右側主面板布局
 # ==========================================
 st.markdown("# 📊 MEMS Intelligence Platform - 微機電系統智慧平台")
+tz_taipei = datetime.timezone(datetime.timedelta(hours=8))  # 強制定義 UTC+8 時區
 
-from zoneinfo import ZoneInfo
+current_time = datetime.datetime.now(tz_taipei).strftime("%Y-%m-%d %H:%M:%S")
 
-current_time = datetime.datetime.now(ZoneInfo("Asia/Taipei")).strftime("%Y-%m-%d %H:%M:%S")
-st.markdown("---")
+st.markdown(f" `系統即時同步：{current_time} (台北標準時間 TST)`")
 
 t, gyro_output, accel_angle, comp_angle, ideal_angle, rmse = generate_simulation_data(
     sensor_id, odr, duration, motion_freq, noise_amp, walk_amp, alpha
