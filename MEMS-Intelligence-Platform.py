@@ -81,7 +81,7 @@ SENSOR_DB = {
 }
 
 st.set_page_config(page_title="Crystal Machine MEMS Platform", layout="wide")
-st.title("🛸 Crystal Machine MEMS Intelligence Platform - 智慧模擬平台")
+st.title("🛸 MEMS Intelligence Platform - 微機電系統智慧平台")
 st.caption("⏱️ 系統即時同步：2026-08-11 11:03:39 (台北標準時間 TST)")
 
 # ==========================================
