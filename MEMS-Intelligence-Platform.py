@@ -86,7 +86,7 @@ st.set_page_config(page_title="Crystal Machine MEMS Platform", layout="wide")
 tz_taipei = datetime.timezone(datetime.timedelta(hours=8))
 now_taipei = datetime.datetime.now(tz_taipei).strftime("%Y-%m-%d %H:%M:%S")
 
-st.markdown("<h1 style='font-size: 28px; margin-bottom: 5px;'>🛸 Crystal Machine MEMS Intelligence Platform - 微機電系統智慧模擬平台</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='font-size: 28px; margin-bottom: 5px;'>🛸 MEMS Intelligence Platform - 微機電系統智慧平台</h1>", unsafe_allow_html=True)
 st.caption(f"⏱️ 系統即時同步：{now_taipei} (台北標準時間 TST)")
 
 # ==========================================
