@@ -81,7 +81,7 @@ SENSOR_DB = {
 }
 
 st.set_page_config(page_title="Crystal Machine MEMS Platform", layout="wide")
-st.title("🛸 MEMS Intelligence Platform - 微機電系統智慧模擬平台")
+st.title("🛸 MEMS Intelligence Platform - 微機電系統智慧平台")
 st.caption("本地開發驗證 ➔ GitHub / Streamlit 3.11 雲端部署架構")
 
 # ==========================================
