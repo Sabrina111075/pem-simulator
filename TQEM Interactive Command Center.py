@@ -4,7 +4,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
-import pytz  # 引入時區處理套件
 
 # -----------------------------------------------------------------------------
 # 頁面配置 (Page Configuration)
@@ -16,10 +15,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 自訂 CSS 樣式 (優化標題、KPI 指標卡與即時時間樣式)
+# 自訂 CSS 樣式 (優化標題與 KPI 指標卡防吃字)
 st.markdown("""
 <style>
-    /* 主標題字體加大 */
+    /* 1. 主標題字體加大 */
     .main-header {
         font-size: 2.8rem !important;
         font-weight: 800 !important;
@@ -27,33 +26,13 @@ st.markdown("""
         margin-bottom: 0.2rem;
         line-height: 1.2;
     }
-    /* 子標題與時間容器 */
-    .sub-header-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        margin-bottom: 1.8rem;
-        gap: 10px;
-    }
-    .sub-header-text {
+    .sub-header {
         font-size: 1.1rem;
         color: #64748B;
-    }
-    .live-time-badge {
-        background-color: #E0F2FE;
-        color: #0369A1;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.95rem;
-        font-weight: 600;
-        border: 1px solid #BAE6FD;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
+        margin-bottom: 1.8rem;
     }
     
-    /* 頂部 KPI 指標卡優化 (防吃字與增強顯眼度) */
+    /* 2. 頂部 KPI 指標卡優化 (防吃字與增強顯眼度) */
     [data-testid="stMetric"] {
         background-color: #F8FAFC;
         border: 1px solid #E2E8F0;
@@ -156,39 +135,32 @@ with st.sidebar:
     current_regime = st.selectbox(
         "當前市場狀態 (Market Regime)",
         ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
-        index=4  # 對應截圖中的 Crisis (危機)
+        index=1
     )
     
     st.markdown("### 動態權重引擎參數")
     alpha_param = st.slider("信心折價係數 α (Uncertainty Discount)", 0.0, 1.0, 0.2, 0.05)
     beta_param = st.slider("風險懲罰係數 β (Risk Penalty)", 0.5, 3.0, 1.0, 0.1)
-    delta_w_max = st.slider("單日權重變化上限 Δw_max", 0.01, 0.20, 0.09, 0.01)
+    delta_w_max = st.slider("單日權重變化上限 Δw_max", 0.01, 0.20, 0.05, 0.01)
     
     st.markdown("---")
-    # 💡 依據要求：此處已移除原本的「資料更新時間」
+    st.caption("資料更新時間：2026-08-14 09:00 (Effective Time)")
     st.caption("資料時間對齊檢查：✅ 無前視偏誤 (No Look-Ahead)")
 
 # -----------------------------------------------------------------------------
-# 主頁面 Header & 核心動態連動指標
+# 主頁面 Header & 核心動態連動指標 (大標題與卡片優化)
 # -----------------------------------------------------------------------------
 st.markdown('<div class="main-header">TimesFM TQEM 量化基金評估與動態權重管理平台</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">整合 Data Layer 治理、Regime 辨識、TimesFM 時間序列預測、五維動態權重與 Kalman 平滑之完整量化研究工作流</div>', unsafe_allow_html=True)
 
-# 💡 依據要求：在標題下方整併子標題與台北時區實時時間
-st.markdown(f"""
-<div class="sub-header-container">
-    <div class="sub-header-text">整合 Data Layer 治理、Regime 辨識、TimesFM 時間序列預測、五維動態權重與 Kalman 平滑之完整量化研究工作流</div>
-    <div class="live-time-badge">🕒 台北時間 (TST)：{current_time_taipei}</div>
-</div>
-""", unsafe_allow_html=True)
-
-# 頂部關鍵指標
+# 頂部關鍵指標 (5 等分欄位，明確清晰)
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
 with kpi1:
-    st.metric("當前市場 Regime", f"{current_regime}", delta="Broadness: 68%" if "Crisis" in current_regime or "Bull" in current_regime else "Broadness: 42%")
+    st.metric("當前市場 Regime", f"{current_regime}", delta="Broadness: 42%" if "Bear" in current_regime else "Broadness: 68%")
 with kpi2:
     st.metric("TimesFM 平均信心", "0.82", delta="+0.04 (C_i)")
 with kpi3:
-    st.metric("近期 Top 特徵 IC", "Momentum (0.12)" if "Crisis" in current_regime or "Bull" in current_regime else "Macro (0.14)", delta="ICIR: 1.02")
+    st.metric("近期 Top 特徵 IC", "Macro (0.14)" if "Bear" in current_regime else "Momentum (0.12)", delta="ICIR: 1.02")
 with kpi4:
     st.metric("M5 組合夏普比率", "1.68", delta="+1.03 vs M0")
 with kpi5:
@@ -208,11 +180,12 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 # -----------------------------------------------------------------------------
-# Tab 1: 市場狀態與 TimesFM 預測
+# Tab 1: 市場狀態與 TimesFM 預測 (改為上下結構，避免擠壓)
 # -----------------------------------------------------------------------------
 with tab1:
     st.subheader("市場狀態辨識 (Regime Detection) & TimesFM 預測引擎")
     
+    # 【上層】：市場 Regime 矩陣
     st.markdown("##### 📌 當前五大 Regime 條件與權重調整矩陣")
     regime_df = pd.DataFrame({
         'Regime': ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
@@ -230,6 +203,7 @@ with tab1:
     
     st.markdown("---")
     
+    # 【下層】：個股 TimesFM 多時間尺度預測圖表
     st.markdown("##### 📈 個股 TimesFM 多時間尺度預測與不確定性 (Quantile Range)")
     
     c_select, c_chart = st.columns([1, 3])
@@ -260,7 +234,7 @@ with tab1:
         st.plotly_chart(fig_fan, use_container_width=True)
 
 # -----------------------------------------------------------------------------
-# 後續的分頁 (Tab 2 - Tab 5) 保持原樣
+# Tab 2: 五維動態權重與 Kalman 平滑
 # -----------------------------------------------------------------------------
 with tab2:
     st.subheader("五維動態權重引擎 (Dynamic Weight Allocation Engine)")
@@ -268,14 +242,29 @@ with tab2:
     
     col_w1, col_w2 = st.columns(2)
     with col_w1:
-        fig_area = px.area(df_kalman_weights, x=df_kalman_weights.index, y=features, title="Kalman 平滑後之 7 大特徵群組歷史動態權重趨勢", labels={'value': '權重比例', 'index': '日期'}, color_discrete_sequence=px.colors.qualitative.Pastel)
+        fig_area = px.area(
+            df_kalman_weights, 
+            x=df_kalman_weights.index, 
+            y=features,
+            title="Kalman 平滑後之 7 大特徵群組歷史動態權重趨勢 (每日總和 = 100%)",
+            labels={'value': '權重比例', 'index': '日期'},
+            color_discrete_sequence=px.colors.qualitative.Pastel
+        )
         fig_area.update_layout(height=380, margin=dict(l=10, r=10, t=40, b=10))
         st.plotly_chart(fig_area, use_container_width=True)
         
     with col_w2:
         latest_raw = df_raw_weights.iloc[-1].copy()
+        
         if "Bear" in current_regime or "Crisis" in current_regime:
-            latest_raw['Macro'] += 0.15; latest_raw['Volatility'] += 0.1; latest_raw['Momentum'] -= 0.15
+            latest_raw['Macro'] += 0.15
+            latest_raw['Volatility'] += 0.1
+            latest_raw['Momentum'] -= 0.15
+        elif "Bull" in current_regime:
+            latest_raw['Momentum'] += 0.15
+            latest_raw['Fund Flow'] += 0.1
+            latest_raw['Macro'] -= 0.1
+            
         latest_raw = latest_raw / latest_raw.sum()
         latest_kalman = latest_raw.rolling(window=3, min_periods=1).mean()
         latest_kalman = latest_kalman / latest_kalman.sum()
@@ -283,34 +272,92 @@ with tab2:
         fig_bar = go.Figure()
         fig_bar.add_trace(go.Bar(x=features, y=latest_raw, name='原始計算權重 (Raw Weight)', marker_color='#CBD5E1'))
         fig_bar.add_trace(go.Bar(x=features, y=latest_kalman, name='Kalman 平滑權重 (Filtered)', marker_color='#0284C7'))
-        fig_bar.update_layout(title=f"當日特徵權重調整狀況 ({current_regime} 情境)", barmode='group', yaxis_title="權重比重", height=380, margin=dict(l=10, r=10, t=40, b=10))
+        
+        fig_bar.update_layout(
+            title=f"當日特徵權重調整狀況 ({current_regime} 情境模擬環境)",
+            barmode='group',
+            yaxis_title="權重比重",
+            height=380,
+            margin=dict(l=10, r=10, t=40, b=10)
+        )
         st.plotly_chart(fig_bar, use_container_width=True)
 
+# -----------------------------------------------------------------------------
+# Tab 3: Alpha 排序與選股清單
+# -----------------------------------------------------------------------------
 with tab3:
     st.subheader("最終 Alpha 訊號生成與選股組合 (Portfolio Optimization Input)")
     st.latex(r"\text{Alpha}_{\text{final}}(i,t) = \beta_1 \cdot \text{Alpha}_{\text{feature}}(i,t) + \beta_2 \cdot \text{Forecast}_{\text{TimesFM}}(i,t)")
+    
+    st.markdown("##### 股票 Alpha 排名與信心指標表 (Top 20 Demo)")
+    
     formatted_df = df_stocks.copy()
-    def highlight_alpha(val): return f"color: {'#DC2626' if val < 0 else '#16A34A'}; font-weight: bold;"
-    st.dataframe(formatted_df.style.map(highlight_alpha, subset=['Alpha_Score', 'Forecast_5D (%)']), use_container_width=True, height=400)
+    
+    def highlight_alpha(val):
+        color = '#DC2626' if val < 0 else '#16A34A'
+        return f'color: {color}; font-weight: bold;'
 
+    st.dataframe(
+        formatted_df.style.map(highlight_alpha, subset=['Alpha_Score', 'Forecast_5D (%)']),
+        use_container_width=True,
+        height=400
+    )
+
+# -----------------------------------------------------------------------------
+# Tab 4: Baseline 模型對比 (M0-M6)
+# -----------------------------------------------------------------------------
 with tab4:
     st.subheader("TQEM Baseline 模型多維度績效評估 (M0 至 M6)")
+    
     col_m1, col_m2 = st.columns(2)
     with col_m1:
-        fig_scatter = px.scatter(df_models, x='Max Drawdown (%)', y='Annual Return (%)', size='Sharpe Ratio', color='Model', text='Model', title="風報比分析：年化報酬率 vs 最大回撤", color_discrete_sequence=px.colors.qualitative.Bold)
-        fig_scatter.update_traces(textposition='top center').update_layout(height=400, margin=dict(l=10, r=10, t=40, b=10))
+        fig_scatter = px.scatter(
+            df_models, 
+            x='Max Drawdown (%)', 
+            y='Annual Return (%)', 
+            size='Sharpe Ratio', 
+            color='Model',
+            text='Model',
+            title="風報比分析：年化報酬率 vs 最大回撤 (泡泡大小 = 夏普比率)",
+            color_discrete_sequence=px.colors.qualitative.Bold
+        )
+        fig_scatter.update_traces(textposition='top center')
+        fig_scatter.update_layout(height=400, margin=dict(l=10, r=10, t=40, b=10))
         st.plotly_chart(fig_scatter, use_container_width=True)
+        
     with col_m2:
+        st.markdown("##### M0-M6 完整評估指標對照表")
         st.dataframe(df_models, hide_index=True, use_container_width=True, height=350)
+        st.caption("註：M5 (TimesFM + Dynamic Weight + Kalman) 在抑制 Turnover 與提高 Sharpe 上達到最佳實操平衡。")
 
+# -----------------------------------------------------------------------------
+# Tab 5: 資料工程與時間對齊驗證
+# -----------------------------------------------------------------------------
 with tab5:
     st.subheader("資料工程 (Data Engineering) & 時間對齊治理")
-    st.markdown("#### 🛡️ 防止 Look-Ahead Bias 時間戳治理機制")
+    
+    st.markdown("""
+    #### 🛡️ 防止 Look-Ahead Bias 時間戳治理機制
+    為確保回測完全真實且可落地，TQEM 強制要求每一筆市場資料必須標註四種時間：
+    """)
+    
     time_col1, time_col2, time_col3, time_col4 = st.columns(4)
-    with time_col1: st.markdown("<div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;'><b>1. Event Time</b><br><small>事件發生時間</small></div>", unsafe_allow_html=True)
-    with time_col2: st.markdown("<div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;'><b>2. Publish Time</b><br><small>資訊公開時間</small></div>", unsafe_allow_html=True)
-    with time_col3: st.markdown("<div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;'><b>3. Ingest Time</b><br><small>系統接收時間</small></div>", unsafe_allow_html=True)
-    with time_col4: st.markdown("<div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;'><b>4. Effective Time</b><br><small>可使用最早時間</small></div>", unsafe_allow_html=True)
+    with time_col1:
+        st.markdown("<div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;'><b>1. Event Time</b><br><small>事件真實發生時間<br>(例如：財報公布 18:00)</small></div>", unsafe_allow_html=True)
+    with time_col2:
+        st.markdown("<div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;'><b>2. Publish Time</b><br><small>資訊對外公開時間<br>(例如：交易所公告 18:30)</small></div>", unsafe_allow_html=True)
+    with time_col3:
+        st.markdown("<div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;'><b>3. Ingest Time</b><br><small>系統實際接收時間<br>(例如：資料庫入庫 18:31)</small></div>", unsafe_allow_html=True)
+    with time_col4:
+        st.markdown("<div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;'><b>4. Effective Time</b><br><small>模型可使用的最早時間<br>(例如：次日開盤前 08:30)</small></div>", unsafe_allow_html=True)
+
     st.markdown("---")
-    data_layer_df = pd.DataFrame({'資料類別': ['1. 價格與成交', '2. 籌碼與資金流', '3. 宏觀經濟'], '品質檢查狀態': ['✅ 通過', '✅ 通過', '✅ 通過']})
+    st.markdown("#### 8 大類市場資料層 (Data Layer) 涵蓋狀態")
+    
+    data_layer_df = pd.DataFrame({
+        '資料類別': ['1. 價格與成交', '2. 市場/產業指數', '3. 波動率與風險', '4. 流動性/微結構', '5. 籌碼與資金流', '6. 宏觀經濟', '7. 公司基本面', '8. 新聞/事件情緒'],
+        '涵蓋指標數': [12, 8, 6, 5, 10, 15, 18, 4],
+        '更新頻率': ['Tick / 日線', '日線', '日線/即時', 'Tick', '每日盤後', '日/週/月', '季/年報', '即時 NLP'],
+        '品質檢查狀態': ['✅ 通過', '✅ 通過', '✅ 通過', '✅ 通過', '✅ 通過', '✅ 通過', '✅ 通過', '✅ 通過']
+    })
     st.dataframe(data_layer_df, hide_index=True, use_container_width=True)
