@@ -73,8 +73,8 @@ st.markdown("""
 # -----------------------------------------------------------------------------
 # 時區與時間動態計算 (台北時區)
 # -----------------------------------------------------------------------------
-taipei_tz = timezone(timedelta(hours=8))
-current_time_taipei = datetime.now(taipei_tz).strftime('%Y-%m-%d %H:%M:%S')
+import datetime as dt
+current_time_taipei = (dt.datetime.utcnow() + dt.timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
 
 # -----------------------------------------------------------------------------
 # 模擬數據生成器 (Mock Data Generator)
