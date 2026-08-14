@@ -219,8 +219,10 @@ with tab1:
 # -----------------------------------------------------------------------------
 with tab2:
     st.subheader("五維動態權重引擎 (Dynamic Weight Allocation Engine)")
-    st.latex(r"w_i(t) = 	ext{Normalize}\left[ w_i^{	ext{base}} 	imes R_i(t) 	imes P_i(t) 	imes C_i(t) 	imes K_i(t) 
-ight]")
+    st.latex(
+    r"w_i(t) = \text{Normalize}\left[ w_i^{\text{base}} \times R_i(t) \times"
+    r" P_i(t) \times C_i(t) \times K_i(t) \right]"
+)
     
     col_w1, col_w2 = st.columns(2)
     
@@ -260,8 +262,11 @@ ight]")
 # -----------------------------------------------------------------------------
 with tab3:
     st.subheader("最終 Alpha 訊號生成與選股組合 (Portfolio Optimization Input)")
-    st.latex(r"	ext{Alpha}_{	ext{final}}(i,t) =  eta_1 \cdot 	ext{Alpha}_{	ext{feature}}(i,t) +  eta_2 \cdot 	ext{Forecast}_{	ext{TimesFM}}(i,t)")
-    
+    st.latex(
+    r"\text{Alpha}_{\text{final}}(i,t) = \beta_1 \cdot"
+    r" \text{Alpha}_{\text{feature}}(i,t) + \beta_2 \cdot"
+    r" \text{Forecast}_{\text{TimesFM}}(i,t)"
+)
     st.markdown("##### 股票 Alpha 排名與信心指標表 (Top 20 Demo)")
     
     # 格式化表格欄位
