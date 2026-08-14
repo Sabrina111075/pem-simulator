@@ -15,37 +15,53 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 自訂 CSS 樣式
+# 自訂 CSS 樣式 (優化標題與 KPI 指標卡防吃字)
 st.markdown("""
 <style>
+    /* 1. 主標題字體加大 */
     .main-header {
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: #1E293B;
+        font-size: 2.8rem !important;
+        font-weight: 800 !important;
+        color: #0F172A;
         margin-bottom: 0.2rem;
+        line-height: 1.2;
     }
     .sub-header {
-        font-size: 1.0rem;
+        font-size: 1.1rem;
         color: #64748B;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.8rem;
     }
-    .metric-card {
+    
+    /* 2. 頂部 KPI 指標卡優化 (防吃字與增強顯眼度) */
+    [data-testid="stMetric"] {
         background-color: #F8FAFC;
         border: 1px solid #E2E8F0;
-        border-radius: 8px;
-        padding: 12px;
-        text-align: center;
+        border-radius: 10px;
+        padding: 12px 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
+    [data-testid="stMetricLabel"] {
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        color: #475569 !important;
+        white-space: nowrap !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
+        color: #0F172A !important;
+    }
+    
+    /* Tab 標籤樣式 */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 45px;
+        height: 48px;
         white-space: pre-wrap;
         background-color: #F1F5F9;
-        border-radius: 6px 6px 0px 0px;
-        padding-top: 10px;
-        padding-bottom: 10px;
+        border-radius: 8px 8px 0px 0px;
+        font-weight: 600;
     }
     .stTabs [aria-selected="true"] {
         background-color: #0284C7;
@@ -113,7 +129,7 @@ with st.sidebar:
     current_regime = st.selectbox(
         "當前市場狀態 (Market Regime)",
         ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
-        index=2  # 預設為盤整，方便測試連動
+        index=1
     )
     
     st.markdown("### 動態權重引擎參數")
@@ -126,21 +142,21 @@ with st.sidebar:
     st.caption("資料時間對齊檢查：✅ 無前視偏誤 (No Look-Ahead)")
 
 # -----------------------------------------------------------------------------
-# 主頁面 Header & 核心動態連動指標
+# 主頁面 Header & 核心動態連動指標 (大標題與卡片優化)
 # -----------------------------------------------------------------------------
 st.markdown('<div class="main-header">TimesFM TQEM 量化基金評估與動態權重管理平台</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">整合 Data Layer 治理、Regime 辨識、TimesFM 時間序列預測、五維動態權重與 Kalman 平滑之完整量化研究工作流</div>', unsafe_allow_html=True)
 
-# 頂部關鍵指標 (將當前 Regime 改為變數連動)
+# 頂部關鍵指標 (5 等分欄位，明確清晰)
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
 with kpi1:
-    st.metric("當前市場 Regime", f"{current_regime}", delta="Broadness: 68%" if "Bull" in current_regime else "Broadness: 42%")
+    st.metric("當前市場 Regime", f"{current_regime}", delta="Broadness: 42%" if "Bear" in current_regime else "Broadness: 68%")
 with kpi2:
-    st.metric("TimesFM 平均信心 (C_i)", "0.82", delta="+0.04")
+    st.metric("TimesFM 平均信心", "0.82", delta="+0.04 (C_i)")
 with kpi3:
-    st.metric("近期 Top 特徵 IC", "Momentum (0.12)" if "Bull" in current_regime else "Macro (0.14)", delta="ICIR: 1.02")
+    st.metric("近期 Top 特徵 IC", "Macro (0.14)" if "Bear" in current_regime else "Momentum (0.12)", delta="ICIR: 1.02")
 with kpi4:
-    st.metric("M5 組合夏普比率", "1.68", delta="vs M0 +1.03")
+    st.metric("M5 組合夏普比率", "1.68", delta="+1.03 vs M0")
 with kpi5:
     st.metric("Kalman 權重週轉率", "8.2%", delta="-15.9% vs Raw")
 
@@ -158,35 +174,41 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 # -----------------------------------------------------------------------------
-# Tab 1: 市場狀態與 TimesFM 預測
+# Tab 1: 市場狀態與 TimesFM 預測 (改為上下結構，避免擠壓)
 # -----------------------------------------------------------------------------
 with tab1:
     st.subheader("市場狀態辨識 (Regime Detection) & TimesFM 預測引擎")
     
-    c1, c2 = st.columns([1, 2])
-    with c1:
-        st.markdown("##### 當前五大 Regime 條件與權重調整矩陣")
-        regime_df = pd.DataFrame({
-            'Regime': ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
-            '主導特徵群組': ['Momentum / Flow', 'Macro / Volatility', 'Mean Reversion', 'Volatility / Cash', 'Risk Control / Macro'],
-            '權重偏向': ['上調 Momentum (+20%)', '上調 Vol/Macro (+30%)', '上調 Price Range', '上調 Vol/Liquidity', '大幅調降 Trend/Flow']
-        })
+    # 【上層】：市場 Regime 矩陣
+    st.markdown("##### 📌 當前五大 Regime 條件與權重調整矩陣")
+    regime_df = pd.DataFrame({
+        'Regime': ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
+        '主導特徵群組': ['Momentum / Flow', 'Macro / Volatility', 'Mean Reversion', 'Volatility / Cash', 'Risk Control / Macro'],
+        '權重偏向': ['上調 Momentum (+20%)', '上調 Vol/Macro (+30%)', '上調 Price Range', '上調 Vol/Liquidity', '大幅調降 Trend/Flow']
+    })
+    
+    def highlight_selected_regime(row):
+        if row['Regime'] == current_regime:
+            return ['background-color: rgba(2, 132, 199, 0.25); font-weight: bold; color: #0284C7;'] * len(row)
+        return [''] * len(row)
         
-        # 反白醒目提示使用者在側邊欄選中的狀態
-        def highlight_selected_regime(row):
-            if row['Regime'] == current_regime:
-                return ['background-color: rgba(2, 132, 199, 0.2); font-weight: bold;'] * len(row)
-            return [''] * len(row)
-            
-        st.dataframe(regime_df.style.apply(highlight_selected_regime, axis=1), hide_index=True, use_container_width=True)
-        st.info("💡 **Regime 規則**：根據 MA20-MA60 趨勢、市場廣度 (Breadth) 與 20日波動率 $\sigma_{20}$ 自動判定。")
-        
-    with c2:
-        st.markdown("##### 個股 TimesFM 多時間尺度預測與不確定性 (Quantile Range)")
-        
+    st.dataframe(regime_df.style.apply(highlight_selected_regime, axis=1), hide_index=True, use_container_width=True)
+    st.info("💡 **Regime 判定規則**：根據 MA20-MA60 趨勢、市場廣度 (Breadth) 與 20日波動率 $\sigma_{20}$ 自動判定。")
+    
+    st.markdown("---")
+    
+    # 【下層】：個股 TimesFM 多時間尺度預測圖表
+    st.markdown("##### 📈 個股 TimesFM 多時間尺度預測與不確定性 (Quantile Range)")
+    
+    c_select, c_chart = st.columns([1, 3])
+    with c_select:
         selected_ticker = st.selectbox("選擇預測個股：", df_stocks['Ticker'].tolist(), index=0)
         stock_row = df_stocks[df_stocks['Ticker'] == selected_ticker].iloc[0]
-        
+        st.write(f"**目前選取**：`{selected_ticker}`")
+        st.write(f"**不確定區間 U**：`{stock_row['Uncertainty_U']}`")
+        st.write(f"**模型信心 C_i**：`{stock_row['Confidence_C']}`")
+
+    with c_chart:
         horizons = ['Current', 'T+1D', 'T+5D', 'T+20D']
         q50_vals = [0, stock_row['Forecast_1D (%)'], stock_row['Forecast_5D (%)'], stock_row['Forecast_20D (%)']]
         q10_vals = [0, stock_row['Q10 (%)']*0.3, stock_row['Q10 (%)']*0.6, stock_row['Q10 (%)']]
@@ -200,7 +222,7 @@ with tab1:
         fig_fan.update_layout(
             title=f"{selected_ticker} TimesFM 預測走勢與 Quantile 不確定性區間 (U = {stock_row['Uncertainty_U']})",
             yaxis_title="預期報酬率 (%)",
-            height=320,
+            height=350,
             margin=dict(l=20, r=20, t=40, b=20)
         )
         st.plotly_chart(fig_fan, use_container_width=True)
@@ -228,7 +250,6 @@ with tab2:
     with col_w2:
         latest_raw = df_raw_weights.iloc[-1].copy()
         
-        # 根據側邊欄的選取狀態調整權重情境模擬
         if "Bear" in current_regime or "Crisis" in current_regime:
             latest_raw['Macro'] += 0.15
             latest_raw['Volatility'] += 0.1
@@ -270,7 +291,6 @@ with tab3:
         color = '#DC2626' if val < 0 else '#16A34A'
         return f'color: {color}; font-weight: bold;'
 
-    # 💡 修正處：將已被舊版刪除的 applymap 替換成新版 Pandas 的 map
     st.dataframe(
         formatted_df.style.map(highlight_alpha, subset=['Alpha_Score', 'Forecast_5D (%)']),
         use_container_width=True,
@@ -317,13 +337,13 @@ with tab5:
     
     time_col1, time_col2, time_col3, time_col4 = st.columns(4)
     with time_col1:
-        st.markdown("<div class='metric-card'><b>1. Event Time</b><br><small>事件真實發生時間<br>(例如：公司財報公布日 18:00)</small></div>", unsafe_allow_html=True)
+        st.markdown("<div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;'><b>1. Event Time</b><br><small>事件真實發生時間<br>(例如：財報公布 18:00)</small></div>", unsafe_allow_html=True)
     with time_col2:
-        st.markdown("<div class='metric-card'><b>1. Publish Time</b><br><small>資訊對外公開時間<br>(例如：交易所公告 18:30)</small></div>", unsafe_allow_html=True)
+        st.markdown("<div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;'><b>2. Publish Time</b><br><small>資訊對外公開時間<br>(例如：交易所公告 18:30)</small></div>", unsafe_allow_html=True)
     with time_col3:
-        st.markdown("<div class='metric-card'><b>3. Ingest Time</b><br><small>系統實際接收時間<br>(例如：資料庫入庫 18:31)</small></div>", unsafe_allow_html=True)
+        st.markdown("<div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;'><b>3. Ingest Time</b><br><small>系統實際接收時間<br>(例如：資料庫入庫 18:31)</small></div>", unsafe_allow_html=True)
     with time_col4:
-        st.markdown("<div class='metric-card'><b>4. Effective Time</b><br><small>模型可使用的最早時間<br>(例如：次日開盤前 08:30)</small></div>", unsafe_allow_html=True)
+        st.markdown("<div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;'><b>4. Effective Time</b><br><small>模型可使用的最早時間<br>(例如：次日開盤前 08:30)</small></div>", unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("#### 8 大類市場資料層 (Data Layer) 涵蓋狀態")
