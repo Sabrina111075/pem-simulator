@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # -----------------------------------------------------------------------------
 # 頁面配置 (Page Configuration)
@@ -36,12 +36,6 @@ st.markdown("""
         padding: 12px;
         text-align: center;
     }
-    .status-tag {
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-weight: bold;
-        font-size: 0.85rem;
-    }
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
     }
@@ -68,28 +62,20 @@ def load_mock_data():
     dates = pd.date_range(end=datetime.today(), periods=180, freq='B')
     np.random.seed(42)
     
-    # 7 大特徵群組
     features = ['Price/Return', 'Volume', 'Momentum', 'Volatility', 'Macro', 'Fund Flow', 'Sentiment']
     
-    # 模擬歷史動態權重數據 (未平滑)
+    # 模擬歷史動態權重數據
     raw_weights = np.random.dirichlet(np.ones(7), size=len(dates))
     df_raw_weights = pd.DataFrame(raw_weights, index=dates, columns=features)
     
-    # 模擬 Kalman 平滑後權重
     df_kalman_weights = df_raw_weights.rolling(window=5, min_periods=1).mean()
     df_kalman_weights = df_kalman_weights.div(df_kalman_weights.sum(axis=1), axis=0)
-    
-    # 模擬 IC 時間序列
-    df_ic = pd.DataFrame({
-        f: np.sin(np.linspace(0, 10, len(dates)) + i) * 0.15 + np.random.normal(0.02, 0.05, len(dates))
-        for i, f in enumerate(features)
-    }, index=dates)
     
     # 模擬個股 Forecast & Uncertainty
     stock_list = [f"{2330 + i}.TW" for i in range(10)] + [f"STOCK_{i:03d}" for i in range(11, 101)]
     df_stocks = pd.DataFrame({
         'Ticker': stock_list[:20],
-        'Regime': np.random.choice(['Bull', 'Bear', 'Sideway', 'HighVol', 'Crisis'], size=20, p=[0.4, 0.2, 0.2, 0.1, 0.1]),
+        'Regime': np.random.choice(['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'], size=20, p=[0.4, 0.2, 0.2, 0.1, 0.1]),
         'Forecast_1D (%)': np.round(np.random.normal(0.3, 1.2, 20), 2),
         'Forecast_5D (%)': np.round(np.random.normal(1.1, 2.5, 20), 2),
         'Forecast_20D (%)': np.round(np.random.normal(3.5, 5.0, 20), 2),
@@ -111,9 +97,9 @@ def load_mock_data():
         'Weight Turnover (%)': [0.0, 15.2, 0.0, 18.5, 24.1, 8.2, 7.5]
     })
     
-    return dates, features, df_raw_weights, df_kalman_weights, df_ic, df_stocks, df_models
+    return dates, features, df_raw_weights, df_kalman_weights, df_stocks, df_models
 
-dates, features, df_raw_weights, df_kalman_weights, df_ic, df_stocks, df_models = load_mock_data()
+dates, features, df_raw_weights, df_kalman_weights, df_stocks, df_models = load_mock_data()
 
 # -----------------------------------------------------------------------------
 # 側邊欄 (Sidebar Control)
@@ -127,7 +113,7 @@ with st.sidebar:
     current_regime = st.selectbox(
         "當前市場狀態 (Market Regime)",
         ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
-        index=0
+        index=2  # 預設為盤整，方便測試連動
     )
     
     st.markdown("### 動態權重引擎參數")
@@ -140,19 +126,19 @@ with st.sidebar:
     st.caption("資料時間對齊檢查：✅ 無前視偏誤 (No Look-Ahead)")
 
 # -----------------------------------------------------------------------------
-# 主頁面 Header
+# 主頁面 Header & 核心動態連動指標
 # -----------------------------------------------------------------------------
 st.markdown('<div class="main-header">TimesFM TQEM 量化基金評估與動態權重管理平台</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">整合 Data Layer 治理、Regime 辨識、TimesFM 時間序列預測、五維動態權重與 Kalman 平滑之完整量化研究工作流</div>', unsafe_allow_html=True)
 
-# 頂部關鍵指標 (KPI Banner)
+# 頂部關鍵指標 (將當前 Regime 改為變數連動)
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
 with kpi1:
-    st.metric("當前市場 Regime", "Bull (多頭)", delta="Broadness: 68%")
+    st.metric("當前市場 Regime", f"{current_regime}", delta="Broadness: 68%" if "Bull" in current_regime else "Broadness: 42%")
 with kpi2:
     st.metric("TimesFM 平均信心 (C_i)", "0.82", delta="+0.04")
 with kpi3:
-    st.metric("近期 Top 特徵 IC", "Momentum (0.12)", delta="ICIR: 1.02")
+    st.metric("近期 Top 特徵 IC", "Momentum (0.12)" if "Bull" in current_regime else "Macro (0.14)", delta="ICIR: 1.02")
 with kpi4:
     st.metric("M5 組合夏普比率", "1.68", delta="vs M0 +1.03")
 with kpi5:
@@ -181,18 +167,23 @@ with tab1:
     with c1:
         st.markdown("##### 當前五大 Regime 條件與權重調整矩陣")
         regime_df = pd.DataFrame({
-            'Regime': ['Bull', 'Bear', 'Sideway', 'HighVol', 'Crisis'],
+            'Regime': ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
             '主導特徵群組': ['Momentum / Flow', 'Macro / Volatility', 'Mean Reversion', 'Volatility / Cash', 'Risk Control / Macro'],
             '權重偏向': ['上調 Momentum (+20%)', '上調 Vol/Macro (+30%)', '上調 Price Range', '上調 Vol/Liquidity', '大幅調降 Trend/Flow']
         })
-        st.dataframe(regime_df, hide_index=True, use_container_width=True)
         
+        # 反白醒目提示使用者在側邊欄選中的狀態
+        def highlight_selected_regime(row):
+            if row['Regime'] == current_regime:
+                return ['background-color: rgba(2, 132, 199, 0.2); font-weight: bold;'] * len(row)
+            return [''] * len(row)
+            
+        st.dataframe(regime_df.style.apply(highlight_selected_regime, axis=1), hide_index=True, use_container_width=True)
         st.info("💡 **Regime 規則**：根據 MA20-MA60 趨勢、市場廣度 (Breadth) 與 20日波動率 $\sigma_{20}$ 自動判定。")
         
     with c2:
         st.markdown("##### 個股 TimesFM 多時間尺度預測與不確定性 (Quantile Range)")
         
-        # 繪製選定股票的 Quantile 預測扇形圖
         selected_ticker = st.selectbox("選擇預測個股：", df_stocks['Ticker'].tolist(), index=0)
         stock_row = df_stocks[df_stocks['Ticker'] == selected_ticker].iloc[0]
         
@@ -219,15 +210,10 @@ with tab1:
 # -----------------------------------------------------------------------------
 with tab2:
     st.subheader("五維動態權重引擎 (Dynamic Weight Allocation Engine)")
-    st.latex(
-    r"w_i(t) = \text{Normalize}\left[ w_i^{\text{base}} \times R_i(t) \times"
-    r" P_i(t) \times C_i(t) \times K_i(t) \right]"
-)
+    st.latex(r"w_i(t) = \text{Normalize}\left[ w_i^{\text{base}} \times R_i(t) \times P_i(t) \times C_i(t) \times K_i(t) \right]")
     
     col_w1, col_w2 = st.columns(2)
-    
     with col_w1:
-        # 原始動態權重 vs Kalman 平滑後權重 (時間序列堆疊圖)
         fig_area = px.area(
             df_kalman_weights, 
             x=df_kalman_weights.index, 
@@ -240,16 +226,28 @@ with tab2:
         st.plotly_chart(fig_area, use_container_width=True)
         
     with col_w2:
-        # 當日特徵權重對比 (Raw vs Kalman Filtered)
-        latest_raw = df_raw_weights.iloc[-1]
-        latest_kalman = df_kalman_weights.iloc[-1]
+        latest_raw = df_raw_weights.iloc[-1].copy()
+        
+        # 根據側邊欄的選取狀態調整權重情境模擬
+        if "Bear" in current_regime or "Crisis" in current_regime:
+            latest_raw['Macro'] += 0.15
+            latest_raw['Volatility'] += 0.1
+            latest_raw['Momentum'] -= 0.15
+        elif "Bull" in current_regime:
+            latest_raw['Momentum'] += 0.15
+            latest_raw['Fund Flow'] += 0.1
+            latest_raw['Macro'] -= 0.1
+            
+        latest_raw = latest_raw / latest_raw.sum()
+        latest_kalman = latest_raw.rolling(window=3, min_periods=1).mean()
+        latest_kalman = latest_kalman / latest_kalman.sum()
         
         fig_bar = go.Figure()
         fig_bar.add_trace(go.Bar(x=features, y=latest_raw, name='原始計算權重 (Raw Weight)', marker_color='#CBD5E1'))
         fig_bar.add_trace(go.Bar(x=features, y=latest_kalman, name='Kalman 平滑權重 (Filtered)', marker_color='#0284C7'))
         
         fig_bar.update_layout(
-            title="當日特徵權重：原始計算 vs Kalman 平滑與 Turnover 限制後",
+            title=f"當日特徵權重調整狀況 ({current_regime} 情境模擬環境)",
             barmode='group',
             yaxis_title="權重比重",
             height=380,
@@ -262,22 +260,19 @@ with tab2:
 # -----------------------------------------------------------------------------
 with tab3:
     st.subheader("最終 Alpha 訊號生成與選股組合 (Portfolio Optimization Input)")
-    st.latex(
-    r"\text{Alpha}_{\text{final}}(i,t) = \beta_1 \cdot"
-    r" \text{Alpha}_{\text{feature}}(i,t) + \beta_2 \cdot"
-    r" \text{Forecast}_{\text{TimesFM}}(i,t)"
-)
+    st.latex(r"\text{Alpha}_{\text{final}}(i,t) = \beta_1 \cdot \text{Alpha}_{\text{feature}}(i,t) + \beta_2 \cdot \text{Forecast}_{\text{TimesFM}}(i,t)")
+    
     st.markdown("##### 股票 Alpha 排名與信心指標表 (Top 20 Demo)")
     
-    # 格式化表格欄位
     formatted_df = df_stocks.copy()
     
     def highlight_alpha(val):
         color = '#DC2626' if val < 0 else '#16A34A'
         return f'color: {color}; font-weight: bold;'
 
+    # 💡 修正處：將已被舊版刪除的 applymap 替換成新版 Pandas 的 map
     st.dataframe(
-        formatted_df.style.applymap(highlight_alpha, subset=['Alpha_Score', 'Forecast_5D (%)']),
+        formatted_df.style.map(highlight_alpha, subset=['Alpha_Score', 'Forecast_5D (%)']),
         use_container_width=True,
         height=400
     )
@@ -289,9 +284,7 @@ with tab4:
     st.subheader("TQEM Baseline 模型多維度績效評估 (M0 至 M6)")
     
     col_m1, col_m2 = st.columns(2)
-    
     with col_m1:
-        # 夏普比率 vs 最大回撤 散佈圖
         fig_scatter = px.scatter(
             df_models, 
             x='Max Drawdown (%)', 
@@ -307,7 +300,6 @@ with tab4:
         st.plotly_chart(fig_scatter, use_container_width=True)
         
     with col_m2:
-        # 績效數據對比表
         st.markdown("##### M0-M6 完整評估指標對照表")
         st.dataframe(df_models, hide_index=True, use_container_width=True, height=350)
         st.caption("註：M5 (TimesFM + Dynamic Weight + Kalman) 在抑制 Turnover 與提高 Sharpe 上達到最佳實操平衡。")
@@ -327,7 +319,7 @@ with tab5:
     with time_col1:
         st.markdown("<div class='metric-card'><b>1. Event Time</b><br><small>事件真實發生時間<br>(例如：公司財報公布日 18:00)</small></div>", unsafe_allow_html=True)
     with time_col2:
-        st.markdown("<div class='metric-card'><b>2. Publish Time</b><br><small>資訊對外公開時間<br>(例如：交易所公告 18:30)</small></div>", unsafe_allow_html=True)
+        st.markdown("<div class='metric-card'><b>1. Publish Time</b><br><small>資訊對外公開時間<br>(例如：交易所公告 18:30)</small></div>", unsafe_allow_html=True)
     with time_col3:
         st.markdown("<div class='metric-card'><b>3. Ingest Time</b><br><small>系統實際接收時間<br>(例如：資料庫入庫 18:31)</small></div>", unsafe_allow_html=True)
     with time_col4:
