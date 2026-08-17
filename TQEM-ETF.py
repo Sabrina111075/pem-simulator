@@ -1,5 +1,5 @@
 ﻿"""
-TQEM-ETF.py - Streamlit 主畫面 (Plotly 橫排中文圖表優化版)
+TQEM-ETF.py - Streamlit 主畫面 (全類別特徵中文翻譯與表格最佳化版)
 """
 import streamlit as st
 import pandas as pd
@@ -13,25 +13,36 @@ from etf_skills import SKILL_MAP
 
 st.set_page_config(page_title="Crystal Machine - 台灣 ETF 智慧預測平台", layout="wide")
 
-# 特徵英文代碼與中文對照字典 (涵蓋 10 大類別常見特徵)
+# 完整特徵名稱中英文對照字典 (涵蓋 10 大 ETF 類別)
 FEATURE_TRANSLATION = {
-    # 市值/高股息
+    # 大型市值型 / 高股息 / 產業型
+    "price_trend": "價格趨勢 (price_trend)",
+    "global_market": "全球市場連動 (global_market)",
+    "flow_capital": "資金流向 (flow_capital)",
+    "nav_premium": "折溢價率 (nav_premium)",
+    "liquidity": "流動性指標 (liquidity)",
+    "concentration": "成分股集中度 (concentration)",
+    "macro_fx": "總體匯率 (macro_fx)",
     "dividend_yield": "股息殖利率 (dividend_yield)",
     "earnings_growth": "獲利成長率 (earnings_growth)",
     "quality_roe": "股東權益報酬率 (quality_roe)",
     "valuation": "估值指標 (valuation)",
     "market_cap": "市值規模 (market_cap)",
-    # 債券/槓桿反向/產業
-    "futures_basis": "期貨價差 (futures_basis)",
-    "path_decay": "路徑損耗 (path_decay)",
-    "underlying_momentum": "標的動能 (underlying_momentum)",
-    "volatility_drag": "波動率拖累 (volatility_drag)",
+    
+    # 債券型 / 固定收益
     "credit_spread": "信用利差 (credit_spread)",
     "duration_risk": "存續期間風險 (duration_risk)",
     "fed_policy": "聯準會政策 (fed_policy)",
     "fx_hedging": "匯率避險 (fx_hedging)",
     "yield_curve": "殖利率曲線 (yield_curve)",
-    # 因子/多重資產
+    
+    # 槓桿 / 反向型
+    "futures_basis": "期貨價差 (futures_basis)",
+    "path_decay": "路徑損耗 (path_decay)",
+    "underlying_momentum": "標的動能 (underlying_momentum)",
+    "volatility_drag": "波動率拖累 (volatility_drag)",
+    
+    # 聰明 Beta / 因子型 / 多重資產
     "value_factor": "價值因子 (value_factor)",
     "momentum_factor": "動能因子 (momentum_factor)",
     "quality_factor": "品質因子 (quality_factor)",
@@ -193,38 +204,34 @@ st.markdown("---")
 st.subheader("⚖️ Kalman 平滑前後的特徵動態權重")
 st.caption(f"⚙️ 當前 Kalman 過程雜訊設定為 **Q = {kalman_q}** ｜ 信賴區間設定為 **{confidence_level}**")
 
-# 將特徵名稱翻譯為中文+英文橫排格式
-translated_keys = [FEATURE_TRANSLATION.get(k, k) for k in raw_weights.keys()]
+# 將特徵名稱翻譯為「中文 (英文代碼)」格式
+translated_keys = [FEATURE_TRANSLATION.get(k, f"{k} ({k})") for k in raw_weights.keys()]
 raw_vals = list(raw_weights.values())
 smooth_vals = list(smoothed_weights.values())
 
 tab1, tab2 = st.tabs(["📊 權重對比圖表", "📋 詳細數據表格"])
 
 with tab1:
-    # 使用 Plotly 繪製水平橫排 X 軸文字的柱狀圖
     fig = go.Figure()
-    
     fig.add_trace(go.Bar(
         x=translated_keys,
         y=raw_vals,
         name='原始動態權重',
         marker_color='#93C5FD'
     ))
-    
     fig.add_trace(go.Bar(
         x=translated_keys,
         y=smooth_vals,
         name='Kalman 平滑權重',
         marker_color='#1D4ED8'
     ))
-    
     fig.update_layout(
         barmode='group',
         height=400,
         margin=dict(l=20, r=20, t=30, b=80),
         xaxis=dict(
-            tickangle=0,            # 強制 X 軸文字橫排 (0度)
-            tickfont=dict(size=12)  # 適合閱讀的字體大小
+            tickangle=0,
+            tickfont=dict(size=12)
         ),
         legend=dict(
             orientation="h",
@@ -234,34 +241,31 @@ with tab1:
             x=1
         )
     )
-    
     st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
-    # 建立 DataFrame 並將特徵名稱獨立設為一欄
     df_weights = pd.DataFrame({
         "特徵名稱": translated_keys,
         "原始動態權重": raw_vals,
         "Kalman 平滑權重": smooth_vals
     })
     
-    # 透過 st.dataframe 的 column_config 設定專屬欄寬與數字格式
     st.dataframe(
         df_weights.style.highlight_max(subset=["原始動態權重", "Kalman 平滑權重"], axis=0, color='#e6f2ff'),
         use_container_width=True,
-        hide_index=True,  # 隱藏預設 0, 1, 2 的數字索引
+        hide_index=True,
         column_config={
             "特徵名稱": st.column_config.TextColumn(
                 "特徵名稱 (Feature Name)",
-                width="large"  # 給予寬廣空間，避免文字裁切
+                width="large"
             ),
             "原始動態權重": st.column_config.NumberColumn(
                 "原始動態權重",
-                format="%.4f"   # 統一格式化為小數點後 4 位
+                format="%.4f"
             ),
             "Kalman 平滑權重": st.column_config.NumberColumn(
                 "Kalman 平滑權重",
-                format="%.4f"   # 統一格式化為小數點後 4 位
+                format="%.4f"
             )
         }
     )
