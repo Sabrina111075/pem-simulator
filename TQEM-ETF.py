@@ -238,8 +238,30 @@ with tab1:
     st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
+    # 建立 DataFrame 並將特徵名稱獨立設為一欄
     df_weights = pd.DataFrame({
+        "特徵名稱": translated_keys,
         "原始動態權重": raw_vals,
         "Kalman 平滑權重": smooth_vals
-    }, index=translated_keys)
-    st.dataframe(df_weights.style.highlight_max(axis=0, color='#e6f2ff'), use_container_width=True)
+    })
+    
+    # 透過 st.dataframe 的 column_config 設定專屬欄寬與數字格式
+    st.dataframe(
+        df_weights.style.highlight_max(subset=["原始動態權重", "Kalman 平滑權重"], axis=0, color='#e6f2ff'),
+        use_container_width=True,
+        hide_index=True,  # 隱藏預設 0, 1, 2 的數字索引
+        column_config={
+            "特徵名稱": st.column_config.TextColumn(
+                "特徵名稱 (Feature Name)",
+                width="large"  # 給予寬廣空間，避免文字裁切
+            ),
+            "原始動態權重": st.column_config.NumberColumn(
+                "原始動態權重",
+                format="%.4f"   # 統一格式化為小數點後 4 位
+            ),
+            "Kalman 平滑權重": st.column_config.NumberColumn(
+                "Kalman 平滑權重",
+                format="%.4f"   # 統一格式化為小數點後 4 位
+            )
+        }
+    )
