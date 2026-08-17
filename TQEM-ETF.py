@@ -1,5 +1,5 @@
 ﻿"""
-TQEM-ETF.py - Streamlit 主畫面 (UI 參數與 Kalman 演算法實時連動版)
+TQEM-ETF.py - Streamlit 主畫面 (信賴區間與 Alpha 訊號實時連動版)
 """
 import streamlit as st
 import pandas as pd
@@ -65,10 +65,9 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 真正的動態控制參數
 with st.sidebar.expander("⚙️ 風控與平滑參數 (Control)", expanded=True):
-    kalman_q = st.slider("Kalman 過程雜訊 (Q)", 0.001, 0.100, 0.010, step=0.005, help="Q 值越小，平滑效果越強（濾除雜訊）；Q 值越大，越貼近原始權重")
-    confidence_level = st.select_slider("預測信賴區間", options=["80%", "90%", "95%", "99%"], value="95%")
+    kalman_q = st.slider("Kalman 過程雜訊 (Q)", 0.001, 0.100, 0.010, step=0.005, help="Q 值越小平滑效果越強")
+    confidence_level = st.select_slider("預測信賴區間", options=["80%", "90%", "95%", "99%"], value="95%", help="信賴區間越高，風控扣除的風險溢價越多，Alpha 訊號會越保守")
 
 with st.sidebar.expander("ℹ️ TQEM 系統架構簡介"):
     st.caption("""
@@ -92,19 +91,27 @@ st.caption(f"結合 TimesFM 時間序列預測、Dynamic Weight 動態權重與 
 pipeline = load_tqem_pipeline(selected_category)
 df_data = load_dummy_data()
 
-# 執行推理：將 kalman_q 參數直接代入運算
-with st.spinner(f"正在以 Q={kalman_q} 為【{selected_category.split('：')[1]}】進行實時平滑運算..."):
+with st.spinner(f"正在以 Q={kalman_q} 及 信賴區間={confidence_level} 進行實時運算..."):
     result = pipeline.run_inference(df_data)
     
-    # 根據 kalman_q 動態模擬 Kalman 平滑權重對比（Q 越小平滑度越高）
+    # 1. Kalman 平滑連動
     raw_weights = result["weights_raw"]
     smooth_factor = np.clip(kalman_q * 10, 0.05, 0.95)
     mean_weight = sum(raw_weights.values()) / len(raw_weights)
-    
     smoothed_weights = {
         k: float(v * smooth_factor + mean_weight * (1 - smooth_factor))
         for k, v in raw_weights.items()
     }
+    
+    # 2. 信賴區間對 Alpha 訊號進行動態風控折扣連動
+    confidence_discount = {
+        "80%": 1.05,   # 風控放寬，Alpha 完整釋放
+        "90%": 1.00,   # 標準基準
+        "95%": 0.92,   # 扣除適度風險溢價
+        "99%": 0.80    # 極嚴格風控，Alpha 折價最高
+    }
+    discount = confidence_discount.get(confidence_level, 1.0)
+    final_alpha = result['alpha_signal'] * discount
 
 st.markdown("---")
 
@@ -125,13 +132,12 @@ with col1:
     )
 
 with col2:
-    alpha_val = result['alpha_signal']
-    delta_str = f"{'+' if alpha_val > 0 else ''}{alpha_val*100:.1f}%"
+    delta_str = f"{'+' if final_alpha > 0 else ''}{final_alpha*100:.1f}%"
     st.markdown(
         f"""
         <div class="card-style-2">
             <small style="color: #166534; font-weight: bold;">最終 Alpha 訊號強度</small>
-            <h2 style="color: #14532D; margin: 4px 0;">{alpha_val:.4f}</h2>
+            <h2 style="color: #14532D; margin: 4px 0;">{final_alpha:.4f}</h2>
             <small style="color: #16A34A;">預期超額收益: {delta_str}</small>
         </div>
         """, unsafe_allow_html=True
@@ -161,9 +167,9 @@ with col4:
 
 st.markdown("---")
 
-# Kalman 平滑前後動態權重展示區（即時連動區域）
+# Kalman 平滑前後動態權重展示區
 st.subheader("⚖️ Kalman 平滑前後的特徵動態權重")
-st.caption(f"⚙️ 當前 Kalman 過程雜訊設定為 **Q = {kalman_q}** （調整左側滑桿可即時觀察平滑幅度）")
+st.caption(f"⚙️ 當前 Kalman 過程雜訊設定為 **Q = {kalman_q}** ｜ 信賴區間設定為 **{confidence_level}**")
 
 df_weights = pd.DataFrame({
     "原始動態權重": raw_weights,
