@@ -203,27 +203,18 @@ with col3:
     )
 
 with col4:
-
     delta_text = f"風險調整收益 {'↑' if sharpe_delta >= 0 else '↓'} {abs(sharpe_delta):.2f}"
-
     st.markdown(
-
         f"""
-
         <div class="card-style-4">
-
             <small style="color: #6B21A8; font-weight: bold;">預期夏普比率 (Sharpe)</small>
-
             <h2 style="color: #581C87; margin: 4px 0;">{dynamic_sharpe:.2f}</h2>
-
             <small style="color: #9333EA;">{delta_text}</small>
-
         </div>
-
-        """, unsafe_allow_html=True
-
+        """,
+        unsafe_allow_html=True
     )
-# ------------------------------------------------------------------
+
 
 st.markdown("---")
 
