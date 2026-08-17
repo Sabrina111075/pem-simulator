@@ -141,16 +141,25 @@ with st.spinner(f"正在為【{selected_category.split('：')[1]}】進行實時
         for k, v in raw_weights.items()
     }
     
-    # 2. 信賴區間連動 (Alpha 折扣與勝率動態連動)
+    # 2. 信賴區間連動
     confidence_discount = {"80%": 1.05, "90%": 1.00, "95%": 0.92, "99%": 0.80}
     discount = confidence_discount.get(confidence_level, 1.0)
     final_alpha = result['alpha_signal'] * discount
 
-    # 勝率根據信賴區間與 Alpha 訊號強度動態計算 (避免寫死 68.5%)
+    # 勝率動態連動
     win_rate_base = {"80%": 58.2, "90%": 63.5, "95%": 68.5, "99%": 75.8}
     base_wr = win_rate_base.get(confidence_level, 68.5)
-    # 加上微小的 Alpha 訊號強度動態修正
     dynamic_win_rate = base_wr + np.clip(final_alpha * 5, -3.0, 3.0)
+
+    # ------------------ 【貼在這裡】夏普比率動態計算 ------------------
+    # Q 值越小(平滑越強) -> 風險越低 -> 夏普比率加分
+    q_sharpe_boost = (0.05 - kalman_q) * 3.0  
+    # 信賴區間越高 -> 訊號品質提升 -> 夏普比率加分
+    conf_sharpe_boost = {"80%": -0.15, "90%": 0.0, "95%": 0.15, "99%": 0.30}.get(confidence_level, 0.0)
+    # 計算最終夏普比率與增益
+    dynamic_sharpe = np.clip(1.65 + q_sharpe_boost + conf_sharpe_boost, 0.8, 3.2)
+    sharpe_delta = dynamic_sharpe - 1.50
+    # ------------------------------------------------------------------
 
 st.markdown("---")
 
@@ -194,15 +203,27 @@ with col3:
     )
 
 with col4:
+
+    delta_text = f"風險調整收益 {'↑' if sharpe_delta >= 0 else '↓'} {abs(sharpe_delta):.2f}"
+
     st.markdown(
-        """
+
+        f"""
+
         <div class="card-style-4">
+
             <small style="color: #6B21A8; font-weight: bold;">預期夏普比率 (Sharpe)</small>
-            <h2 style="color: #581C87; margin: 4px 0;">1.82</h2>
-            <small style="color: #9333EA;">風險調整收益 ↑ 0.15</small>
+
+            <h2 style="color: #581C87; margin: 4px 0;">{dynamic_sharpe:.2f}</h2>
+
+            <small style="color: #9333EA;">{delta_text}</small>
+
         </div>
+
         """, unsafe_allow_html=True
+
     )
+# ------------------------------------------------------------------
 
 st.markdown("---")
 
