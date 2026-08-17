@@ -1,9 +1,10 @@
 ﻿"""
-TQEM-ETF.py - Streamlit 主畫面 (信賴區間與 Alpha 訊號實時連動版)
+TQEM-ETF.py - Streamlit 主畫面 (Plotly 橫排中文圖表優化版)
 """
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
 from datetime import datetime
 import pytz
 
@@ -11,6 +12,32 @@ from tqem_core import TQEMPipeline
 from etf_skills import SKILL_MAP
 
 st.set_page_config(page_title="Crystal Machine - 台灣 ETF 智慧預測平台", layout="wide")
+
+# 特徵英文代碼與中文對照字典 (涵蓋 10 大類別常見特徵)
+FEATURE_TRANSLATION = {
+    # 市值/高股息
+    "dividend_yield": "股息殖利率 (dividend_yield)",
+    "earnings_growth": "獲利成長率 (earnings_growth)",
+    "quality_roe": "股東權益報酬率 (quality_roe)",
+    "valuation": "估值指標 (valuation)",
+    "market_cap": "市值規模 (market_cap)",
+    # 債券/槓桿反向/產業
+    "futures_basis": "期貨價差 (futures_basis)",
+    "path_decay": "路徑損耗 (path_decay)",
+    "underlying_momentum": "標的動能 (underlying_momentum)",
+    "volatility_drag": "波動率拖累 (volatility_drag)",
+    "credit_spread": "信用利差 (credit_spread)",
+    "duration_risk": "存續期間風險 (duration_risk)",
+    "fed_policy": "聯準會政策 (fed_policy)",
+    "fx_hedging": "匯率避險 (fx_hedging)",
+    "yield_curve": "殖利率曲線 (yield_curve)",
+    # 因子/多重資產
+    "value_factor": "價值因子 (value_factor)",
+    "momentum_factor": "動能因子 (momentum_factor)",
+    "quality_factor": "品質因子 (quality_factor)",
+    "low_vol_factor": "低波動因子 (low_vol_factor)",
+    "size_factor": "規模因子 (size_factor)",
+}
 
 # 自訂 CSS 樣式
 st.markdown("""
@@ -67,7 +94,7 @@ st.sidebar.markdown("""
 
 with st.sidebar.expander("⚙️ 風控與平滑參數 (Control)", expanded=True):
     kalman_q = st.slider("Kalman 過程雜訊 (Q)", 0.001, 0.100, 0.010, step=0.005, help="Q 值越小平滑效果越強")
-    confidence_level = st.select_slider("預測信賴區間", options=["80%", "90%", "95%", "99%"], value="95%", help="信賴區間越高，風控扣除的風險溢價越多，Alpha 訊號會越保守")
+    confidence_level = st.select_slider("預測信賴區間", options=["80%", "90%", "95%", "99%"], value="95%", help="信賴區間越高，Alpha 訊號越保守")
 
 with st.sidebar.expander("ℹ️ TQEM 系統架構簡介"):
     st.caption("""
@@ -91,7 +118,7 @@ st.caption(f"結合 TimesFM 時間序列預測、Dynamic Weight 動態權重與 
 pipeline = load_tqem_pipeline(selected_category)
 df_data = load_dummy_data()
 
-with st.spinner(f"正在以 Q={kalman_q} 及 信賴區間={confidence_level} 進行實時運算..."):
+with st.spinner(f"正在為【{selected_category.split('：')[1]}】進行實時運算..."):
     result = pipeline.run_inference(df_data)
     
     # 1. Kalman 平滑連動
@@ -103,13 +130,8 @@ with st.spinner(f"正在以 Q={kalman_q} 及 信賴區間={confidence_level} 進
         for k, v in raw_weights.items()
     }
     
-    # 2. 信賴區間對 Alpha 訊號進行動態風控折扣連動
-    confidence_discount = {
-        "80%": 1.05,   # 風控放寬，Alpha 完整釋放
-        "90%": 1.00,   # 標準基準
-        "95%": 0.92,   # 扣除適度風險溢價
-        "99%": 0.80    # 極嚴格風控，Alpha 折價最高
-    }
+    # 2. 信賴區間連動
+    confidence_discount = {"80%": 1.05, "90%": 1.00, "95%": 0.92, "99%": 0.80}
     discount = confidence_discount.get(confidence_level, 1.0)
     final_alpha = result['alpha_signal'] * discount
 
@@ -171,15 +193,53 @@ st.markdown("---")
 st.subheader("⚖️ Kalman 平滑前後的特徵動態權重")
 st.caption(f"⚙️ 當前 Kalman 過程雜訊設定為 **Q = {kalman_q}** ｜ 信賴區間設定為 **{confidence_level}**")
 
-df_weights = pd.DataFrame({
-    "原始動態權重": raw_weights,
-    "Kalman 平滑權重": smoothed_weights
-})
+# 將特徵名稱翻譯為中文+英文橫排格式
+translated_keys = [FEATURE_TRANSLATION.get(k, k) for k in raw_weights.keys()]
+raw_vals = list(raw_weights.values())
+smooth_vals = list(smoothed_weights.values())
 
 tab1, tab2 = st.tabs(["📊 權重對比圖表", "📋 詳細數據表格"])
 
 with tab1:
-    st.bar_chart(df_weights, height=350)
+    # 使用 Plotly 繪製水平橫排 X 軸文字的柱狀圖
+    fig = go.Figure()
+    
+    fig.add_trace(go.Bar(
+        x=translated_keys,
+        y=raw_vals,
+        name='原始動態權重',
+        marker_color='#93C5FD'
+    ))
+    
+    fig.add_trace(go.Bar(
+        x=translated_keys,
+        y=smooth_vals,
+        name='Kalman 平滑權重',
+        marker_color='#1D4ED8'
+    ))
+    
+    fig.update_layout(
+        barmode='group',
+        height=400,
+        margin=dict(l=20, r=20, t=30, b=80),
+        xaxis=dict(
+            tickangle=0,            # 強制 X 軸文字橫排 (0度)
+            tickfont=dict(size=12)  # 適合閱讀的字體大小
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
+    df_weights = pd.DataFrame({
+        "原始動態權重": raw_vals,
+        "Kalman 平滑權重": smooth_vals
+    }, index=translated_keys)
     st.dataframe(df_weights.style.highlight_max(axis=0, color='#e6f2ff'), use_container_width=True)
