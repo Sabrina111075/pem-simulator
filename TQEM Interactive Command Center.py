@@ -121,13 +121,25 @@ st.markdown("---")
 # 3. 頁面渲染
 # -----------------------------------------------------------------
 
-if selected_page.startswith("1."):
+elif selected_page.startswith("1."):
     st.subheader("1. 市場狀態辨識 (Regime Detection) & TimesFM 預測引擎")
-    st.markdown(f"##### 📌 當前選定 Regime：`{selected_regime}` 與權重調整矩陣")
+    st.markdown(f"##### 📌 當前選定 Regime：`{selected_regime}` （動態權重調整矩陣）")
+    
+    # 根據當前參數即時計算動態偏向
+    adj_momentum = f"{20 * (1 - alpha):+.1f}% (經 α 折價)"
+    adj_volatility = f"{30 * (1 + beta*0.5):+.1f}% (經 β 懲罰加權)"
+    
     regime_df = pd.DataFrame({
-        'Regime': ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
+        'Regime 狀態': ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
         '主導特徵群組': ['Momentum / Flow', 'Macro / Volatility', 'Mean Reversion', 'Volatility / Cash', 'Risk Control / Macro'],
-        '權重偏向': ['上調 Momentum (+20%)', '上調 Vol/Macro (+30%)', '上調 Price Range', '上調 Vol/Liquidity', '大幅調降 Trend/Flow']
+        '預設權重偏向': ['上調 Momentum (+20%)', '上調 Vol/Macro (+30%)', '上調 Price Range', '上調 Vol/Liquidity', '大幅調降 Trend/Flow'],
+        '當前參數實時微調結果': [
+            adj_momentum if selected_regime.startswith('Bull') else '標準配置',
+            adj_volatility if selected_regime.startswith('Bear') else '標準配置',
+            f"微調上限 Δw={delta_w_max:.2f}",
+            f"風控權重增益 β={beta:.2f}",
+            "強制現金防禦 50%+"
+        ]
     })
     st.dataframe(regime_df, use_container_width=True)
 
