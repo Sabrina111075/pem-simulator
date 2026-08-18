@@ -226,37 +226,53 @@ elif selected_page.startswith("5."):
 
 elif selected_page.startswith("6."):
     st.subheader("6. 威科夫 (Wyckoff) 價量籌碼 (PVCS) 診斷沙盒")
-    try:
-        from wyckoff_pvcs_engine import render_wyckoff_tab
-        render_wyckoff_tab(st, alpha=alpha, beta=beta, delta_w_max=delta_w_max, regime=selected_regime)
-    except Exception:
-        w_col1, w_col2, w_col3, w_col4 = st.columns(4)
-        with w_col1:
-            st.metric("Wyckoff 階段辨識", "Phase D / E", "↑ SOS / Jac...")
-        with w_col2:
-            st.metric("PVCS 綜合評估分", f"{round(73.8 - alpha*5, 1)} / 100", "↑ +3.4 pts")
-        with w_col3:
-            st.metric("籌碼集中度 (Chip Score)", "68.3 / 100", "↑ 三大法人同步買超")
-        with w_col4:
-            st.metric("建議策略動作", "積極加碼 / 持股續抱", "↑ 信心度 88%")
-            
-        st.markdown("---")
-        st.markdown("##### 📈 K線價量結構與 PVCS 訊號疊加圖")
-        wyckoff_chart_data = pd.DataFrame(
-            np.random.randn(40, 2).cumsum(axis=0) + [100, 50],
-            columns=['Wyckoff Price Trend', 'PVCS Cumulative Flow']
-        )
-        st.line_chart(wyckoff_chart_data)
-        
-        st.markdown("---")
-        st.markdown("##### 🎯 PVCS 三維診斷文字方塊")
-        
-        tb_col1, tb_col2, tb_col3, tb_col4 = st.columns(4)
-        with tb_col1:
-            st.info("**P - 價格結構得分**\n\n### **81.7**\n\n📌 狀態：強勢突破點")
-        with tb_col2:
-            st.info("**V - 成交量動能得分**\n\n### **72.8**\n\n📌 狀態：量增價漲結構")
-        with tb_col3:
-            st.info("**C - 籌碼集中度得分**\n\n### **68.3**\n\n📌 狀態：主力集中控盤")
-        with tb_col4:
-            st.info("**S - 市場情緒指數**\n\n### **70.7**\n\n📌 狀態：市場偏向樂觀")
+    
+    # 1. 根據左側選定的 Regime，動態計算對應的 PVCS 四維數據
+    regime_pvcs_map = {
+        'Bull (多頭)': {
+            'P': (81.7, "📌 狀態：強勢突破點"),
+            'V': (72.8, "📌 狀態：量增價漲結構"),
+            'C': (68.3, "📌 狀態：主力集中控盤"),
+            'S': (70.7, "📌 狀態：市場偏向樂觀")
+        },
+        'Bear (空頭)': {
+            'P': (38.2, "📌 狀態：破位空頭排列"),
+            'V': (41.5, "📌 狀態：殺多帶量陰線"),
+            'C': (45.0, "📌 狀態：籌碼鬆動釋出"),
+            'S': (28.4, "📌 狀態：市場極度悲觀")
+        },
+        'Sideway (盤整)': {
+            'P': (52.0, "📌 狀態：箱型區間震盪"),
+            'V': (48.6, "📌 狀態：量能萎縮觀望"),
+            'C': (55.1, "📌 狀態：法人低吞高拋"),
+            'S': (50.0, "📌 狀態：市場情緒中性")
+        },
+        'HighVol (高波動)': {
+            'P': (61.4, "📌 狀態：多空劇烈洗盤"),
+            'V': (85.2, "📌 狀態：天量爆發爭奪"),
+            'C': (42.8, "📌 狀態：散戶籌碼激增"),
+            'S': (62.3, "📌 狀態：情緒高度分歧")
+        },
+        'Crisis (危機)': {
+            'P': (15.5, "📌 狀態：無差別恐慌拋售"),
+            'V': (22.0, "📌 狀態：流動性凍結"),
+            'C': (31.2, "📌 狀態：主力避險出清"),
+            'S': (10.8, "📌 狀態：極度恐慌 (Panic)")
+        }
+    }
+    
+    # 取得當前 Regime 的對應數據（預設為 Bull）
+    current_pvcs = regime_pvcs_map.get(selected_regime, regime_pvcs_map['Bull (多頭)'])
+
+    st.markdown("🎯 **PVCS 四維診斷即時動態卡片**")
+    
+    # 2. 排版呈現 4 個動態卡片
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric("P - 價格結構得分", f"{current_pvcs['P'][0]}", delta=f"{current_pvcs['P'][1]}")
+    with c2:
+        st.metric("V - 成交量動能得分", f"{current_pvcs['V'][0]}", delta=f"{current_pvcs['V'][1]}")
+    with c3:
+        st.metric("C - 籌碼集中度得分", f"{current_pvcs['C'][0]}", delta=f"{current_pvcs['C'][1]}")
+    with c4:
+        st.metric("S - 市場情緒指數", f"{current_pvcs['S'][0]}", delta=f"{current_pvcs['S'][1]}")
