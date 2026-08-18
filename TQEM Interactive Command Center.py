@@ -1,10 +1,10 @@
 ﻿import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime, timezone, timedelta  # 👈 使用內建時區處理，免裝 pytz，絕不噴錯！
+from datetime import datetime, timezone, timedelta
 
 # 頁面基本設定
-st.set_page_config(page_title="TQEM Command Center", layout="wide")
+st.set_page_config(page_title="TimesFM TQEM 量化基金平台", layout="wide")
 
 # Custom CSS：優化頂部 Metric 卡片視覺
 st.markdown("""
@@ -43,8 +43,8 @@ selected_regime = st.sidebar.selectbox(
 
 st.sidebar.markdown("---")
 st.sidebar.header("⚙️ 動態權重引擎參數")
-alpha = st.sidebar.slider("信心折價係數 α (Uncertainty Discount)", 0.0, 1.0, 0.50, 0.01)
-beta = st.sidebar.slider("風險懲罰係數 β (Risk Penalty)", 0.0, 2.0, 0.65, 0.05)
+alpha = st.sidebar.slider("信心折價係數 α (Uncertainty Discount)", 0.0, 1.0, 0.42, 0.01)
+beta = st.sidebar.slider("風險懲罰係數 β (Risk Penalty)", 0.0, 2.0, 0.80, 0.05)
 delta_w_max = st.sidebar.slider("單日權重變化上限 Δw_max", 0.01, 0.50, 0.19, 0.01)
 
 st.session_state['alpha'] = alpha
@@ -68,16 +68,13 @@ selected_page = st.sidebar.radio(
 st.sidebar.caption("資料時間對齊檢查：✔ 無前視偏誤 (No Look-Ahead)")
 
 # -----------------------------------------------------------------
-# 2. 右側 Header & 連動 Metrics
+# 2. 右側 Header & 連動 Metrics (專業資訊升級)
 # -----------------------------------------------------------------
-# 1. 計算台北標準時間 (UTC+8)
 taipei_tz = timezone(timedelta(hours=8))
 taipei_time_str = datetime.now(taipei_tz).strftime("%Y-%m-%d %H:%M:%S")
 
-# 2. 渲染機構級主標題
 st.title("TimesFM TQEM 量化基金評估與動態權重管理平台")
 
-# 3. 渲染專業資訊副標題
 st.markdown(f"""
 <div style="font-size: 0.88rem; color: #64748B; margin-top: -10px; margin-bottom: 15px;">
     🕒 <b>系統台北時間 (CST / UTC+8)：</b> <code>{taipei_time_str}</code> &nbsp;|&nbsp; 
@@ -86,12 +83,51 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+base_sharpe = {'Bull (多頭)': 1.85, 'Bear (空頭)': 0.21, 'Sideway (盤整)': 0.88, 'HighVol (高波動)': 0.55, 'Crisis (危機)': 0.41}[selected_regime]
+dynamic_sharpe = round(base_sharpe * (1 - alpha * 0.1) * (1 - (2.0 - beta) * 0.05), 2)
+
+regime_metrics_map = {
+    'Bull (多頭)': {"broadness": "78%", "confidence": f"{0.82 - alpha*0.1:.2f}", "ic": "Momentum (+0.18)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{12.4 + delta_w_max*10:.1f}%"},
+    'Bear (空頭)': {"broadness": "22%", "confidence": f"{0.35 - alpha*0.1:.2f}", "ic": "Macro/Vol (+0.22)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{68.2 + delta_w_max*10:.1f}%"},
+    'Sideway (盤整)': {"broadness": "45%", "confidence": f"{0.51 - alpha*0.1:.2f}", "ic": "MeanRev (+0.12)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{31.5 + delta_w_max*10:.1f}%"},
+    'HighVol (高波動)': {"broadness": "30%", "confidence": f"{0.41 - alpha*0.1:.2f}", "ic": "Volatility (+0.25)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{54.1 + delta_w_max*10:.1f}%"},
+    'Crisis (危機)': {"broadness": "15%", "confidence": f"{0.48 - alpha*0.1:.2f}", "ic": "Tail-Risk (+0.31)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{49.8 + delta_w_max*10:.1f}%"}
+}
+
+current_metric = regime_metrics_map[selected_regime]
+
+col1, col2, col3, col4, col5 = st.columns(5)
+with col1:
+    st.metric("當前市場 Regime", selected_regime, f"↑ Broadness: {current_metric['broadness']}")
+with col2:
+    st.metric("TimesFM 平均信心", current_metric['confidence'], f"↑ α = {alpha:.2f}")
+with col3:
+    st.metric("近期 Top 特徵 IC", current_metric['ic'], "↑ 客觀特徵")
+with col4:
+    st.metric("M5 組合夏普比率", current_metric['sharpe'], f"↑ 訊號追蹤 (Δw={delta_w_max:.2f})")
+with col5:
+    st.metric("Kalman 權重週轉率", current_metric['turnover'], "↑ 調倉天花板")
+
+st.markdown("---")
+
+# -----------------------------------------------------------------
+# 3. 頁面渲染
+# -----------------------------------------------------------------
+
+if selected_page.startswith("1."):
+    st.subheader("1. 市場狀態辨識 (Regime Detection) & TimesFM 預測引擎")
+    st.markdown(f"##### 📌 當前選定 Regime：`{selected_regime}` 與權重調整矩陣")
+    regime_df = pd.DataFrame({
+        'Regime': ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
+        '主導特徵群組': ['Momentum / Flow', 'Macro / Volatility', 'Mean Reversion', 'Volatility / Cash', 'Risk Control / Macro'],
+        '權重偏向': ['上調 Momentum (+20%)', '上調 Vol/Macro (+30%)', '上調 Price Range', '上調 Vol/Liquidity', '大幅調降 Trend/Flow']
+    })
+    st.dataframe(regime_df, use_container_width=True)
+
 elif selected_page.startswith("2."):
     st.subheader("2. 五維動態權重引擎 (Dynamic Weight Allocation Engine)")
     st.markdown("##### 📊 五維因子動態權重隨時間變化示意圖")
-    
-    # 建立動態權重模擬數據
-    dates = pd.date_range(start="2026-01-01", periods=30, freq="D")
+    dates = pd.date_range(end=datetime.now(taipei_tz), periods=30, freq="D")
     weight_data = pd.DataFrame({
         "Date": dates,
         "Trend/Momentum": np.clip(0.35 - alpha*0.1 + np.sin(np.linspace(0, 10, 30))*0.05, 0.05, 0.6),
@@ -100,7 +136,6 @@ elif selected_page.startswith("2."):
         "Valuation/Fundamental": [0.15] * 30,
         "Sentiment/Wyckoff": np.clip(0.15 - delta_w_max*0.1 + np.cos(np.linspace(0, 5, 30))*0.02, 0.05, 0.4)
     }).set_index("Date")
-    
     st.area_chart(weight_data)
     
     col_w1, col_w2 = st.columns(2)
@@ -112,7 +147,6 @@ elif selected_page.startswith("2."):
 elif selected_page.startswith("3."):
     st.subheader("3. 最終 Alpha 訊號生成與選股組合")
     st.markdown("##### 🏆 今日 Top 10 標的 Alpha 綜合評分榜單")
-    
     stock_data = pd.DataFrame({
         '股票代碼': ['2330.TW', '2454.TW', '2317.TW', '2308.TW', '3037.TW', '2379.TW', '3034.TW', '2382.TW', '3231.TW', '6669.TW'],
         '股票名稱': ['台積電', '聯發科', '鴻海', '台達電', '欣興', '瑞昱', '聯詠', '廣達', '緯創', '緯穎'],
@@ -121,7 +155,6 @@ elif selected_page.startswith("3."):
         '最終 Alpha 總分': [90.8, 85.6, 82.7, 83.3, 75.9, 74.3, 74.7, 76.1, 70.4, 71.6],
         '建議持股權重 (%)': [18.5, 14.2, 12.0, 11.5, 9.1, 8.2, 7.5, 7.0, 6.2, 5.8]
     })
-    
     st.dataframe(stock_data, use_container_width=True)
     st.bar_chart(stock_data.set_index('股票名稱')['最終 Alpha 總分'])
 
@@ -138,17 +171,14 @@ elif selected_page.startswith("4."):
 
 elif selected_page.startswith("5."):
     st.subheader("5. 資料工程 (Data Engineering) & 時間對齊治理")
-    
     st.markdown("##### 🛡️ 時間戳對齊與無前視偏誤 (No Look-Ahead) 檢核狀態")
-    
     data_status = pd.DataFrame({
         '資料源 (Data Pipeline)': ['台股日 K 價量資料', '三大法人籌碼資料', 'TimesFM 預測 Feature', 'Macro 總體經濟指標', '高頻 Tick 數據'],
-        '最後更新時間': ['2026-08-18 13:30:00', '2026-08-18 15:00:00', '2026-08-18 16:30:00', '2026-08-17 23:59:59', '2026-08-18 13:30:00'],
+        '最後更新時間': [taipei_time_str, taipei_time_str, taipei_time_str, taipei_time_str, taipei_time_str],
         '時間對齊狀態': ['✔ 嚴格對齊 (T-0)', '✔ 嚴格對齊 (T-0)', '✔ 無未來資訊注入', '✔ 滯後一期 (T-1)', '✔ 觸發即時校準'],
         '數據完整度': ['100%', '100%', '99.8%', '100%', '98.5%']
     })
     st.table(data_status)
-    
     st.success("✔ 所有特徵工程矩陣皆經過 Strict Point-in-Time Join 驗證，確定無數據洩漏 (Data Leakage)。")
 
 elif selected_page.startswith("6."):
