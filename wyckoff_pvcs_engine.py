@@ -7,10 +7,10 @@ def render_wyckoff_tab(st, alpha=0.5, beta=0.65, delta_w_max=0.19, regime="Bull 
     regime = st.session_state.get('selected_regime', regime)
     alpha = st.session_state.get('alpha', alpha)
     
-    # 1. 四大卡片 Metrics (直列卡片樣式)
+    # 1. 四大卡片 Metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Wyckoff 階段辨識", "Phase D / E", "↑ SOS (Sign of Strength) / Jac...")
+        st.metric("Wyckoff 階段辨識", "Phase D / E", "↑ SOS / Jac...")
     with col2:
         st.metric("PVCS 綜合評估分", f"{round(73.8 - alpha*5, 1)} / 100", "↑ +3.4 pts")
     with col3:
@@ -20,7 +20,7 @@ def render_wyckoff_tab(st, alpha=0.5, beta=0.65, delta_w_max=0.19, regime="Bull 
 
     st.markdown("---")
 
-    # 2. K線價量結構與 PVCS 訊號疊加圖 (全寬上置)
+    # 2. K線價量結構與 PVCS 訊號疊加圖
     st.markdown("##### 📈 K線價量結構與 PVCS 訊號疊加圖")
     chart_data = pd.DataFrame(
         np.random.randn(40, 2).cumsum(axis=0) + [100, 50],
@@ -30,21 +30,15 @@ def render_wyckoff_tab(st, alpha=0.5, beta=0.65, delta_w_max=0.19, regime="Bull 
 
     st.markdown("---")
 
-    # 3. PVCS 三維診斷雷達 (移至最下方全寬呈現)
-    st.markdown("##### 🎯 PVCS 三維診斷雷達")
-    p_score = 81.7
-    v_score = 72.8
-    c_score = 68.3
-    s_score = 70.7
-
-    r_col1, r_col2 = st.columns([1, 3])
-    with r_col1:
-        st.caption(f"P - 價格結構得分: **{p_score}**")
-        st.progress(p_score / 100)
-        st.caption(f"V - 成交量動能得分: **{v_score}**")
-        st.progress(v_score / 100)
-    with r_col2:
-        st.caption(f"C - 籌碼集中度得分: **{c_score}**")
-        st.progress(c_score / 100)
-        st.caption(f"S - 市場情緒指數: **{s_score}**")
-        st.progress(s_score / 100)
+    # 3. PVCS 三維診斷指標 (改為 4 欄文字指標卡片)
+    st.markdown("##### 🎯 PVCS 三維診斷數據")
+    
+    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    with m_col1:
+        st.metric("P - 價格結構得分", "81.7", "強勢突破")
+    with m_col2:
+        st.metric("V - 成交量動能得分", "72.8", "量增價漲")
+    with m_col3:
+        st.metric("C - 籌碼集中度得分", "68.3", "主力控盤")
+    with m_col4:
+        st.metric("S - 市場情緒指數", "70.7", "偏向樂觀")
