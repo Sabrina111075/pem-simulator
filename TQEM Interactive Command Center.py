@@ -121,7 +121,7 @@ st.markdown("---")
 # 3. 頁面渲染
 # -----------------------------------------------------------------
 
-elif selected_page.startswith("1."):
+if selected_page.startswith("1."):
     st.subheader("1. 市場狀態辨識 (Regime Detection) & TimesFM 預測引擎")
     st.markdown(f"##### 📌 當前選定 Regime：`{selected_regime}` （動態權重調整矩陣）")
     
