@@ -182,26 +182,28 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 頂部關鍵指標 (動態連動 Regime 邏輯)
+# 頂部關鍵指標 (動態連動 Regime & alpha 參數)
 # -----------------------------------------------------------------------------
-# 根據選取的 Regime 設定動態數據 mapping
+# 1. 根據選取的 Regime 設定基本參數
 regime_stats = {
-    'Bull (多頭)':    {'confidence': '0.88', 'sharpe': '2.15', 'turnover': '6.5%',  'ic': 'Momentum (0.16)', 'broadness': '68%'},
-    'Bear (空頭)':    {'confidence': '0.72', 'sharpe': '1.12', 'turnover': '12.4%', 'ic': 'Macro (0.14)',    'broadness': '32%'},
-    'Sideway (盤整)': {'confidence': '0.78', 'sharpe': '1.45', 'turnover': '9.1%',  'ic': 'Volatility (0.11)','broadness': '48%'},
-    'HighVol (高波動)':{'confidence': '0.65', 'sharpe': '0.98', 'turnover': '18.2%', 'ic': 'Cash/Risk (0.18)','broadness': '25%'},
-    'Crisis (危機)':   {'confidence': '0.52', 'sharpe': '0.42', 'turnover': '24.5%', 'ic': 'Tail-Risk (0.22)','broadness': '15%'}
+    'Bull (多頭)':    {'base_conf': 0.88, 'sharpe': '2.15', 'turnover': '6.5%',  'ic': 'Momentum (0.16)', 'broadness': '68%'},
+    'Bear (空頭)':    {'base_conf': 0.72, 'sharpe': '1.12', 'turnover': '12.4%', 'ic': 'Macro (0.14)',    'broadness': '32%'},
+    'Sideway (盤整)': {'base_conf': 0.78, 'sharpe': '1.45', 'turnover': '9.1%',  'ic': 'Volatility (0.11)','broadness': '48%'},
+    'HighVol (高波動)':{'base_conf': 0.65, 'sharpe': '0.98', 'turnover': '18.2%', 'ic': 'Cash/Risk (0.18)','broadness': '25%'},
+    'Crisis (危機)':   {'base_conf': 0.52, 'sharpe': '0.42', 'turnover': '24.5%', 'ic': 'Tail-Risk (0.22)','broadness': '15%'}
 }
 
-# 取得目前狀態的統計值
 stats = regime_stats.get(current_regime, regime_stats['Bull (多頭)'])
 
+# 2. 即時計算受 alpha (信心折價係數) 影響後的平均信心度
+dynamic_confidence = round(stats['base_conf'] / (1 + 0.5 * alpha_param), 2)
+
+# 3. 渲染 5 大 KPI 卡片
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
 with kpi1:
     st.metric("當前市場 Regime", f"{current_regime}", delta=f"Broadness: {stats['broadness']}")
 with kpi2:
-    
-    st.metric("TimesFM 平均信心", f"{avg_confidence:.2f}", delta=f"α = {alpha_param}")
+    st.metric("TimesFM 平均信心", f"{dynamic_confidence}", delta=f"α = {alpha_param}")
 with kpi3:
     st.metric("近期 Top 特徵 IC", stats['ic'], delta="ICIR Optimized")
 with kpi4:
