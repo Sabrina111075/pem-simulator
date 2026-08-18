@@ -8,19 +8,26 @@ import streamlit as st
 import pytz  # 引入時區處理套件
 
 # =============================================================================
-# 1. 頁面大標題與副標題 (擺在最上方)
+# 1. 頁面標題與安全時間獲取 (避免 datetime 導引模組衝突)
 # =============================================================================
 st.title("TimesFM TQEM 量化基金評估與動態權重管理平台")
 st.caption("整合 Data Layer 治理、Regime 辨識、TimesFM 時間序列預測、五維動態權重與 Kalman 平滑之完整量化研究工作流")
 
-# 顯示台北時間 (可依原程式邏輯保留)
-import datetime
-tst_now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-st.info(f"🕒 台北時間 (TST) : {tst_now}")
+# 安全時間讀取機制 (兼顧時區與一般 datetime 呼叫)
+try:
+    from datetime import datetime
+    import pytz
+    taipei_tz = pytz.timezone('Asia/Taipei')
+    current_time_taipei = datetime.now(taipei_tz).strftime('%Y-%m-%d %H:%M:%S')
+except Exception:
+    import datetime as dt
+    current_time_taipei = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+st.info(f"🕒 台北時間 (TST) : {current_time_taipei}")
 
 
 # =============================================================================
-# 2. 方案 B：CSS 注入 (防止文字截斷、支援自動換列與卡片美化)
+# 2. CSS 注入 (解決文字截斷、支援自動換列與卡片美化)
 # =============================================================================
 st.markdown("""
 <style>
@@ -46,15 +53,14 @@ st.markdown("""
 
 
 # =============================================================================
-# 3. 取得側邊欄變數與四重動態即時連動計算 (擺在標題下方)
+# 3. 變數安全抓取與四重動態計算邏輯 (連動 α, β, Δw, Regime)
 # =============================================================================
-# 綁定側邊欄變數名稱 (若前段已有宣告則直接讀取，若無則精準取用或帶入預設)
-current_regime = globals().get('current_regime', locals().get('market_regime', 'Bull (多頭)'))
-alpha_param = globals().get('alpha_param', locals().get('alpha', 0.45))
-beta_param = globals().get('beta_param', locals().get('beta', 1.70))
-delta_w_max = globals().get('delta_w_max', locals().get('delta_w', 0.08))
+# 確保能動態讀取側邊欄傳進來的參數，並給予預設防護
+c_regime = globals().get('current_regime', locals().get('current_regime', 'Bull (多頭)'))
+a_param = float(globals().get('alpha_param', locals().get('alpha_param', 0.45)))
+b_param = float(globals().get('beta_param', locals().get('beta_param', 1.70)))
+dw_max = float(globals().get('delta_w_max', locals().get('delta_w_max', 0.08)))
 
-# 定義 5 大 Regime 基礎特徵
 regime_stats = {
     'Bull (多頭)':    {'base_conf': 0.88, 'base_sharpe': 2.15, 'base_turnover': 6.5,  'ic_name': 'Momentum',  'ic_val': '0.16', 'broadness': '68%'},
     'Bear (空頭)':    {'base_conf': 0.72, 'base_sharpe': 1.12, 'base_turnover': 12.4, 'ic_name': 'Macro',     'ic_val': '0.14', 'broadness': '32%'},
@@ -63,15 +69,14 @@ regime_stats = {
     'Crisis (危機)':   {'base_conf': 0.52, 'base_sharpe': 0.42, 'base_turnover': 24.5, 'ic_name': 'Tail-Risk',  'ic_val': '0.22', 'broadness': '15%'}
 }
 
-# 取得對應狀態之數據基底
-stats = regime_stats.get(current_regime, regime_stats['Bull (多頭)'])
+stats = regime_stats.get(c_regime, regime_stats['Bull (多頭)'])
 
-# 即時即動計算
-dynamic_confidence = round(stats['base_conf'] / (1 + 0.4 * float(alpha_param)), 2)
-turnover_penalty = 0.9 + 2.0 * min(float(delta_w_max), 0.05)
-beta_impact = (1.2 * float(beta_param) - 0.2 * (float(beta_param) ** 2))
-dynamic_sharpe = round(stats['base_sharpe'] * (1 + 0.1 * float(alpha_param)) * (0.8 + 0.15 * beta_impact) * turnover_penalty, 2)
-dynamic_turnover = round(stats['base_turnover'] * (1 + 0.15 * float(alpha_param) + 0.2 * (float(beta_param) - 0.5)) * (float(delta_w_max) / 0.05), 1)
+# 計算動態連動指標
+dynamic_confidence = round(stats['base_conf'] / (1 + 0.4 * a_param), 2)
+turnover_penalty = 0.9 + 2.0 * min(dw_max, 0.05)
+beta_impact = (1.2 * b_param - 0.2 * (b_param ** 2))
+dynamic_sharpe = round(stats['base_sharpe'] * (1 + 0.1 * a_param) * (0.8 + 0.15 * beta_impact) * turnover_penalty, 2)
+dynamic_turnover = round(stats['base_turnover'] * (1 + 0.15 * a_param + 0.2 * (b_param - 0.5)) * (dw_max / 0.05), 1)
 
 
 # =============================================================================
@@ -80,15 +85,15 @@ dynamic_turnover = round(stats['base_turnover'] * (1 + 0.15 * float(alpha_param)
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
 
 with kpi1:
-    st.metric(label="當前市場 Regime", value=f"{current_regime}", delta=f"廣度: {stats['broadness']}")
+    st.metric(label="當前市場 Regime", value=f"{c_regime}", delta=f"廣度: {stats['broadness']}")
 with kpi2:
-    st.metric(label="TimesFM 平均信心", value=f"{dynamic_confidence}", delta=f"α = {alpha_param}")
+    st.metric(label="TimesFM 平均信心", value=f"{dynamic_confidence}", delta=f"α = {a_param}")
 with kpi3:
     st.metric(label="近期 Top 特徵 IC", value=stats['ic_name'], delta=f"IC: {stats['ic_val']}")
 with kpi4:
-    st.metric(label="M5 組合夏普比率", value=f"{dynamic_sharpe}", delta=f"Δw = {delta_w_max}")
+    st.metric(label="M5 組合夏普比率", value=f"{dynamic_sharpe}", delta=f"Δw = {dw_max}")
 with kpi5:
-    st.metric(label="Kalman 權重週轉率", value=f"{dynamic_turnover}%", delta=f"β = {beta_param}")
+    st.metric(label="Kalman 權重週轉率", value=f"{dynamic_turnover}%", delta=f"β = {b_param}")
 
 # -----------------------------------------------------------------------------
 # 時區與時間動態計算 (台北時區)
