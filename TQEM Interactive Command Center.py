@@ -73,7 +73,7 @@ st.sidebar.caption("資料時間對齊檢查：✔ 無前視偏誤 (No Look-Ahea
 taipei_tz = timezone(timedelta(hours=8))
 taipei_time_str = datetime.now(taipei_tz).strftime("%Y-%m-%d %H:%M:%S")
 
-st.title("TQEM：TimesFM 與Wyckoff籌碼之AI 量化基金平台")
+st.title("TQEM：TimesFM 與Wyckoff 之AI 量化基金平台")
 
 # 1. 核心模型與數據來源（第一行）
 st.markdown("""
