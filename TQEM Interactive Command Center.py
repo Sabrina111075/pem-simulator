@@ -75,11 +75,18 @@ taipei_time_str = datetime.now(taipei_tz).strftime("%Y-%m-%d %H:%M:%S")
 
 st.title("TimesFM TQEM 量化基金評估與動態權重管理平台")
 
-st.markdown(f"""
-<div style="font-size: 0.88rem; color: #64748B; margin-top: -10px; margin-bottom: 15px;">
-    🕒 <b>系統台北時間 (CST / UTC+8)：</b> <code>{taipei_time_str}</code> &nbsp;|&nbsp; 
-    🧠 <b>核心模型依據：</b> Google TimesFM 2.0 時序基礎模型 + Wyckoff PVCS 價量結構 + 卡爾曼動態權重矩陣 (Kalman Filtering) &nbsp;|&nbsp; 
+# 1. 核心模型與數據來源（第一行）
+st.markdown("""
+<div style="font-size: 0.88rem; color: #475569; margin-top: -8px; margin-bottom: 6px; font-weight: 500;">
+    🧠 <b>核心模型依據：</b> Google TimesFM 2.0 時序基礎模型 + Wyckoff PVCS 價量結構 + 卡爾曼動態權重矩陣 (Kalman Filtering)<br>
     🛡️ <b>數據基底：</b> 台股全市場日線/Tick 數據與三大法人籌碼流向 (Point-in-Time Verified)
+</div>
+""", unsafe_allow_html=True)
+
+# 2. 台北時間（單獨第二行，適度下拉間距）
+st.markdown(f"""
+<div style="font-size: 0.85rem; color: #64748B; margin-top: 10px; margin-bottom: 20px;">
+    🕒 <b>台北時間 (CST / UTC+8)：</b> <code style="color: #0284C7; background-color: #F0F9FF; padding: 2px 6px; border-radius: 4px; border: 1px solid #BAE6FD;">{taipei_time_str}</code>
 </div>
 """, unsafe_allow_html=True)
 
