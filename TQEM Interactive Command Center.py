@@ -234,7 +234,15 @@ selected_page = st.sidebar.radio("📌 模組功能導覽", [
 
 st.divider()
 
-# 2. 嚴格條件切換（選什麼，才渲染什麼！）
+st.divider()
+
+# 橋接容器：自動將選中的頁面轉為對應的 tab 物件
+tab1 = st.container() if selected_page.startswith("1.") else st.empty()
+tab2 = st.container() if selected_page.startswith("2.") else st.empty()
+tab3 = st.container() if selected_page.startswith("3.") else st.empty()
+tab4 = st.container() if selected_page.startswith("4.") else st.empty()
+tab5 = st.container() if selected_page.startswith("5.") else st.empty()
+tab6 = st.container() if selected_page.startswith("6.") else st.empty()
 
 if selected_page.startswith("1."):
     st.subheader("1. 市場狀態辨識 (Regime Detection) & TimesFM 預測引擎")
