@@ -200,7 +200,8 @@ kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
 with kpi1:
     st.metric("當前市場 Regime", f"{current_regime}", delta=f"Broadness: {stats['broadness']}")
 with kpi2:
-    st.metric("TimesFM 平均信心", stats['confidence'], delta=f"C_i (動態流動)")
+    
+    st.metric("TimesFM 平均信心", f"{avg_confidence:.2f}", delta=f"α = {alpha_param}")
 with kpi3:
     st.metric("近期 Top 特徵 IC", stats['ic'], delta="ICIR Optimized")
 with kpi4:
