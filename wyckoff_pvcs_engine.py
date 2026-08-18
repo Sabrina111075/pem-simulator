@@ -99,7 +99,7 @@ with tab3:
         'Regime Adaptive Vol': ['Low', 'Medium', 'Low', 'High', 'High'],
         'Recommended Weight': ['28.5%', '18.2%', '22.1%', '14.0%', '17.2%']
     })
-    st.dataframe(stock_data, use_container_state=True)
+    st.dataframe(stock_data, use_container_width=True)
 
 with tab4:
     st.subheader("4. Baseline 模型對比 (M0-M6)")
