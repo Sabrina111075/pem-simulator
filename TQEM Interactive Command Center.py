@@ -164,18 +164,42 @@ elif selected_page.startswith("2."):
         st.info(f"**當前 β 風險懲罰點位**：`{beta:.2f}`\n\n平滑高波動期權重變更幅度，控制單日 Max Delta 在 `{delta_w_max:.2f}`。")
 
 elif selected_page.startswith("3."):
+    import altair as alt
+    
     st.subheader("3. 最終 Alpha 訊號生成與選股組合")
     st.markdown("##### 🏆 今日 Top 10 標的 Alpha 綜合評分榜單")
+    
+    # 1. 建立包含「中文 + 英文 + 股票代碼」的資料集
     stock_data = pd.DataFrame({
         '股票代碼': ['2330.TW', '2454.TW', '2317.TW', '2308.TW', '3037.TW', '2379.TW', '3034.TW', '2382.TW', '3231.TW', '6669.TW'],
         '股票名稱': ['台積電', '聯發科', '鴻海', '台達電', '欣興', '瑞昱', '聯詠', '廣達', '緯創', '緯穎'],
+        '顯示標籤': [
+            '台積電 (TSMC)', '聯發科 (MTK)', '鴻海 (Foxconn)', '台達電 (Delta)', 
+            '欣興 (Unimicron)', '瑞昱 (Realtek)', '聯詠 (Novatek)', '廣達 (Quanta)', 
+            '緯創 (Wistron)', '緯穎 (Wiwynn)'
+        ],
         'TimesFM 信心分': [92.5, 88.1, 85.4, 82.0, 79.3, 77.8, 75.2, 73.0, 71.5, 70.1],
         'PVCS 籌碼得分': [88.0, 82.3, 79.1, 85.0, 71.2, 69.5, 74.0, 80.2, 68.9, 73.5],
         '最終 Alpha 總分': [90.8, 85.6, 82.7, 83.3, 75.9, 74.3, 74.7, 76.1, 70.4, 71.6],
         '建議持股權重 (%)': [18.5, 14.2, 12.0, 11.5, 9.1, 8.2, 7.5, 7.0, 6.2, 5.8]
     })
-    st.dataframe(stock_data, use_container_width=True)
-    st.bar_chart(stock_data.set_index('股票名稱')['最終 Alpha 總分'])
+    
+    # 顯示數據表格
+    st.dataframe(stock_data[['股票代碼', '股票名稱', 'TimesFM 信心分', 'PVCS 籌碼得分', '最終 Alpha 總分', '建議持股權重 (%)']], use_container_width=True)
+    
+    st.markdown("---")
+    st.markdown("##### 📊 Top 10 Alpha 綜合得分柱狀圖")
+    
+    # 2. 使用 Altair 繪製「橫條圖 (Horizontal Bar Chart)」，文字橫排呈現，字數再多也絕對不會吃字！
+    chart = alt.Chart(stock_data).mark_bar(color='#0284C7', cornerRadiusEnd=4).encode(
+        x=alt.X('最終 Alpha 總分:Q', title='最終 Alpha 總分', scale=alt.Scale(domain=[0, 100])),
+        y=alt.Y('顯示標籤:N', title='標的名稱 (中文 + 英文簡稱)', sort='-x', axis=alt.Axis(labelFontSize=12)),
+        tooltip=['股票代碼', '股票名稱', '顯示標籤', '最終 Alpha 總分', '建議持股權重 (%)']
+    ).properties(
+        height=380
+    )
+    
+    st.altair_chart(chart, use_container_width=True)
 
 elif selected_page.startswith("4."):
     st.subheader("4. TQEM Baseline 模型多維度績效評估 (M0 至 M6)")
