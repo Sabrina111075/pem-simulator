@@ -182,7 +182,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 頂部關鍵指標 (融入 alpha 與 Regime 雙重動態機制)
+# 頂部關鍵指標 (整合 Regime, alpha 與 beta 三重動態機制)
 # -----------------------------------------------------------------------------
 regime_stats = {
     'Bull (多頭)':    {'base_conf': 0.88, 'base_sharpe': 2.15, 'base_turnover': 6.5,  'ic': 'Momentum (0.16)', 'broadness': '68%'},
@@ -194,11 +194,16 @@ regime_stats = {
 
 stats = regime_stats.get(current_regime, regime_stats['Bull (多頭)'])
 
-# 根據 alpha_param 計算動態變化
-dynamic_confidence = round(stats['base_conf'] / (1 + 0.5 * alpha_param), 2)
-# alpha 提高 -> 風控提升 -> 夏普比率稍微優化；週轉率隨權重重構增加
-dynamic_sharpe = round(stats['base_sharpe'] * (1 + 0.15 * alpha_param), 2)
-dynamic_turnover = round(stats['base_turnover'] * (1 + 0.25 * alpha_param), 1)
+# 1. 信心度：僅受 alpha (信心折價) 影響
+dynamic_confidence = round(stats['base_conf'] / (1 + 0.4 * alpha_param), 2)
+
+# 2. 夏普比率：同時受 alpha (信心選擇) 與 beta (風險抑制) 影響
+# beta 適度提升可壓低波動增強夏普，但過高會過度防守降低報酬
+beta_impact = (1.2 * beta_param - 0.2 * (beta_param ** 2))
+dynamic_sharpe = round(stats['base_sharpe'] * (1 + 0.1 * alpha_param) * (0.8 + 0.15 * beta_impact), 2)
+
+# 3. 週轉率：受 alpha 重構與 beta 風險避險的雙重調倉影響
+dynamic_turnover = round(stats['base_turnover'] * (1 + 0.15 * alpha_param + 0.2 * (beta_param - 0.5)), 1)
 
 # 渲染 5 大 KPI 卡片
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
@@ -207,12 +212,11 @@ with kpi1:
 with kpi2:
     st.metric("TimesFM 平均信心", f"{dynamic_confidence}", delta=f"α = {alpha_param}")
 with kpi3:
-    st.metric("近期 Top 特徵 IC", stats['ic'], delta="客觀特徵 (不受 α 影響)")
+    st.metric("近期 Top 特徵 IC", stats['ic'], delta="客觀特徵 (不受 α/β 影響)")
 with kpi4:
-    st.metric("M5 組合夏普比率", f"{dynamic_sharpe}", delta=f"風控校正 (α={alpha_param})")
+    st.metric("M5 組合夏普比率", f"{dynamic_sharpe}", delta=f"風控校正 (α={alpha_param}, β={beta_param})")
 with kpi5:
-    st.metric("Kalman 權重週轉率", f"{dynamic_turnover}%", delta=f"調倉反應 (α={alpha_param})")
-
+    st.metric("Kalman 權重週轉率", f"{dynamic_turnover}%", delta=f"調倉反應 (β={beta_param})")
 st.markdown("---")
 
 # -----------------------------------------------------------------------------
