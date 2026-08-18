@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
+from wyckoff_pvcs_engine import render_wyckoff_tab
 import pytz  # 引入時區處理套件
 
 # -----------------------------------------------------------------------------
@@ -224,12 +225,13 @@ st.markdown("---")
 # -----------------------------------------------------------------------------
 # 分頁標籤 (Main Tabs)
 # -----------------------------------------------------------------------------
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📊 1. 市場狀態與 TimesFM 預測", 
-    "⚖️ 2. 五維動態權重與 Kalman 平滑", 
-    "🎯 3. Alpha 排序與選股清單", 
-    "📈 4. Baseline 模型對比 (M0-M6)", 
-    "🛡️ 5. 資料工程與時間對齊驗證"
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "1. 市場狀態與 TimesFM 預測", 
+    "2. 五維動態權重重興", 
+    "3. Alpha 排序與選股清單", 
+    "4. Baseline 模型對比 (M0-M6)", 
+    "5. 資料工程與時間對齊驗證",
+    "6. 威科夫 (Wyckoff) 價量籌碼 (PVCS) 診斷"  # <-- 只加這一行
 ])
 
 # -----------------------------------------------------------------------------
@@ -339,3 +341,7 @@ with tab5:
     st.markdown("---")
     data_layer_df = pd.DataFrame({'資料類別': ['1. 價格與成交', '2. 籌碼與資金流', '3. 宏觀經濟'], '品質檢查狀態': ['✅ 通過', '✅ 通過', '✅ 通過']})
     st.dataframe(data_layer_df, hide_index=True, use_container_width=True)
+
+with tab6:
+
+    render_wyckoff_tab(st)
