@@ -222,39 +222,39 @@ with kpi5:
 
 st.markdown("---")
 
-# 1. 在側邊欄建立選單
-selected_page = st.sidebar.radio(
-    "📌 模組功能導覽",
-    [
-        "1. 市場狀態與 TimesFM 預測",
-        "2. 五維動態權重重興",
-        "3. Alpha 排序與選股清單",
-        "4. Baseline 模型對比 (M0-M6)",
-        "5. 資料工程與時間對齊驗證",
-        "6. 威科夫 (Wyckoff) 價量籌碼診斷"
-    ]
-)
+# 1. 側邊欄選單
+selected_page = st.sidebar.radio("📌 模組功能導覽", [
+    "1. 市場狀態與 TimesFM 預測",
+    "2. 五維動態權重重興",
+    "3. Alpha 排序與選股清單",
+    "4. Baseline 模型對比 (M0-M6)",
+    "5. 資料工程與時間對齊驗證",
+    "6. 威科夫 (Wyckoff) 價量籌碼診斷"
+])
 
-# ✅ 正確寫法：把 with tab1: 替換掉
+# --------------------------------------------------
+# 主畫面根據選單進行分頁渲染
+# --------------------------------------------------
+
 if selected_page.startswith("1."):
-    st.subheader("1. 市場狀態與 TimesFM 預測")
-    # ...把原本 with tab1 下方的程式碼整塊縮排放在這裡...
+    st.subheader("1. 市場狀態辨識與 TimesFM 序列預測")
+    # ... 這裡放你原本第 1 頁的圖表程式碼 ...
 
 elif selected_page.startswith("2."):
     st.subheader("2. 五維動態權重重興")
-    # ...把原本 with tab2 下方的程式碼整塊縮排放在這裡...
+    # ... 這裡放你原本第 2 頁的程式碼 ...
 
 elif selected_page.startswith("3."):
     st.subheader("3. Alpha 排序與選股清單")
-    # ...把原本 with tab3 下方的程式碼整塊縮排放在這裡...
+    # ... 這裡放你原本第 3 頁的程式碼 ...
 
 elif selected_page.startswith("4."):
     st.subheader("4. Baseline 模型對比")
-    # ...把原本 with tab4 下方的程式碼整塊縮排放在這裡...
+    # ... 這裡放你原本第 4 頁的程式碼 ...
 
 elif selected_page.startswith("5."):
     st.subheader("5. 資料工程與時間對齊驗證")
-    # ...把原本 with tab5 下方的程式碼整塊縮排放在這裡...
+    # ... 這裡放你原本第 5 頁的程式碼 ...
 
 elif selected_page.startswith("6."):
     from wyckoff_pvcs_engine import render_wyckoff_tab
