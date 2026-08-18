@@ -261,7 +261,7 @@ elif selected_page.startswith("6."):
     st.markdown("---")
     st.markdown("##### 🎯 PVCS 四維診斷即時動態卡片")
 
-    # 3. 下方 PVCS 四維診斷（與 Regime 連動）
+# 3. 下方 PVCS 四維診斷（與 Regime 連動）
     regime_pvcs_map = {
         'Bull (多頭)': {
             'P': (81.7, "📌 狀態：強勢突破點"),
@@ -283,7 +283,7 @@ elif selected_page.startswith("6."):
         },
         'HighVol (高波動)': {
             'P': (61.4, "📌 狀態：多空劇烈洗盤"),
-             me'V': (85.2, "📌 狀態：天量爆發爭奪"),
+            'V': (85.2, "📌 狀態：天量爆發爭奪"),
             'C': (42.8, "📌 狀態：散戶籌碼激增"),
             'S': (62.3, "📌 狀態：情緒高度分歧")
         },
