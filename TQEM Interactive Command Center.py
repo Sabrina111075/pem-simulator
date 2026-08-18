@@ -49,9 +49,15 @@ st.markdown("""
 
 
 # =============================================================================
-# 方案 A：頂部關鍵指標 (整合 Regime, α, β, Δw 四重動態機制與精簡架構)
+# 頂部關鍵指標 (帶有變數安全防護機制)
 # =============================================================================
-# 1. 定義各 Regime 之基礎數據與精簡特徵名稱 (避開過長截斷)
+# 🛡️ 防護機制：如果變數尚未在前面宣告，給予安全預設值，避免 NameError 崩潰
+current_regime = locals().get('current_regime', 'Bull (多頭)')
+alpha_param = locals().get('alpha_param', 0.45)
+beta_param = locals().get('beta_param', 1.70)
+delta_w_max = locals().get('delta_w_max', 0.08)
+
+# 1. 定義各 Regime 之基礎數據與精簡特徵名稱
 regime_stats = {
     'Bull (多頭)':    {'base_conf': 0.88, 'base_sharpe': 2.15, 'base_turnover': 6.5,  'ic_name': 'Momentum',  'ic_val': '0.16', 'broadness': '68%'},
     'Bear (空頭)':    {'base_conf': 0.72, 'base_sharpe': 1.12, 'base_turnover': 12.4, 'ic_name': 'Macro',     'ic_val': '0.14', 'broadness': '32%'},
@@ -60,59 +66,28 @@ regime_stats = {
     'Crisis (危機)':   {'base_conf': 0.52, 'base_sharpe': 0.42, 'base_turnover': 24.5, 'ic_name': 'Tail-Risk',  'ic_val': '0.22', 'broadness': '15%'}
 }
 
-# 取得目前選取的狀態數據 (安全預設值為 Bull)
 stats = regime_stats.get(current_regime, regime_stats['Bull (多頭)'])
 
 # 2. 四重參數動態連動計算邏輯
-# (A) 信心度：受 α (信心折價) 影響
 dynamic_confidence = round(stats['base_conf'] / (1 + 0.4 * alpha_param), 2)
-
-# (B) 夏普比率：受 α, β 影響，且受 Δw 上限過嚴(不足 0.05) 之追蹤扣分
 turnover_penalty = 0.9 + 2.0 * min(delta_w_max, 0.05)
 beta_impact = (1.2 * beta_param - 0.2 * (beta_param ** 2))
 dynamic_sharpe = round(stats['base_sharpe'] * (1 + 0.1 * alpha_param) * (0.8 + 0.15 * beta_impact) * turnover_penalty, 2)
-
-# (C) 週轉率：受 α, β 風控組合重構影響，並直接受 Δw 硬性約束成正比
 dynamic_turnover = round(stats['base_turnover'] * (1 + 0.15 * alpha_param + 0.2 * (beta_param - 0.5)) * (delta_w_max / 0.05), 1)
-
 
 # 3. 渲染 5 大明亮化 KPI 卡片
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
 
 with kpi1:
-    st.metric(
-        label="當前市場 Regime",
-        value=f"{current_regime}",
-        delta=f"廣度: {stats['broadness']}"
-    )
-
+    st.metric(label="當前市場 Regime", value=f"{current_regime}", delta=f"廣度: {stats['broadness']}")
 with kpi2:
-    st.metric(
-        label="TimesFM 平均信心",
-        value=f"{dynamic_confidence}",
-        delta=f"α = {alpha_param}"
-    )
-
+    st.metric(label="TimesFM 平均信心", value=f"{dynamic_confidence}", delta=f"α = {alpha_param}")
 with kpi3:
-    st.metric(
-        label="近期 Top 特徵 IC",
-        value=stats['ic_name'],
-        delta=f"IC: {stats['ic_val']}"
-    )
-
+    st.metric(label="近期 Top 特徵 IC", value=stats['ic_name'], delta=f"IC: {stats['ic_val']}")
 with kpi4:
-    st.metric(
-        label="M5 組合夏普比率",
-        value=f"{dynamic_sharpe}",
-        delta=f"Δw = {delta_w_max}"
-    )
-
+    st.metric(label="M5 組合夏普比率", value=f"{dynamic_sharpe}", delta=f"Δw = {delta_w_max}")
 with kpi5:
-    st.metric(
-        label="Kalman 權重週轉率",
-        value=f"{dynamic_turnover}%",
-        delta=f"β = {beta_param}"
-    )
+    st.metric(label="Kalman 權重週轉率", value=f"{dynamic_turnover}%", delta=f"β = {beta_param}")
 
 # -----------------------------------------------------------------------------
 # 時區與時間動態計算 (台北時區)
