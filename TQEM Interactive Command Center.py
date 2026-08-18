@@ -241,25 +241,26 @@ if selected_page.startswith("1."):
     st.subheader("1. 市場狀態辨識與 TimesFM 序列預測")
     # ...
 
+# ✅ 正確寫法：把 with tab1: 替換掉
 if selected_page.startswith("1."):
     st.subheader("1. 市場狀態與 TimesFM 預測")
-    # ... 放第 1 頁程式碼 ...
+    # ...把原本 with tab1 下方的程式碼整塊縮排放在這裡...
 
 elif selected_page.startswith("2."):
     st.subheader("2. 五維動態權重重興")
-    pass  # ✅ 若暫時沒程式碼，記得加 pass，就不會報錯！
+    # ...把原本 with tab2 下方的程式碼整塊縮排放在這裡...
 
 elif selected_page.startswith("3."):
     st.subheader("3. Alpha 排序與選股清單")
-    # ... 放第 3 頁程式碼 ...
+    # ...把原本 with tab3 下方的程式碼整塊縮排放在這裡...
 
 elif selected_page.startswith("4."):
     st.subheader("4. Baseline 模型對比")
-    pass
+    # ...把原本 with tab4 下方的程式碼整塊縮排放在這裡...
 
 elif selected_page.startswith("5."):
     st.subheader("5. 資料工程與時間對齊驗證")
-    pass
+    # ...把原本 with tab5 下方的程式碼整塊縮排放在這裡...
 
 elif selected_page.startswith("6."):
     from wyckoff_pvcs_engine import render_wyckoff_tab
