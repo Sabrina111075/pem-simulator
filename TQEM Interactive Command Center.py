@@ -64,9 +64,9 @@ st.sidebar.markdown("---")
 
 # (2) 動態權重引擎參數
 st.sidebar.header("⚙️ 動態權重引擎參數")
-alpha = st.sidebar.slider("信心折價係數 α (Uncertainty Discount)", 0.0, 1.0, 0.28, 0.01)
-beta = st.sidebar.slider("風險懲罰係數 β (Risk Penalty)", 0.0, 2.0, 1.65, 0.05)
-delta_w_max = st.sidebar.slider("單日權重變化上限 Δw_max", 0.01, 0.50, 0.45, 0.01)
+alpha = st.sidebar.slider("信心折價係數 α (Uncertainty Discount)", 0.0, 1.0, 0.50, 0.01)
+beta = st.sidebar.slider("風險懲罰係數 β (Risk Penalty)", 0.0, 2.0, 0.65, 0.05)
+delta_w_max = st.sidebar.slider("單日權重變化上限 Δw_max", 0.01, 0.50, 0.19, 0.01)
 
 # 同步參數至 Session State
 st.session_state['alpha'] = alpha
@@ -93,7 +93,7 @@ selected_page = st.sidebar.radio(
 st.sidebar.caption("資料時間對齊檢查：✔ 無前視偏誤 (No Look-Ahead)")
 
 # -----------------------------------------------------------------
-# 2. 右側 Header & 連動 Metrics (樣式與寬度全面強化)
+# 2. 右側 Header & 連動 Metrics
 # -----------------------------------------------------------------
 st.title("TQEM 量化決策系統 Control Center")
 
@@ -195,11 +195,13 @@ elif selected_page.startswith("4."):
         'Max Drawdown (%)': [-30.1, -25.4, -22.1, -18.5, -15.2, -12.8, -10.1]
     })
     
-    c1, c2 = st.columns([2, 1])
-    with c1:
-        st.scatter_chart(baseline_df, x='Max Drawdown (%)', y='Annual Return (%)', color='Model')
-    with c2:
-        st.dataframe(baseline_df, use_container_width=True)
+    # 圖表上置（滿寬呈現，避免文字與欄位被壓縮）
+    st.markdown("##### 📈 模型風險報酬散佈圖 (Max Drawdown vs Annual Return)")
+    st.scatter_chart(baseline_df, x='Max Drawdown (%)', y='Annual Return (%)', color='Model')
+    
+    # 表格移至最下方
+    st.markdown("##### 📋 Baseline 模型詳細績效指標對比表")
+    st.dataframe(baseline_df, use_container_width=True)
 
 elif selected_page.startswith("5."):
     st.subheader("5. 資料工程 (Data Engineering) & 時間對齊治理")
