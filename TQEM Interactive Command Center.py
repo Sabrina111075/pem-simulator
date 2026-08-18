@@ -6,8 +6,77 @@ import numpy as np
 st.set_page_config(page_title="TQEM Command Center", layout="wide")
 
 # -----------------------------------------------------------------
-# 1. 側邊欄 (Sidebar)：包含 Regime 切換與動態引擎參數
+# 0. Custom CSS：優化頂部 Metric 卡片視覺，明亮清楚且不吃字
 # -----------------------------------------------------------------
+st.markdown("""
+<style>
+    /* Metric 卡片容器視覺強化 */
+    div[data-testid="stMetric"] {
+        background-color: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 10px;
+        padding: 12px 14px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        transition: all 0.2s ease-in-out;
+    }
+    div[data-testid="stMetric"]:hover {
+        border-color: #3B82F6;
+        box-shadow: 0 4px 8px rgba(59,130,246,0.12);
+    }
+    /* 標題字級優化 */
+    div[data-testid="stMetricLabel"] > div {
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        color: #475569 !important;
+        white-space: nowrap !important;
+    }
+    /* 核心數據數值優化 (防止截斷吃字) */
+    div[data-testid="stMetricValue"] > div {
+        font-size: 1.35rem !important;
+        font-weight: 700 !important;
+        color: #0F172A !important;
+        white-space: nowrap !important;
+        text-overflow: ellipsis !important;
+        overflow: hidden !important;
+    }
+    /* 底部 Delta 標籤字級優化 */
+    div[data-testid="stMetricDelta"] {
+        font-size: 0.78rem !important;
+        font-weight: 500 !important;
+        white-space: nowrap !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# -----------------------------------------------------------------
+# 1. 側邊欄 (Sidebar)：調整順序，導覽放到最下方
+# -----------------------------------------------------------------
+
+# (1) 市場 Regime 切換
+st.sidebar.header("🌐 市場 Regime 手動切換 / 模擬")
+selected_regime = st.sidebar.selectbox(
+    "選擇目前市場狀態 (Regime)：",
+    ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
+    index=0  # 預設 Bull
+)
+
+st.sidebar.markdown("---")
+
+# (2) 動態權重引擎參數
+st.sidebar.header("⚙️ 動態權重引擎參數")
+alpha = st.sidebar.slider("信心折價係數 α (Uncertainty Discount)", 0.0, 1.0, 0.28, 0.01)
+beta = st.sidebar.slider("風險懲罰係數 β (Risk Penalty)", 0.0, 2.0, 1.65, 0.05)
+delta_w_max = st.sidebar.slider("單日權重變化上限 Δw_max", 0.01, 0.50, 0.45, 0.01)
+
+# 同步參數至 Session State
+st.session_state['alpha'] = alpha
+st.session_state['beta'] = beta
+st.session_state['delta_w_max'] = delta_w_max
+st.session_state['selected_regime'] = selected_regime
+
+st.sidebar.markdown("---")
+
+# (3) 模組功能導覽 (移動至左側最下方)
 st.sidebar.header("📌 模組功能導覽")
 selected_page = st.sidebar.radio(
     "請選擇功能模組：",
@@ -21,42 +90,20 @@ selected_page = st.sidebar.radio(
     ]
 )
 
-st.sidebar.markdown("---")
-st.sidebar.header("🌐 市場 Regime 手動切換 / 模擬")
-selected_regime = st.sidebar.selectbox(
-    "選擇目前市場狀態 (Regime)：",
-    ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
-    index=0  # 預設 Bull
-)
-
-st.sidebar.markdown("---")
-st.sidebar.header("⚙️ 動態權重引擎參數")
-alpha = st.sidebar.slider("信心折價係數 α (Uncertainty Discount)", 0.0, 1.0, 0.43, 0.01)
-beta = st.sidebar.slider("風險懲罰係數 β (Risk Penalty)", 0.0, 2.0, 1.65, 0.05)
-delta_w_max = st.sidebar.slider("單日權重變化上限 Δw_max", 0.01, 0.50, 0.38, 0.01)
-
-# 將參數同步寫入 Session State 供外掛模組 (wyckoff_pvcs_engine) 自動讀取連動
-st.session_state['alpha'] = alpha
-st.session_state['beta'] = beta
-st.session_state['delta_w_max'] = delta_w_max
-st.session_state['selected_regime'] = selected_regime
-
-st.sidebar.markdown("---")
 st.sidebar.caption("資料時間對齊檢查：✔ 無前視偏誤 (No Look-Ahead)")
 
 # -----------------------------------------------------------------
-# 2. 右側 Header & 連動 Metrics
+# 2. 右側 Header & 連動 Metrics (樣式與寬度全面強化)
 # -----------------------------------------------------------------
 st.title("TQEM 量化決策系統 Control Center")
 
-# 動態計算邏輯：將拉桿參數 (alpha, beta, delta_w_max) 融入算式連動
 base_sharpe = {'Bull (多頭)': 1.85, 'Bear (空頭)': 0.21, 'Sideway (盤整)': 0.88, 'HighVol (高波動)': 0.55, 'Crisis (危機)': 0.41}[selected_regime]
 dynamic_sharpe = round(base_sharpe * (1 - alpha * 0.1) * (1 - (2.0 - beta) * 0.05), 2)
 
 regime_metrics_map = {
     'Bull (多頭)': {"broadness": "78%", "confidence": f"{0.82 - alpha*0.1:.2f}", "ic": "Momentum (+0.18)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{12.4 + delta_w_max*10:.1f}%"},
     'Bear (空頭)': {"broadness": "22%", "confidence": f"{0.35 - alpha*0.1:.2f}", "ic": "Macro/Vol (+0.22)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{68.2 + delta_w_max*10:.1f}%"},
-    'Sideway (盤整)': {"broadness": "45%", "confidence": f"{0.51 - alpha*0.1:.2f}", "ic": "Mean Reversion (+0.12)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{31.5 + delta_w_max*10:.1f}%"},
+    'Sideway (盤整)': {"broadness": "45%", "confidence": f"{0.51 - alpha*0.1:.2f}", "ic": "MeanRev (+0.12)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{31.5 + delta_w_max*10:.1f}%"},
     'HighVol (高波動)': {"broadness": "30%", "confidence": f"{0.41 - alpha*0.1:.2f}", "ic": "Volatility (+0.25)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{54.1 + delta_w_max*10:.1f}%"},
     'Crisis (危機)': {"broadness": "15%", "confidence": f"{0.48 - alpha*0.1:.2f}", "ic": "Tail-Risk (+0.31)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{49.8 + delta_w_max*10:.1f}%"}
 }
@@ -103,7 +150,6 @@ elif selected_page.startswith("2."):
     st.subheader("2. 五維動態權重引擎 (Dynamic Weight Allocation Engine)")
     st.latex(r"w_i(t) = \text{Normalize} \left[ w_i^{\text{base}} \times R_i(t) \times P_i(t) \times C_i(t) \times K_i(t) \right]")
     
-    # 實時權重計算展示（連動 alpha 與 beta）
     w_momentum = round(0.20 * (1 + (2.0 - beta)*0.1), 3)
     w_volatility = round(0.25 * (1 + alpha*0.2), 3)
     
@@ -165,14 +211,11 @@ elif selected_page.startswith("5."):
     st.dataframe(audit_data, use_container_width=True)
 
 elif selected_page.startswith("6."):
-    # 不重複繪製 subheader，交由下方或外掛模組進行獨立渲染
     try:
         from wyckoff_pvcs_engine import render_wyckoff_tab
-        # 試圖將主程式的參數傳入 wyckoff 模組
         try:
             render_wyckoff_tab(st, alpha=alpha, beta=beta, delta_w_max=delta_w_max, regime=selected_regime)
         except TypeError:
-            # 若 wyckoff 模組函式只接受 (st)，則使用預設呼叫（已透過 st.session_state 共享參數）
             render_wyckoff_tab(st)
     except Exception as e:
         st.subheader("6. 威科夫 (Wyckoff) 價量籌碼 (PVCS) 診斷沙盒")
