@@ -193,7 +193,6 @@ elif selected_page.startswith("3."):
     # 2. 使用 Altair 繪製「橫條圖 (Horizontal Bar Chart)」，文字橫排呈現，字數再多也絕對不會吃字！
     chart = alt.Chart(stock_data).mark_bar(color='#0284C7', cornerRadiusEnd=4).encode(
         x=alt.X('最終 Alpha 總分:Q', title='最終 Alpha 總分', scale=alt.Scale(domain=[0, 100])),
-        y=alt.Y('顯示標籤:N', title='標的名稱 (中文 + 英文簡稱)', sort='-x', axis=alt.Axis(labelFontSize=12)),
         tooltip=['股票代碼', '股票名稱', '顯示標籤', '最終 Alpha 總分', '建議持股權重 (%)']
     ).properties(
         height=380
