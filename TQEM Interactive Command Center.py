@@ -10,7 +10,7 @@ import pytz  # 引入時區處理套件
 # 頁面配置 (Page Configuration)
 # -----------------------------------------------------------------------------
 st.set_page_config(
-    page_title="TQEM-100 TimesFM 量化基金評估與動態權重控制台",
+    page_title="CrystalMachine TQEM-100 TimesFM 量化基金評估與動態權重控制台",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
