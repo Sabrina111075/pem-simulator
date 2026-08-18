@@ -182,7 +182,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 頂部關鍵指標 (整合 Regime, alpha 與 beta 三重動態機制)
+# 頂部關鍵指標 (整合 Regime, alpha, beta 與 delta_w_max 四重動態機制)
 # -----------------------------------------------------------------------------
 regime_stats = {
     'Bull (多頭)':    {'base_conf': 0.88, 'base_sharpe': 2.15, 'base_turnover': 6.5,  'ic': 'Momentum (0.16)', 'broadness': '68%'},
@@ -194,16 +194,17 @@ regime_stats = {
 
 stats = regime_stats.get(current_regime, regime_stats['Bull (多頭)'])
 
-# 1. 信心度：僅受 alpha (信心折價) 影響
+# 1. 信心度：受 alpha (信心折價) 影響
 dynamic_confidence = round(stats['base_conf'] / (1 + 0.4 * alpha_param), 2)
 
-# 2. 夏普比率：同時受 alpha (信心選擇) 與 beta (風險抑制) 影響
-# beta 適度提升可壓低波動增強夏普，但過高會過度防守降低報酬
+# 2. 夏普比率：受 alpha, beta 影響，且若 delta_w_max 過小(限制過嚴)會導致訊號跟不上而微幅扣分
+turnover_penalty = 0.9 + 2.0 * min(delta_w_max, 0.05)  # 限制在 0.05 以下時會懲罰效益
 beta_impact = (1.2 * beta_param - 0.2 * (beta_param ** 2))
-dynamic_sharpe = round(stats['base_sharpe'] * (1 + 0.1 * alpha_param) * (0.8 + 0.15 * beta_impact), 2)
+dynamic_sharpe = round(stats['base_sharpe'] * (1 + 0.1 * alpha_param) * (0.8 + 0.15 * beta_impact) * turnover_penalty, 2)
 
-# 3. 週轉率：受 alpha 重構與 beta 風險避險的雙重調倉影響
-dynamic_turnover = round(stats['base_turnover'] * (1 + 0.15 * alpha_param + 0.2 * (beta_param - 0.5)), 1)
+# 3. 週轉率：受 alpha, beta 重構影響，並直接被 delta_w_max 硬性約束/放行
+# delta_w_max 越大，允許調倉上限越高，週轉率直接成正比上升
+dynamic_turnover = round(stats['base_turnover'] * (1 + 0.15 * alpha_param + 0.2 * (beta_param - 0.5)) * (delta_w_max / 0.05), 1)
 
 # 渲染 5 大 KPI 卡片
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
@@ -212,11 +213,12 @@ with kpi1:
 with kpi2:
     st.metric("TimesFM 平均信心", f"{dynamic_confidence}", delta=f"α = {alpha_param}")
 with kpi3:
-    st.metric("近期 Top 特徵 IC", stats['ic'], delta="客觀特徵 (不受 α/β 影響)")
+    st.metric("近期 Top 特徵 IC", stats['ic'], delta="客觀特徵 (不受風控參數影響)")
 with kpi4:
-    st.metric("M5 組合夏普比率", f"{dynamic_sharpe}", delta=f"風控校正 (α={alpha_param}, β={beta_param})")
+    st.metric("M5 組合夏普比率", f"{dynamic_sharpe}", delta=f"訊號追蹤 (Δw={delta_w_max})")
 with kpi5:
-    st.metric("Kalman 權重週轉率", f"{dynamic_turnover}%", delta=f"調倉反應 (β={beta_param})")
+    st.metric("Kalman 權重週轉率", f"{dynamic_turnover}%", delta=f"調倉天花板 (Δw={delta_w_max})")
+
 st.markdown("---")
 
 # -----------------------------------------------------------------------------
