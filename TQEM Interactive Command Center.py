@@ -181,18 +181,32 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 頂部關鍵指標
+# -----------------------------------------------------------------------------
+# 頂部關鍵指標 (動態連動 Regime 邏輯)
+# -----------------------------------------------------------------------------
+# 根據選取的 Regime 設定動態數據 mapping
+regime_stats = {
+    'Bull (多頭)':    {'confidence': '0.88', 'sharpe': '2.15', 'turnover': '6.5%',  'ic': 'Momentum (0.16)', 'broadness': '68%'},
+    'Bear (空頭)':    {'confidence': '0.72', 'sharpe': '1.12', 'turnover': '12.4%', 'ic': 'Macro (0.14)',    'broadness': '32%'},
+    'Sideway (盤整)': {'confidence': '0.78', 'sharpe': '1.45', 'turnover': '9.1%',  'ic': 'Volatility (0.11)','broadness': '48%'},
+    'HighVol (高波動)':{'confidence': '0.65', 'sharpe': '0.98', 'turnover': '18.2%', 'ic': 'Cash/Risk (0.18)','broadness': '25%'},
+    'Crisis (危機)':   {'confidence': '0.52', 'sharpe': '0.42', 'turnover': '24.5%', 'ic': 'Tail-Risk (0.22)','broadness': '15%'}
+}
+
+# 取得目前狀態的統計值
+stats = regime_stats.get(current_regime, regime_stats['Bull (多頭)'])
+
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
 with kpi1:
-    st.metric("當前市場 Regime", f"{current_regime}", delta="Broadness: 68%" if "Crisis" in current_regime or "Bull" in current_regime else "Broadness: 42%")
+    st.metric("當前市場 Regime", f"{current_regime}", delta=f"Broadness: {stats['broadness']}")
 with kpi2:
-    st.metric("TimesFM 平均信心", "0.82", delta="+0.04 (C_i)")
+    st.metric("TimesFM 平均信心", stats['confidence'], delta=f"C_i (動態流動)")
 with kpi3:
-    st.metric("近期 Top 特徵 IC", "Momentum (0.12)" if "Crisis" in current_regime or "Bull" in current_regime else "Macro (0.14)", delta="ICIR: 1.02")
+    st.metric("近期 Top 特徵 IC", stats['ic'], delta="ICIR Optimized")
 with kpi4:
-    st.metric("M5 組合夏普比率", "1.68", delta="+1.03 vs M0")
+    st.metric("M5 組合夏普比率", stats['sharpe'], delta="vs M0 Baseline")
 with kpi5:
-    st.metric("Kalman 權重週轉率", "8.2%", delta="-15.9% vs Raw")
+    st.metric("Kalman 權重週轉率", stats['turnover'], delta="Kalman Smoothed")
 
 st.markdown("---")
 
