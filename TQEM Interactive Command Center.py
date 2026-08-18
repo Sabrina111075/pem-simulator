@@ -222,17 +222,44 @@ with kpi5:
 
 st.markdown("---")
 
-# -----------------------------------------------------------------------------
-# 分頁標籤 (Main Tabs)
-# -----------------------------------------------------------------------------
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "1. 市場狀態與 TimesFM 預測", 
-    "2. 五維動態權重重興", 
-    "3. Alpha 排序與選股清單", 
-    "4. Baseline 模型對比 (M0-M6)", 
-    "5. 資料工程與時間對齊驗證",
-    "6. 威科夫 (Wyckoff) 價量籌碼 (PVCS) 診斷"  # <-- 只加這一行
-])
+# 1. 在左側邊欄新增模組導覽選單（替代原有的 st.tabs）
+st.sidebar.divider()
+selected_page = st.sidebar.radio(
+    "📌 模組功能導覽",
+    [
+        "1. 市場狀態與 TimesFM 預測",
+        "2. 五維動態權重重興",
+        "3. Alpha 排序與選股清單",
+        "4. Baseline 模型對比 (M0-M6)",
+        "5. 資料工程與時間對齊驗證",
+        "6. 威科夫 (Wyckoff) 價量籌碼診斷"
+    ]
+)
+
+# 2. 主畫面根據側邊欄選擇獨立渲染（乾淨獨立，不互相擠壓）
+if selected_page.startswith("1."):
+    st.header("📊 1. 市場狀態與 TimesFM 預測")
+    # ... 放第 1 頁的圖表 ...
+
+elif selected_page.startswith("2."):
+    st.header("⚙️ 2. 五維動態權重與 Kalman 平滑")
+    # ... 放第 2 頁的數據 ...
+
+elif selected_page.startswith("3."):
+    st.header("🎯 3. Alpha 排序與選股清單")
+    # ... 放第 3 頁的表格 ...
+
+elif selected_page.startswith("4."):
+    st.header("📈 4. Baseline 模型對比 (M0-M6)")
+    # ... 放第 4 頁的對比圖 ...
+
+elif selected_page.startswith("5."):
+    st.header("🛡️ 5. 資料工程與時間對齊驗證")
+    # ... 放第 5 頁的時間軸 ...
+
+elif selected_page.startswith("6."):
+    from wyckoff_pvcs_engine import render_wyckoff_tab
+    render_wyckoff_tab(st)
 
 # -----------------------------------------------------------------------------
 # Tab 1: 市場狀態與 TimesFM 預測
