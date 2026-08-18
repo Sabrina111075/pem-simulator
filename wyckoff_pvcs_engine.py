@@ -3,11 +3,9 @@ import pandas as pd
 import numpy as np
 
 def render_wyckoff_tab(st, alpha=0.5, beta=0.65, delta_w_max=0.19, regime="Bull (多頭)"):
-    # 讀取 Session State 確保連動
     regime = st.session_state.get('selected_regime', regime)
     alpha = st.session_state.get('alpha', alpha)
     
-    # 1. 四大卡片 Metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Wyckoff 階段辨識", "Phase D / E", "↑ SOS / Jac...")
@@ -20,7 +18,6 @@ def render_wyckoff_tab(st, alpha=0.5, beta=0.65, delta_w_max=0.19, regime="Bull 
 
     st.markdown("---")
 
-    # 2. K線價量結構與 PVCS 訊號疊加圖
     st.markdown("##### 📈 K線價量結構與 PVCS 訊號疊加圖")
     chart_data = pd.DataFrame(
         np.random.randn(40, 2).cumsum(axis=0) + [100, 50],
@@ -30,15 +27,14 @@ def render_wyckoff_tab(st, alpha=0.5, beta=0.65, delta_w_max=0.19, regime="Bull 
 
     st.markdown("---")
 
-    # 3. PVCS 三維診斷指標 (改為 4 欄文字指標卡片)
-    st.markdown("##### 🎯 PVCS 三維診斷數據")
+    st.markdown("##### 🎯 PVCS 三維診斷文字方塊")
     
-    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-    with m_col1:
-        st.metric("P - 價格結構得分", "81.7", "強勢突破")
-    with m_col2:
-        st.metric("V - 成交量動能得分", "72.8", "量增價漲")
-    with m_col3:
-        st.metric("C - 籌碼集中度得分", "68.3", "主力控盤")
-    with m_col4:
-        st.metric("S - 市場情緒指數", "70.7", "偏向樂觀")
+    tb_col1, tb_col2, tb_col3, tb_col4 = st.columns(4)
+    with tb_col1:
+        st.info("**P - 價格結構得分**\n\n### **81.7**\n\n📌 狀態：強勢突破點")
+    with tb_col2:
+        st.info("**V - 成交量動能得分**\n\n### **72.8**\n\n📌 狀態：量增價漲結構")
+    with tb_col3:
+        st.info("**C - 籌碼集中度得分**\n\n### **68.3**\n\n📌 狀態：主力集中控盤")
+    with tb_col4:
+        st.info("**S - 市場情緒指數**\n\n### **70.7**\n\n📌 狀態：市場偏向樂觀")
