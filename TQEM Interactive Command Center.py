@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
+import streamlit as st
 import pytz  # 引入時區處理套件
 
 # -----------------------------------------------------------------------------
@@ -16,80 +17,102 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 自訂 CSS 樣式 (優化標題、KPI 指標卡與即時時間樣式)
+import streamlit as st
+
+# =============================================================================
+# 方案 B：CSS 注入（防止文字被 ... 截斷，實現自動換列與彈性縮放）
+# =============================================================================
 st.markdown("""
 <style>
-    /* 主標題字體加大 */
-    .main-header {
-        font-size: 2.8rem !important;
-        font-weight: 800 !important;
-        color: #0F172A;
-        margin-bottom: 0.2rem;
-        line-height: 1.2;
-    }
-    /* 子標題與時間容器 */
-    .sub-header-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        margin-bottom: 1.8rem;
-        gap: 10px;
-    }
-    .sub-header-text {
-        font-size: 1.1rem;
-        color: #64748B;
-    }
-    .live-time-badge {
-        background-color: #E0F2FE;
-        color: #0369A1;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.95rem;
-        font-weight: 600;
-        border: 1px solid #BAE6FD;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-    
-    /* 頂部 KPI 指標卡優化 (防吃字與增強顯眼度) */
-    [data-testid="stMetric"] {
-        background-color: #F8FAFC;
-        border: 1px solid #E2E8F0;
-        border-radius: 10px;
-        padding: 12px 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    [data-testid="stMetricLabel"] {
-        font-size: 0.95rem !important;
-        font-weight: 600 !important;
-        color: #475569 !important;
-        white-space: nowrap !important;
-    }
+    /* 允許 Metric 主字體自動換列與彈性縮放 */
     [data-testid="stMetricValue"] {
-        font-size: 1.8rem !important;
-        font-weight: 700 !important;
-        color: #0F172A !important;
+        font-size: 1.35rem !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        line-height: 1.25 !important;
     }
-    
-    /* Tab 標籤樣式 */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
+    /* 允許 Delta 輔助文字自動換列不截斷 */
+    [data-testid="stMetricDelta"] {
+        white-space: normal !important;
+        word-break: break-word !important;
+        font-size: 0.82rem !important;
     }
-    .stTabs [data-baseweb="tab"] {
-        height: 48px;
-        white-space: pre-wrap;
-        background-color: #F1F5F9;
-        border-radius: 8px 8px 0px 0px;
-        font-weight: 600;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #0284C7;
-        color: white;
+    /* 優化卡片容器，呈現明亮現代感 */
+    [data-testid="stMetric"] {
+        background-color: #f8f9fa;
+        padding: 12px 14px;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
     }
 </style>
 """, unsafe_allow_html=True)
+
+
+# =============================================================================
+# 方案 A：頂部關鍵指標 (整合 Regime, α, β, Δw 四重動態機制與精簡架構)
+# =============================================================================
+# 1. 定義各 Regime 之基礎數據與精簡特徵名稱 (避開過長截斷)
+regime_stats = {
+    'Bull (多頭)':    {'base_conf': 0.88, 'base_sharpe': 2.15, 'base_turnover': 6.5,  'ic_name': 'Momentum',  'ic_val': '0.16', 'broadness': '68%'},
+    'Bear (空頭)':    {'base_conf': 0.72, 'base_sharpe': 1.12, 'base_turnover': 12.4, 'ic_name': 'Macro',     'ic_val': '0.14', 'broadness': '32%'},
+    'Sideway (盤整)': {'base_conf': 0.78, 'base_sharpe': 1.45, 'base_turnover': 9.1,  'ic_name': 'Volatility', 'ic_val': '0.11', 'broadness': '48%'},
+    'HighVol (高波動)':{'base_conf': 0.65, 'base_sharpe': 0.98, 'base_turnover': 18.2, 'ic_name': 'Cash/Risk',  'ic_val': '0.18', 'broadness': '25%'},
+    'Crisis (危機)':   {'base_conf': 0.52, 'base_sharpe': 0.42, 'base_turnover': 24.5, 'ic_name': 'Tail-Risk',  'ic_val': '0.22', 'broadness': '15%'}
+}
+
+# 取得目前選取的狀態數據 (安全預設值為 Bull)
+stats = regime_stats.get(current_regime, regime_stats['Bull (多頭)'])
+
+# 2. 四重參數動態連動計算邏輯
+# (A) 信心度：受 α (信心折價) 影響
+dynamic_confidence = round(stats['base_conf'] / (1 + 0.4 * alpha_param), 2)
+
+# (B) 夏普比率：受 α, β 影響，且受 Δw 上限過嚴(不足 0.05) 之追蹤扣分
+turnover_penalty = 0.9 + 2.0 * min(delta_w_max, 0.05)
+beta_impact = (1.2 * beta_param - 0.2 * (beta_param ** 2))
+dynamic_sharpe = round(stats['base_sharpe'] * (1 + 0.1 * alpha_param) * (0.8 + 0.15 * beta_impact) * turnover_penalty, 2)
+
+# (C) 週轉率：受 α, β 風控組合重構影響，並直接受 Δw 硬性約束成正比
+dynamic_turnover = round(stats['base_turnover'] * (1 + 0.15 * alpha_param + 0.2 * (beta_param - 0.5)) * (delta_w_max / 0.05), 1)
+
+
+# 3. 渲染 5 大明亮化 KPI 卡片
+kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
+
+with kpi1:
+    st.metric(
+        label="當前市場 Regime",
+        value=f"{current_regime}",
+        delta=f"廣度: {stats['broadness']}"
+    )
+
+with kpi2:
+    st.metric(
+        label="TimesFM 平均信心",
+        value=f"{dynamic_confidence}",
+        delta=f"α = {alpha_param}"
+    )
+
+with kpi3:
+    st.metric(
+        label="近期 Top 特徵 IC",
+        value=stats['ic_name'],
+        delta=f"IC: {stats['ic_val']}"
+    )
+
+with kpi4:
+    st.metric(
+        label="M5 組合夏普比率",
+        value=f"{dynamic_sharpe}",
+        delta=f"Δw = {delta_w_max}"
+    )
+
+with kpi5:
+    st.metric(
+        label="Kalman 權重週轉率",
+        value=f"{dynamic_turnover}%",
+        delta=f"β = {beta_param}"
+    )
 
 # -----------------------------------------------------------------------------
 # 時區與時間動態計算 (台北時區)
@@ -180,46 +203,6 @@ st.markdown(f"""
     <div class="live-time-badge">🕒 台北時間 (TST)：{current_time_taipei}</div>
 </div>
 """, unsafe_allow_html=True)
-
-# -----------------------------------------------------------------------------
-# 頂部關鍵指標 (整合 Regime, alpha, beta 與 delta_w_max 四重動態機制)
-# -----------------------------------------------------------------------------
-regime_stats = {
-    'Bull (多頭)':    {'base_conf': 0.88, 'base_sharpe': 2.15, 'base_turnover': 6.5,  'ic': 'Momentum (0.16)', 'broadness': '68%'},
-    'Bear (空頭)':    {'base_conf': 0.72, 'base_sharpe': 1.12, 'base_turnover': 12.4, 'ic': 'Macro (0.14)',    'broadness': '32%'},
-    'Sideway (盤整)': {'base_conf': 0.78, 'base_sharpe': 1.45, 'base_turnover': 9.1,  'ic': 'Volatility (0.11)','broadness': '48%'},
-    'HighVol (高波動)':{'base_conf': 0.65, 'base_sharpe': 0.98, 'base_turnover': 18.2, 'ic': 'Cash/Risk (0.18)','broadness': '25%'},
-    'Crisis (危機)':   {'base_conf': 0.52, 'base_sharpe': 0.42, 'base_turnover': 24.5, 'ic': 'Tail-Risk (0.22)','broadness': '15%'}
-}
-
-stats = regime_stats.get(current_regime, regime_stats['Bull (多頭)'])
-
-# 1. 信心度：受 alpha (信心折價) 影響
-dynamic_confidence = round(stats['base_conf'] / (1 + 0.4 * alpha_param), 2)
-
-# 2. 夏普比率：受 alpha, beta 影響，且若 delta_w_max 過小(限制過嚴)會導致訊號跟不上而微幅扣分
-turnover_penalty = 0.9 + 2.0 * min(delta_w_max, 0.05)  # 限制在 0.05 以下時會懲罰效益
-beta_impact = (1.2 * beta_param - 0.2 * (beta_param ** 2))
-dynamic_sharpe = round(stats['base_sharpe'] * (1 + 0.1 * alpha_param) * (0.8 + 0.15 * beta_impact) * turnover_penalty, 2)
-
-# 3. 週轉率：受 alpha, beta 重構影響，並直接被 delta_w_max 硬性約束/放行
-# delta_w_max 越大，允許調倉上限越高，週轉率直接成正比上升
-dynamic_turnover = round(stats['base_turnover'] * (1 + 0.15 * alpha_param + 0.2 * (beta_param - 0.5)) * (delta_w_max / 0.05), 1)
-
-# 渲染 5 大 KPI 卡片
-kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
-with kpi1:
-    st.metric("當前市場 Regime", f"{current_regime}", delta=f"Broadness: {stats['broadness']}")
-with kpi2:
-    st.metric("TimesFM 平均信心", f"{dynamic_confidence}", delta=f"α = {alpha_param}")
-with kpi3:
-    st.metric("近期 Top 特徵 IC", stats['ic'], delta="客觀特徵 (不受風控參數影響)")
-with kpi4:
-    st.metric("M5 組合夏普比率", f"{dynamic_sharpe}", delta=f"訊號追蹤 (Δw={delta_w_max})")
-with kpi5:
-    st.metric("Kalman 權重週轉率", f"{dynamic_turnover}%", delta=f"調倉天花板 (Δw={delta_w_max})")
-
-st.markdown("---")
 
 # -----------------------------------------------------------------------------
 # 分頁標籤 (Main Tabs)
