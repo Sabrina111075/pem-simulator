@@ -182,34 +182,36 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 頂部關鍵指標 (動態連動 Regime & alpha 參數)
+# 頂部關鍵指標 (融入 alpha 與 Regime 雙重動態機制)
 # -----------------------------------------------------------------------------
-# 1. 根據選取的 Regime 設定基本參數
 regime_stats = {
-    'Bull (多頭)':    {'base_conf': 0.88, 'sharpe': '2.15', 'turnover': '6.5%',  'ic': 'Momentum (0.16)', 'broadness': '68%'},
-    'Bear (空頭)':    {'base_conf': 0.72, 'sharpe': '1.12', 'turnover': '12.4%', 'ic': 'Macro (0.14)',    'broadness': '32%'},
-    'Sideway (盤整)': {'base_conf': 0.78, 'sharpe': '1.45', 'turnover': '9.1%',  'ic': 'Volatility (0.11)','broadness': '48%'},
-    'HighVol (高波動)':{'base_conf': 0.65, 'sharpe': '0.98', 'turnover': '18.2%', 'ic': 'Cash/Risk (0.18)','broadness': '25%'},
-    'Crisis (危機)':   {'base_conf': 0.52, 'sharpe': '0.42', 'turnover': '24.5%', 'ic': 'Tail-Risk (0.22)','broadness': '15%'}
+    'Bull (多頭)':    {'base_conf': 0.88, 'base_sharpe': 2.15, 'base_turnover': 6.5,  'ic': 'Momentum (0.16)', 'broadness': '68%'},
+    'Bear (空頭)':    {'base_conf': 0.72, 'base_sharpe': 1.12, 'base_turnover': 12.4, 'ic': 'Macro (0.14)',    'broadness': '32%'},
+    'Sideway (盤整)': {'base_conf': 0.78, 'base_sharpe': 1.45, 'base_turnover': 9.1,  'ic': 'Volatility (0.11)','broadness': '48%'},
+    'HighVol (高波動)':{'base_conf': 0.65, 'base_sharpe': 0.98, 'base_turnover': 18.2, 'ic': 'Cash/Risk (0.18)','broadness': '25%'},
+    'Crisis (危機)':   {'base_conf': 0.52, 'base_sharpe': 0.42, 'base_turnover': 24.5, 'ic': 'Tail-Risk (0.22)','broadness': '15%'}
 }
 
 stats = regime_stats.get(current_regime, regime_stats['Bull (多頭)'])
 
-# 2. 即時計算受 alpha (信心折價係數) 影響後的平均信心度
+# 根據 alpha_param 計算動態變化
 dynamic_confidence = round(stats['base_conf'] / (1 + 0.5 * alpha_param), 2)
+# alpha 提高 -> 風控提升 -> 夏普比率稍微優化；週轉率隨權重重構增加
+dynamic_sharpe = round(stats['base_sharpe'] * (1 + 0.15 * alpha_param), 2)
+dynamic_turnover = round(stats['base_turnover'] * (1 + 0.25 * alpha_param), 1)
 
-# 3. 渲染 5 大 KPI 卡片
+# 渲染 5 大 KPI 卡片
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
 with kpi1:
     st.metric("當前市場 Regime", f"{current_regime}", delta=f"Broadness: {stats['broadness']}")
 with kpi2:
     st.metric("TimesFM 平均信心", f"{dynamic_confidence}", delta=f"α = {alpha_param}")
 with kpi3:
-    st.metric("近期 Top 特徵 IC", stats['ic'], delta="ICIR Optimized")
+    st.metric("近期 Top 特徵 IC", stats['ic'], delta="客觀特徵 (不受 α 影響)")
 with kpi4:
-    st.metric("M5 組合夏普比率", stats['sharpe'], delta="vs M0 Baseline")
+    st.metric("M5 組合夏普比率", f"{dynamic_sharpe}", delta=f"風控校正 (α={alpha_param})")
 with kpi5:
-    st.metric("Kalman 權重週轉率", stats['turnover'], delta="Kalman Smoothed")
+    st.metric("Kalman 權重週轉率", f"{dynamic_turnover}%", delta=f"調倉反應 (α={alpha_param})")
 
 st.markdown("---")
 
