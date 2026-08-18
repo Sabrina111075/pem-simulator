@@ -232,33 +232,17 @@ selected_page = st.sidebar.radio("📌 模組功能導覽", [
     "6. 威科夫 (Wyckoff) 價量籌碼診斷"
 ])
 
-# --------------------------------------------------
-# 主畫面根據選單進行分頁渲染
-# --------------------------------------------------
+# 2. 自動切換容器（這樣下面的 with tab1 到 with tab6 就能直接運作且只顯示選中的那頁）
+class DummyContainer:
+    def __enter__(self): pass
+    def __exit__(self, type, value, traceback): pass
 
-if selected_page.startswith("1."):
-    st.subheader("1. 市場狀態辨識與 TimesFM 序列預測")
-    # ... 這裡放你原本第 1 頁的圖表程式碼 ...
-
-elif selected_page.startswith("2."):
-    st.subheader("2. 五維動態權重重興")
-    # ... 這裡放你原本第 2 頁的程式碼 ...
-
-elif selected_page.startswith("3."):
-    st.subheader("3. Alpha 排序與選股清單")
-    # ... 這裡放你原本第 3 頁的程式碼 ...
-
-elif selected_page.startswith("4."):
-    st.subheader("4. Baseline 模型對比")
-    # ... 這裡放你原本第 4 頁的程式碼 ...
-
-elif selected_page.startswith("5."):
-    st.subheader("5. 資料工程與時間對齊驗證")
-    # ... 這裡放你原本第 5 頁的程式碼 ...
-
-elif selected_page.startswith("6."):
-    from wyckoff_pvcs_engine import render_wyckoff_tab
-    render_wyckoff_tab(st)
+tab1 = st.container() if selected_page.startswith("1.") else DummyContainer()
+tab2 = st.container() if selected_page.startswith("2.") else DummyContainer()
+tab3 = st.container() if selected_page.startswith("3.") else DummyContainer()
+tab4 = st.container() if selected_page.startswith("4.") else DummyContainer()
+tab5 = st.container() if selected_page.startswith("5.") else DummyContainer()
+tab6 = st.container() if selected_page.startswith("6.") else DummyContainer()
 
 # -----------------------------------------------------------------------------
 # Tab 1: 市場狀態與 TimesFM 預測
