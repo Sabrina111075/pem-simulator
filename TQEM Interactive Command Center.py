@@ -1,6 +1,7 @@
 ﻿import streamlit as st
 import pandas as pd
 import numpy as np
+from datetime import datetime, timezone, timedelta  # 👈 使用內建時區處理，免裝 pytz，絕不噴錯！
 
 # 頁面基本設定
 st.set_page_config(page_title="TQEM Command Center", layout="wide")
@@ -69,48 +70,21 @@ st.sidebar.caption("資料時間對齊檢查：✔ 無前視偏誤 (No Look-Ahea
 # -----------------------------------------------------------------
 # 2. 右側 Header & 連動 Metrics
 # -----------------------------------------------------------------
-st.title("TQEM 量化決策系統 Control Center")
+# 1. 計算台北標準時間 (UTC+8)
+taipei_tz = timezone(timedelta(hours=8))
+taipei_time_str = datetime.now(taipei_tz).strftime("%Y-%m-%d %H:%M:%S")
 
-base_sharpe = {'Bull (多頭)': 1.85, 'Bear (空頭)': 0.21, 'Sideway (盤整)': 0.88, 'HighVol (高波動)': 0.55, 'Crisis (危機)': 0.41}[selected_regime]
-dynamic_sharpe = round(base_sharpe * (1 - alpha * 0.1) * (1 - (2.0 - beta) * 0.05), 2)
+# 2. 渲染機構級主標題
+st.title("TimesFM TQEM 量化基金評估與動態權重管理平台")
 
-regime_metrics_map = {
-    'Bull (多頭)': {"broadness": "78%", "confidence": f"{0.82 - alpha*0.1:.2f}", "ic": "Momentum (+0.18)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{12.4 + delta_w_max*10:.1f}%"},
-    'Bear (空頭)': {"broadness": "22%", "confidence": f"{0.35 - alpha*0.1:.2f}", "ic": "Macro/Vol (+0.22)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{68.2 + delta_w_max*10:.1f}%"},
-    'Sideway (盤整)': {"broadness": "45%", "confidence": f"{0.51 - alpha*0.1:.2f}", "ic": "MeanRev (+0.12)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{31.5 + delta_w_max*10:.1f}%"},
-    'HighVol (高波動)': {"broadness": "30%", "confidence": f"{0.41 - alpha*0.1:.2f}", "ic": "Volatility (+0.25)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{54.1 + delta_w_max*10:.1f}%"},
-    'Crisis (危機)': {"broadness": "15%", "confidence": f"{0.48 - alpha*0.1:.2f}", "ic": "Tail-Risk (+0.31)", "sharpe": f"{dynamic_sharpe}", "turnover": f"{49.8 + delta_w_max*10:.1f}%"}
-}
-
-current_metric = regime_metrics_map[selected_regime]
-
-col1, col2, col3, col4, col5 = st.columns(5)
-with col1:
-    st.metric("當前市場 Regime", selected_regime, f"↑ Broadness: {current_metric['broadness']}")
-with col2:
-    st.metric("TimesFM 平均信心", current_metric['confidence'], f"↑ α = {alpha:.2f}")
-with col3:
-    st.metric("近期 Top 特徵 IC", current_metric['ic'], "↑ 客觀特徵")
-with col4:
-    st.metric("M5 組合夏普比率", current_metric['sharpe'], f"↑ 訊號追蹤 (Δw={delta_w_max:.2f})")
-with col5:
-    st.metric("Kalman 權重週轉率", current_metric['turnover'], "↑ 調倉天花板")
-
-st.markdown("---")
-
-# -----------------------------------------------------------------
-# 3. 頁面渲染
-# -----------------------------------------------------------------
-
-if selected_page.startswith("1."):
-    st.subheader("1. 市場狀態辨識 (Regime Detection) & TimesFM 預測引擎")
-    st.markdown(f"##### 📌 當前選定 Regime：`{selected_regime}` 與權重調整矩陣")
-    regime_df = pd.DataFrame({
-        'Regime': ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
-        '主導特徵群組': ['Momentum / Flow', 'Macro / Volatility', 'Mean Reversion', 'Volatility / Cash', 'Risk Control / Macro'],
-        '權重偏向': ['上調 Momentum (+20%)', '上調 Vol/Macro (+30%)', '上調 Price Range', '上調 Vol/Liquidity', '大幅調降 Trend/Flow']
-    })
-    st.dataframe(regime_df, use_container_width=True)
+# 3. 渲染專業資訊副標題
+st.markdown(f"""
+<div style="font-size: 0.88rem; color: #64748B; margin-top: -10px; margin-bottom: 15px;">
+    🕒 <b>系統台北時間 (CST / UTC+8)：</b> <code>{taipei_time_str}</code> &nbsp;|&nbsp; 
+    🧠 <b>核心模型依據：</b> Google TimesFM 2.0 時序基礎模型 + Wyckoff PVCS 價量結構 + 卡爾曼動態權重矩陣 (Kalman Filtering) &nbsp;|&nbsp; 
+    🛡️ <b>數據基底：</b> 台股全市場日線/Tick 數據與三大法人籌碼流向 (Point-in-Time Verified)
+</div>
+""", unsafe_allow_html=True)
 
 elif selected_page.startswith("2."):
     st.subheader("2. 五維動態權重引擎 (Dynamic Weight Allocation Engine)")
