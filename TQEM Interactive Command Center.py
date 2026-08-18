@@ -222,8 +222,7 @@ with kpi5:
 
 st.markdown("---")
 
-# 1. 在左側邊欄新增模組導覽選單（替代原有的 st.tabs）
-st.sidebar.divider()
+# 1. 在側邊欄建立選單
 selected_page = st.sidebar.radio(
     "📌 模組功能導覽",
     [
@@ -236,28 +235,30 @@ selected_page = st.sidebar.radio(
     ]
 )
 
-# 2. 主畫面根據側邊欄選擇獨立渲染（乾淨獨立，不互相擠壓）
+# 2. 用 if / elif 替換原本的 with tab1 ~ with tab6
 if selected_page.startswith("1."):
-    st.header("📊 1. 市場狀態與 TimesFM 預測")
-    # ... 放第 1 頁的圖表 ...
+    # 這裡放入你原本 with tab1 下面的所有程式碼內容
+    st.subheader("1. 市場狀態辨識與 TimesFM 序列預測")
+    # ...
 
 elif selected_page.startswith("2."):
-    st.header("⚙️ 2. 五維動態權重與 Kalman 平滑")
-    # ... 放第 2 頁的數據 ...
+    # 這裡放入你原本 with tab2 下面的程式碼
+    # ...
 
 elif selected_page.startswith("3."):
-    st.header("🎯 3. Alpha 排序與選股清單")
-    # ... 放第 3 頁的表格 ...
+    # 這裡放入你原本 with tab3 下面的程式碼
+    # ...
 
 elif selected_page.startswith("4."):
-    st.header("📈 4. Baseline 模型對比 (M0-M6)")
-    # ... 放第 4 頁的對比圖 ...
+    # 這裡放入你原本 with tab4 下面的程式碼
+    # ...
 
 elif selected_page.startswith("5."):
-    st.header("🛡️ 5. 資料工程與時間對齊驗證")
-    # ... 放第 5 頁的時間軸 ...
+    # 這裡放入你原本 with tab5 下面的程式碼
+    # ...
 
 elif selected_page.startswith("6."):
+    # 呼叫 Wyckoff 模組
     from wyckoff_pvcs_engine import render_wyckoff_tab
     render_wyckoff_tab(st)
 
