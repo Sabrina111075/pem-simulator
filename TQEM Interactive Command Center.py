@@ -157,65 +157,40 @@ with st.sidebar:
     st.caption("TimesFM Quant Evaluation Model v1.0")
     st.markdown("---")
     
-# =============================================================================
-# 頂部關鍵指標 (精準綁定 sidebar 變數與四重動態連動)
-# =============================================================================
-# 1. 優先嘗試直接讀取 sideBar 變數名稱（請確保變數名稱與你的 sidebar 控制項一致）
-try:
-    c_regime = current_regime
-except NameError:
-    c_regime = 'Bull (多頭)'
-
-try:
-    a_param = float(alpha_param)
-except NameError:
-    a_param = 0.45
-
-try:
-    b_param = float(beta_param)
-except NameError:
-    b_param = 1.70
-
-try:
-    dw_max = float(delta_w_max)
-except NameError:
-    dw_max = 0.08
-
-
-# 2. 定義 5 大 Regime 基礎特徵與指標基底
+# -----------------------------------------------------------------------------
+# 頂部關鍵指標 (穩定單一渲染版 - 無 CSS / 無重複區塊)
+# -----------------------------------------------------------------------------
+# 請確保這段放在 st.sidebar 滑桿設定「之後」！
 regime_stats = {
-    'Bull (多頭)':    {'base_conf': 0.88, 'base_sharpe': 2.15, 'base_turnover': 6.5,  'ic_name': 'Momentum',  'ic_val': '0.16', 'broadness': '68%'},
-    'Bear (空頭)':    {'base_conf': 0.72, 'base_sharpe': 1.12, 'base_turnover': 12.4, 'ic_name': 'Macro',     'ic_val': '0.14', 'broadness': '32%'},
-    'Sideway (盤整)': {'base_conf': 0.78, 'base_sharpe': 1.45, 'base_turnover': 9.1,  'ic_name': 'Volatility', 'ic_val': '0.11', 'broadness': '48%'},
-    'HighVol (高波動)':{'base_conf': 0.65, 'base_sharpe': 0.98, 'base_turnover': 18.2, 'ic_name': 'Cash/Risk',  'ic_val': '0.18', 'broadness': '25%'},
-    'Crisis (危機)':   {'base_conf': 0.52, 'base_sharpe': 0.42, 'base_turnover': 24.5, 'ic_name': 'Tail-Risk',  'ic_val': '0.22', 'broadness': '15%'}
+    'Bull (多頭)':    {'base_conf': 0.88, 'base_sharpe': 2.15, 'base_turnover': 6.5,  'ic': 'Momentum (0.16)', 'broadness': '68%'},
+    'Bear (空頭)':    {'base_conf': 0.72, 'base_sharpe': 1.12, 'base_turnover': 12.4, 'ic': 'Macro (0.14)',    'broadness': '32%'},
+    'Sideway (盤整)': {'base_conf': 0.78, 'base_sharpe': 1.45, 'base_turnover': 9.1,  'ic': 'Volatility (0.11)','broadness': '48%'},
+    'HighVol (高波動)':{'base_conf': 0.65, 'base_sharpe': 0.98, 'base_turnover': 18.2, 'ic': 'Cash/Risk (0.18)','broadness': '25%'},
+    'Crisis (危機)':   {'base_conf': 0.52, 'base_sharpe': 0.42, 'base_turnover': 24.5, 'ic': 'Tail-Risk (0.22)','broadness': '15%'}
 }
 
-# 根據選取的 Regime 即時切換基底 (安全 Match key)
-stats = regime_stats.get(c_regime, regime_stats['Bull (多頭)'])
+# 取得側邊欄變數
+stats = regime_stats.get(current_regime, regime_stats['Bull (多頭)'])
 
+# 計算動態指標
+dynamic_confidence = round(stats['base_conf'] / (1 + 0.4 * alpha_param), 2)
+turnover_penalty = 0.9 + 2.0 * min(delta_w_max, 0.05)
+beta_impact = (1.2 * beta_param - 0.2 * (beta_param ** 2))
+dynamic_sharpe = round(stats['base_sharpe'] * (1 + 0.1 * alpha_param) * (0.8 + 0.15 * beta_impact) * turnover_penalty, 2)
+dynamic_turnover = round(stats['base_turnover'] * (1 + 0.15 * alpha_param + 0.2 * (beta_param - 0.5)) * (delta_w_max / 0.05), 1)
 
-# 3. 即時連動動態計算
-dynamic_confidence = round(stats['base_conf'] / (1 + 0.4 * a_param), 2)
-turnover_penalty = 0.9 + 2.0 * min(dw_max, 0.05)
-beta_impact = (1.2 * b_param - 0.2 * (b_param ** 2))
-dynamic_sharpe = round(stats['base_sharpe'] * (1 + 0.1 * a_param) * (0.8 + 0.15 * beta_impact) * turnover_penalty, 2)
-dynamic_turnover = round(stats['base_turnover'] * (1 + 0.15 * a_param + 0.2 * (b_param - 0.5)) * (dw_max / 0.05), 1)
-
-
-# 4. 渲染 5 大 KPI 卡片
+# 渲染 5 大 KPI
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
-
 with kpi1:
-    st.metric(label="當前市場 Regime", value=f"{c_regime}", delta=f"廣度: {stats['broadness']}")
+    st.metric("當前市場 Regime", f"{current_regime}", delta=f"Broadness: {stats['broadness']}")
 with kpi2:
-    st.metric(label="TimesFM 平均信心", value=f"{dynamic_confidence}", delta=f"α = {a_param}")
+    st.metric("TimesFM 平均信心", f"{dynamic_confidence}", delta=f"α = {alpha_param}")
 with kpi3:
-    st.metric(label="近期 Top 特徵 IC", value=stats['ic_name'], delta=f"IC: {stats['ic_val']}")
+    st.metric("近期 Top 特徵 IC", stats['ic'], delta="客觀特徵")
 with kpi4:
-    st.metric(label="M5 組合夏普比率", value=f"{dynamic_sharpe}", delta=f"Δw = {dw_max}")
+    st.metric("M5 組合夏普比率", f"{dynamic_sharpe}", delta=f"Δw = {delta_w_max}")
 with kpi5:
-    st.metric(label="Kalman 權重週轉率", value=f"{dynamic_turnover}%", delta=f"β = {b_param}")
+    st.metric("Kalman 權重週轉率", f"{dynamic_turnover}%", delta=f"β = {beta_param}")
     
     st.markdown("### 動態權重引擎參數")
     alpha_param = st.slider("信心折價係數 α (Uncertainty Discount)", 0.0, 1.0, 0.2, 0.05)
