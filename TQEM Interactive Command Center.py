@@ -241,24 +241,27 @@ if selected_page.startswith("1."):
     st.subheader("1. 市場狀態辨識與 TimesFM 序列預測")
     # ...
 
+if selected_page.startswith("1."):
+    st.subheader("1. 市場狀態與 TimesFM 預測")
+    # ... 放第 1 頁程式碼 ...
+
 elif selected_page.startswith("2."):
-    # 這裡放入你原本 with tab2 下面的程式碼
-    # ...
+    st.subheader("2. 五維動態權重重興")
+    pass  # ✅ 若暫時沒程式碼，記得加 pass，就不會報錯！
 
 elif selected_page.startswith("3."):
-    # 這裡放入你原本 with tab3 下面的程式碼
-    # ...
+    st.subheader("3. Alpha 排序與選股清單")
+    # ... 放第 3 頁程式碼 ...
 
 elif selected_page.startswith("4."):
-    # 這裡放入你原本 with tab4 下面的程式碼
-    # ...
+    st.subheader("4. Baseline 模型對比")
+    pass
 
 elif selected_page.startswith("5."):
-    # 這裡放入你原本 with tab5 下面的程式碼
-    # ...
+    st.subheader("5. 資料工程與時間對齊驗證")
+    pass
 
 elif selected_page.startswith("6."):
-    # 呼叫 Wyckoff 模組
     from wyckoff_pvcs_engine import render_wyckoff_tab
     render_wyckoff_tab(st)
 
