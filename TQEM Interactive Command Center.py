@@ -222,7 +222,7 @@ with kpi5:
 
 st.markdown("---")
 
-# 1. 側邊欄選單
+# 1. 左側邊欄選單
 selected_page = st.sidebar.radio("📌 模組功能導覽", [
     "1. 市場狀態與 TimesFM 預測",
     "2. 五維動態權重重興",
@@ -232,17 +232,56 @@ selected_page = st.sidebar.radio("📌 模組功能導覽", [
     "6. 威科夫 (Wyckoff) 價量籌碼診斷"
 ])
 
-# 2. 自動切換容器（這樣下面的 with tab1 到 with tab6 就能直接運作且只顯示選中的那頁）
-class DummyContainer:
-    def __enter__(self): pass
-    def __exit__(self, type, value, traceback): pass
+st.divider()
 
-tab1 = st.container() if selected_page.startswith("1.") else DummyContainer()
-tab2 = st.container() if selected_page.startswith("2.") else DummyContainer()
-tab3 = st.container() if selected_page.startswith("3.") else DummyContainer()
-tab4 = st.container() if selected_page.startswith("4.") else DummyContainer()
-tab5 = st.container() if selected_page.startswith("5.") else DummyContainer()
-tab6 = st.container() if selected_page.startswith("6.") else DummyContainer()
+# 2. 嚴格條件切換（選什麼，才渲染什麼！）
+
+if selected_page.startswith("1."):
+    st.subheader("1. 市場狀態辨識 (Regime Detection) & TimesFM 預測引擎")
+    # -----------------------------------------------------------------
+    # 👇 把原本 with tab1: 底下的所有程式碼貼在這裡（記得全部向右縮排 4 個空白）
+    # -----------------------------------------------------------------
+    # 例：
+    # regime_df = pd.DataFrame(...)
+    # st.dataframe(regime_df)
+    # st.plotly_chart(...)
+
+
+elif selected_page.startswith("2."):
+    st.subheader("2. 五維動態權重引擎 (Dynamic Weight Allocation Engine)")
+    # -----------------------------------------------------------------
+    # 👇 把原本 with tab2: 底下的所有程式碼貼在這裡
+    # -----------------------------------------------------------------
+
+
+elif selected_page.startswith("3."):
+    st.subheader("3. 最終 Alpha 訊號生成與選股組合")
+    # -----------------------------------------------------------------
+    # 👇 把原本 with tab3: 底下的所有程式碼貼在這裡
+    # -----------------------------------------------------------------
+
+
+elif selected_page.startswith("4."):
+    st.subheader("4. TQEM Baseline 模型多維度績效評估 (M0 至 M6)")
+    # -----------------------------------------------------------------
+    # 👇 把原本 with tab4: 底下的所有程式碼貼在這裡
+    # -----------------------------------------------------------------
+
+
+elif selected_page.startswith("5."):
+    st.subheader("5. 資料工程 (Data Engineering) & 時間對齊治理")
+    # -----------------------------------------------------------------
+    # 👇 把原本 with tab5: 底下的所有程式碼貼在這裡
+    # -----------------------------------------------------------------
+
+
+elif selected_page.startswith("6."):
+    st.subheader("6. 威科夫 (Wyckoff) 價量籌碼 (PVCS) 診斷沙盒")
+    # -----------------------------------------------------------------
+    # 👇 Tab 6 Wyckoff 診斷模組
+    # -----------------------------------------------------------------
+    from wyckoff_pvcs_engine import render_wyckoff_tab
+    render_wyckoff_tab(st)
 
 # -----------------------------------------------------------------------------
 # Tab 1: 市場狀態與 TimesFM 預測
