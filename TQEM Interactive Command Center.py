@@ -33,7 +33,7 @@ st.markdown("""
 # -----------------------------------------------------------------
 # 1. 側邊欄 (Sidebar)
 # -----------------------------------------------------------------
-st.sidebar.header("🌐 市場 Regime 手動切換 / 模擬")
+st.sidebar.header("🌐 Crystal Machine 市場 Regime 模擬平台")
 selected_regime = st.sidebar.selectbox(
     "選擇目前市場狀態 (Regime)：",
     ['Bull (多頭)', 'Bear (空頭)', 'Sideway (盤整)', 'HighVol (高波動)', 'Crisis (危機)'],
