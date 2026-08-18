@@ -235,12 +235,6 @@ selected_page = st.sidebar.radio(
     ]
 )
 
-# 2. 用 if / elif 替換原本的 with tab1 ~ with tab6
-if selected_page.startswith("1."):
-    # 這裡放入你原本 with tab1 下面的所有程式碼內容
-    st.subheader("1. 市場狀態辨識與 TimesFM 序列預測")
-    # ...
-
 # ✅ 正確寫法：把 with tab1: 替換掉
 if selected_page.startswith("1."):
     st.subheader("1. 市場狀態與 TimesFM 預測")
