@@ -111,14 +111,38 @@ def compute_multi_horizon_pvcs(df):
     return data, weights
 
 
-def rule_engine(p, v, c, pvcs):
-    if p > 30 and v > 30 and c > 30:
-        return "強勢吸籌 / 三維一致偏多", "多方結構完整，量能與籌碼同步配合。"
-    elif c > 40 and p < 10:
-        return "籌碼累積階段", "價格尚未發動，但籌碼已有主力卡位跡象。"
-    elif p > 50 and (v < -20 or c < -20):
-        return "價量籌碼背離預警", "價格創高但籌碼或量能未跟上，需注意高檔拉回風險。"
-    elif p < -30 and c < -30:
-        return "空方趨勢確認", "價格與籌碼同步弱勢，建議觀望。"
+def rule_engine(p, v, c, pvcs_20d):
+    """進階規則引擎：包含價量/籌碼背離預警與狀態說明"""
+    divergence_type = "無背離"
+    risk_level = "低"
+
+    # 背離偵測邏輯
+    if p > 30 and (v < -20 or c < -20):
+        divergence_type = "高檔背離警報"
+        risk_level = "高"
+        status = "價強實弱 (背離風險)"
+        msg = "價格創高或處於高點，但量能或籌碼未同步配合，需留意高檔拉回或主力出貨風險。"
+    elif p < -30 and (v > 20 or c > 20):
+        divergence_type = "低檔背離訊號"
+        risk_level = "中"
+        status = "低檔轉強 (築底訊號)"
+        msg = "價格處於低檔，但籌碼或量能已先行回溫，可能為主力逢低佈局跡象。"
+    elif p > 20 and v > 20 and c > 20:
+        status = "強勢吸籌 / 三維一致"
+        msg = "價格、量能與籌碼三維訊號高度一致偏多，多方結構完整。"
+    elif c > 35 and p < 15:
+        status = "籌碼沉澱卡位"
+        msg = "價格尚未大漲，但籌碼面出現顯著買超，屬於進場卡位階段。"
+    elif p < -20 and c < -20:
+        status = "空方結構確認"
+        msg = "價格與籌碼同步偏弱，多頭動能不足，建議觀望。"
     else:
-        return "區間震盪整理", "三維訊號分歧，市場處於盤整狀態。"
+        status = "區間震盪整理"
+        msg = "三維指標相互抵銷，市場無明確單向趨勢，建議以區間視之。"
+
+    return {
+        "status": status,
+        "msg": msg,
+        "divergence": divergence_type,
+        "risk": risk_level,
+    }
