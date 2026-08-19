@@ -10,19 +10,17 @@ st.caption(
     "盤後研究版 | 基於 5D / 20D / 60D 多時間尺度與個股專屬動態權重分析"
 )
 
-# 側邊欄：簡化介面，移除令人困惑的歷史範圍，專注於個股分析
+# 側邊欄：僅保留股票代碼輸入
 st.sidebar.header("分析設定")
 ticker_input = st.sidebar.text_input("股票代碼 (台股請加 .TW)", value="2330.TW")
 
-# 預設後台自動抓取 1 年資料用於 IC/ICIR 權重校準
-history_period = "1y"
-
 if st.sidebar.button("開始分析", type="primary"):
-    with st.spinner(f"正在計算 {ticker_input} 之 5D/20D/60D 權重與 PVCS..."):
-        df = yf.download(ticker_input, period=history_period)
+    with st.spinner(f"正在抓取 {ticker_input} 並計算 5D/20D/60D 權重..."):
+        # 後台固定下載 2 年，確保 60D 未來報酬與 IC 計算不會因為長度不足而被剔除
+        df = yf.download(ticker_input, period="2y")
 
-        if df.empty:
-            st.error("找不到該股票資料，請確認代碼（例如 2330.TW 或 2603.TW）")
+        if df.empty or len(df) < 60:
+            st.error("找不到該股票資料或歷史資料不足，請確認代碼（例如 2330.TW 或 2603.TW）")
         else:
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
@@ -56,9 +54,8 @@ if st.sidebar.button("開始分析", type="primary"):
             st.markdown("---")
 
             # === 區塊 2：5D, 20D, 60D 權重比例分析 ===
-            st.markdown("### 2. 各時間尺度 (5D / 20D / 60D) 之 P/V/C 權重比例")
+            st.markdown("### 2. 各時間尺度 (5D / 20D / 60D) 之 P/V/C 權重比例分析")
 
-            # 建立 5D, 20D, 60D 權重對比表格
             weight_data = []
             for h in ["5D", "20D", "60D"]:
                 w = weights[h]

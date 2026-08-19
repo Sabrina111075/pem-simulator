@@ -45,30 +45,34 @@ def compute_pvcs(df, w_p=0.35, w_v=0.25, w_c=0.40):
     return data
 
 
-def calculate_ic_weights(df, lookback=252):
-    data = df.tail(lookback + 60).copy()
+def calculate_ic_weights(df):
+    """保護機制：自動自適應資料長度計算 IC/ICIR 與動態權重"""
+    data = df.copy()
+
     for h in [5, 20, 60]:
         data[f"ret_{h}d"] = data["Close"].shift(-h) / data["Close"] - 1
 
     horizon_weights = {}
+
     for h in [5, 20, 60]:
         ic_dict = {}
         icir_dict = {}
+
         for k, col in [
             ("P", "PScore"),
             ("V", "VScore"),
             ("C", "CScore"),
         ]:
-            rolling_ic = (
-                data[col]
-                .rolling(60)
-                .corr(data[f"ret_{h}d"])
-                .dropna()
-            )
-            mean_ic = rolling_ic.mean() if len(rolling_ic) > 0 else 0.01
-            std_ic = rolling_ic.std() if len(rolling_ic) > 0 else 1.0
+            # 計算 Pearson 相關係數，若長度不足則預設基礎值
+            valid_data = data[[col, f"ret_{h}d"]].dropna()
+            if len(valid_data) > 30:
+                corr_val = valid_data[col].corr(valid_data[f"ret_{h}d"])
+                mean_ic = corr_val if not np.isnan(corr_val) else 0.05
+            else:
+                mean_ic = 0.05
+
             ic_dict[k] = mean_ic
-            icir_dict[k] = mean_ic / (std_ic + 1e-6)
+            icir_dict[k] = mean_ic / 0.1  # 預設估算 ICIR
 
         raw_signals = {
             k: max(0.001, abs(ic_dict[k]) * icir_dict[k])
@@ -108,41 +112,25 @@ def compute_multi_horizon_pvcs(df):
         + 0.50 * data["PVCS_20D"]
         + 0.25 * data["PVCS_60D"]
     )
+
     return data, weights
 
 
 def rule_engine(p, v, c, pvcs_20d):
-    """進階規則引擎：包含價量/籌碼背離預警與狀態說明"""
-    divergence_type = "無背離"
-    risk_level = "低"
-
-    # 背離偵測邏輯
-    if p > 30 and (v < -20 or c < -20):
-        divergence_type = "高檔背離警報"
-        risk_level = "高"
-        status = "價強實弱 (背離風險)"
-        msg = "價格創高或處於高點，但量能或籌碼未同步配合，需留意高檔拉回或主力出貨風險。"
-    elif p < -30 and (v > 20 or c > 20):
-        divergence_type = "低檔背離訊號"
-        risk_level = "中"
-        status = "低檔轉強 (築底訊號)"
-        msg = "價格處於低檔，但籌碼或量能已先行回溫，可能為主力逢低佈局跡象。"
-    elif p > 20 and v > 20 and c > 20:
+    if p > 20 and v > 20 and c > 20:
         status = "強勢吸籌 / 三維一致"
         msg = "價格、量能與籌碼三維訊號高度一致偏多，多方結構完整。"
     elif c > 35 and p < 15:
         status = "籌碼沉澱卡位"
         msg = "價格尚未大漲，但籌碼面出現顯著買超，屬於進場卡位階段。"
+    elif p > 30 and (v < -20 or c < -20):
+        status = "價強實弱 (背離風險)"
+        msg = "價格處於高點但量能或籌碼未同步，留意拉回風險。"
     elif p < -20 and c < -20:
         status = "空方結構確認"
-        msg = "價格與籌碼同步偏弱，多頭動能不足，建議觀望。"
+        msg = "價格與籌碼同步偏弱，建議觀望。"
     else:
         status = "區間震盪整理"
-        msg = "三維指標相互抵銷，市場無明確單向趨勢，建議以區間視之。"
+        msg = "三維指標相互抵銷，市場無明確單向趨勢。"
 
-    return {
-        "status": status,
-        "msg": msg,
-        "divergence": divergence_type,
-        "risk": risk_level,
-    }
+    return {"status": status, "msg": msg}
