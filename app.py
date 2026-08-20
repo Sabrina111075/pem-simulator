@@ -3,7 +3,11 @@ import streamlit as st
 import yfinance as yf
 from pvcs_engine import compute_multi_horizon_pvcs, rule_engine
 
-st.set_page_config(page_title="PVCS 台股三維分析網", layout="wide")
+st.set_page_config(
+    page_title="PVCS 台股三維分析網",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 st.title("PVCS 台股價 × 量 × 籌碼三維分析")
 st.caption(
@@ -13,7 +17,6 @@ st.caption(
 # === 側邊欄：進階股票選擇機制 ===
 st.sidebar.header("分析設定")
 
-# 1. 常用熱門個股選單
 stock_dict = {
     "2330.TW (台積電)": "2330.TW",
     "2317.TW (鴻海)": "2317.TW",
@@ -30,14 +33,12 @@ selected_option = st.sidebar.selectbox(
     "選擇熱門個股/ETF 或自訂", list(stock_dict.keys())
 )
 
-# 2. 判斷是否為手動輸入並處理代碼格式
 if stock_dict[selected_option] == "CUSTOM":
     user_input = st.sidebar.text_input(
-        "輸入股票或 ETF 代碼（例如 00878 或 2330）", value="00878"
+        "輸入股票或 ETF 代碼（例如 00878 或 2330）", value="8446"
     )
     raw_ticker = user_input.strip().upper()
 
-    # 自動幫使用者補上 .TW (若無指定 .TWO 或 .TW)
     if raw_ticker and not (
         raw_ticker.endswith(".TW") or raw_ticker.endswith(".TWO")
     ):
@@ -52,11 +53,10 @@ if st.sidebar.button("開始分析", type="primary"):
         st.error("請輸入有效的股票代碼！")
     else:
         with st.spinner(
-            f"正在抓取 {ticker_input} 並計算 5D/20D/60D 權重..."
+            f"正在抓取 {ticker_input} 並計算 P/V/C 與 5D/20D/60D 權重..."
         ):
             df = yf.download(ticker_input, period="2y")
 
-            # 備用機制：若 .TW 抓不到，嘗試 .TWO (上櫃股票)
             if df.empty and ticker_input.endswith(".TW"):
                 alt_ticker = ticker_input.replace(".TW", ".TWO")
                 df = yf.download(alt_ticker, period="2y")
@@ -71,9 +71,10 @@ if st.sidebar.button("開始分析", type="primary"):
                 if isinstance(df.columns, pd.MultiIndex):
                     df.columns = df.columns.get_level_values(0)
 
-                # 計算 5D, 20D, 60D 多時間尺度與專屬權重
+                # 執行 PVCS 運算
                 res, weights = compute_multi_horizon_pvcs(df)
                 latest = res.iloc[-1]
+                prev = res.iloc[-2]
 
                 diag = rule_engine(
                     latest["PScore"],
@@ -82,20 +83,38 @@ if st.sidebar.button("開始分析", type="primary"):
                     latest["PVCS_20D"],
                 )
 
-                st.success(f"【{ticker_input}】分析完成！")
+                st.success(f"【{ticker_input}】量化三維分析完成！")
 
-                # === 區塊 1：5D / 20D / 60D 時間尺度矩陣 ===
-                st.markdown("### 1. 多時間尺度 PVCS 矩陣 (5D / 20D / 60D)")
-                m1, m2, m3, m4 = st.columns(4)
-                m1.metric("5D 短線分數", f"{latest['PVCS_5D']:.1f}")
-                m2.metric(
-                    "20D 波段分數",
-                    f"{latest['PVCS_20D']:.1f}",
-                    help="主要研究尺度",
+                # === 區塊 1：三維核心指標 (Price / Volume / Chip) ===
+                st.markdown("### 1. P/V/C 三維獨立因子得分 (最新數據)")
+                c1, c2, c3, c4 = st.columns(4)
+
+                p_delta = latest["PScore"] - prev["PScore"]
+                v_delta = latest["VScore"] - prev["VScore"]
+                c_delta = latest["CScore"] - prev["CScore"]
+
+                c1.metric(
+                    "Price (價動量得分)",
+                    f"{latest['PScore']:.1f}",
+                    delta=f"{p_delta:+.1f}",
+                    help="評估趨勢強度與均線乖離",
                 )
-                m3.metric("60D 中線分數", f"{latest['PVCS_60D']:.1f}")
-                m4.metric(
-                    "Composite 綜合總分", f"{latest['PVCS_Composite']:.1f}"
+                c2.metric(
+                    "Volume (量能強度得分)",
+                    f"{latest['VScore']:.1f}",
+                    delta=f"{v_delta:+.1f}",
+                    help="評估相對成交量與價量配合度",
+                )
+                c3.metric(
+                    "Chip (籌碼動向得分)",
+                    f"{latest['CScore']:.1f}",
+                    delta=f"{c_delta:+.1f}",
+                    help="基於價量流向模擬之籌碼沉澱指標",
+                )
+                c4.metric(
+                    "Confidence (指標可信度)",
+                    f"{latest['Confidence']:.1f}%",
+                    help="三維指標共振程度，數值越高代表方向越明確",
                 )
 
                 st.info(
@@ -103,9 +122,9 @@ if st.sidebar.button("開始分析", type="primary"):
                 )
                 st.markdown("---")
 
-                # === 區塊 2：5D, 20D, 60D 權重比例分析 ===
+                # === 區塊 2：5D / 20D / 60D 時間尺度與動態權重 ===
                 st.markdown(
-                    "### 2. 各時間尺度 (5D / 20D / 60D) 之 P/V/C 權重比例分析"
+                    "### 2. 各時間尺度 (5D / 20D / 60D) 之 P/V/C 權重與得分"
                 )
 
                 weight_data = []
@@ -117,15 +136,26 @@ if st.sidebar.button("開始分析", type="primary"):
                             "Price (價) 權重": f"{w['w_p']*100:.1f}%",
                             "Volume (量) 權重": f"{w['w_v']*100:.1f}%",
                             "Chip (籌碼) 權重": f"{w['w_c']*100:.1f}%",
-                            "PVCS 得分": f"{latest[f'PVCS_{h}']:.1f}",
+                            "該尺度 PVCS 總分": f"{latest[f'PVCS_{h}']:.1f}",
                         }
                     )
 
                 w_df = pd.DataFrame(weight_data).set_index("時間尺度")
                 st.table(w_df)
 
-                # === 區塊 3：近期 PVCS 走勢圖 ===
-                st.markdown("### 3. 近期 5D / 20D / 60D PVCS 走勢比較")
-                st.line_chart(
-                    res[["PVCS_5D", "PVCS_20D", "PVCS_60D"]].tail(60)
-                )
+                st.markdown("---")
+
+                # === 區塊 3：圖表分析 (分兩欄呈現) ===
+                col_left, col_right = st.columns(2)
+
+                with col_left:
+                    st.markdown("### 3A. P / V / C 三維子指標歷史走勢")
+                    st.line_chart(
+                        res[["PScore", "VScore", "CScore"]].tail(60)
+                    )
+
+                with col_right:
+                    st.markdown("### 3B. 5D / 20D / 60D PVCS 綜合分數走勢")
+                    st.line_chart(
+                        res[["PVCS_5D", "PVCS_20D", "PVCS_60D"]].tail(60)
+                    )
