@@ -1,5 +1,6 @@
 ﻿from datetime import datetime
 import pandas as pd
+import pytz
 import streamlit as st
 import yfinance as yf
 from pvcs_engine import compute_multi_horizon_pvcs, rule_engine
@@ -10,9 +11,24 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# === 取得台北實時時間與市場狀態 ===
+taipei_tz = pytz.timezone("Asia/Taipei")
+now_taipei = datetime.now(taipei_tz)
+now_time_str = now_taipei.strftime("%Y-%m-%d %H:%M:%S")
+
+# 判斷台北時間交易狀態 (台股 13:30 收盤，14:30 盤後資料結算完畢)
+if now_taipei.hour < 13 or (now_taipei.hour == 13 and now_taipei.minute < 30):
+    market_status = "🟢 盤中進行中"
+elif now_taipei.hour < 14 or (
+    now_taipei.hour == 14 and now_taipei.minute < 30
+):
+    market_status = "🟡 盤後試算/清算中"
+else:
+    market_status = "🔵 盤後資料結算完成"
+
 st.title("PVCS 台股價 × 量 × 籌碼三維分析")
 st.caption(
-    "盤後研究版 | 基於 5D / 20D / 60D 多時間尺度與個股專屬動態權重分析"
+    f"盤後研究版 | 台北實時時間：**{now_time_str}**（狀態：**{market_status}**） | 基於 5D/20D/60D 多時間尺度分析"
 )
 
 # === 側邊欄：設定與資料來源資訊 ===
@@ -59,6 +75,7 @@ st.sidebar.caption(
     "• 台灣證券交易所 (TWSE)\n"
     "• 證券櫃檯買賣中心 (TPEx)\n"
     "• API 介接：Yahoo Finance (延遲 15-20 分鐘)\n"
+    "• *註：每日 14:30 盤後清算完成後為最準確之最終收盤數據。*"
 )
 st.sidebar.caption(
     "**三維模型維度**：\n"
@@ -101,15 +118,18 @@ if start_analysis:
                 latest = res.iloc[-1]
                 prev = res.iloc[-2]
 
-                # 判斷盤中或最終收盤狀態
                 latest_date = res.index[-1]
                 latest_date_str = latest_date.strftime("%Y-%m-%d")
-                now_hour = datetime.now().hour
 
-                # 簡單判斷：若為今日且未滿 14:30，標示為盤中延遲
+                # 依據台北時間 14:30 判斷資料顯示狀態
                 if (
-                    latest_date.date() == datetime.now().date()
-                    and now_hour < 15
+                    latest_date.date() == now_taipei.date()
+                    and (
+                        now_taipei.hour < 14
+                        or (
+                            now_taipei.hour == 14 and now_taipei.minute < 30
+                        )
+                    )
                 ):
                     status_tag = (
                         f"<span style='color:orange;'>{latest_date_str} (盤中即時/暫存數據)</span>"
