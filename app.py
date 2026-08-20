@@ -1,4 +1,5 @@
-﻿import pandas as pd
+﻿from datetime import datetime
+import pandas as pd
 import streamlit as st
 import yfinance as yf
 from pvcs_engine import compute_multi_horizon_pvcs, rule_engine
@@ -9,13 +10,13 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.title("PVCS 台股價 × 量 × 籌碼三維分析平台")
+st.title("PVCS 台股價 × 量 × 籌碼三維分析")
 st.caption(
     "盤後研究版 | 基於 5D / 20D / 60D 多時間尺度與個股專屬動態權重分析"
 )
 
 # === 側邊欄：設定與資料來源資訊 ===
-st.sidebar.header("Crystal Machine 分析設定")
+st.sidebar.header("分析設定")
 
 stock_dict = {
     "2330.TW (台積電)": "2330.TW",
@@ -35,7 +36,7 @@ selected_option = st.sidebar.selectbox(
 
 if stock_dict[selected_option] == "CUSTOM":
     user_input = st.sidebar.text_input(
-        "輸入股票或 ETF 代碼（例如 00878 或 2330）", value="0056"
+        "輸入股票或 ETF 代碼（例如 00878 或 2330）", value="2330"
     )
     raw_ticker = user_input.strip().upper()
 
@@ -50,14 +51,15 @@ else:
 
 start_analysis = st.sidebar.button("開始分析", type="primary")
 
-# === 側邊欄：資料來源與系統聲明 (增加公信力) ===
+# === 側邊欄：資料來源與系統聲明 ===
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📊 資料來源與系統說明")
 st.sidebar.caption(
     "**行情數據源**：\n"
     "• 台灣證券交易所 (TWSE)\n"
     "• 證券櫃檯買賣中心 (TPEx)\n"
-    "• API 介接：Yahoo Finance"
+    "• API 介接：Yahoo Finance (延遲 15-20 分鐘)\n"
+    "• *註：每日 14:30 盤後清算完成後為最準確之最終收盤數據。*"
 )
 st.sidebar.caption(
     "**三維模型維度**：\n"
@@ -70,7 +72,6 @@ st.sidebar.caption(
     "⚠️ **免責聲明**：\n"
     "本系統數據與分析結果僅供學術研究與量化策略評估參考，不構成任何投資買賣建議。"
 )
-
 
 # === 主畫面邏輯 ===
 if start_analysis:
@@ -101,13 +102,26 @@ if start_analysis:
                 latest = res.iloc[-1]
                 prev = res.iloc[-2]
 
-                # 取得最新交易日資訊與實時價量
-                latest_date_str = res.index[-1].strftime("%Y-%m-%d")
+                # 判斷盤中或最終收盤狀態
+                latest_date = res.index[-1]
+                latest_date_str = latest_date.strftime("%Y-%m-%d")
+                now_hour = datetime.now().hour
+
+                # 簡單判斷：若為今日且未滿 14:30，標示為盤中延遲
+                if (
+                    latest_date.date() == datetime.now().date()
+                    and now_hour < 15
+                ):
+                    status_tag = (
+                        f"<span style='color:orange;'>{latest_date_str} (盤中即時/暫存數據)</span>"
+                    )
+                else:
+                    status_tag = f"<span style='color:green;'>{latest_date_str} (盤後最終數據)</span>"
+
                 close_price = latest["Close"]
                 price_change = close_price - prev["Close"]
                 price_pct = (price_change / prev["Close"]) * 100
 
-                # 轉為張數 (股數 / 1000)
                 vol_sheets = latest["Volume"] / 1000
                 prev_vol_sheets = prev["Volume"] / 1000
                 vol_change = vol_sheets - prev_vol_sheets
@@ -123,18 +137,24 @@ if start_analysis:
 
                 # === 區塊 1：行情數據與三維因子得分 ===
                 st.markdown(
-                    f"### 1. 最新市場行情與 P/V/C 得分 `(資料日期: {latest_date_str})`"
+                    f"### 1. 市場行情與 P/V/C 得分 `(資料日期:` {status_tag} `)`",
+                    unsafe_allow_html=True,
                 )
+
+                if "盤中即時" in status_tag:
+                    st.warning(
+                        "⚠️ 提示：目前時間尚在盤中/清算時間（14:30 前），Yahoo API 提供的成交量與價格為盤中暫存數據（具 15-20 分鐘延遲），完整成交張數將於 14:30 盤後作業完成後自動更新。"
+                    )
 
                 # 第一列：最新收盤價與成交量
                 k1, k2, k3 = st.columns(3)
                 k1.metric(
-                    "最新收盤價",
+                    "最新價格/收盤價",
                     f"${close_price:.2f}",
                     delta=f"{price_change:+.2f} ({price_pct:+.2f}%)",
                 )
                 k2.metric(
-                    "當日成交量",
+                    "成交量 (目前估算)",
                     f"{vol_sheets:,.0f} 張",
                     delta=f"{vol_change:+,.0f} 張",
                 )
