@@ -14,7 +14,7 @@ st.caption(
     "盤後研究版 | 基於 5D / 20D / 60D 多時間尺度與個股專屬動態權重分析"
 )
 
-# === 側邊欄：進階股票選擇機制 ===
+# === 側邊欄：設定與資料來源資訊 ===
 st.sidebar.header("分析設定")
 
 stock_dict = {
@@ -35,7 +35,7 @@ selected_option = st.sidebar.selectbox(
 
 if stock_dict[selected_option] == "CUSTOM":
     user_input = st.sidebar.text_input(
-        "輸入股票或 ETF 代碼（例如 00878 或 2330）", value="00878"
+        "輸入股票或 ETF 代碼（例如 00878 或 2330）", value="0056"
     )
     raw_ticker = user_input.strip().upper()
 
@@ -48,7 +48,32 @@ if stock_dict[selected_option] == "CUSTOM":
 else:
     ticker_input = stock_dict[selected_option]
 
-if st.sidebar.button("開始分析", type="primary"):
+start_analysis = st.sidebar.button("開始分析", type="primary")
+
+# === 側邊欄：資料來源與系統聲明 (增加公信力) ===
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📊 資料來源與系統說明")
+st.sidebar.caption(
+    "**行情數據源**：\n"
+    "• 台灣證券交易所 (TWSE)\n"
+    "• 證券櫃檯買賣中心 (TPEx)\n"
+    "• API 介接：Yahoo Finance"
+)
+st.sidebar.caption(
+    "**三維模型維度**：\n"
+    "• **Price**：趨勢強度與 20MA 乖離率\n"
+    "• **Volume**：相對成交量與價量共振\n"
+    "• **Chip**：價量動能累積 (Money Flow)\n"
+    "• **Weights**：自適應 IC/ICIR 權重"
+)
+st.sidebar.caption(
+    "⚠️ **免責聲明**：\n"
+    "本系統數據與分析結果僅供學術研究與量化策略評估參考，不構成任何投資買賣建議。"
+)
+
+
+# === 主畫面邏輯 ===
+if start_analysis:
     if not ticker_input:
         st.error("請輸入有效的股票代碼！")
     else:
@@ -172,7 +197,7 @@ if st.sidebar.button("開始分析", type="primary"):
 
                 st.markdown("---")
 
-                # === 區塊 3：圖表分析 (上下單欄排列，視覺更清爽) ===
+                # === 區塊 3：圖表分析 ===
                 st.markdown("### 3. P / V / C 三維子指標歷史走勢 (近 60 日)")
                 st.line_chart(
                     res[["PScore", "VScore", "CScore"]].tail(60)
