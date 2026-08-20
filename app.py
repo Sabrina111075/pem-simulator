@@ -35,7 +35,7 @@ selected_option = st.sidebar.selectbox(
 
 if stock_dict[selected_option] == "CUSTOM":
     user_input = st.sidebar.text_input(
-        "輸入股票或 ETF 代碼（例如 00878 或 2330）", value="2330"
+        "輸入股票或 ETF 代碼（例如 00878 或 2330）", value="00878"
     )
     raw_ticker = user_input.strip().upper()
 
@@ -172,17 +172,17 @@ if st.sidebar.button("開始分析", type="primary"):
 
                 st.markdown("---")
 
-                # === 區塊 3：圖表分析 (分兩欄呈現) ===
-                col_left, col_right = st.columns(2)
+                # === 區塊 3：圖表分析 (上下單欄排列，視覺更清爽) ===
+                st.markdown("### 3. P / V / C 三維子指標歷史走勢 (近 60 日)")
+                st.line_chart(
+                    res[["PScore", "VScore", "CScore"]].tail(60)
+                )
 
-                with col_left:
-                    st.markdown("### 3A. P / V / C 三維子指標歷史走勢")
-                    st.line_chart(
-                        res[["PScore", "VScore", "CScore"]].tail(60)
-                    )
+                st.markdown("---")
 
-                with col_right:
-                    st.markdown("### 3B. 5D / 20D / 60D PVCS 綜合分數走勢")
-                    st.line_chart(
-                        res[["PVCS_5D", "PVCS_20D", "PVCS_60D"]].tail(60)
-                    )
+                st.markdown(
+                    "### 4. 5D / 20D / 60D PVCS 綜合分數走勢比較 (近 60 日)"
+                )
+                st.line_chart(
+                    res[["PVCS_5D", "PVCS_20D", "PVCS_60D"]].tail(60)
+                )
