@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.title("PVCS 台股價 × 量 × 籌碼三維分析")
+st.title("Crystal Machine PVCS 台股價 × 量 × 籌碼三維分析平台")
 st.caption(
     "盤後研究版 | 基於 5D / 20D / 60D 多時間尺度與個股專屬動態權重分析"
 )
