@@ -35,7 +35,7 @@ selected_option = st.sidebar.selectbox(
 
 if stock_dict[selected_option] == "CUSTOM":
     user_input = st.sidebar.text_input(
-        "輸入股票或 ETF 代碼（例如 00878 或 2330）", value="8446"
+        "輸入股票或 ETF 代碼（例如 00878 或 2330）", value="2330"
     )
     raw_ticker = user_input.strip().upper()
 
@@ -76,6 +76,17 @@ if st.sidebar.button("開始分析", type="primary"):
                 latest = res.iloc[-1]
                 prev = res.iloc[-2]
 
+                # 取得最新交易日資訊與實時價量
+                latest_date_str = res.index[-1].strftime("%Y-%m-%d")
+                close_price = latest["Close"]
+                price_change = close_price - prev["Close"]
+                price_pct = (price_change / prev["Close"]) * 100
+
+                # 轉為張數 (股數 / 1000)
+                vol_sheets = latest["Volume"] / 1000
+                prev_vol_sheets = prev["Volume"] / 1000
+                vol_change = vol_sheets - prev_vol_sheets
+
                 diag = rule_engine(
                     latest["PScore"],
                     latest["VScore"],
@@ -85,10 +96,31 @@ if st.sidebar.button("開始分析", type="primary"):
 
                 st.success(f"【{ticker_input}】量化三維分析完成！")
 
-                # === 區塊 1：三維核心指標 (Price / Volume / Chip) ===
-                st.markdown("### 1. P/V/C 三維獨立因子得分 (最新數據)")
-                c1, c2, c3, c4 = st.columns(4)
+                # === 區塊 1：行情數據與三維因子得分 ===
+                st.markdown(
+                    f"### 1. 最新市場行情與 P/V/C 得分 `(資料日期: {latest_date_str})`"
+                )
 
+                # 第一列：最新收盤價與成交量
+                k1, k2, k3 = st.columns(3)
+                k1.metric(
+                    "最新收盤價",
+                    f"${close_price:.2f}",
+                    delta=f"{price_change:+.2f} ({price_pct:+.2f}%)",
+                )
+                k2.metric(
+                    "當日成交量",
+                    f"{vol_sheets:,.0f} 張",
+                    delta=f"{vol_change:+,.0f} 張",
+                )
+                k3.metric(
+                    "Confidence (指標可信度)",
+                    f"{latest['Confidence']:.1f}%",
+                    help="三維指標共振程度，數值越高代表方向越明確",
+                )
+
+                # 第二列：P / V / C 三維因子得分
+                c1, c2, c3 = st.columns(3)
                 p_delta = latest["PScore"] - prev["PScore"]
                 v_delta = latest["VScore"] - prev["VScore"]
                 c_delta = latest["CScore"] - prev["CScore"]
@@ -110,11 +142,6 @@ if st.sidebar.button("開始分析", type="primary"):
                     f"{latest['CScore']:.1f}",
                     delta=f"{c_delta:+.1f}",
                     help="基於價量流向模擬之籌碼沉澱指標",
-                )
-                c4.metric(
-                    "Confidence (指標可信度)",
-                    f"{latest['Confidence']:.1f}%",
-                    help="三維指標共振程度，數值越高代表方向越明確",
                 )
 
                 st.info(
