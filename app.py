@@ -59,7 +59,6 @@ st.sidebar.caption(
     "• 台灣證券交易所 (TWSE)\n"
     "• 證券櫃檯買賣中心 (TPEx)\n"
     "• API 介接：Yahoo Finance (延遲 15-20 分鐘)\n"
-    "• *註：每日 14:30 盤後清算完成後為最準確之最終收盤數據。*"
 )
 st.sidebar.caption(
     "**三維模型維度**：\n"
