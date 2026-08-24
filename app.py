@@ -7,7 +7,7 @@ import streamlit as st
 import plotly.graph_objects as go
 
 # ---------------------------------------------------------
-# 1. 頁面配置與 CSS 樣式優化
+# 1. 頁面配置與柔和明亮主題 (Soft Light Theme)
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="GeodesicX | DMEC-GF 盤前幾何預測模擬平台",
@@ -19,25 +19,54 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    .main { background-color: #0e1117; }
-    .stMetric { background-color: #161b22; padding: 15px; border-radius: 8px; border: 1px solid #30363d; }
-    .source-box {
-        padding: 12px;
-        background-color: #161b22;
-        border-left: 4px solid #00d26a;
-        border-radius: 4px;
-        font-size: 0.85rem;
-        color: #8b949e;
-        margin-top: 20px;
+    /* 全域明亮背景與字體顏色 */
+    .stApp {
+        background-color: #f8f9fa;
+        color: #1f2937;
     }
+    /* 側邊欄背景 */
+    section[data-testid="stSidebar"] {
+        background-color: #f1f3f5;
+        border-right: 1px solid #e9ecef;
+    }
+    /* 核心 Metric 指牌 - 柔和白底卡片 */
+    div[data-testid="stMetric"] {
+        background-color: #ffffff !important;
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        border: 1px solid #e9ecef;
+    }
+    div[data-testid="stMetric"] label {
+        color: #4b5563 !important;
+        font-weight: 600;
+    }
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+        color: #111827 !important;
+        font-weight: 700;
+    }
+    /* 權威數據來源聲明卡片 */
+    .source-box {
+        padding: 14px;
+        background-color: #ffffff;
+        border-left: 4px solid #10b981;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        color: #4b5563;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        margin-top: 15px;
+    }
+    /* 時間標籤 - 明亮藍綠風格 */
     .time-badge {
-        background-color: #1f242d;
-        color: #58a6ff;
-        padding: 6px 12px;
+        background-color: #e0f2fe;
+        color: #0369a1;
+        padding: 6px 14px;
         border-radius: 20px;
         font-family: monospace;
-        font-size: 0.9rem;
-        border: 1px solid #30363d;
+        font-size: 0.88rem;
+        font-weight: 600;
+        border: 1px solid #bae6fd;
+        display: inline-block;
     }
     </style>
 """,
@@ -46,11 +75,11 @@ st.markdown(
 
 
 # ---------------------------------------------------------
-# 2. 幾何引擎與原生數據抓取
+# 2. 幾何引擎與數據抓取
 # ---------------------------------------------------------
 @st.cache_data(ttl=300)
 def fetch_twse_data():
-    """使用內建 urllib 抓取證交所 OpenAPI / 備用數據"""
+    """抓取證交所 Open Data 實時指數"""
     try:
         url = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -93,7 +122,7 @@ chip_nfs = st.sidebar.slider(
     max_value=1.0,
     value=0.45,
     step=0.05,
-    help="融合盤前大戶委買委賣比、期貨溢價與試撮動能 calculated via DMEC u_t Vector",
+    help="融合盤前大戶委買委賣比與試撮動能 calculated via DMEC u_t Vector",
 )
 
 futures_diff = st.sidebar.number_input(
@@ -102,14 +131,15 @@ futures_diff = st.sidebar.number_input(
 
 st.sidebar.markdown("---")
 
+# 🏛️ 數據來源與權威機構聲明
 st.sidebar.markdown(
     """
     <div class="source-box">
-        <b style="color: #00d26a;">🟢 DATA STREAM CONNECTED</b><br/>
+        <b style="color: #059669;">🟢 DATA STREAM CONNECTED</b><br/>
         <b>Data Source:</b> Taiwan Stock Exchange (TWSE)<br/>
         <b>Market Data:</b> TAIEX Index & TAIFEX Futures<br/>
         <b>Update Mode:</b> Real-time Pre-market API<br/>
-        <hr style="margin: 8px 0; border-color: #30363d;"/>
+        <hr style="margin: 8px 0; border-color: #e5e7eb;"/>
         <small>本平台計算邏輯遵循 DMEC-GF v1.0 微分幾何規範，數據經由台灣證券交易所 Open Data 實時同步進算。</small>
     </div>
 """,
@@ -138,7 +168,7 @@ with col_time:
         f"""
         <div style="text-align: right;">
             <span class="time-badge">🇹🇼 台北時間: {time_str}</span><br/>
-            <small style="color: #8b949e; font-size: 0.8rem;">Status: <b>Pre-Market Simulation (08:30-08:59)</b></small>
+            <small style="color: #6b7280; font-size: 0.8rem; line-height: 2;">Status: <b>Pre-Market Simulation (08:30-08:59)</b></small>
         </div>
     """,
         unsafe_allow_html=True,
@@ -191,7 +221,7 @@ with m4:
 st.markdown("<br/>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 6. 動態圖表與路徑推演
+# 6. 動態圖表與路徑推演 (修正填充 BUG)
 # ---------------------------------------------------------
 c_left, c_right = st.columns([2, 1])
 
@@ -209,37 +239,55 @@ with c_left:
 
     fig = go.Figure()
 
+    # 上邊界 Q90
     fig.add_trace(
         go.Scatter(
-            x=future_dates + future_dates[::-1],
-            y=list(q90) + list(q10)[::-1],
-            fill="todense",
-            fillcolor="rgba(0, 210, 106, 0.15)",
-            line=dict(color="rgba(255,255,255,0)"),
+            x=future_dates,
+            y=q90,
+            mode="lines",
+            line=dict(width=0),
+            showlegend=False,
             hoverinfo="skip",
-            name="Q10~Q90 機率信心通道",
         )
     )
 
+    # 下邊界 Q10 ＋ 填充區間 (修正用 tozeroy/tonexty 確保相容)
+    fig.add_trace(
+        go.Scatter(
+            x=future_dates,
+            y=q10,
+            mode="lines",
+            line=dict(width=0),
+            fill="tonexty",
+            fillcolor="rgba(16, 185, 129, 0.12)",
+            name="Q10~Q90 信心區間",
+            hoverinfo="skip",
+        )
+    )
+
+    # 中軸 Q50
     fig.add_trace(
         go.Scatter(
             x=future_dates,
             y=q50,
             mode="lines+markers",
             name="Q50 測地線核心路徑",
-            line=dict(color="#00d26a", width=3),
+            line=dict(color="#10b981", width=3),
+            marker=dict(size=6, color="#047857"),
         )
     )
 
     fig.update_layout(
-        template="plotly_dark",
+        template="plotly_white",
         margin=dict(l=20, r=20, t=30, b=20),
         height=380,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(255,255,255,1)",
         legend=dict(
             orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
         ),
-        xaxis_title="推演時間 (Trading Days)",
-        yaxis_title="大盤指數 (TAIEX Points)",
+        xaxis=dict(title="推演時間 (Trading Days)", gridcolor="#f3f4f6"),
+        yaxis=dict(title="大盤指數 (TAIEX Points)", gridcolor="#f3f4f6"),
     )
 
     st.plotly_chart(fig, use_container_width=True)
