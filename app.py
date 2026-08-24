@@ -148,27 +148,29 @@ st.sidebar.markdown(
 
 
 # ---------------------------------------------------------
-# 4. 主頁面頂部：標題與原生臺北實時時間
+# 4. 主頁面頂部：獨立標題與下方時間狀態列
 # ---------------------------------------------------------
 tz_taipei = timezone(timedelta(hours=8))
 now_taipei = datetime.now(tz_taipei)
 time_str = now_taipei.strftime("%Y-%m-%d %H:%M:%S")
 
-col_title, col_time = st.columns([2.5, 1])
+# 1. 主標題獨佔第一行
+st.title("📈 GeodesicX：DMEC-GF 盤前幾何預測模擬平台")
 
-with col_title:
-    st.title("📈 GeodesicX：DMEC-GF 盤前幾何預測模擬平台")
+# 2. 副標題與台北時間/狀態並排在第二行
+col_sub, col_time = st.columns([2, 1])
+
+with col_sub:
     st.caption(
         "Market Manifold (E, V, A) × Pre-Market Force Field (NFS) × TimesFM / Chronos-2 Ensemble"
     )
 
 with col_time:
-    st.markdown("<br/>", unsafe_allow_html=True)
     st.markdown(
         f"""
-        <div style="text-align: right;">
-            <span class="time-badge">🇹🇼 台北時間: {time_str}</span><br/>
-            <small style="color: #6b7280; font-size: 0.8rem; line-height: 2;">Status: <b>Pre-Market Simulation (08:30-08:59)</b></small>
+        <div style="text-align: right; margin-top: -10px;">
+            <span class="time-badge">🇹🇼 台北時間: {time_str}</span>
+            <span style="color: #6b7280; font-size: 0.8rem; margin-left: 8px;"><b>Status: Pre-Market (08:30-08:59)</b></span>
         </div>
     """,
         unsafe_allow_html=True,
@@ -221,98 +223,98 @@ with m4:
 st.markdown("<br/>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 6. 動態圖表與路徑推演 (修正填充 BUG)
+# 6. 動態圖表與路徑推演 (垂直單欄式排版)
 # ---------------------------------------------------------
-c_left, c_right = st.columns([2, 1])
 
-with c_left:
-    st.subheader(
-        "📊 開盤 (5D / 20D / 60D) 機率區間推演 (Q10 / Q50 / Q90)"
+# 區塊 1：開盤機率區間推演 (完整寬幅 Plotly 圖表)
+st.subheader("📊 開盤 (5D / 20D / 60D) 機率區間推演 (Q10 / Q50 / Q90)")
+
+future_dates = [now_taipei + timedelta(days=i) for i in range(1, 21)]
+base = last_close + futures_diff
+
+q50 = base + np.cumsum(np.linspace(10, 80, 20) * (trend_score / 50))
+q90 = q50 + np.linspace(20, 250, 20)
+q10 = q50 - np.linspace(20, 200, 20)
+
+fig = go.Figure()
+
+fig.add_trace(
+    go.Scatter(
+        x=future_dates,
+        y=q90,
+        mode="lines",
+        line=dict(width=0),
+        showlegend=False,
+        hoverinfo="skip",
     )
+)
 
-    future_dates = [now_taipei + timedelta(days=i) for i in range(1, 21)]
-    base = last_close + futures_diff
-
-    q50 = base + np.cumsum(np.linspace(10, 80, 20) * (trend_score / 50))
-    q90 = q50 + np.linspace(20, 250, 20)
-    q10 = q50 - np.linspace(20, 200, 20)
-
-    fig = go.Figure()
-
-    # 上邊界 Q90
-    fig.add_trace(
-        go.Scatter(
-            x=future_dates,
-            y=q90,
-            mode="lines",
-            line=dict(width=0),
-            showlegend=False,
-            hoverinfo="skip",
-        )
+fig.add_trace(
+    go.Scatter(
+        x=future_dates,
+        y=q10,
+        mode="lines",
+        line=dict(width=0),
+        fill="tonexty",
+        fillcolor="rgba(16, 185, 129, 0.12)",
+        name="Q10~Q90 信心區間",
+        hoverinfo="skip",
     )
+)
 
-    # 下邊界 Q10 ＋ 填充區間 (修正用 tozeroy/tonexty 確保相容)
-    fig.add_trace(
-        go.Scatter(
-            x=future_dates,
-            y=q10,
-            mode="lines",
-            line=dict(width=0),
-            fill="tonexty",
-            fillcolor="rgba(16, 185, 129, 0.12)",
-            name="Q10~Q90 信心區間",
-            hoverinfo="skip",
-        )
+fig.add_trace(
+    go.Scatter(
+        x=future_dates,
+        y=q50,
+        mode="lines+markers",
+        name="Q50 測地線核心路徑",
+        line=dict(color="#10b981", width=3),
+        marker=dict(size=6, color="#047857"),
     )
+)
 
-    # 中軸 Q50
-    fig.add_trace(
-        go.Scatter(
-            x=future_dates,
-            y=q50,
-            mode="lines+markers",
-            name="Q50 測地線核心路徑",
-            line=dict(color="#10b981", width=3),
-            marker=dict(size=6, color="#047857"),
-        )
-    )
+fig.update_layout(
+    template="plotly_white",
+    margin=dict(l=20, r=20, t=30, b=20),
+    height=400,
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(255,255,255,1)",
+    legend=dict(
+        orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+    ),
+    xaxis=dict(title="推演時間 (Trading Days)", gridcolor="#f3f4f6"),
+    yaxis=dict(title="大盤指數 (TAIEX Points)", gridcolor="#f3f4f6"),
+)
 
-    fig.update_layout(
-        template="plotly_white",
-        margin=dict(l=20, r=20, t=30, b=20),
-        height=380,
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(255,255,255,1)",
-        legend=dict(
-            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
-        ),
-        xaxis=dict(title="推演時間 (Trading Days)", gridcolor="#f3f4f6"),
-        yaxis=dict(title="大盤指數 (TAIEX Points)", gridcolor="#f3f4f6"),
-    )
+st.plotly_chart(fig, use_container_width=True)
 
-    st.plotly_chart(fig, use_container_width=True)
+st.markdown("<br/>", unsafe_allow_html=True)
 
-with c_right:
-    st.subheader("🌀 市場四階段週期機率")
+# 區塊 2：市場四階段週期機率 (垂直堆疊於下方)
+st.subheader("🌀 市場四階段週期機率與 LLM 盤前解析")
 
+p_col1, p_col2 = st.columns([1, 1])
+
+with p_col1:
     st.write("**C2: 趨勢展開 (Expansion)**")
     st.progress(0.65)
 
     st.write("**C3: 高位衰竭 (Exhaustion)**")
     st.progress(0.15)
 
+with p_col2:
     st.write("**C1: 築底形成 (Formation)**")
     st.progress(0.10)
 
     st.write("**C4: 修正回歸 (Correction)**")
     st.progress(0.10)
 
-    st.info(
-        f"""
-        🤖 **LLM 盤前解析導讀：**
-        當前盤前籌碼 NFS 達 **+{chip_nfs}**，台指期展現 **+{futures_diff} 點** 溢價。幾何曲率保持平穩，顯示市場處於 **C2 趨勢展開期**，開盤後續推攻多頭軌跡明確。
-        """
-    )
+st.info(
+    f"""
+    🤖 **LLM 盤前解析導讀：**
+    當前盤前籌碼 NFS 達 **+{chip_nfs}**，台指期展現 **+{futures_diff} 點** 溢價。幾何曲率保持平穩，顯示市場處於 **C2 趨勢展開期**，開盤後續推攻多頭軌跡明確。
+    """
+)
 
 st.markdown("---")
 st.caption(
