@@ -70,32 +70,63 @@ class CurvatureRiskEngine:
         return res_df
 
 # ==========================================
-# 2. UI 頁面配置與 CSS 柔和色彩樣式注入
+# 2. UI 頁面配置與 CSS 100% 縮放專用優化
 # ==========================================
 st.set_page_config(page_title="HyperFlow DMEC - 台股雙曲流形與數位分身平台", layout="wide")
 
-# 注入專業柔和風格 CSS
+# 針對 100% 瀏覽器縮放注入適應性 CSS
 st.markdown("""
 <style>
-    /* Metric 卡片柔和外框與底色 */
+    /* 1. 主標題字體與行高優化 (避免 100% 縮放時斷行) */
+    .custom-main-title {
+        font-size: 1.85rem !important;
+        font-weight: 700 !important;
+        color: #0f172a;
+        line-height: 1.25 !important;
+        margin-bottom: 0.2rem !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* 2. Metric 卡片 (文字方塊) 佈局與字體微調 */
     [data-testid="stMetric"] {
         background-color: #f8fafc;
         border: 1px solid #e2e8f0;
-        padding: 12px 16px;
-        border-radius: 10px;
+        padding: 8px 10px !important; /* 縮減內邊距防擠壓 */
+        border-radius: 8px;
         box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.02);
     }
     
-    /* 頂部時間標籤柔和背景 */
+    /* Metric 標題字體 */
+    [data-testid="stMetricLabel"] {
+        font-size: 0.82rem !important;
+        color: #64748b !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Metric 數字字體 (適度縮小避免 ... 吃字) */
+    [data-testid="stMetricValue"] {
+        font-size: 1.45rem !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+    }
+
+    /* Metric 漲跌幅標籤 */
+    [data-testid="stMetricDelta"] {
+        font-size: 0.8rem !important;
+    }
+    
+    /* 3. 頂部時間標籤背景 */
     .time-banner {
         background-color: #f0f4f8;
         border-left: 4px solid #3b82f6;
-        padding: 8px 14px;
+        padding: 6px 12px;
         border-radius: 4px;
-        font-size: 0.9rem;
+        font-size: 0.88rem;
         color: #334155;
-        margin-top: 5px;
-        margin-bottom: 15px;
+        margin-top: 6px;
+        margin-bottom: 12px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -107,9 +138,9 @@ date_str = now_taipei.strftime("%Y-%m-%d")
 time_str = now_taipei.strftime("%H:%M:%S")
 
 # ------------------------------------------
-# 頂部標題區：主標題與實時時間單欄連貫佈局
+# 頂部標題區：採用客製化 CSS 標題
 # ------------------------------------------
-st.title("🛡️ HyperFlow DMEC 全日台股雙曲流形與數位分身平台")
+st.markdown('<div class="custom-main-title">🛡️ HyperFlow DMEC 全日台股雙曲流形與數位分身平台</div>', unsafe_allow_html=True)
 st.caption("Micro-DMEC-G 觀察框架：結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincaré 雙曲幾何之個股動態評估面板")
 
 st.markdown(
@@ -129,7 +160,6 @@ st.sidebar.header("📈 PVCS 台股個股選取")
 
 stock_mode = st.sidebar.radio("選擇股票模式", ["熱門標的", "自訂股票代碼"])
 
-# 熱門個股基準價格對照字典（確保股價符合真實市場區間）
 base_price_map = {
     "2330": 980.0,
     "2317": 205.0,
@@ -174,7 +204,6 @@ time_steps = 120
 t = np.linspace(0, 12, time_steps)
 bias_offset = (premarket_gap / 100.0) + intent_val
 
-# 根據選取的個股價格基準 (base_p) 動態生成時序
 mock_price = (np.sin(t) + bias_offset) * (base_p * 0.01) + base_p + noise_level * np.random.normal(size=time_steps)
 mock_volume = (np.cos(t * 1.5) + premarket_vol) * 15000 + 20000
 mock_count = np.abs(np.gradient(mock_price)) * 3000 + 5000
@@ -188,7 +217,6 @@ df_res = risk_engine.compute_trajectory_curvature(df_geo)
 
 latest = df_res.iloc[-1]
 
-# 動態計算行情數據與 P/V/C 得分
 latest_price = mock_price[-1]
 price_diff = mock_price[-1] - mock_price[-2]
 est_volume = int(mock_volume[-1])
