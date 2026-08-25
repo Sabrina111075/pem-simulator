@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from datetime import datetime
 import pytz
 
@@ -182,11 +183,11 @@ if stock_mode == "熱門標的":
     stock_code = selected_stock.split(" ")[0]
     display_stock_name = selected_stock
 else:
-    stock_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 009816)", value="009816").strip().upper()
+    stock_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 009816)", value="2330").strip().upper()
     stock_name = stock_name_map.get(stock_code, "")
     display_stock_name = f"{stock_code} {stock_name}".strip()
 
-base_p = base_price_map.get(stock_code, 15.21)
+base_p = base_price_map.get(stock_code, 100.0)
 base_v = base_volume_map.get(stock_code, 30000)
 
 st.sidebar.markdown("---")
@@ -220,7 +221,7 @@ time_steps = 120
 t = np.linspace(0, 12, time_steps)
 bias_offset = (premarket_gap / 100.0) + intent_val
 
-mock_price = (np.sin(t) + bias_offset) * (base_p * 0.002) + base_p + noise_level * np.random.normal(size=time_steps) * 0.01
+mock_price = (np.sin(t) + bias_offset) * (base_p * 0.005) + base_p + noise_level * np.random.normal(size=time_steps)
 mock_volume = (np.cos(t * 1.5) * 0.3 + premarket_vol) * base_v + np.random.normal(scale=base_v*0.05, size=time_steps)
 mock_count = np.abs(np.gradient(mock_price)) * (base_v * 0.1) + (base_v * 0.15)
 
@@ -272,7 +273,7 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 7. 圖表與診斷區
+# 7. 圖表與診斷區 (圓盤 + 補回的波浪時序圖)
 # ==========================================
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 fig_disk = go.Figure()
@@ -308,10 +309,57 @@ fig_disk.update_layout(
 )
 st.plotly_chart(fig_disk, use_container_width=True)
 
+# ------------------------------------------
+# 🌊 [補回] PVCS 軌跡曲率強度與轉折風險 Temporal 波動圖
+# ------------------------------------------
+st.subheader(f"🌊 {display_stock_name} PVCS 軌跡曲率強度與轉折風險動態時序")
+
+fig_wave = make_subplots(specs=[[{"secondary_y": True}]])
+
+# 繪製曲率強度波浪線 (左 Y 軸)
+fig_wave.add_trace(
+    go.Scatter(
+        x=t, 
+        y=df_res['Curvature_Intensity'].to_numpy(),
+        mode='lines',
+        name='軌跡曲率強度 (κ_intensity)',
+        line=dict(color='#3b82f6', width=2)
+    ),
+    secondary_y=False
+)
+
+# 繪製轉折風險波浪線 (右 Y 軸)
+fig_wave.add_trace(
+    go.Scatter(
+        x=t, 
+        y=df_res['Turning_Risk'].to_numpy(),
+        mode='lines',
+        name='個股轉折風險 (Turning Risk)',
+        line=dict(color='#ef4444', width=2, dash='dot')
+    ),
+    secondary_y=True
+)
+
+fig_wave.update_layout(
+    xaxis_title="時間軸 (Time Step t)",
+    height=320,
+    margin=dict(l=20, r=20, t=30, b=20),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+)
+
+fig_wave.update_yaxes(title_text="曲率強度 κ", secondary_y=False)
+fig_wave.update_yaxes(title_text="轉折風險 Risk", secondary_y=True)
+
+st.plotly_chart(fig_wave, use_container_width=True)
+
 st.markdown("---")
+
+# ==========================================
+# 8. 數位分身診斷區
+# ==========================================
 st.subheader("🤖 個股 PVCS 閉環數位分身診斷與處置建議")
 
-simulated_twin_val = mock_price[-1] + np.random.uniform(-0.05, 0.05)
+simulated_twin_val = mock_price[-1] + np.random.uniform(-0.5, 0.5)
 residual = abs(mock_price[-1] - simulated_twin_val)
 
 d_col1, d_col2 = st.columns([1, 2])
