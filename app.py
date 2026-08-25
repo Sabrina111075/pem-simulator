@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from datetime import datetime
+import pytz
 
 # ==========================================
 # 1. 核心幾何與風險計算邏輯
@@ -68,18 +70,27 @@ class CurvatureRiskEngine:
         return res_df
 
 # ==========================================
-# 2. Streamlit UI 頁面配置與控制項
+# 2. UI 頁面配置與側邊欄
 # ==========================================
 st.set_page_config(page_title="幾何狀態與數位分身 Dashboard", layout="wide")
 
-st.title("🛡️ 幾何狀態監控與閉環數位分身 Dashboard")
+# 主標題與台北實時時間
+title_col, time_col = st.columns([3, 1])
+
+with title_col:
+    st.title("🛡️ 幾何狀態監控與閉環數位分身 Dashboard")
+
+with time_col:
+    # 取得台北時間 (UTC+8)
+    taipei_tz = pytz.timezone('Asia/Taipei')
+    now_taipei = datetime.now(taipei_tz).strftime("%Y-%m-%d %H:%M:%S")
+    st.markdown("<br>", unsafe_allow_warning=True)
+    st.metric(label="🕒 台北實時時間 (Taipei)", value=now_taipei.split(" ")[1], delta=now_taipei.split(" ")[0])
+
 st.caption("基於 Poincaré 雙曲幾何與軌跡曲率之系統狀態動態評估面板")
 
-# ------------------------------------------
-# 側邊欄控制項 (加入 08:30~08:59 盤前籌碼區間)
-# ------------------------------------------
+# 側邊欄控制項
 st.sidebar.header("📊 08:30~08:59 盤前籌碼與大盤觀察")
-
 premarket_gap = st.sidebar.slider("盤前試撮 / 夜盤價差 (點/%)", -150, 150, 25, 5)
 major_buyer_intent = st.sidebar.select_slider(
     "主力籌碼意向 (Major Intent)",
@@ -93,17 +104,15 @@ st.sidebar.header("⚙️ 幾何與數位分身參數")
 noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.05)
 tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05)
 
-# 將籌碼意向轉換為數值權重
+# 計算模擬數據
 intent_map = {"極度偏空": -1.5, "偏空": -0.7, "中立": 0.0, "偏多": 0.7, "極度偏多": 1.5}
 intent_val = intent_map[major_buyer_intent]
 
-# 生成受盤前籌碼影響的動態模擬數據流
 time_steps = 120
 t = np.linspace(0, 12, time_steps)
 bias_offset = (premarket_gap / 100.0) + intent_val
 raw_signal = (np.sin(t) + bias_offset) * premarket_vol + noise_level * np.random.normal(size=time_steps)
 
-# 執行引擎計算
 geo_engine = HyperbolicStateEngine()
 risk_engine = CurvatureRiskEngine()
 
@@ -128,77 +137,72 @@ col4.metric("轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{risk_val
 st.markdown("---")
 
 # ==========================================
-# 4. 主圖表繪製 (Poincaré Disk + 時序圖)
+# 4. 圖表改為「垂直形態」佈局 (Vertical Layout)
 # ==========================================
-left_chart, right_chart = st.columns([1, 1])
 
-with left_chart:
-    st.subheader("🌀 Poincaré Disk 雙曲狀態圓盤")
-    
-    fig_disk = go.Figure()
+# (1) 上圖：Poincaré Disk 雙曲狀態圓盤
+st.subheader("🌀 Poincaré Disk 雙曲狀態圓盤")
+fig_disk = go.Figure()
 
-    # 繪製單位圓 (Boundary r=1)
-    theta_grid = np.linspace(0, 2*np.pi, 100)
-    fig_disk.add_trace(go.Scatter(
-        x=np.cos(theta_grid), y=np.sin(theta_grid),
-        mode='lines', line=dict(color='gray', dash='dash'),
-        name='Boundary (r=1)'
-    ))
+theta_grid = np.linspace(0, 2*np.pi, 100)
+fig_disk.add_trace(go.Scatter(
+    x=np.cos(theta_grid), y=np.sin(theta_grid),
+    mode='lines', line=dict(color='gray', dash='dash'),
+    name='Boundary (r=1)'
+))
 
-    # 繪製軌跡線 (使用 .to_numpy() 確保傳輸型別穩定)
-    fig_disk.add_trace(go.Scatter(
-        x=df_res['Poincare_u'].to_numpy(), 
-        y=df_res['Poincare_v'].to_numpy(),
-        mode='lines+markers',
-        marker=dict(
-            size=6, 
-            color=df_res['Turning_Risk'].to_numpy(), 
-            colorscale='Viridis', 
-            showscale=True, 
-            colorbar=dict(title="Risk")
-        ),
-        name='State Trajectory'
-    ))
+fig_disk.add_trace(go.Scatter(
+    x=df_res['Poincare_u'].to_numpy(), 
+    y=df_res['Poincare_v'].to_numpy(),
+    mode='lines+markers',
+    marker=dict(
+        size=7, 
+        color=df_res['Turning_Risk'].to_numpy(), 
+        colorscale='Viridis', 
+        showscale=True, 
+        colorbar=dict(title="Risk")
+    ),
+    name='State Trajectory'
+))
 
-    # 標示最新狀態點
-    fig_disk.add_trace(go.Scatter(
-        x=[float(latest['Poincare_u'])], 
-        y=[float(latest['Poincare_v'])],
-        mode='markers', 
-        marker=dict(size=14, color='red', symbol='x'),
-        name='Current State'
-    ))
+fig_disk.add_trace(go.Scatter(
+    x=[float(latest['Poincare_u'])], 
+    y=[float(latest['Poincare_v'])],
+    mode='markers', 
+    marker=dict(size=14, color='red', symbol='x'),
+    name='Current State'
+))
 
-    fig_disk.update_layout(
-        xaxis=dict(range=[-1.1, 1.1], constrain='domain'),
-        yaxis=dict(range=[-1.1, 1.1], scaleanchor="x", scaleratio=1),
-        width=500, height=500,
-        margin=dict(l=20, r=20, t=30, b=20)
-    )
-    st.plotly_chart(fig_disk, use_container_width=True)
+fig_disk.update_layout(
+    xaxis=dict(range=[-1.1, 1.1], constrain='domain'),
+    yaxis=dict(range=[-1.1, 1.1], scaleanchor="x", scaleratio=1),
+    height=450,
+    margin=dict(l=20, r=20, t=30, b=20)
+)
+st.plotly_chart(fig_disk, use_container_width=True)
 
-with right_chart:
-    st.subheader("📈 狀態運動學與曲率變化")
-    
-    fig_time = make_subplots(rows=2, cols=1, shared_xaxes=True, subplot_titles=("偏離 (E) & 速度 (V)", "軌跡曲率 (κ) & 風險"))
+st.markdown("---")
 
-    # 偏離與速度
-    fig_time.add_trace(go.Scatter(y=df_res['E'].to_numpy(), name="E (Dev)"), row=1, col=1)
-    fig_time.add_trace(go.Scatter(y=df_res['V'].to_numpy(), name="V (Vel)"), row=1, col=1)
+# (2) 下圖：狀態運動學與曲率時序變化圖
+st.subheader("📈 狀態運動學與軌跡曲率變化時序圖")
 
-    # 曲率與風險
-    fig_time.add_trace(go.Scatter(y=df_res['Curvature_kappa'].to_numpy(), name="Curvature (κ)", line=dict(color='orange')), row=2, col=1)
-    fig_time.add_trace(go.Scatter(y=df_res['Turning_Risk'].to_numpy(), name="Risk Score", line=dict(color='red', dash='dot')), row=2, col=1)
+fig_time = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.12, subplot_titles=("偏離 (E) & 速度 (V)", "軌跡曲率 (κ) & 轉折風險"))
 
-    fig_time.update_layout(height=500, margin=dict(l=20, r=20, t=30, b=20))
-    st.plotly_chart(fig_time, use_container_width=True)
+fig_time.add_trace(go.Scatter(y=df_res['E'].to_numpy(), name="E (Dev)"), row=1, col=1)
+fig_time.add_trace(go.Scatter(y=df_res['V'].to_numpy(), name="V (Vel)"), row=1, col=1)
+
+fig_time.add_trace(go.Scatter(y=df_res['Curvature_kappa'].to_numpy(), name="Curvature (κ)", line=dict(color='orange')), row=2, col=1)
+fig_time.add_trace(go.Scatter(y=df_res['Turning_Risk'].to_numpy(), name="Risk Score", line=dict(color='red', dash='dot')), row=2, col=1)
+
+fig_time.update_layout(height=450, margin=dict(l=20, r=20, t=30, b=20))
+st.plotly_chart(fig_time, use_container_width=True)
 
 # ==========================================
 # 5. 閉環數位分身診斷區
 # ==========================================
+st.markdown("---")
 st.subheader("🤖 盤前籌碼評估與閉環處置建議")
 
-# 模擬數位分身與實體殘差
 simulated_twin_val = raw_signal[-1] + np.random.uniform(-0.3, 0.3)
 residual = abs(raw_signal[-1] - simulated_twin_val)
 
