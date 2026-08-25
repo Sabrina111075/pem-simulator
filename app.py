@@ -40,8 +40,8 @@ class HyperbolicStateEngine:
 class CurvatureRiskEngine:
     @staticmethod
     def compute_trajectory_curvature(df_geo: pd.DataFrame) -> pd.DataFrame:
-        u = df_geo['Poincare_u'].values
-        v = df_geo['Poincare_v'].values
+        u = df_geo['Poincare_u'].to_numpy()
+        v = df_geo['Poincare_v'].to_numpy()
         
         du = np.gradient(u)
         dv = np.gradient(v)
@@ -57,7 +57,7 @@ class CurvatureRiskEngine:
         z_kappa = (curvature - np.mean(curvature)) / (np.std(curvature) + 1e-8)
         curvature_intensity = np.tanh(np.abs(z_kappa))
         
-        r = df_geo['Poincare_r'].values
+        r = df_geo['Poincare_r'].to_numpy()
         turning_risk = 1.0 / (1.0 + np.exp(-(1.5 * r + 2.0 * curvature_intensity - 1.5)))
         
         res_df = df_geo.copy()
@@ -75,16 +75,33 @@ st.set_page_config(page_title="幾何狀態與數位分身 Dashboard", layout="w
 st.title("🛡️ 幾何狀態監控與閉環數位分身 Dashboard")
 st.caption("基於 Poincaré 雙曲幾何與軌跡曲率之系統狀態動態評估面板")
 
-# 側邊欄控制
-st.sidebar.header("⚙️ 模擬參數設定")
+# ------------------------------------------
+# 側邊欄控制項 (加入 08:30~08:59 盤前籌碼區間)
+# ------------------------------------------
+st.sidebar.header("📊 08:30~08:59 盤前籌碼與大盤觀察")
+
+premarket_gap = st.sidebar.slider("盤前試撮 / 夜盤價差 (點/%)", -150, 150, 25, 5)
+major_buyer_intent = st.sidebar.select_slider(
+    "主力籌碼意向 (Major Intent)",
+    options=["極度偏空", "偏空", "中立", "偏多", "極度偏多"],
+    value="偏多"
+)
+premarket_vol = st.sidebar.slider("盤前預估量放量程度", 0.5, 3.0, 1.2, 0.1)
+
+st.sidebar.markdown("---")
+st.sidebar.header("⚙️ 幾何與數位分身參數")
 noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.05)
-anomaly_boost = st.sidebar.slider("狀態偏離強度 (Deviation)", 0.5, 3.0, 1.2, 0.1)
 tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05)
 
-# 生成模擬數據流
+# 將籌碼意向轉換為數值權重
+intent_map = {"極度偏空": -1.5, "偏空": -0.7, "中立": 0.0, "偏多": 0.7, "極度偏多": 1.5}
+intent_val = intent_map[major_buyer_intent]
+
+# 生成受盤前籌碼影響的動態模擬數據流
 time_steps = 120
 t = np.linspace(0, 12, time_steps)
-raw_signal = np.sin(t) * anomaly_boost + noise_level * np.random.normal(size=time_steps)
+bias_offset = (premarket_gap / 100.0) + intent_val
+raw_signal = (np.sin(t) + bias_offset) * premarket_vol + noise_level * np.random.normal(size=time_steps)
 
 # 執行引擎計算
 geo_engine = HyperbolicStateEngine()
@@ -118,7 +135,6 @@ left_chart, right_chart = st.columns([1, 1])
 with left_chart:
     st.subheader("🌀 Poincaré Disk 雙曲狀態圓盤")
     
-    # 建立雙曲圓盤 Plots
     fig_disk = go.Figure()
 
     # 繪製單位圓 (Boundary r=1)
@@ -129,7 +145,7 @@ with left_chart:
         name='Boundary (r=1)'
     ))
 
-    # 繪製軌跡線 (使用 .to_numpy() 轉為純 Array 避免傳輸型別錯誤)
+    # 繪製軌跡線 (使用 .to_numpy() 確保傳輸型別穩定)
     fig_disk.add_trace(go.Scatter(
         x=df_res['Poincare_u'].to_numpy(), 
         y=df_res['Poincare_v'].to_numpy(),
@@ -144,7 +160,7 @@ with left_chart:
         name='State Trajectory'
     ))
 
-    # 標示最新狀態點 (明確轉為 float)
+    # 標示最新狀態點
     fig_disk.add_trace(go.Scatter(
         x=[float(latest['Poincare_u'])], 
         y=[float(latest['Poincare_v'])],
@@ -178,9 +194,9 @@ with right_chart:
     st.plotly_chart(fig_time, use_container_width=True)
 
 # ==========================================
-# 5. 閉環數位分身殘差診斷區
+# 5. 閉環數位分身診斷區
 # ==========================================
-st.subheader("🤖 閉環數位分身診斷與處置建議")
+st.subheader("🤖 盤前籌碼評估與閉環處置建議")
 
 # 模擬數位分身與實體殘差
 simulated_twin_val = raw_signal[-1] + np.random.uniform(-0.3, 0.3)
@@ -189,17 +205,17 @@ residual = abs(raw_signal[-1] - simulated_twin_val)
 d_col1, d_col2 = st.columns([1, 2])
 
 with d_col1:
-    st.write(f"**實體訊號測值**: `{raw_signal[-1]:.4f}`")
-    st.write(f"**數位分身預測**: `{simulated_twin_val:.4f}`")
-    st.write(f"**即時殘差 |e(t)|**: `{residual:.4f}`")
+    st.write(f"**盤前價差權重**: `{bias_offset:+.2f}`")
+    st.write(f"**主力籌碼設定**: `{major_buyer_intent}`")
+    st.write(f"**模型殘差 |e(t)|**: `{residual:.4f}`")
 
 with d_col2:
     if residual > tolerance or risk_val > 0.65:
-        st.error("⚠️ **系統檢測到偏離告警 (Warning)**")
+        st.error("⚠️ **盤前狀態異常 / 轉折偏離告警**")
         if risk_val > 0.65:
-            st.markdown("👉 **建議處置動作**：軌跡曲率與雙曲偏離過高，觸發閉環控制（例如：調降動態參數或平滑輸出電流波形）。")
+            st.markdown("👉 **建議處置動作**：盤前試撮與主力意向顯示市場軌跡曲率偏高，預警開盤後可能發生劇烈轉折 (Regime Change)，建議降低開盤避險槓桿。")
         else:
-            st.markdown("👉 **建議處置動作**：感測殘差超標，建議對數位分身進行線上參數重校準 (Recalibration)。")
+            st.markdown("👉 **建議處置動作**：殘差高於預期，建議對盤前開盤模型進行線上參數 recalibration。")
     else:
-        st.success("✅ **系統狀態正常 (Normal Operation)**")
-        st.markdown("👉 **建議處置動作**：維持當前運轉參數。")
+        st.success("✅ **盤前開盤幾何狀態穩定**")
+        st.markdown("👉 **建議處置動作**：開盤動能與主力方向一致，維持當前開盤策略部署。")
