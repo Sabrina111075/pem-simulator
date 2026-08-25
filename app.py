@@ -224,6 +224,25 @@ st.sidebar.header("⚙️ 幾何與數位分身參數")
 noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.05)
 tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05)
 
+# ==========================================
+# 側邊欄最下方：資料來源與專業宣告
+# ==========================================
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 0.78rem; color: #475569; line-height: 1.5;">
+    <div style="font-weight: bold; color: #1e293b; margin-bottom: 6px; font-size: 0.82rem;">
+        🌐 資料來源與運算架構
+    </div>
+    • <b>行情數據來源</b>：臺灣證券交易所 (TWSE) / 櫃買中心 (TPEx) 實時與歷史 Tick 級別數據<br>
+    • <b>雙曲幾何引擎</b>：Poincaré Disk Metric & Mahalanobis PVCS Field<br>
+    • <b>閉環分身技術</b>：Micro-DMEC-G (Digital Twin Engine)<br>
+    <hr style="margin: 8px 0; border: none; border-top: 1px dashed #cbd5e1;">
+    <div style="color: #94a3b8; font-size: 0.72rem;">
+        ⚠️ <b>免責聲明</b>：本平台僅供學術研究與 PVCS 雙曲幾何演算法決策模擬使用，不構成任何投資買賣建議。
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
 # ------------------------------------------
 # 4. 生成 PVCS 數據 (全數整數化)
 # ------------------------------------------
