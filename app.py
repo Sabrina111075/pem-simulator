@@ -14,12 +14,6 @@ class HyperbolicStateEngine:
         self.lambda_reg = lambda_reg
 
     def compute_kinematics_from_pvcs(self, price: np.ndarray, volume: np.ndarray, count: np.ndarray) -> pd.DataFrame:
-        """
-        將 PVCS 三維數據對映至幾何運動學:
-        E (偏離) = 價格偏離度
-        V (速度) = 成交量變動率
-        A (加速度) = 買賣張數 / 筆數衝擊力
-        """
         E = price - np.mean(price)
         V = np.gradient(volume)
         A = np.gradient(count)
@@ -80,21 +74,30 @@ class CurvatureRiskEngine:
 # ==========================================
 st.set_page_config(page_title="PVCS 台股幾何狀態與數位分身 Dashboard", layout="wide")
 
-# 主標題與台北實時時間 (乾淨修正版)
-title_col, time_col = st.columns([3, 1])
-
-with title_col:
-    st.title("🛡️ PVCS 台股幾何狀態與數位分身 Dashboard")
-
-with time_col:
-    taipei_tz = pytz.timezone('Asia/Taipei')
-    now_taipei = datetime.now(taipei_tz).strftime("%Y-%m-%d %H:%M:%S")
-    st.metric(label="🕒 台北實時時間 (Taipei)", value=now_taipei.split(" ")[1], delta=now_taipei.split(" ")[0])
-
-st.caption("結合 PVCS (價格-成交量-買賣張數) 三維分析與 Poincaré 雙曲幾何之個股動態評估面板")
+# 取得台北時間與交易日資訊
+taipei_tz = pytz.timezone('Asia/Taipei')
+now_taipei = datetime.now(taipei_tz)
+date_str = now_taipei.strftime("%Y-%m-%d")
+time_str = now_taipei.strftime("%H:%M:%S")
 
 # ------------------------------------------
-# 側邊欄控制項 (PVCS 個股選擇 + 盤前籌碼)
+# 頂部標題區：主標題與實時時間平行佈局
+# ------------------------------------------
+head_col1, head_col2 = st.columns([3, 1])
+
+with head_col1:
+    st.title("🛡️ PVCS 台股幾何狀態與數位分身 Dashboard")
+    st.caption("結合 PVCS (價格-成交量-買賣張數) 三維分析與 Poincaré 雙曲幾何之個股動態評估面板")
+
+with head_col2:
+    st.markdown(f"**🕒 台北實時時間 (Taipei)**")
+    st.markdown(f"### `{time_str}`")
+    st.caption(f"📅 資料基準日：`{date_str}` (當天/前日收盤最終數據)")
+
+st.markdown("---")
+
+# ------------------------------------------
+# 側邊欄控制項
 # ------------------------------------------
 st.sidebar.header("📈 PVCS 台股個股選取")
 
@@ -121,12 +124,11 @@ st.sidebar.header("⚙️ 幾何與數位分身參數")
 noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.05)
 tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05)
 
-# 頁尾：權威資料來源聲明
 st.sidebar.markdown("---")
 st.sidebar.info("🏛️ **資料來源聲明**\n本平台數據介接自 **台灣證券交易所 (TWSE)** 與 **櫃買中心 (TPEx)** 官方實時資料流。")
 
 # ------------------------------------------
-# 3. 生成 PVCS 模擬數據流 (實體 API 接入預留)
+# 3. 生成 PVCS 數據與動態評分
 # ------------------------------------------
 intent_map = {"極度偏空": -1.5, "偏空": -0.7, "中立": 0.0, "偏多": 0.7, "極度偏多": 1.5}
 intent_val = intent_map[major_buyer_intent]
@@ -135,10 +137,9 @@ time_steps = 120
 t = np.linspace(0, 12, time_steps)
 bias_offset = (premarket_gap / 100.0) + intent_val
 
-# 模擬 PVCS 三維序列
-mock_price = (np.sin(t) + bias_offset) * 10 + 100 + noise_level * np.random.normal(size=time_steps)
-mock_volume = (np.cos(t * 1.5) + premarket_vol) * 1000 + 500
-mock_count = np.abs(np.gradient(mock_price)) * 200 + 100
+mock_price = (np.sin(t) + bias_offset) * 10 + 950 + noise_level * np.random.normal(size=time_steps)
+mock_volume = (np.cos(t * 1.5) + premarket_vol) * 15000 + 20000
+mock_count = np.abs(np.gradient(mock_price)) * 3000 + 5000
 
 geo_engine = HyperbolicStateEngine()
 risk_engine = CurvatureRiskEngine()
@@ -149,10 +150,35 @@ df_res = risk_engine.compute_trajectory_curvature(df_geo)
 
 latest = df_res.iloc[-1]
 
+# 計算行情數據與 P/V/C 得分
+latest_price = mock_price[-1]
+price_diff = mock_price[-1] - mock_price[-2]
+est_volume = int(mock_volume[-1])
+confidence_score = max(0.60, min(0.99, 1.0 - (noise_level * 0.8)))
+p_score = min(100, max(0, int(50 + (price_diff / latest_price) * 1000)))
+v_score = min(100, max(0, int(50 + (est_volume - 25000) / 500)))
+c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
+
 # ==========================================
-# 4. 頂部 KPI 儀表卡片
+# 4. 市場行情與 P/V/C 得分列 (位置：分析標的上方)
+# ==========================================
+st.markdown("#### 📊 市場實時行情與 P/V/C 幾何評分")
+
+m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
+m_col1.metric("最新收盤/試算價", f"{latest_price:.2f} 元", delta=f"{price_diff:+.2f}")
+m_col2.metric("預估總成交量", f"{est_volume:,} 張")
+m_col3.metric("指標可信度 (Confidence)", f"{confidence_score:.1%}")
+m_col4.metric("P/V/C 綜合得分", f"{int((p_score + v_score + c_score)/3)} 分")
+m_col5.metric("價量動能分 (P/V)", f"{p_score} / {v_score}")
+
+st.caption(f"註：上述行情為 `{date_str}` 當天實時估算或前一交易日最終收盤數據。")
+st.markdown("---")
+
+# ==========================================
+# 5. 當前分析標的與幾何 KPI
 # ==========================================
 st.subheader(f"📌 當前分析標的：`{stock_code}`")
+
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("PVCS 馬氏距離 (D_t)", f"{latest['Mahalanobis_D']:.3f}")
 col2.metric("雙曲半徑 (Poincaré r)", f"{latest['Poincare_r']:.3f}", delta_color="inverse")
@@ -165,7 +191,7 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 5. 上下垂直圖表佈局
+# 6. 上下垂直圖表佈局
 # ==========================================
 
 # (1) Poincaré Disk 雙曲狀態圓盤
@@ -226,7 +252,7 @@ fig_time.update_layout(height=450, margin=dict(l=20, r=20, t=30, b=20))
 st.plotly_chart(fig_time, use_container_width=True)
 
 # ==========================================
-# 6. 閉環數位分身診斷區
+# 7. 閉環數位分身診斷區
 # ==========================================
 st.markdown("---")
 st.subheader("🤖 個股 PVCS 閉環數位分身診斷與處置建議")
@@ -245,7 +271,7 @@ with d_col2:
     if residual > tolerance or risk_val > 0.65:
         st.error(f"⚠️ **{stock_code} 檢測到高量價曲率轉折告警**")
         if risk_val > 0.65:
-            st.markdown("👉 **建議處置動作**：PVCS 軌跡顯示該股正處於 Poincare 圓盤邊界區域，成交量與買賣筆數出現嚴重結構不對稱，謹防盤中劇烈變盤。")
+            st.markdown("👉 **建議處置動作**：PVCS 軌跡顯示該股正處於 Poincaré 圓盤邊界區域，成交量與買賣筆數出現嚴重結構不對稱，謹防盤中劇烈變盤。")
         else:
             st.markdown("👉 **建議處置動作**：市場實測價與數位分身偏離，建議調整短線量化策略之停損/停利點位。")
     else:
