@@ -146,38 +146,64 @@ st.markdown(
 st.markdown("---")
 
 # ------------------------------------------
-# 側邊欄控制項
+# 側邊欄控制項與台股代碼/名稱對照表
 # ------------------------------------------
 st.sidebar.header("📈 PVCS 台股個股選取")
 
 stock_mode = st.sidebar.radio("選擇股票模式", ["熱門標的", "自訂股票代碼"])
 
-# 1. 價格基準地圖
+# 1. 台股名稱 mapping 對照字典 (可持續擴充)
+stock_name_map = {
+    "2330": "台積電",
+    "2317": "鴻海",
+    "2454": "聯發科",
+    "2382": "廣達",
+    "2603": "長榮",
+    "3231": "緯創",
+    "2308": "台達電",
+    "2357": "華碩",
+    "3008": "大立光",
+    "3443": "創意",
+    "6669": "緯穎",
+    "0050": "元大台灣50",
+    "0056": "元大高股息",
+    "00878": "國泰永續高股息",
+    "00919": "群益台灣精選高息",
+    "00940": "元大台灣價值高息",
+    "00578": "富邦中證500"
+}
+
 base_price_map = {
     "2330": 980.0,
     "2317": 205.0,
     "2454": 1250.0,
     "2382": 290.0,
-    "2603": 175.0
+    "2603": 175.0,
+    "3231": 105.0,
+    "00578": 28.5
 }
 
-# 2. 成交量基準地圖 (解決預估總成交量沒變動的 BUG)
 base_volume_map = {
     "2330": 35000,
     "2317": 65000,
     "2454": 12000,
     "2382": 45000,
-    "2603": 55000
+    "2603": 55000,
+    "3231": 38000,
+    "00578": 15000
 }
 
 if stock_mode == "熱門標的":
     selected_stock = st.sidebar.selectbox("熱門股票清單", ["2330 台積電", "2317 鴻海", "2454 聯發科", "2382 廣達", "2603 長榮"])
     stock_code = selected_stock.split(" ")[0]
+    display_stock_name = selected_stock  # 直接取用完整選單字串 (如: 2330 台積電)
 else:
-    stock_code = st.sidebar.text_input("請輸入台股代碼 (例如: 3231)", value="2330")
+    stock_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330)", value="2330").strip()
+    # 自動搜尋對照字典，有找到名稱就加上，沒找到則直接顯示代碼
+    stock_name = stock_name_map.get(stock_code, "")
+    display_stock_name = f"{stock_code} {stock_name}".strip()
 
-# 取得該個股之基準價格與基準成交量
-base_p = base_price_map.get(stock_code, 500.0)
+base_p = base_price_map.get(stock_code, 300.0)
 base_v = base_volume_map.get(stock_code, 25000)
 
 st.sidebar.markdown("---")
@@ -199,9 +225,8 @@ st.sidebar.markdown("---")
 st.sidebar.info("🏛️ **資料來源聲明**\n本平台數據介接自 **台灣證券交易所 (TWSE)** 與 **櫃買中心 (TPEx)** 官方實時資料流。")
 
 # ------------------------------------------
-# 3. 生成個股獨特 PVCS 數據 (帶有股票代碼 Seed)
+# 3. 生成個股獨特 PVCS 數據
 # ------------------------------------------
-# 將股票代碼轉為數字設置隨機種子，確保不同股票生成獨特幾何軌跡
 try:
     code_seed = int(''.join(filter(str.isdigit, stock_code)))
 except ValueError:
@@ -215,7 +240,6 @@ time_steps = 120
 t = np.linspace(0, 12, time_steps)
 bias_offset = (premarket_gap / 100.0) + intent_val
 
-# 價格與成交量完全連動個股基準 (base_p, base_v)
 mock_price = (np.sin(t) + bias_offset) * (base_p * 0.01) + base_p + noise_level * np.random.normal(size=time_steps)
 mock_volume = (np.cos(t * 1.5) * 0.3 + premarket_vol) * base_v + np.random.normal(scale=base_v*0.05, size=time_steps)
 mock_count = np.abs(np.gradient(mock_price)) * (base_v * 0.1) + (base_v * 0.15)
@@ -252,9 +276,9 @@ m_col5.metric("價量動能分 (P/V)", f"{p_score} / {v_score}")
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
-# 5. 當前分析標的與幾何 KPI
+# 5. 當前分析標的與幾何 KPI (顯示完整名稱)
 # ==========================================
-st.subheader(f"📌 當前分析標的：`{stock_code}`")
+st.subheader(f"📌 當前分析標的：`{display_stock_name}`")
 
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("PVCS 馬氏距離 (D_t)", f"{latest['Mahalanobis_D']:.3f}")
@@ -272,7 +296,7 @@ st.markdown("---")
 # ==========================================
 
 # (1) Poincaré Disk 雙曲狀態圓盤
-st.subheader(f"🌀 {stock_code} Poincaré Disk PVCS 雙曲狀態圓盤")
+st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 fig_disk = go.Figure()
 
 theta_grid = np.linspace(0, 2*np.pi, 100)
@@ -315,7 +339,7 @@ st.plotly_chart(fig_disk, use_container_width=True)
 st.markdown("---")
 
 # (2) PVCS 三維時序變化圖
-st.subheader(f"📈 {stock_code} PVCS (價格/成交量/買賣張數) 與曲率時序圖")
+st.subheader(f"📈 {display_stock_name} PVCS (價格/成交量/買賣張數) 與曲率時序圖")
 
 fig_time = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.12, subplot_titles=("收盤價 (Price) & 成交量 (Volume)", "軌跡曲率 (κ) & 變盤風險"))
 
@@ -340,17 +364,17 @@ residual = abs(mock_price[-1] - simulated_twin_val)
 d_col1, d_col2 = st.columns([1, 2])
 
 with d_col1:
-    st.write(f"**目標股票代碼**: `{stock_code}`")
+    st.write(f"**目標股票標的**: `{display_stock_name}`")
     st.write(f"**即時預估收盤價**: `{mock_price[-1]:.2f}` 元")
     st.write(f"**數位分身模型殘差 |e(t)|**: `{residual:.4f}`")
 
 with d_col2:
     if residual > tolerance or risk_val > 0.65:
-        st.error(f"⚠️ **{stock_code} 檢測到高量價曲率轉折告警**")
+        st.error(f"⚠️ **{display_stock_name} 檢測到高量價曲率轉折告警**")
         if risk_val > 0.65:
             st.markdown("👉 **建議處置動作**：PVCS 軌跡顯示該股正處於 Poincaré 圓盤邊界區域，成交量與買賣筆數出現嚴重結構不對稱，謹防盤中劇烈變盤。")
         else:
             st.markdown("👉 **建議處置動作**：市場實測價與數位分身偏離，建議調整短線量化策略之停損/停利點位。")
     else:
-        st.success(f"✅ **{stock_code} PVCS 幾何狀態穩定**")
+        st.success(f"✅ **{display_stock_name} PVCS 幾何狀態穩定**")
         st.markdown("👉 **建議處置動作**：價量籌碼結構處於正常趨勢，維持原策略持有或操作。")
