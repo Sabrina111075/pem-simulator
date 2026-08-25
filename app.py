@@ -7,10 +7,10 @@ from datetime import datetime
 import pytz
 
 # ==========================================
-# 0. 台股升降單位 (Tick Size) 離散化邏輯
+# 0. 台股升降單位 (Tick Size) 離散化邏輯 (強制傳回整數)
 # ==========================================
-def apply_twse_tick_size(price: float) -> float:
-    """根據台灣證券交易所規定，將價格對齊至標準 Tick Size"""
+def apply_twse_tick_size(price: float) -> int:
+    """根據台灣證券交易所規定，將價格對齊至標準 Tick Size 並強制取整數"""
     if price < 10:
         tick = 0.01
     elif price < 50:
@@ -23,7 +23,7 @@ def apply_twse_tick_size(price: float) -> float:
         tick = 1.0
     else:
         tick = 5.0
-    return round(price / tick) * tick
+    return int(round(price / tick) * tick)
 
 # ==========================================
 # 1. 核心幾何與 PVCS 風險計算邏輯
@@ -178,11 +178,11 @@ stock_name_map = {
 }
 
 base_price_map = {
-    "2330": 2400.0, "2317": 210.0, "2454": 1400.0, "2303": 125.9, "6770": 26.8,
-    "2308": 380.0, "2357": 490.0, "3008": 2550.0, "3443": 1350.0, "6669": 2100.0,
-    "2382": 290.0, "3231": 105.0, "3481": 15.2, "2409": 16.8, "2324": 37.5,
-    "2344": 27.2, "2603": 175.0, "2609": 63.6, "2615": 82.0, "0050": 170.0, 
-    "0056": 38.5, "00878": 22.8, "009816": 15.21
+    "2330": 2400, "2317": 210, "2454": 1400, "2303": 126, "6770": 27,
+    "2308": 380, "2357": 490, "3008": 2550, "3443": 1350, "6669": 2100,
+    "2382": 290, "3231": 105, "3481": 15, "2409": 17, "2324": 38,
+    "2344": 27, "2603": 175, "2609": 64, "2615": 82, "0050": 170, 
+    "0056": 39, "00878": 23, "009816": 15
 }
 
 base_volume_map = {
@@ -206,7 +206,7 @@ else:
     stock_name = stock_name_map.get(stock_code, "")
     display_stock_name = f"{stock_code} {stock_name}".strip()
 
-base_p = base_price_map.get(stock_code, 100.0)
+base_p = base_price_map.get(stock_code, 100)
 base_v = base_volume_map.get(stock_code, 30000)
 
 st.sidebar.markdown("---")
@@ -225,7 +225,7 @@ noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.
 tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05)
 
 # ------------------------------------------
-# 4. 生成 PVCS 數據 (包含 Tick Size 離散化)
+# 4. 生成 PVCS 數據 (全數整數化)
 # ------------------------------------------
 try:
     code_seed = sum(ord(c) for c in stock_code)
@@ -240,9 +240,9 @@ time_steps = 120
 t = np.linspace(0, 12, time_steps)
 bias_offset = (premarket_gap / 100.0) + intent_val
 
-# 動態價格並進行 TWSE Tick Size 規格對齊
+# 動態價格生成，並強制轉換為整數
 raw_price = (np.sin(t) + bias_offset) * (base_p * 0.001) + base_p + noise_level * np.random.normal(size=time_steps) * 0.2
-mock_price = np.array([apply_twse_tick_size(p) for p in raw_price])
+mock_price = np.array([apply_twse_tick_size(p) for p in raw_price], dtype=int)
 
 mock_volume = (np.cos(t * 1.5) * 0.3 + premarket_vol) * base_v + np.random.normal(scale=base_v*0.05, size=time_steps)
 mock_count = np.abs(np.gradient(mock_price)) * (base_v * 0.1) + (base_v * 0.15)
@@ -256,16 +256,17 @@ df_res = risk_engine.compute_trajectory_curvature(df_geo)
 
 latest = df_res.iloc[-1]
 
-latest_price = mock_price[-1]
-price_diff = mock_price[-1] - mock_price[-2]
+latest_price = int(mock_price[-1])
+price_diff = int(mock_price[-1] - mock_price[-2])
 est_volume = int(mock_volume[-1])
 confidence_score = max(0.60, min(0.99, 1.0 - (noise_level * 0.8)))
 p_score = min(100, max(0, int(50 + (price_diff / latest_price) * 1000)))
 v_score = min(100, max(0, int(50 + (est_volume - base_v) / (base_v * 0.02))))
 c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
 
-# 格式化顯示字串：如果是整數價位則不顯示小數點
-price_display_fmt = f"{latest_price:.0f}" if latest_price >= 500 else f"{latest_price:.2f}"
+# 統一為整數格式字串
+price_display_fmt = f"{latest_price:,}"
+diff_display_fmt = f"{price_diff:+d}"
 
 # ==========================================
 # 5. 市場行情與 P/V/C 得分卡片
@@ -273,7 +274,7 @@ price_display_fmt = f"{latest_price:.0f}" if latest_price >= 500 else f"{latest_
 st.markdown("#### 📊 市場實時行情與 P/V/C 幾何評分")
 
 m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
-m_col1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=f"{price_diff:+.0f}" if latest_price >= 500 else f"{price_diff:+.2f}")
+m_col1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
 m_col2.metric("預估總成交量", f"{est_volume:,} 張")
 m_col3.metric("指標可信度 (Confidence)", f"{confidence_score:.1%}")
 m_col4.metric("P/V/C 綜合得分", f"{int((p_score + v_score + c_score)/3)} 分")
