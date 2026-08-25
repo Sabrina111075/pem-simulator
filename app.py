@@ -72,7 +72,7 @@ class CurvatureRiskEngine:
 # ==========================================
 # 2. UI 頁面配置與 CSS 柔和色彩樣式注入
 # ==========================================
-st.set_page_config(page_title="PVCS 台股幾何狀態與數位分身 Dashboard", layout="wide")
+st.set_page_config(page_title="HyperFlow DMEC - 台股雙曲流形與數位分身平台", layout="wide")
 
 # 注入專業柔和風格 CSS
 st.markdown("""
@@ -107,12 +107,11 @@ date_str = now_taipei.strftime("%Y-%m-%d")
 time_str = now_taipei.strftime("%H:%M:%S")
 
 # ------------------------------------------
-# 頂部標題區：簡潔整齊的單欄佈局
+# 頂部標題區：主標題與實時時間單欄連貫佈局
 # ------------------------------------------
-st.title("🛡️ PVCS 台股幾何狀態與數位分身 Dashboard")
-st.caption("結合 PVCS (價格-成交量-買賣張數) 三維分析與 Poincaré 雙曲幾何之個股動態評估面板")
+st.title("🛡️ HyperFlow DMEC 全日台股雙曲流形與數位分身平台")
+st.caption("Micro-DMEC-G 觀察框架：結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincaré 雙曲幾何之個股動態評估面板")
 
-# 時間與基準日同一行顯示
 st.markdown(
     f'<div class="time-banner">'
     f'🕒 <b>台北實時時間 (Taipei)</b>：<span style="color:#1d4ed8; font-weight:bold;">{time_str}</span> &nbsp;&nbsp;|&nbsp;&nbsp; '
@@ -130,11 +129,22 @@ st.sidebar.header("📈 PVCS 台股個股選取")
 
 stock_mode = st.sidebar.radio("選擇股票模式", ["熱門標的", "自訂股票代碼"])
 
+# 熱門個股基準價格對照字典（確保股價符合真實市場區間）
+base_price_map = {
+    "2330": 980.0,
+    "2317": 205.0,
+    "2454": 1250.0,
+    "2382": 290.0,
+    "2603": 175.0
+}
+
 if stock_mode == "熱門標的":
     selected_stock = st.sidebar.selectbox("熱門股票清單", ["2330 台積電", "2317 鴻海", "2454 聯發科", "2382 廣達", "2603 長榮"])
     stock_code = selected_stock.split(" ")[0]
+    base_p = base_price_map.get(stock_code, 950.0)
 else:
     stock_code = st.sidebar.text_input("請輸入台股代碼 (例如: 3231)", value="2330")
+    base_p = base_price_map.get(stock_code, 500.0)
 
 st.sidebar.markdown("---")
 st.sidebar.header("📊 08:30~08:59 盤前籌碼觀察")
@@ -164,7 +174,8 @@ time_steps = 120
 t = np.linspace(0, 12, time_steps)
 bias_offset = (premarket_gap / 100.0) + intent_val
 
-mock_price = (np.sin(t) + bias_offset) * 10 + 940 + noise_level * np.random.normal(size=time_steps)
+# 根據選取的個股價格基準 (base_p) 動態生成時序
+mock_price = (np.sin(t) + bias_offset) * (base_p * 0.01) + base_p + noise_level * np.random.normal(size=time_steps)
 mock_volume = (np.cos(t * 1.5) + premarket_vol) * 15000 + 20000
 mock_count = np.abs(np.gradient(mock_price)) * 3000 + 5000
 
@@ -177,7 +188,7 @@ df_res = risk_engine.compute_trajectory_curvature(df_geo)
 
 latest = df_res.iloc[-1]
 
-# 計算行情數據與 P/V/C 得分
+# 動態計算行情數據與 P/V/C 得分
 latest_price = mock_price[-1]
 price_diff = mock_price[-1] - mock_price[-2]
 est_volume = int(mock_volume[-1])
