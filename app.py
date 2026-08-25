@@ -70,9 +70,35 @@ class CurvatureRiskEngine:
         return res_df
 
 # ==========================================
-# 2. UI 頁面配置與側邊欄
+# 2. UI 頁面配置與 CSS 柔和色彩樣式注入
 # ==========================================
 st.set_page_config(page_title="PVCS 台股幾何狀態與數位分身 Dashboard", layout="wide")
+
+# 注入專業柔和風格 CSS
+st.markdown("""
+<style>
+    /* Metric 卡片柔和外框與底色 */
+    [data-testid="stMetric"] {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 12px 16px;
+        border-radius: 10px;
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.02);
+    }
+    
+    /* 頂部時間標籤柔和背景 */
+    .time-banner {
+        background-color: #f0f4f8;
+        border-left: 4px solid #3b82f6;
+        padding: 8px 14px;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        color: #334155;
+        margin-top: 5px;
+        margin-bottom: 15px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # 取得台北時間與交易日資訊
 taipei_tz = pytz.timezone('Asia/Taipei')
@@ -81,18 +107,19 @@ date_str = now_taipei.strftime("%Y-%m-%d")
 time_str = now_taipei.strftime("%H:%M:%S")
 
 # ------------------------------------------
-# 頂部標題區：主標題與實時時間平行佈局
+# 頂部標題區：簡潔整齊的單欄佈局
 # ------------------------------------------
-head_col1, head_col2 = st.columns([3, 1])
+st.title("🛡️ PVCS 台股幾何狀態與數位分身 Dashboard")
+st.caption("結合 PVCS (價格-成交量-買賣張數) 三維分析與 Poincaré 雙曲幾何之個股動態評估面板")
 
-with head_col1:
-    st.title("🛡️ PVCS 台股幾何狀態與數位分身 Dashboard")
-    st.caption("結合 PVCS (價格-成交量-買賣張數) 三維分析與 Poincaré 雙曲幾何之個股動態評估面板")
-
-with head_col2:
-    st.markdown(f"**🕒 台北實時時間 (Taipei)**")
-    st.markdown(f"### `{time_str}`")
-    st.caption(f"📅 資料基準日：`{date_str}` (當天/前日收盤最終數據)")
+# 時間與基準日同一行顯示
+st.markdown(
+    f'<div class="time-banner">'
+    f'🕒 <b>台北實時時間 (Taipei)</b>：<span style="color:#1d4ed8; font-weight:bold;">{time_str}</span> &nbsp;&nbsp;|&nbsp;&nbsp; '
+    f'📅 <b>資料基準日</b>：<code>{date_str}</code> (當天實時估算/前日收盤最終數據)'
+    f'</div>',
+    unsafe_allow_html=True
+)
 
 st.markdown("---")
 
@@ -137,7 +164,7 @@ time_steps = 120
 t = np.linspace(0, 12, time_steps)
 bias_offset = (premarket_gap / 100.0) + intent_val
 
-mock_price = (np.sin(t) + bias_offset) * 10 + 950 + noise_level * np.random.normal(size=time_steps)
+mock_price = (np.sin(t) + bias_offset) * 10 + 940 + noise_level * np.random.normal(size=time_steps)
 mock_volume = (np.cos(t * 1.5) + premarket_vol) * 15000 + 20000
 mock_count = np.abs(np.gradient(mock_price)) * 3000 + 5000
 
@@ -160,7 +187,7 @@ v_score = min(100, max(0, int(50 + (est_volume - 25000) / 500)))
 c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
 
 # ==========================================
-# 4. 市場行情與 P/V/C 得分列 (位置：分析標的上方)
+# 4. 市場行情與 P/V/C 得分卡片
 # ==========================================
 st.markdown("#### 📊 市場實時行情與 P/V/C 幾何評分")
 
@@ -171,8 +198,7 @@ m_col3.metric("指標可信度 (Confidence)", f"{confidence_score:.1%}")
 m_col4.metric("P/V/C 綜合得分", f"{int((p_score + v_score + c_score)/3)} 分")
 m_col5.metric("價量動能分 (P/V)", f"{p_score} / {v_score}")
 
-st.caption(f"註：上述行情為 `{date_str}` 當天實時估算或前一交易日最終收盤數據。")
-st.markdown("---")
+st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
 # 5. 當前分析標的與幾何 KPI
