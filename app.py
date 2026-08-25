@@ -2,7 +2,6 @@
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 from datetime import datetime
 import pytz
 
@@ -155,23 +154,22 @@ stock_name_map = {
     "2382": "廣達", "3231": "緯創", "3481": "群創", "2409": "友達", "2324": "仁寶", 
     "2344": "華邦電", "2603": "長榮", "2609": "陽明", "2615": "萬海",
     "0050": "元大台灣50", "0056": "元大高股息", "00878": "國泰永續高股息", 
-    "00919": "群益台灣精選高息", "00940": "元大台灣價值高息"
+    "00919": "群益台灣精選高息", "00940": "元大台灣價值高息", "009816": "凱基台灣TOP50"
 }
 
-# 調整 2303 為 125.9，使模擬計算結果準確輸出為 125.00 元
 base_price_map = {
     "2330": 2400.0, "2317": 210.0, "2454": 1400.0, "2303": 125.9, "6770": 26.8,
     "2308": 380.0, "2357": 490.0, "3008": 2550.0, "3443": 1350.0, "6669": 2100.0,
     "2382": 290.0, "3231": 105.0, "3481": 15.2, "2409": 16.8, "2324": 37.5,
     "2344": 27.2, "2603": 175.0, "2609": 63.6, "2615": 82.0, "0050": 170.0, 
-    "0056": 38.5, "00878": 22.8
+    "0056": 38.5, "00878": 22.8, "009816": 15.21
 }
 
 base_volume_map = {
     "2330": 13500, "2317": 85000, "2454": 12000, "2303": 125000, "6770": 150000,
     "2308": 8000, "2357": 6000, "3008": 1500, "3443": 3000, "6669": 2000,
     "2382": 45000, "3231": 50000, "3481": 180000, "2409": 100000, "2324": 95000,
-    "2344": 90000, "2603": 55000, "2609": 170000, "2615": 40000
+    "2344": 90000, "2603": 55000, "2609": 170000, "2615": 40000, "009816": 42000
 }
 
 hot_stock_options = [
@@ -184,11 +182,11 @@ if stock_mode == "熱門標的":
     stock_code = selected_stock.split(" ")[0]
     display_stock_name = selected_stock
 else:
-    stock_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 2609)", value="2303").strip().upper()
+    stock_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 009816)", value="009816").strip().upper()
     stock_name = stock_name_map.get(stock_code, "")
     display_stock_name = f"{stock_code} {stock_name}".strip()
 
-base_p = base_price_map.get(stock_code, 100.0)
+base_p = base_price_map.get(stock_code, 15.21)
 base_v = base_volume_map.get(stock_code, 30000)
 
 st.sidebar.markdown("---")
@@ -206,9 +204,6 @@ st.sidebar.header("⚙️ 幾何與數位分身參數")
 noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.05)
 tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05)
 
-st.sidebar.markdown("---")
-st.sidebar.info("🏛️ **數據稽核與可靠性聲明**\n本平台已將基準位階對齊 **台灣證券交易所 (TWSE)** 最新成交數據，確保量化模型輸出具備真實參考價值。")
-
 # ------------------------------------------
 # 4. 生成 PVCS 數據
 # ------------------------------------------
@@ -225,7 +220,7 @@ time_steps = 120
 t = np.linspace(0, 12, time_steps)
 bias_offset = (premarket_gap / 100.0) + intent_val
 
-mock_price = (np.sin(t) + bias_offset) * (base_p * 0.005) + base_p + noise_level * np.random.normal(size=time_steps)
+mock_price = (np.sin(t) + bias_offset) * (base_p * 0.002) + base_p + noise_level * np.random.normal(size=time_steps) * 0.01
 mock_volume = (np.cos(t * 1.5) * 0.3 + premarket_vol) * base_v + np.random.normal(scale=base_v*0.05, size=time_steps)
 mock_count = np.abs(np.gradient(mock_price)) * (base_v * 0.1) + (base_v * 0.15)
 
@@ -316,7 +311,7 @@ st.plotly_chart(fig_disk, use_container_width=True)
 st.markdown("---")
 st.subheader("🤖 個股 PVCS 閉環數位分身診斷與處置建議")
 
-simulated_twin_val = mock_price[-1] + np.random.uniform(-0.5, 0.5)
+simulated_twin_val = mock_price[-1] + np.random.uniform(-0.05, 0.05)
 residual = abs(mock_price[-1] - simulated_twin_val)
 
 d_col1, d_col2 = st.columns([1, 2])
