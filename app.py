@@ -129,18 +129,27 @@ with left_chart:
         name='Boundary (r=1)'
     ))
 
-    # 繪製軌跡線
+    # 繪製軌跡線 (使用 .to_numpy() 轉為純 Array 避免傳輸型別錯誤)
     fig_disk.add_trace(go.Scatter(
-        x=df_res['Poincare_u'], y=df_res['Poincare_v'],
+        x=df_res['Poincare_u'].to_numpy(), 
+        y=df_res['Poincare_v'].to_numpy(),
         mode='lines+markers',
-        marker=dict(size=6, color=df_res['Turning_Risk'], colorscale='Viridis', showscale=True, title="Risk"),
+        marker=dict(
+            size=6, 
+            color=df_res['Turning_Risk'].to_numpy(), 
+            colorscale='Viridis', 
+            showscale=True, 
+            colorbar=dict(title="Risk")
+        ),
         name='State Trajectory'
     ))
 
-    # 標示最新狀態點
+    # 標示最新狀態點 (明確轉為 float)
     fig_disk.add_trace(go.Scatter(
-        x=[latest['Poincare_u']], y=[latest['Poincare_v']],
-        mode='markers', marker=dict(size=14, color='red', symbol='cross'),
+        x=[float(latest['Poincare_u'])], 
+        y=[float(latest['Poincare_v'])],
+        mode='markers', 
+        marker=dict(size=14, color='red', symbol='x'),
         name='Current State'
     ))
 
@@ -158,12 +167,12 @@ with right_chart:
     fig_time = make_subplots(rows=2, cols=1, shared_xaxes=True, subplot_titles=("偏離 (E) & 速度 (V)", "軌跡曲率 (κ) & 風險"))
 
     # 偏離與速度
-    fig_time.add_trace(go.Scatter(y=df_res['E'], name="E (Dev)"), row=1, col=1)
-    fig_time.add_trace(go.Scatter(y=df_res['V'], name="V (Vel)"), row=1, col=1)
+    fig_time.add_trace(go.Scatter(y=df_res['E'].to_numpy(), name="E (Dev)"), row=1, col=1)
+    fig_time.add_trace(go.Scatter(y=df_res['V'].to_numpy(), name="V (Vel)"), row=1, col=1)
 
     # 曲率與風險
-    fig_time.add_trace(go.Scatter(y=df_res['Curvature_kappa'], name="Curvature (κ)", line=dict(color='orange')), row=2, col=1)
-    fig_time.add_trace(go.Scatter(y=df_res['Turning_Risk'], name="Risk Score", line=dict(color='red', dash='dot')), row=2, col=1)
+    fig_time.add_trace(go.Scatter(y=df_res['Curvature_kappa'].to_numpy(), name="Curvature (κ)", line=dict(color='orange')), row=2, col=1)
+    fig_time.add_trace(go.Scatter(y=df_res['Turning_Risk'].to_numpy(), name="Risk Score", line=dict(color='red', dash='dot')), row=2, col=1)
 
     fig_time.update_layout(height=500, margin=dict(l=20, r=20, t=30, b=20))
     st.plotly_chart(fig_time, use_container_width=True)
