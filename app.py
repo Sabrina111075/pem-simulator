@@ -74,10 +74,9 @@ class CurvatureRiskEngine:
 # ==========================================
 st.set_page_config(page_title="HyperFlow DMEC - 台股雙曲流形與數位分身平台", layout="wide")
 
-# 針對 100% 瀏覽器縮放注入適應性 CSS
 st.markdown("""
 <style>
-    /* 1. 主標題字體與行高優化 (避免 100% 縮放時斷行) */
+    /* 1. 主標題字體與行高優化 */
     .custom-main-title {
         font-size: 1.85rem !important;
         font-weight: 700 !important;
@@ -89,30 +88,27 @@ st.markdown("""
         text-overflow: ellipsis;
     }
     
-    /* 2. Metric 卡片 (文字方塊) 佈局與字體微調 */
+    /* 2. Metric 卡片佈局與字體微調 */
     [data-testid="stMetric"] {
         background-color: #f8fafc;
         border: 1px solid #e2e8f0;
-        padding: 8px 10px !important; /* 縮減內邊距防擠壓 */
+        padding: 8px 10px !important;
         border-radius: 8px;
         box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.02);
     }
     
-    /* Metric 標題字體 */
     [data-testid="stMetricLabel"] {
         font-size: 0.82rem !important;
         color: #64748b !important;
         white-space: nowrap !important;
     }
     
-    /* Metric 數字字體 (適度縮小避免 ... 吃字) */
     [data-testid="stMetricValue"] {
         font-size: 1.45rem !important;
         font-weight: 600 !important;
         white-space: nowrap !important;
     }
 
-    /* Metric 漲跌幅標籤 */
     [data-testid="stMetricDelta"] {
         font-size: 0.8rem !important;
     }
@@ -131,15 +127,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 取得台北時間與交易日資訊
 taipei_tz = pytz.timezone('Asia/Taipei')
 now_taipei = datetime.now(taipei_tz)
 date_str = now_taipei.strftime("%Y-%m-%d")
 time_str = now_taipei.strftime("%H:%M:%S")
 
-# ------------------------------------------
-# 頂部標題區：採用客製化 CSS 標題
-# ------------------------------------------
 st.markdown('<div class="custom-main-title">🛡️ HyperFlow DMEC 全日台股雙曲流形與數位分身平台</div>', unsafe_allow_html=True)
 st.caption("Micro-DMEC-G 觀察框架：結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincaré 雙曲幾何之個股動態評估面板")
 
@@ -160,6 +152,7 @@ st.sidebar.header("📈 PVCS 台股個股選取")
 
 stock_mode = st.sidebar.radio("選擇股票模式", ["熱門標的", "自訂股票代碼"])
 
+# 1. 價格基準地圖
 base_price_map = {
     "2330": 980.0,
     "2317": 205.0,
@@ -168,13 +161,24 @@ base_price_map = {
     "2603": 175.0
 }
 
+# 2. 成交量基準地圖 (解決預估總成交量沒變動的 BUG)
+base_volume_map = {
+    "2330": 35000,
+    "2317": 65000,
+    "2454": 12000,
+    "2382": 45000,
+    "2603": 55000
+}
+
 if stock_mode == "熱門標的":
     selected_stock = st.sidebar.selectbox("熱門股票清單", ["2330 台積電", "2317 鴻海", "2454 聯發科", "2382 廣達", "2603 長榮"])
     stock_code = selected_stock.split(" ")[0]
-    base_p = base_price_map.get(stock_code, 950.0)
 else:
     stock_code = st.sidebar.text_input("請輸入台股代碼 (例如: 3231)", value="2330")
-    base_p = base_price_map.get(stock_code, 500.0)
+
+# 取得該個股之基準價格與基準成交量
+base_p = base_price_map.get(stock_code, 500.0)
+base_v = base_volume_map.get(stock_code, 25000)
 
 st.sidebar.markdown("---")
 st.sidebar.header("📊 08:30~08:59 盤前籌碼觀察")
@@ -195,8 +199,15 @@ st.sidebar.markdown("---")
 st.sidebar.info("🏛️ **資料來源聲明**\n本平台數據介接自 **台灣證券交易所 (TWSE)** 與 **櫃買中心 (TPEx)** 官方實時資料流。")
 
 # ------------------------------------------
-# 3. 生成 PVCS 數據與動態評分
+# 3. 生成個股獨特 PVCS 數據 (帶有股票代碼 Seed)
 # ------------------------------------------
+# 將股票代碼轉為數字設置隨機種子，確保不同股票生成獨特幾何軌跡
+try:
+    code_seed = int(''.join(filter(str.isdigit, stock_code)))
+except ValueError:
+    code_seed = 9999
+np.random.seed(code_seed)
+
 intent_map = {"極度偏空": -1.5, "偏空": -0.7, "中立": 0.0, "偏多": 0.7, "極度偏多": 1.5}
 intent_val = intent_map[major_buyer_intent]
 
@@ -204,9 +215,10 @@ time_steps = 120
 t = np.linspace(0, 12, time_steps)
 bias_offset = (premarket_gap / 100.0) + intent_val
 
+# 價格與成交量完全連動個股基準 (base_p, base_v)
 mock_price = (np.sin(t) + bias_offset) * (base_p * 0.01) + base_p + noise_level * np.random.normal(size=time_steps)
-mock_volume = (np.cos(t * 1.5) + premarket_vol) * 15000 + 20000
-mock_count = np.abs(np.gradient(mock_price)) * 3000 + 5000
+mock_volume = (np.cos(t * 1.5) * 0.3 + premarket_vol) * base_v + np.random.normal(scale=base_v*0.05, size=time_steps)
+mock_count = np.abs(np.gradient(mock_price)) * (base_v * 0.1) + (base_v * 0.15)
 
 geo_engine = HyperbolicStateEngine()
 risk_engine = CurvatureRiskEngine()
@@ -222,7 +234,7 @@ price_diff = mock_price[-1] - mock_price[-2]
 est_volume = int(mock_volume[-1])
 confidence_score = max(0.60, min(0.99, 1.0 - (noise_level * 0.8)))
 p_score = min(100, max(0, int(50 + (price_diff / latest_price) * 1000)))
-v_score = min(100, max(0, int(50 + (est_volume - 25000) / 500)))
+v_score = min(100, max(0, int(50 + (est_volume - base_v) / (base_v * 0.02))))
 c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
 
 # ==========================================
