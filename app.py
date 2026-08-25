@@ -1,322 +1,196 @@
-﻿from datetime import datetime, timezone, timedelta
-import json
-import urllib.request
+﻿import streamlit as st
 import numpy as np
 import pandas as pd
-import streamlit as st
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
-# ---------------------------------------------------------
-# 1. 頁面配置與柔和明亮主題 (Soft Light Theme)
-# ---------------------------------------------------------
-st.set_page_config(
-    page_title="GeodesicX | DMEC-GF 盤前幾何預測模擬平台",
-    page_icon="📈",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+# ==========================================
+# 1. 核心幾何與風險計算邏輯
+# ==========================================
+class HyperbolicStateEngine:
+    def __init__(self, lambda_reg=1e-5):
+        self.lambda_reg = lambda_reg
 
-st.markdown(
-    """
-    <style>
-    /* 全域明亮背景與字體顏色 */
-    .stApp {
-        background-color: #f8f9fa;
-        color: #1f2937;
-    }
-    /* 側邊欄背景 */
-    section[data-testid="stSidebar"] {
-        background-color: #f1f3f5;
-        border-right: 1px solid #e9ecef;
-    }
-    /* 核心 Metric 指牌 - 柔和白底卡片 */
-    div[data-testid="stMetric"] {
-        background-color: #ffffff !important;
-        padding: 16px;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        border: 1px solid #e9ecef;
-    }
-    div[data-testid="stMetric"] label {
-        color: #4b5563 !important;
-        font-weight: 600;
-    }
-    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-        color: #111827 !important;
-        font-weight: 700;
-    }
-    /* 權威數據來源聲明卡片 */
-    .source-box {
-        padding: 14px;
-        background-color: #ffffff;
-        border-left: 4px solid #10b981;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        color: #4b5563;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-        margin-top: 15px;
-    }
-    /* 時間標籤 - 明亮藍綠風格 */
-    .time-badge {
-        background-color: #e0f2fe;
-        color: #0369a1;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-family: monospace;
-        font-size: 0.88rem;
-        font-weight: 600;
-        border: 1px solid #bae6fd;
-        display: inline-block;
-    }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
+    def compute_kinematics(self, data_series: np.ndarray) -> pd.DataFrame:
+        E = data_series - np.mean(data_series)
+        V = np.gradient(E)
+        A = np.gradient(V)
+        return pd.DataFrame({'E': E, 'V': V, 'A': A})
 
+    def map_to_poincare_disk(self, df_kinematics: pd.DataFrame):
+        X = df_kinematics[['E', 'V', 'A']].values
+        N, D = X.shape
+        cov_matrix = np.cov(X.T) + self.lambda_reg * np.eye(D)
+        inv_cov = np.linalg.inv(cov_matrix)
+        
+        mahalanobis_dists = np.sqrt(np.sum((X @ inv_cov) * X, axis=1))
+        r = np.tanh(mahalanobis_dists / 2.0)
+        theta = np.arctan2(df_kinematics['V'].values, df_kinematics['E'].values)
+        
+        u = r * np.cos(theta)
+        v = r * np.sin(theta)
+        
+        res_df = df_kinematics.copy()
+        res_df['Mahalanobis_D'] = mahalanobis_dists
+        res_df['Poincare_r'] = r
+        res_df['Poincare_u'] = u
+        res_df['Poincare_v'] = v
+        return res_df
 
-# ---------------------------------------------------------
-# 2. 幾何引擎與數據抓取
-# ---------------------------------------------------------
-@st.cache_data(ttl=300)
-def fetch_twse_data():
-    """抓取證交所 Open Data 實時指數"""
-    try:
-        url = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=3) as response:
-            data = json.loads(response.read().decode())
-            last_close = float(data[0]["ClosingPrice"].replace(",", ""))
-            return last_close, 150.25
-    except Exception:
-        return 22450.80, 85.50
+class CurvatureRiskEngine:
+    @staticmethod
+    def compute_trajectory_curvature(df_geo: pd.DataFrame) -> pd.DataFrame:
+        u = df_geo['Poincare_u'].values
+        v = df_geo['Poincare_v'].values
+        
+        du = np.gradient(u)
+        dv = np.gradient(v)
+        d2u = np.gradient(du)
+        d2v = np.gradient(dv)
+        
+        path_length = np.cumsum(np.sqrt(du**2 + dv**2))
+        
+        numerator = np.abs(du * d2v - dv * d2u)
+        denominator = (du**2 + dv**2)**(1.5) + 1e-8
+        curvature = numerator / denominator
+        
+        z_kappa = (curvature - np.mean(curvature)) / (np.std(curvature) + 1e-8)
+        curvature_intensity = np.tanh(np.abs(z_kappa))
+        
+        r = df_geo['Poincare_r'].values
+        turning_risk = 1.0 / (1.0 + np.exp(-(1.5 * r + 2.0 * curvature_intensity - 1.5)))
+        
+        res_df = df_geo.copy()
+        res_df['Path_Length_L'] = path_length
+        res_df['Curvature_kappa'] = curvature
+        res_df['Curvature_Intensity'] = curvature_intensity
+        res_df['Turning_Risk'] = turning_risk
+        return res_df
 
+# ==========================================
+# 2. Streamlit UI 頁面配置與控制項
+# ==========================================
+st.set_page_config(page_title="幾何狀態與數位分身 Dashboard", layout="wide")
 
-def calculate_geometry_metrics(chip_nfs, futures_diff):
-    """計算 DMEC-GF 幾何狀態指標"""
-    curvature = 0.0421 + (abs(chip_nfs) * 0.015)
-    turning_risk = 1.0 / (1.0 + np.exp(-(curvature * 10 + chip_nfs * 2)))
+st.title("🛡️ 幾何狀態監控與閉環數位分身 Dashboard")
+st.caption("基於 Poincaré 雙曲幾何與軌跡曲率之系統狀態動態評估面板")
 
-    fts = (
-        (0.20 * 0.5)
-        + (0.20 * (1 - curvature))
-        + (0.15 * 0.4)
-        + (0.15 * chip_nfs)
-        + (0.15 * 0.6)
-        + (0.15 * (futures_diff / 100))
-    )
-    trend_score = 100.0 * np.tanh(fts)
+# 側邊欄控制
+st.sidebar.header("⚙️ 模擬參數設定")
+noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.05)
+anomaly_boost = st.sidebar.slider("狀態偏離強度 (Deviation)", 0.5, 3.0, 1.2, 0.1)
+tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05)
 
-    return curvature, turning_risk, trend_score
+# 生成模擬數據流
+time_steps = 120
+t = np.linspace(0, 12, time_steps)
+raw_signal = np.sin(t) * anomaly_boost + noise_level * np.random.normal(size=time_steps)
 
+# 執行引擎計算
+geo_engine = HyperbolicStateEngine()
+risk_engine = CurvatureRiskEngine()
 
-# ---------------------------------------------------------
-# 3. 側邊欄設計 (含 TWSE 專業聲明)
-# ---------------------------------------------------------
-st.sidebar.title("⚡ GeodesicX 控制台")
-st.sidebar.markdown("---")
+df_kinematics = geo_engine.compute_kinematics(raw_signal)
+df_geo = geo_engine.map_to_poincare_disk(df_kinematics)
+df_res = risk_engine.compute_trajectory_curvature(df_geo)
 
-st.sidebar.subheader("⏱️ 08:30~08:59 盤前試撮特徵")
-chip_nfs = st.sidebar.slider(
-    "主力籌碼淨力分數 (Net Force Score, NFS)",
-    min_value=-1.0,
-    max_value=1.0,
-    value=0.45,
-    step=0.05,
-    help="融合盤前大戶委買委賣比與試撮動能 calculated via DMEC u_t Vector",
-)
+latest = df_res.iloc[-1]
 
-futures_diff = st.sidebar.number_input(
-    "台指期盤前價差 / 溢價 (點數)", value=30.0, step=5.0
-)
+# ==========================================
+# 3. 頂部 KPI 儀表卡片
+# ==========================================
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("馬氏幾何距離 (D_t)", f"{latest['Mahalanobis_D']:.3f}")
+col2.metric("雙曲半徑 (Poincaré r)", f"{latest['Poincare_r']:.3f}", delta_color="inverse")
+col3.metric("軌跡曲率強度 (κ_intensity)", f"{latest['Curvature_Intensity']:.3f}")
 
-st.sidebar.markdown("---")
-
-# 🏛️ 數據來源與權威機構聲明
-st.sidebar.markdown(
-    """
-    <div class="source-box">
-        <b style="color: #059669;">🟢 DATA STREAM CONNECTED</b><br/>
-        <b>Data Source:</b> Taiwan Stock Exchange (TWSE)<br/>
-        <b>Market Data:</b> TAIEX Index & TAIFEX Futures<br/>
-        <b>Update Mode:</b> Real-time Pre-market API<br/>
-        <hr style="margin: 8px 0; border-color: #e5e7eb;"/>
-        <small>本平台計算邏輯遵循 DMEC-GF v1.0 微分幾何規範，數據經由台灣證券交易所 Open Data 實時同步進算。</small>
-    </div>
-""",
-    unsafe_allow_html=True,
-)
-
-
-# ---------------------------------------------------------
-# 4. 主頁面頂部：獨立標題與下方時間狀態列
-# ---------------------------------------------------------
-tz_taipei = timezone(timedelta(hours=8))
-now_taipei = datetime.now(tz_taipei)
-time_str = now_taipei.strftime("%Y-%m-%d %H:%M:%S")
-
-# 1. 主標題獨佔第一行
-st.title("📈 GeodesicX：DMEC-GF 盤前幾何預測模擬平台")
-
-# 2. 副標題與台北時間/狀態並排在第二行
-col_sub, col_time = st.columns([2, 1])
-
-with col_sub:
-    st.caption(
-        "Market Manifold (E, V, A) × Pre-Market Force Field (NFS) × TimesFM / Chronos-2 Ensemble"
-    )
-
-with col_time:
-    st.markdown(
-        f"""
-        <div style="text-align: right; margin-top: -10px;">
-            <span class="time-badge">🇹🇼 台北時間: {time_str}</span>
-            <span style="color: #6b7280; font-size: 0.8rem; margin-left: 8px;"><b>Status: Pre-Market (08:30-08:59)</b></span>
-        </div>
-    """,
-        unsafe_allow_html=True,
-    )
+risk_val = latest['Turning_Risk']
+risk_color = "normal" if risk_val < 0.6 else "inverse"
+col4.metric("轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{risk_val - 0.5:.2f}", delta_color=risk_color)
 
 st.markdown("---")
 
-# ---------------------------------------------------------
-# 5. 核心量化指標列 (Metrics)
-# ---------------------------------------------------------
-last_close, price_diff = fetch_twse_data()
-curvature, turning_risk, trend_score = calculate_geometry_metrics(
-    chip_nfs, futures_diff
-)
+# ==========================================
+# 4. 主圖表繪製 (Poincaré Disk + 時序圖)
+# ==========================================
+left_chart, right_chart = st.columns([1, 1])
 
-m1, m2, m3, m4 = st.columns(4)
+with left_chart:
+    st.subheader("🌀 Poincaré Disk 雙曲狀態圓盤")
+    
+    # 建立雙曲圓盤 Plots
+    fig_disk = go.Figure()
 
-with m1:
-    st.metric(
-        label="TWSE 加權指數 (試撮/最新)",
-        value=f"{last_close:,.2f}",
-        delta=f"{price_diff:+.2f} 點",
+    # 繪製單位圓 (Boundary r=1)
+    theta_grid = np.linspace(0, 2*np.pi, 100)
+    fig_disk.add_trace(go.Scatter(
+        x=np.cos(theta_grid), y=np.sin(theta_grid),
+        mode='lines', line=dict(color='gray', dash='dash'),
+        name='Boundary (r=1)'
+    ))
+
+    # 繪製軌跡線
+    fig_disk.add_trace(go.Scatter(
+        x=df_res['Poincare_u'], y=df_res['Poincare_v'],
+        mode='lines+markers',
+        marker=dict(size=6, color=df_res['Turning_Risk'], colorscale='Viridis', showscale=True, title="Risk"),
+        name='State Trajectory'
+    ))
+
+    # 標示最新狀態點
+    fig_disk.add_trace(go.Scatter(
+        x=[latest['Poincare_u']], y=[latest['Poincare_v']],
+        mode='markers', marker=dict(size=14, color='red', symbol='cross'),
+        name='Current State'
+    ))
+
+    fig_disk.update_layout(
+        xaxis=dict(range=[-1.1, 1.1], constrain='domain'),
+        yaxis=dict(range=[-1.1, 1.1], scaleanchor="x", scaleratio=1),
+        width=500, height=500,
+        margin=dict(l=20, r=20, t=30, b=20)
     )
+    st.plotly_chart(fig_disk, use_container_width=True)
 
-with m2:
-    st.metric(
-        label="預測趨勢分數 (TrendScore)",
-        value=f"{trend_score:+.1f}",
-        delta="多頭主導 (Bullish)"
-        if trend_score > 30
-        else "弱勢震盪 (Consolidation)",
-    )
+with right_chart:
+    st.subheader("📈 狀態運動學與曲率變化")
+    
+    fig_time = make_subplots(rows=2, cols=1, shared_xaxes=True, subplot_titles=("偏離 (E) & 速度 (V)", "軌跡曲率 (κ) & 風險"))
 
-with m3:
-    st.metric(
-        label="軌跡曲率 (Curvature κ)",
-        value=f"{curvature:.4f}",
-        delta="-0.0020 (軌跡穩定)",
-        delta_color="normal",
-    )
+    # 偏離與速度
+    fig_time.add_trace(go.Scatter(y=df_res['E'], name="E (Dev)"), row=1, col=1)
+    fig_time.add_trace(go.Scatter(y=df_res['V'], name="V (Vel)"), row=1, col=1)
 
-with m4:
-    st.metric(
-        label="轉折風險 (Turning Risk)",
-        value=f"{turning_risk * 100:.1f}%",
-        delta="低風險區間 (<40%)",
-        delta_color="inverse",
-    )
+    # 曲率與風險
+    fig_time.add_trace(go.Scatter(y=df_res['Curvature_kappa'], name="Curvature (κ)", line=dict(color='orange')), row=2, col=1)
+    fig_time.add_trace(go.Scatter(y=df_res['Turning_Risk'], name="Risk Score", line=dict(color='red', dash='dot')), row=2, col=1)
 
-st.markdown("<br/>", unsafe_allow_html=True)
+    fig_time.update_layout(height=500, margin=dict(l=20, r=20, t=30, b=20))
+    st.plotly_chart(fig_time, use_container_width=True)
 
-# ---------------------------------------------------------
-# 6. 動態圖表與路徑推演 (垂直單欄式排版)
-# ---------------------------------------------------------
+# ==========================================
+# 5. 閉環數位分身殘差診斷區
+# ==========================================
+st.subheader("🤖 閉環數位分身診斷與處置建議")
 
-# 區塊 1：開盤機率區間推演 (完整寬幅 Plotly 圖表)
-st.subheader("📊 開盤 (5D / 20D / 60D) 機率區間推演 (Q10 / Q50 / Q90)")
+# 模擬數位分身與實體殘差
+simulated_twin_val = raw_signal[-1] + np.random.uniform(-0.3, 0.3)
+residual = abs(raw_signal[-1] - simulated_twin_val)
 
-future_dates = [now_taipei + timedelta(days=i) for i in range(1, 21)]
-base = last_close + futures_diff
+d_col1, d_col2 = st.columns([1, 2])
 
-q50 = base + np.cumsum(np.linspace(10, 80, 20) * (trend_score / 50))
-q90 = q50 + np.linspace(20, 250, 20)
-q10 = q50 - np.linspace(20, 200, 20)
+with d_col1:
+    st.write(f"**實體訊號測值**: `{raw_signal[-1]:.4f}`")
+    st.write(f"**數位分身預測**: `{simulated_twin_val:.4f}`")
+    st.write(f"**即時殘差 |e(t)|**: `{residual:.4f}`")
 
-fig = go.Figure()
-
-fig.add_trace(
-    go.Scatter(
-        x=future_dates,
-        y=q90,
-        mode="lines",
-        line=dict(width=0),
-        showlegend=False,
-        hoverinfo="skip",
-    )
-)
-
-fig.add_trace(
-    go.Scatter(
-        x=future_dates,
-        y=q10,
-        mode="lines",
-        line=dict(width=0),
-        fill="tonexty",
-        fillcolor="rgba(16, 185, 129, 0.12)",
-        name="Q10~Q90 信心區間",
-        hoverinfo="skip",
-    )
-)
-
-fig.add_trace(
-    go.Scatter(
-        x=future_dates,
-        y=q50,
-        mode="lines+markers",
-        name="Q50 測地線核心路徑",
-        line=dict(color="#10b981", width=3),
-        marker=dict(size=6, color="#047857"),
-    )
-)
-
-fig.update_layout(
-    template="plotly_white",
-    margin=dict(l=20, r=20, t=30, b=20),
-    height=400,
-    paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(255,255,255,1)",
-    legend=dict(
-        orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
-    ),
-    xaxis=dict(title="推演時間 (Trading Days)", gridcolor="#f3f4f6"),
-    yaxis=dict(title="大盤指數 (TAIEX Points)", gridcolor="#f3f4f6"),
-)
-
-st.plotly_chart(fig, use_container_width=True)
-
-st.markdown("<br/>", unsafe_allow_html=True)
-
-# 區塊 2：市場四階段週期機率 (垂直堆疊於下方)
-st.subheader("🌀 市場四階段週期機率與 LLM 盤前解析")
-
-p_col1, p_col2 = st.columns([1, 1])
-
-with p_col1:
-    st.write("**C2: 趨勢展開 (Expansion)**")
-    st.progress(0.65)
-
-    st.write("**C3: 高位衰竭 (Exhaustion)**")
-    st.progress(0.15)
-
-with p_col2:
-    st.write("**C1: 築底形成 (Formation)**")
-    st.progress(0.10)
-
-    st.write("**C4: 修正回歸 (Correction)**")
-    st.progress(0.10)
-
-st.info(
-    f"""
-    🤖 **LLM 盤前解析導讀：**
-    當前盤前籌碼 NFS 達 **+{chip_nfs}**，台指期展現 **+{futures_diff} 點** 溢價。幾何曲率保持平穩，顯示市場處於 **C2 趨勢展開期**，開盤後續推攻多頭軌跡明確。
-    """
-)
-
-st.markdown("---")
-st.caption(
-    "GeodesicX Simulation Platform | Powered by DMEC-GF Engine & Streamlit | 數據來源：臺灣證券交易所 (TWSE)"
-)
+with d_col2:
+    if residual > tolerance or risk_val > 0.65:
+        st.error("⚠️ **系統檢測到偏離告警 (Warning)**")
+        if risk_val > 0.65:
+            st.markdown("👉 **建議處置動作**：軌跡曲率與雙曲偏離過高，觸發閉環控制（例如：調降動態參數或平滑輸出電流波形）。")
+        else:
+            st.markdown("👉 **建議處置動作**：感測殘差超標，建議對數位分身進行線上參數重校準 (Recalibration)。")
+    else:
+        st.success("✅ **系統狀態正常 (Normal Operation)**")
+        st.markdown("👉 **建議處置動作**：維持當前運轉參數。")
