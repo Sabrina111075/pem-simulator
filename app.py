@@ -84,7 +84,6 @@ with time_col:
     # 取得台北時間 (UTC+8)
     taipei_tz = pytz.timezone('Asia/Taipei')
     now_taipei = datetime.now(taipei_tz).strftime("%Y-%m-%d %H:%M:%S")
-    st.markdown("<br>", unsafe_allow_warning=True)
     st.metric(label="🕒 台北實時時間 (Taipei)", value=now_taipei.split(" ")[1], delta=now_taipei.split(" ")[0])
 
 st.caption("基於 Poincaré 雙曲幾何與軌跡曲率之系統狀態動態評估面板")
