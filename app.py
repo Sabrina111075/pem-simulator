@@ -7,6 +7,25 @@ from datetime import datetime
 import pytz
 
 # ==========================================
+# 0. 台股升降單位 (Tick Size) 離散化邏輯
+# ==========================================
+def apply_twse_tick_size(price: float) -> float:
+    """根據台灣證券交易所規定，將價格對齊至標準 Tick Size"""
+    if price < 10:
+        tick = 0.01
+    elif price < 50:
+        tick = 0.05
+    elif price < 100:
+        tick = 0.1
+    elif price < 500:
+        tick = 0.5
+    elif price < 1000:
+        tick = 1.0
+    else:
+        tick = 5.0
+    return round(price / tick) * tick
+
+# ==========================================
 # 1. 核心幾何與 PVCS 風險計算邏輯
 # ==========================================
 class HyperbolicStateEngine:
@@ -192,13 +211,13 @@ base_v = base_volume_map.get(stock_code, 30000)
 
 st.sidebar.markdown("---")
 st.sidebar.header("📊 08:30~08:59 盤前籌碼觀察")
-premarket_gap = st.sidebar.slider("盤前試撮 / 夜盤價差 (點/%)", -150, 150, 25, 5)
+premarket_gap = st.sidebar.slider("盤前試撮 / 夜盤價差 (點/%)", -150, 150, 0, 5)
 major_buyer_intent = st.sidebar.select_slider(
     "主力籌碼意向 (Major Intent)",
     options=["極度偏空", "偏空", "中立", "偏多", "極度偏多"],
-    value="偏多"
+    value="中立"
 )
-premarket_vol = st.sidebar.slider("盤前預估量放量程度", 0.5, 3.0, 1.2, 0.1)
+premarket_vol = st.sidebar.slider("盤前預估量放量程度", 0.5, 3.0, 1.0, 0.1)
 
 st.sidebar.markdown("---")
 st.sidebar.header("⚙️ 幾何與數位分身參數")
@@ -206,7 +225,7 @@ noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.
 tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05)
 
 # ------------------------------------------
-# 4. 生成 PVCS 數據
+# 4. 生成 PVCS 數據 (包含 Tick Size 離散化)
 # ------------------------------------------
 try:
     code_seed = sum(ord(c) for c in stock_code)
@@ -221,7 +240,10 @@ time_steps = 120
 t = np.linspace(0, 12, time_steps)
 bias_offset = (premarket_gap / 100.0) + intent_val
 
-mock_price = (np.sin(t) + bias_offset) * (base_p * 0.005) + base_p + noise_level * np.random.normal(size=time_steps)
+# 動態價格並進行 TWSE Tick Size 規格對齊
+raw_price = (np.sin(t) + bias_offset) * (base_p * 0.001) + base_p + noise_level * np.random.normal(size=time_steps) * 0.2
+mock_price = np.array([apply_twse_tick_size(p) for p in raw_price])
+
 mock_volume = (np.cos(t * 1.5) * 0.3 + premarket_vol) * base_v + np.random.normal(scale=base_v*0.05, size=time_steps)
 mock_count = np.abs(np.gradient(mock_price)) * (base_v * 0.1) + (base_v * 0.15)
 
@@ -242,13 +264,16 @@ p_score = min(100, max(0, int(50 + (price_diff / latest_price) * 1000)))
 v_score = min(100, max(0, int(50 + (est_volume - base_v) / (base_v * 0.02))))
 c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
 
+# 格式化顯示字串：如果是整數價位則不顯示小數點
+price_display_fmt = f"{latest_price:.0f}" if latest_price >= 500 else f"{latest_price:.2f}"
+
 # ==========================================
 # 5. 市場行情與 P/V/C 得分卡片
 # ==========================================
 st.markdown("#### 📊 市場實時行情與 P/V/C 幾何評分")
 
 m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
-m_col1.metric("最新收盤/試算價", f"{latest_price:.2f} 元", delta=f"{price_diff:+.2f}")
+m_col1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=f"{price_diff:+.0f}" if latest_price >= 500 else f"{price_diff:+.2f}")
 m_col2.metric("預估總成交量", f"{est_volume:,} 張")
 m_col3.metric("指標可信度 (Confidence)", f"{confidence_score:.1%}")
 m_col4.metric("P/V/C 綜合得分", f"{int((p_score + v_score + c_score)/3)} 分")
@@ -273,7 +298,7 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 7. 圖表與診斷區 (圓盤 + 補回的波浪時序圖)
+# 7. 圖表與診斷區
 # ==========================================
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 fig_disk = go.Figure()
@@ -310,13 +335,12 @@ fig_disk.update_layout(
 st.plotly_chart(fig_disk, use_container_width=True)
 
 # ------------------------------------------
-# 🌊 [補回] PVCS 軌跡曲率強度與轉折風險 Temporal 波動圖
+# 🌊 PVCS 軌跡曲率強度與轉折風險 Temporal 波動圖
 # ------------------------------------------
 st.subheader(f"🌊 {display_stock_name} PVCS 軌跡曲率強度與轉折風險動態時序")
 
 fig_wave = make_subplots(specs=[[{"secondary_y": True}]])
 
-# 繪製曲率強度波浪線 (左 Y 軸)
 fig_wave.add_trace(
     go.Scatter(
         x=t, 
@@ -328,7 +352,6 @@ fig_wave.add_trace(
     secondary_y=False
 )
 
-# 繪製轉折風險波浪線 (右 Y 軸)
 fig_wave.add_trace(
     go.Scatter(
         x=t, 
@@ -359,14 +382,14 @@ st.markdown("---")
 # ==========================================
 st.subheader("🤖 個股 PVCS 閉環數位分身診斷與處置建議")
 
-simulated_twin_val = mock_price[-1] + np.random.uniform(-0.5, 0.5)
+simulated_twin_val = mock_price[-1]
 residual = abs(mock_price[-1] - simulated_twin_val)
 
 d_col1, d_col2 = st.columns([1, 2])
 
 with d_col1:
     st.write(f"**目標股票標的**: `{display_stock_name}`")
-    st.write(f"**即時預估收盤價**: `{mock_price[-1]:.2f}` 元")
+    st.write(f"**即時預估收盤價**: `{price_display_fmt}` 元")
     st.write(f"**數位分身模型殘差 |e(t)|**: `{residual:.4f}`")
 
 with d_col2:
