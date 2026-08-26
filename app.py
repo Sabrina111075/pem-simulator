@@ -447,15 +447,7 @@ st.markdown("---")
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 fig_disk = go.Figure()
 
-# 1. 邊界圓環 (r=1)
-theta_grid = np.linspace(0, 2*np.pi, 100)
-fig_disk.add_trace(go.Scatter(
-    x=np.cos(theta_grid), y=np.sin(theta_grid),
-    mode='lines', line=dict(color='gray', dash='dash'),
-    name='Boundary (r=1)'
-))
-
-# 2. PVCS 狀態軌跡 (僅保留這一個 trace，並設定 colorbar)
+# 1. 調整 trace 裡面的 colorbar 位置 (將 x 從 1.15 調小至 1.02，縮短 len 至 0.75 並垂直置中)
 fig_disk.add_trace(go.Scatter(
     x=df_res['Poincare_u'].to_numpy(), 
     y=df_res['Poincare_v'].to_numpy(),
@@ -465,10 +457,29 @@ fig_disk.add_trace(go.Scatter(
         color=df_res['Turning_Risk'].to_numpy(), 
         colorscale='Viridis', 
         showscale=True,
-        colorbar=dict(x=1.15, len=0.85, title="Risk")
+        colorbar=dict(
+            x=1.02,          # 漸層條緊貼圓盤右側
+            len=0.75,         # 縮短高度，避免撞到右上角圖例
+            y=0.45,          # 稍微下移置中
+            title="Risk",
+            thickness=15     # 稍微放細漸層條
+        )
     ),
     name='PVCS State Trajectory'
 ))
+
+# 2. 將圖例 (Legend) 放到上方水平排列，並將圓盤向左靠齊
+fig_disk.update_layout(
+    xaxis=dict(range=[-1.15, 1.15], constrain='domain'),
+    yaxis=dict(range=[-1.15, 1.15], scaleanchor="x", scaleratio=1),
+    height=420,
+    margin=dict(l=10, r=40, t=40, b=20),  # 左留白縮小至 10px，整體向左靠
+    legend=dict(
+        orientation="h",                  # 圖例改為水平橫排
+        yanchor="bottom", y=1.02, 
+        xanchor="right", x=1
+    )
+)
 
 # 3. 當前狀態點 (紅 X)
 fig_disk.add_trace(go.Scatter(
