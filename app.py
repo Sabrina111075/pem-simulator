@@ -409,7 +409,7 @@ st.markdown(
     <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
         <span style="font-size: 1.3rem; font-weight: 700; color: #0f172a;">📊 市場實時行情與 P/V/C 幾何評分</span>
         <span style="font-size: 0.85rem; color: #64748b;">
-            ℹ️ <b>數據來源</b>：<code>{data_source_label}</code> ｜ 行情與收盤成交量已精確同步，盤中數據快取更新頻率為 60 秒。
+            ℹ️行情與收盤成交量已精確同步。
         </span>
     </div>
     ''',
