@@ -1,4 +1,8 @@
 ﻿import streamlit as st
+from streamlit_autorefresh import st_autorefresh
+
+# 設定每 60 秒 (60000 毫秒) 自動重新載入網頁畫面
+st_autorefresh(interval=60000, key="datarefresh")
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
