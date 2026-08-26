@@ -405,7 +405,7 @@ else:
 # 7. 市場行情與 P/V/C 得分卡片
 # ==========================================
 st.markdown("#### 📊 市場實時行情與 P/V/C 幾何評分")
-st.caption(f"ℹ️ **行情與收盤成交量已精確同步，盤中數據快取更新頻率為 60 秒。")
+st.caption(f"ℹ️ 行情與收盤成交量已精確同步")
 
 m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
 m_col1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
