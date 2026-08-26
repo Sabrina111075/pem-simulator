@@ -29,32 +29,42 @@ def apply_twse_tick_size(price: float) -> int:
 # ==========================================
 # 1. yfinance 即時 API 擷取邏輯 (含 180 秒快取與備援機制)
 # ==========================================
-@st.cache_data(ttl=180)
-def fetch_realtime_market_data(ticker_symbol: str):
-    """透過 yfinance 抓取即時盤面價量數據，若失敗則回傳 None"""
+import requests
+
+@st.cache_data(ttl=60)
+def fetch_twse_official_data(stock_code: str):
+    """直接對接臺灣證券交易所 (TWSE) 官方 OpenAPI 取得精確收盤/盤中數據"""
     try:
-        ticker = yf.Ticker(ticker_symbol)
-        df = ticker.history(period="5d")
+        # TWSE 個股日成交資訊 API
+        url = f"https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&stockNo={stock_code}"
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        res = requests.get(url, headers=headers, timeout=5)
+        data = res.json()
         
-        if df.empty:
-            return None
+        if data.get("stat") == "OK" and "data" in data:
+            latest_row = data["data"][-1] # 取得最新一個交易日數據
+            # TWSE 回傳格式: [日期, 成交股數, 成交金額, 開盤價, 最高價, 最低價, 收盤價, 漲跌價差, 成交筆數]
+            shares = int(latest_row[1].replace(',', ''))
+            lots = shares // 1000  # 轉為張數
+            close_p = float(latest_row[6].replace(',', ''))
             
-        latest = df.iloc[-1]
-        prev_close = df.iloc[-2]['Close'] if len(df) > 1 else latest['Open']
-        
-        real_price = float(latest['Close'])
-        change = float(real_price - prev_close)
-        volume_shares = int(latest['Volume'])
-        volume_lots = volume_shares // 1000  # 股數轉張數
-        
-        return {
-            "price": real_price,
-            "change": change,
-            "volume_lots": volume_lots,
-            "success": True
-        }
+            # 計算漲跌
+            change_str = latest_row[7].replace(',', '').replace('+', '')
+            try:
+                change_p = float(change_str)
+            except ValueError:
+                change_p = 0.0
+                
+            return {
+                "price": close_p,
+                "change": change_p,
+                "volume_lots": lots,
+                "success": True,
+                "source": "TWSE 證交所官方"
+            }
     except Exception:
-        return None
+        pass
+    return None
 
 # ==========================================
 # 2. 核心幾何與 PVCS 風險計算邏輯
@@ -341,6 +351,9 @@ diff_display_fmt = f"{price_diff:+d}"
 # 6. 市場行情與 P/V/C 得分卡片
 # ==========================================
 st.markdown("#### 📊 市場實時行情與 P/V/C 幾何評分")
+
+# 數據來源與延遲說明標籤
+st.caption("ℹ️ **數據說明**：本面板行情數據透過 TWSE / Yahoo API 進行 1~3 分鐘快取同步。盤中「預估總成交量」與幾何軌跡係採用 Micro-DMEC-G 雙曲幾何算式動態推估，與券商實時 Tick 報價可能存在 15 分鐘延遲或計算微幅誤差。")
 
 m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
 m_col1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
