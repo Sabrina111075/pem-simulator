@@ -514,3 +514,46 @@ with d_col2:
     else:
         st.success(f"✅ **{display_stock_name} PVCS 幾何狀態穩定**")
         st.markdown("👉 **建議處置動作**：價量籌碼結構處於正常趨勢，維持原策略持有。")
+
+# ==========================================
+# 10. 時序圖：PVCS 軌跡曲率強度與轉折風險
+# ==========================================
+st.subheader(f"🌊 {display_stock_name} PVCS 軌跡曲率強度與轉折風險動態時序")
+
+fig_wave = make_subplots(specs=[[{"secondary_y": True}]])
+
+# 1. 軌跡曲率強度 (κ intensity - 藍線)
+fig_wave.add_trace(
+    go.Scatter(
+        x=df_res.index,
+        y=df_res['Curvature_Intensity'].to_numpy(),
+        mode='lines',
+        name='軌跡曲率強度 (κ_intensity)',
+        line=dict(color='#3b82f6', width=2)
+    ),
+    secondary_y=False
+)
+
+# 2. 個股轉折風險 (Turning Risk - 紅虛線)
+fig_wave.add_trace(
+    go.Scatter(
+        x=df_res.index,
+        y=df_res['Turning_Risk'].to_numpy(),
+        mode='lines',
+        name='個股轉折風險 (Turning Risk)',
+        line=dict(color='#ef4444', width=2, dash='dot')
+    ),
+    secondary_y=True
+)
+
+# 3. 佈局調整
+fig_wave.update_layout(
+    height=280,
+    margin=dict(l=20, r=20, t=20, b=20),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+)
+
+fig_wave.update_yaxes(title_text="曲率強度 κ", secondary_y=False)
+fig_wave.update_yaxes(title_text="轉折風險得分", secondary_y=True)
+
+st.plotly_chart(fig_wave, use_container_width=True)
