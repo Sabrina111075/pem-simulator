@@ -404,8 +404,17 @@ else:
 # ==========================================
 # 7. 市場行情與 P/V/C 得分卡片
 # ==========================================
-st.markdown("#### 📊 市場實時行情與 P/V/C 幾何評分")
-st.caption(f"ℹ️ 行情與收盤成交量已精確同步")
+st.markdown(
+    f'''
+    <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
+        <span style="font-size: 1.3rem; font-weight: 700; color: #0f172a;">📊 市場實時行情與 P/V/C 幾何評分</span>
+        <span style="font-size: 0.85rem; color: #64748b;">
+            ℹ️ <b>數據來源</b>：<code>{data_source_label}</code> ｜ 行情與收盤成交量已精確同步，盤中數據快取更新頻率為 60 秒。
+        </span>
+    </div>
+    ''',
+    unsafe_allow_html=True
+)
 
 m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
 m_col1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
