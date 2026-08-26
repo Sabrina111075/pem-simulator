@@ -493,29 +493,6 @@ st.plotly_chart(fig_disk, use_container_width=True)
 st.markdown("---")
 
 # ==========================================
-# 10. 數位分身診斷區
-# ==========================================
-st.subheader("🤖 個股 PVCS 閉環數位分身診斷與處置建議")
-
-simulated_twin_val = mock_price[-1]
-residual = abs(mock_price[-1] - simulated_twin_val)
-
-d_col1, d_col2 = st.columns([1, 2])
-
-with d_col1:
-    st.write(f"**目標股票標的**: `{display_stock_name}`")
-    st.write(f"**即時預估收盤價**: `{price_display_fmt}` 元")
-    st.write(f"**數位分身模型殘差 |e(t)|**: `{residual:.4f}`")
-
-with d_col2:
-    if residual > tolerance or risk_val > 0.65:
-        st.error(f"⚠️ **{display_stock_name} 檢測到高量價曲率轉折告警**")
-        st.markdown("👉 **建議處置動作**：PVCS 軌跡顯示該股正處於 Poincaré 圓盤邊界區域，請即時監控風險。")
-    else:
-        st.success(f"✅ **{display_stock_name} PVCS 幾何狀態穩定**")
-        st.markdown("👉 **建議處置動作**：價量籌碼結構處於正常趨勢，維持原策略持有。")
-
-# ==========================================
 # 10. 時序圖：PVCS 軌跡曲率強度與轉折風險
 # ==========================================
 st.subheader(f"🌊 {display_stock_name} PVCS 軌跡曲率強度與轉折風險動態時序")
@@ -557,3 +534,26 @@ fig_wave.update_yaxes(title_text="曲率強度 κ", secondary_y=False)
 fig_wave.update_yaxes(title_text="轉折風險得分", secondary_y=True)
 
 st.plotly_chart(fig_wave, use_container_width=True)
+
+# ==========================================
+# 11. 數位分身診斷區
+# ==========================================
+st.subheader("🤖 個股 PVCS 閉環數位分身診斷與處置建議")
+
+simulated_twin_val = mock_price[-1]
+residual = abs(mock_price[-1] - simulated_twin_val)
+
+d_col1, d_col2 = st.columns([1, 2])
+
+with d_col1:
+    st.write(f"**目標股票標的**: `{display_stock_name}`")
+    st.write(f"**即時預估收盤價**: `{price_display_fmt}` 元")
+    st.write(f"**數位分身模型殘差 |e(t)|**: `{residual:.4f}`")
+
+with d_col2:
+    if residual > tolerance or risk_val > 0.65:
+        st.error(f"⚠️ **{display_stock_name} 檢測到高量價曲率轉折告警**")
+        st.markdown("👉 **建議處置動作**：PVCS 軌跡顯示該股正處於 Poincaré 圓盤邊界區域，請即時監控風險。")
+    else:
+        st.success(f"✅ **{display_stock_name} PVCS 幾何狀態穩定**")
+        st.markdown("👉 **建議處置動作**：價量籌碼結構處於正常趨勢，維持原策略持有。")
