@@ -1,7 +1,5 @@
 ﻿import streamlit as st
 from streamlit_autorefresh import st_autorefresh
-
-# 設定每 60 秒 (60000 毫秒) 自動重新載入網頁畫面
 st_autorefresh(interval=60000, key="datarefresh")
 import numpy as np
 import pandas as pd
@@ -161,15 +159,77 @@ st.markdown("""
         font-weight: 600 !important;
     }
     
-    .time-banner {
-        background-color: #f0f4f8;
-        border-left: 4px solid #3b82f6;
-        padding: 6px 12px;
-        border-radius: 4px;
+# 自動刷新機制：每 60 秒 (60,000 毫秒) 自動刷新一次頁面
+count = st_autorefresh(interval=60000, limit=None, key="twse_heartbeat")
+
+st.markdown("""
+<style>
+    .custom-main-title {
+        font-size: 1.85rem !important;
+        font-weight: 700 !important;
+        color: #0f172a;
+        line-height: 1.25 !important;
+        margin-bottom: 0.2rem !important;
+    }
+    
+    [data-testid="stMetric"] {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 8px 10px !important;
+        border-radius: 8px;
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.02);
+    }
+    
+    [data-testid="stMetricLabel"] {
+        font-size: 0.82rem !important;
+        color: #64748b !important;
+    }
+    
+    [data-testid="stMetricValue"] {
+        font-size: 1.45rem !important;
+        font-weight: 600 !important;
+    }
+    
+    /* 心跳綠燈閃爍動畫 */
+    @keyframes blink {
+        0% { opacity: 1.0; transform: scale(1); }
+        50% { opacity: 0.3; transform: scale(0.85); }
+        100% { opacity: 1.0; transform: scale(1); }
+    }
+    .heartbeat-dot {
+        height: 10px;
+        width: 10px;
+        background-color: #22c55e;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 6px;
+        box-shadow: 0 0 8px #22c55e;
+        animation: blink 1.5s infinite ease-in-out;
+    }
+    
+    .live-status-box {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        border-left: 4px solid #22c55e;
+        padding: 10px 16px;
+        border-radius: 8px;
+        color: #f8fafc;
         font-size: 0.88rem;
-        color: #334155;
-        margin-top: 6px;
-        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    
+    .status-tag {
+        background-color: rgba(34, 197, 94, 0.15);
+        color: #4ade80;
+        padding: 2px 8px;
+        border-radius: 12px;
+        border: 1px solid rgba(74, 222, 128, 0.3);
+        font-size: 0.78rem;
+        font-weight: 600;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -182,11 +242,21 @@ time_str = now_taipei.strftime("%H:%M:%S")
 st.markdown('<div class="custom-main-title">🛡️ HyperFlow DMEC 全日台股雙曲流形與數位分身平台</div>', unsafe_allow_html=True)
 st.caption("Micro-DMEC-G 觀察框架：結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincaré 雙曲幾何之個股動態評估面板")
 
+# 渲染心跳連線儀表板 Banner
 st.markdown(
-    f'<div class="time-banner">'
-    f'🕒 <b>台北實時時間 (Taipei)</b>：<span style="color:#1d4ed8; font-weight:bold;">{time_str}</span> &nbsp;&nbsp;|&nbsp;&nbsp; '
-    f'📅 <b>資料基準日</b>：<code>{date_str}</code> (TWSE 證交所 API 精確對接)'
-    f'</div>',
+    f'''
+    <div class="live-status-box">
+        <div>
+            <span class="heartbeat-dot"></span>
+            <b>TWSE 官方 API 實時連線中</b> &nbsp;|&nbsp; 
+            <span>台北時間：<code style="color:#60a5fa; background:none;">{time_str}</code></span> &nbsp;|&nbsp; 
+            <span>基準日：<code>{date_str}</code></span>
+        </div>
+        <div>
+            <span class="status-tag">60s 自動同步 (第 {count+1} 次脈衝)</span>
+        </div>
+    </div>
+    ''',
     unsafe_allow_html=True
 )
 
