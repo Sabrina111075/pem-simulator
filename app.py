@@ -7,44 +7,6 @@ from datetime import datetime
 import pytz
 import yfinance as yf
 
-# 1. 建立股票名稱與 yfinance Ticker 對映字典
-HOT_STOCKS = {
-    "2330 台積電": "2330.TW",
-    "2317 鴻海": "2317.TW",
-    "2454 聯發科": "2454.TW",
-    "2303 聯電": "2303.TW",
-    "2609 陽明": "2609.TW",
-    "2603 長榮": "2603.TW",
-    "6770 力積電": "6770.TW"
-}
-
-# 2. 實時 API 抓取函式 (快取 180 秒)
-@st.cache_data(ttl=180)
-def get_realtime_market_data(ticker_symbol: str):
-    try:
-        ticker = yf.Ticker(ticker_symbol)
-        df = ticker.history(period="5d")
-        
-        if df.empty:
-            return None
-            
-        latest = df.iloc[-1]
-        prev_close = df.iloc[-2]['Close'] if len(df) > 1 else latest['Open']
-        
-        real_price = float(latest['Close'])
-        change = float(real_price - prev_close)
-        volume_shares = int(latest['Volume'])
-        volume_lots = volume_shares // 1000  # 股數轉換為張數
-        
-        return {
-            "price": round(real_price, 2),
-            "change": round(change, 2),
-            "volume_lots": volume_lots,
-            "success": True
-        }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
 # ==========================================
 # 0. 台股升降單位 (Tick Size) 離散化邏輯 (強制傳回整數)
 # ==========================================
@@ -65,7 +27,37 @@ def apply_twse_tick_size(price: float) -> int:
     return int(round(price / tick) * tick)
 
 # ==========================================
-# 1. 核心幾何與 PVCS 風險計算邏輯
+# 1. yfinance 即時 API 擷取邏輯 (含 180 秒快取與備援機制)
+# ==========================================
+@st.cache_data(ttl=180)
+def fetch_realtime_market_data(ticker_symbol: str):
+    """透過 yfinance 抓取即時盤面價量數據，若失敗則回傳 None"""
+    try:
+        ticker = yf.Ticker(ticker_symbol)
+        df = ticker.history(period="5d")
+        
+        if df.empty:
+            return None
+            
+        latest = df.iloc[-1]
+        prev_close = df.iloc[-2]['Close'] if len(df) > 1 else latest['Open']
+        
+        real_price = float(latest['Close'])
+        change = float(real_price - prev_close)
+        volume_shares = int(latest['Volume'])
+        volume_lots = volume_shares // 1000  # 股數轉張數
+        
+        return {
+            "price": real_price,
+            "change": change,
+            "volume_lots": volume_lots,
+            "success": True
+        }
+    except Exception:
+        return None
+
+# ==========================================
+# 2. 核心幾何與 PVCS 風險計算邏輯
 # ==========================================
 class HyperbolicStateEngine:
     def __init__(self, lambda_reg=1e-5):
@@ -128,7 +120,7 @@ class CurvatureRiskEngine:
         return res_df
 
 # ==========================================
-# 2. UI 頁面配置與 CSS 優化
+# 3. UI 頁面配置與 CSS 優化
 # ==========================================
 st.set_page_config(page_title="HyperFlow DMEC - 台股雙曲流形與數位分身平台", layout="wide")
 
@@ -200,12 +192,12 @@ st.markdown(
 
 st.markdown("---")
 
-# ------------------------------------------
-# 3. 側邊欄控制項與最新真實價格對照表 (已修復聯發科為 3735)
-# ------------------------------------------
+# ==========================================
+# 4. 側邊欄控制項與對映對照表
+# ==========================================
 st.sidebar.header("📈 PVCS 台股個股選取")
 
-mode = st.sidebar.radio("選擇股票模式", ["熱門標的", "自訂股票代碼"])
+stock_mode = st.sidebar.radio("選擇股票模式", ["熱門標的", "自訂股票代碼"])
 
 stock_name_map = {
     "2330": "台積電", "2317": "鴻海", "2454": "聯發科", "2303": "聯電", "6770": "力積電",
@@ -213,7 +205,7 @@ stock_name_map = {
     "2382": "廣達", "3231": "緯創", "3481": "群創", "2409": "友達", "2324": "仁寶", 
     "2344": "華邦電", "2603": "長榮", "2609": "陽明", "2615": "萬海",
     "0050": "元大台灣50", "0056": "元大高股息", "00878": "國泰永續高股息", 
-    "00919": "群益台灣精選高息", "00940": "元大台灣價值高息", "009816": "凱基台灣TOP50"
+    "00919": "群益台灣精選高息", "00940": "元大台灣價值高息"
 }
 
 base_price_map = {
@@ -221,14 +213,14 @@ base_price_map = {
     "2308": 380, "2357": 490, "3008": 2550, "3443": 1350, "6669": 2100,
     "2382": 290, "3231": 105, "3481": 15, "2409": 17, "2324": 38,
     "2344": 27, "2603": 175, "2609": 64, "2615": 82, "0050": 170, 
-    "0056": 39, "00878": 23, "009816": 15
+    "0056": 39, "00878": 23
 }
 
 base_volume_map = {
-    "2330": 13500, "2317": 85000, "2454": 5129, "2303": 125000, "6770": 150000,
+    "2330": 28000, "2317": 85000, "2454": 5129, "2303": 125000, "6770": 150000,
     "2308": 8000, "2357": 6000, "3008": 1500, "3443": 3000, "6669": 2000,
     "2382": 45000, "3231": 50000, "3481": 180000, "2409": 100000, "2324": 95000,
-    "2344": 90000, "2603": 55000, "2609": 170000, "2615": 40000, "009816": 42000
+    "2344": 90000, "2603": 55000, "2609": 170000, "2615": 40000
 }
 
 hot_stock_options = [
@@ -236,22 +228,15 @@ hot_stock_options = [
     "6770 力積電", "3481 群創", "2409 友達", "2324 仁寶", "2344 華邦電", "2382 廣達"
 ]
 
-if mode == "熱門標的":
-
-    selected_label = st.sidebar.selectbox("熱門股票清單 (成交熱門/權值股)", list(HOT_STOCKS.keys()))
-
-    selected_ticker = HOT_STOCKS[selected_label]
-
+if stock_mode == "熱門標的":
+    selected_stock = st.sidebar.selectbox("熱門股票清單 (成交熱門/權值股)", hot_stock_options)
+    stock_code = selected_stock.split(" ")[0]
+    display_stock_name = selected_stock
 else:
-
-    user_symbol_input = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 009816)", value="2308")
-
-    raw_symbol = user_symbol_input.strip()
-
-    selected_ticker = raw_symbol if raw_symbol.endswith((".TW", ".TWO")) else f"{raw_symbol}.TW"
-
-base_p = base_price_map.get(stock_code, 100)
-base_v = base_volume_map.get(stock_code, 30000)
+    user_input_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 009816)", value="2308").strip().upper()
+    stock_code = user_input_code if user_input_code else "2308"
+    stock_name = stock_name_map.get(stock_code, "")
+    display_stock_name = f"{stock_code} {stock_name}".strip()
 
 st.sidebar.markdown("---")
 st.sidebar.header("📊 08:30~08:59 盤前籌碼觀察")
@@ -268,9 +253,9 @@ st.sidebar.header("⚙️ 幾何與數位分身參數")
 noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.05)
 tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05)
 
-# ==========================================
-# 側邊欄最下方：資料來源與專業宣告
-# ==========================================
+# ------------------------------------------
+# 側邊欄資料來源與宣告
+# ------------------------------------------
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
 <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 0.78rem; color: #475569; line-height: 1.5;">
@@ -287,9 +272,22 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ------------------------------------------
-# 4. 生成 PVCS 數據 (全數整數化)
-# ------------------------------------------
+# ==========================================
+# 5. 數據獲取 (API 優先，靜態對照檔備援)
+# ==========================================
+ticker_symbol = f"{stock_code}.TW" if not stock_code.endswith((".TW", ".TWO")) else stock_code
+api_data = fetch_realtime_market_data(ticker_symbol)
+
+if api_data and api_data["success"]:
+    base_p = api_data["price"]
+    base_v = api_data["volume_lots"]
+    api_change = api_data["change"]
+else:
+    base_p = base_price_map.get(stock_code, 100)
+    base_v = base_volume_map.get(stock_code, 30000)
+    api_change = 0.0
+
+# 生成時序 PVCS 數據 (對齊現有幾何與視覺化邏輯)
 try:
     code_seed = sum(ord(c) for c in stock_code)
 except Exception:
@@ -303,7 +301,6 @@ time_steps = 120
 t = np.linspace(0, 12, time_steps)
 bias_offset = (premarket_gap / 100.0) + intent_val
 
-# 動態價格生成，並強制轉換為整數
 raw_price = (np.sin(t) + bias_offset) * (base_p * 0.001) + base_p + noise_level * np.random.normal(size=time_steps) * 0.2
 mock_price = np.array([apply_twse_tick_size(p) for p in raw_price], dtype=int)
 
@@ -320,33 +317,32 @@ df_res = risk_engine.compute_trajectory_curvature(df_geo)
 latest = df_res.iloc[-1]
 
 latest_price = int(mock_price[-1])
-price_diff = int(mock_price[-1] - mock_price[-2])
+price_diff = int(api_change) if api_data else int(mock_price[-1] - mock_price[-2])
 est_volume = int(mock_volume[-1])
 confidence_score = max(0.60, min(0.99, 1.0 - (noise_level * 0.8)))
 p_score = min(100, max(0, int(50 + (price_diff / latest_price) * 1000)))
 v_score = min(100, max(0, int(50 + (est_volume - base_v) / (base_v * 0.02))))
 c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
 
-# 統一為整數格式字串
 price_display_fmt = f"{latest_price:,}"
 diff_display_fmt = f"{price_diff:+d}"
 
-# 判斷使用者切換的模式 (熱門標的 vs 自訂代碼)
-if mode == "熱門標的":
-    # 確保 selected_label 有被正確讀取
-    selected_ticker = HOT_STOCKS.get(selected_label, "2330.TW")
-else:
-    # 自訂代碼模式：讀取輸入框 (例如 "2308") 並自動補上 ".TW"
-    user_symbol = user_symbol_input.strip() if 'user_symbol_input' in locals() else "2308"
-    if user_symbol.endswith((".TW", ".TWO")):
-        selected_ticker = user_symbol
-    else:
-        selected_ticker = f"{user_symbol}.TW"
+# ==========================================
+# 6. 市場行情與 P/V/C 得分卡片
+# ==========================================
+st.markdown("#### 📊 市場實時行情與 P/V/C 幾何評分")
 
-# --- 將 current_price 與 current_volume 傳入你原本下方的雙曲圓盤與幾何模型運算 ---
+m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
+m_col1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
+m_col2.metric("預估總成交量", f"{est_volume:,} 張")
+m_col3.metric("指標可信度 (Confidence)", f"{confidence_score:.1%}")
+m_col4.metric("P/V/C 綜合得分", f"{int((p_score + v_score + c_score)/3)} 分")
+m_col5.metric("價量動能分 (P/V)", f"{p_score} / {v_score}")
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
-# 6. 當前分析標的與幾何 KPI
+# 7. 當前分析標的與幾何 KPI
 # ==========================================
 st.subheader(f"📌 當前分析標的：`{display_stock_name}`")
 
@@ -362,7 +358,7 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 7. 圖表與診斷區
+# 8. 圖表區：Poincaré Disk 與曲率時序圖
 # ==========================================
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 fig_disk = go.Figure()
@@ -399,7 +395,7 @@ fig_disk.update_layout(
 st.plotly_chart(fig_disk, use_container_width=True)
 
 # ------------------------------------------
-# 🌊 PVCS 軌跡曲率強度與轉折風險 Temporal 波動圖
+# PVCS 軌跡曲率強度與轉折風險 Temporal 波動圖
 # ------------------------------------------
 st.subheader(f"🌊 {display_stock_name} PVCS 軌跡曲率強度與轉折風險動態時序")
 
@@ -442,7 +438,7 @@ st.plotly_chart(fig_wave, use_container_width=True)
 st.markdown("---")
 
 # ==========================================
-# 8. 數位分身診斷區
+# 9. 數位分身診斷區
 # ==========================================
 st.subheader("🤖 個股 PVCS 閉環數位分身診斷與處置建議")
 
