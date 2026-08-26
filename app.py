@@ -442,66 +442,47 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 9. 圖表區：Poincaré Disk 盤前籌碼預測 (終極強制連動版)
+# 9. 圖表區：Poincaré Disk 盤前籌碼預測 (UI與算式一體化)
 # ==========================================
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 
 # ------------------------------------------
-# A. 強制攔截並解析 sidebar 滑桿 (解決 Session 未傳遞問題)
+# A. 在圖表區直接建立專屬控制器 (確保 100% 即時連動)
 # ------------------------------------------
-# 直接掃描所有 Streamlit 內部 session key
-spread_val = 0.0
-intent_val = 0.0
-vol_ratio_val = 1.0
-
-# 1. 暴力掃描包含 "價差" 或 "試撮" 的 key/名稱
-for k, v in st.session_state.items():
-    k_str = str(k)
-    if '價差' in k_str or '試撮' in k_str or 'spread' in k_str.lower():
-        try: spread_val = float(v)
-        except: pass
-    elif '意向' in k_str or 'intent' in k_str.lower():
-        intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
-        intent_val = intent_map.get(str(v), 0.0)
-    elif '放量' in k_str or 'volume' in k_str.lower():
-        try: vol_ratio_val = float(v)
-        except: pass
-
-# 如果 session_state 空空如也，直接從全局變數搜尋
-if spread_val == 0.0:
-    for k, v in list(locals().items()):
-        if '價差' in str(k) or 'spread' in str(k).lower():
-            try:
-                if float(v) != 0.0:
-                    spread_val = float(v)
-                    break
-            except: pass
+c1, c2, c3 = st.columns(3)
+with c1:
+    spread_val = st.slider("盤前試撮 / 夜盤價差 (點/%)", min_value=-150.0, max_value=150.0, value=0.0, step=1.0, key="disk_spread_slider")
+with c2:
+    intent_str = st.selectbox("主力籌碼意向", ["極度偏多", "偏多", "中立", "偏空", "極度偏空"], index=2, key="disk_intent_select")
+    intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
+    intent_val = intent_map[intent_str]
+with c3:
+    vol_ratio_val = st.slider("盤前預估量放量程度", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key="disk_vol_slider")
 
 # ------------------------------------------
-# B. 超高敏銳度動態幾何計算 (擺盪效果極致化)
+# B. 高敏銳幾何映射計算
 # ------------------------------------------
-# 價差正規化 (-150 ~ +150 轉成 -1.0 ~ +1.0)
+# 價差正規化
 spread_norm = np.clip(spread_val / 150.0, -1.0, 1.0)
 
 # 半徑 control (0.35 ~ 0.92)
-pred_r = np.clip(0.35 + (vol_ratio_val * 0.2), 0.2, 0.92)
+pred_r = np.clip(0.35 + (vol_ratio_val * 0.1), 0.2, 0.92)
 
-# 綜合偏向 (價差權重 70% + 籌碼意向 30%)
+# 綜合偏向 (價差權重 70% + 意向 30%)
 combined_bias = np.clip(spread_norm * 0.7 + intent_val * 0.3, -1.0, 1.0)
 
-# 角度計算：偏多往右(極東/極北)，偏空往左(極西/極南)
-# 0 點是頂點 90度 (π/2)， combined_bias 為 1 時偏轉到 -45度(右下)，為 -1 時偏轉到 225度(左下)
+# 角度極致擺盪偏轉
 pred_theta = (np.pi / 2.0) - (combined_bias * (np.pi * 0.75))
 
 pred_u = pred_r * np.cos(pred_theta)
 pred_v = pred_r * np.sin(pred_theta)
 
 # ------------------------------------------
-# C. 繪圖 logic
+# C. 繪圖與呈現
 # ------------------------------------------
 fig_disk = go.Figure()
 
-# 1. 圓盤邊界 Boundary (r=1)
+# 1. 圓盤邊界
 theta_b = np.linspace(0, 2*np.pi, 200)
 fig_disk.add_trace(go.Scatter(
     x=np.cos(theta_b), y=np.sin(theta_b),
