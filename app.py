@@ -132,7 +132,7 @@ class CurvatureRiskEngine:
         return res_df
 
 # ==========================================
-# 4. UI 頁面配置與 CSS 心跳燈視覺
+# 4. UI 頁面配置與 CSS 心跳燈視覺 (柔和科技風 + JS 實時讀秒)
 # ==========================================
 st.set_page_config(page_title="HyperFlow DMEC - 台股雙曲流形與數位分身平台", layout="wide")
 
@@ -171,64 +171,86 @@ st.markdown("""
         100% { opacity: 1.0; transform: scale(1); }
     }
     .heartbeat-dot {
-        height: 10px;
-        width: 10px;
-        background-color: #22c55e;
+        height: 9px;
+        width: 9px;
+        background-color: #10b981;
         border-radius: 50%;
         display: inline-block;
         margin-right: 6px;
-        box-shadow: 0 0 8px #22c55e;
-        animation: blink 1.5s infinite ease-in-out;
+        box-shadow: 0 0 6px #10b981;
+        animation: blink 1.2s infinite ease-in-out;
     }
     
+    /* 柔和科技風格 Banner (明亮薄荷/藍灰調) */
     .live-status-box {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        border-left: 4px solid #22c55e;
-        padding: 10px 16px;
+        background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);
+        border: 1px solid #dcfce7;
+        border-left: 4px solid #10b981;
+        padding: 8px 16px;
         border-radius: 8px;
-        color: #f8fafc;
+        color: #1e293b;
         font-size: 0.88rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-top: 8px;
         margin-bottom: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
     }
     
     .status-tag {
-        background-color: rgba(34, 197, 94, 0.15);
-        color: #4ade80;
-        padding: 2px 8px;
+        background-color: #e0f2fe;
+        color: #0369a1;
+        padding: 3px 10px;
         border-radius: 12px;
-        border: 1px solid rgba(74, 222, 128, 0.3);
+        border: 1px solid #bae6fd;
         font-size: 0.78rem;
         font-weight: 600;
+    }
+
+    .time-code {
+        color: #0f766e;
+        font-family: monospace;
+        font-weight: 700;
+        background-color: #ccfbf1;
+        padding: 2px 6px;
+        border-radius: 4px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-taipei_tz = pytz.timezone('Asia/Taipei')
-now_taipei = datetime.now(taipei_tz)
-date_str = now_taipei.strftime("%Y-%m-%d")
-time_str = now_taipei.strftime("%H:%M:%S")
-
 st.markdown('<div class="custom-main-title">🛡️ HyperFlow DMEC 全日台股雙曲流形與數位分身平台</div>', unsafe_allow_html=True)
 st.caption("Micro-DMEC-G 觀察框架：結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincaré 雙曲幾何之個股動態評估面板")
 
+# 渲染柔和色調 + JavaScript 實時讀秒連線 Banner
 st.markdown(
     f'''
     <div class="live-status-box">
         <div>
             <span class="heartbeat-dot"></span>
-            <b>TWSE 官方 API 實時連線中</b> &nbsp;|&nbsp; 
-            <span>台北時間：<code style="color:#60a5fa; background:none;">{time_str}</code></span> &nbsp;|&nbsp; 
-            <span>基準日：<code>{date_str}</code></span>
+            <b style="color: #0f172a;">TWSE 官方 API 實時連線中</b> &nbsp;|&nbsp; 
+            <span>台北時間：<span id="live-clock" class="time-code">載入中...</span></span> &nbsp;|&nbsp; 
+            <span>基準日：<code style="background:none; color:#475569;">{date_str}</code></span>
         </div>
         <div>
-            <span class="status-tag">60s 自動同步 (第 {count+1} 次脈衝)</span>
+            <span class="status-tag">⚡ 60s 脈衝同步 (第 {count+1} 次)</span>
         </div>
     </div>
+
+    <!-- 前端 JS 實時每秒更新時間 -->
+    <script>
+        function updateClock() {{
+            const now = new Date();
+            const options = {{ timeZone: 'Asia/Taipei', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }};
+            const timeStr = new Intl.DateTimeFormat('zh-TW', options).format(now);
+            const clockElem = document.getElementById('live-clock');
+            if (clockElem) {{
+                clockElem.innerText = timeStr;
+            }}
+        }}
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
     ''',
     unsafe_allow_html=True
 )
