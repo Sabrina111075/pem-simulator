@@ -436,19 +436,49 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 9. 圖表區：Poincaré Disk 盤前籌碼預測 (乾淨連動版)
+# 9. 圖表區：Poincaré Disk 盤前籌碼預測 (安全防禦連動版)
 # ==========================================
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 
 # ------------------------------------------
-# A. 直接從 Sidebar 的 key 讀取數值
+# A. 安全讀取 Sidebar 變數 (避免 NameError)
 # ------------------------------------------
-spread_val = st.session_state.get("sb_spread", 0.0)
-intent_str = st.session_state.get("sb_intent", "中立")
-vol_ratio_val = st.session_state.get("sb_vol", 1.0)
+# 1. 抓取價差 (優先順序：st.session_state -> locals -> 預設0.0)
+spread_val = 0.0
+for k, v in list(st.session_state.items()) + list(locals().items()):
+    if any(x in str(k).lower() for x in ['spread', '價差', 'sb_spread', 'pre_market']):
+        try:
+            spread_val = float(v)
+            break
+        except: pass
 
+# 2. 抓取主力意向
 intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
-intent_val = intent_map.get(intent_str, 0.0)
+intent_val = 0.0
+
+# 安全檢查 major_buyer_intent 或其他可能名稱
+target_intent_str = "中立"
+if 'major_buyer_intent' in locals():
+    target_intent_str = locals()['major_buyer_intent']
+elif 'major_buyer_intent' in st.session_state:
+    target_intent_str = st.session_state['major_buyer_intent']
+else:
+    for k, v in list(st.session_state.items()) + list(locals().items()):
+        if str(v) in intent_map:
+            target_intent_str = str(v)
+            break
+
+intent_val = intent_map.get(str(target_intent_str), 0.0)
+
+# 3. 抓取放量程度
+vol_ratio_val = 1.0
+for k, v in list(st.session_state.items()) + list(locals().items()):
+    if any(x in str(k).lower() for x in ['volume', '放量', 'vol', 'sb_vol']):
+        try:
+            if float(v) > 0:
+                vol_ratio_val = float(v)
+                break
+        except: pass
 
 # ------------------------------------------
 # B. 高敏銳幾何映射計算
@@ -457,14 +487,14 @@ spread_norm = np.clip(spread_val / 150.0, -1.0, 1.0)
 pred_r = np.clip(0.35 + (vol_ratio_val * 0.1), 0.2, 0.92)
 combined_bias = np.clip(spread_norm * 0.7 + intent_val * 0.3, -1.0, 1.0)
 
-# 偏轉角度計算
+# 角度極致擺盪偏轉
 pred_theta = (np.pi / 2.0) - (combined_bias * (np.pi * 0.75))
 
 pred_u = pred_r * np.cos(pred_theta)
 pred_v = pred_r * np.sin(pred_theta)
 
 # ------------------------------------------
-# C. Plotly 繪圖 logic
+# C. Plotly 繪圖
 # ------------------------------------------
 fig_disk = go.Figure()
 
