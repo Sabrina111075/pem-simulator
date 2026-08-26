@@ -462,19 +462,28 @@ fig_disk.add_trace(go.Scatter(
     name='PVCS State Trajectory'
 ))
 
+# 1. 在 marker 設定中調整 colorbar 位置，讓它往右移開
 fig_disk.add_trace(go.Scatter(
-    x=[float(latest['Poincare_u'])], 
-    y=[float(latest['Poincare_v'])],
-    mode='markers', 
-    marker=dict(size=14, color='red', symbol='x'),
-    name='Current State'
+    x=df_res['Poincare_u'].to_numpy(), 
+    y=df_res['Poincare_v'].to_numpy(),
+    mode='lines+markers',
+    marker=dict(
+        size=7, 
+        color=df_res['Turning_Risk'].to_numpy(), 
+        colorscale='Viridis', 
+        showscale=True,
+        colorbar=dict(x=1.18, len=0.85, title="Risk")  # 往右平移並縮放長度
+    ),
+    name='PVCS State Trajectory'
 ))
 
+# 2. 更新 layout，調整圖例位置與右側留白 margins
 fig_disk.update_layout(
     xaxis=dict(range=[-1.1, 1.1], constrain='domain'),
     yaxis=dict(range=[-1.1, 1.1], scaleanchor="x", scaleratio=1),
     height=420,
-    margin=dict(l=20, r=20, t=30, b=20)
+    margin=dict(l=20, r=100, t=30, b=20),  # 右側邊界放大到 100 避開元件
+    legend=dict(x=1.02, y=1, xanchor='left') # 圖例獨立對齊
 )
 st.plotly_chart(fig_disk, use_container_width=True)
 
