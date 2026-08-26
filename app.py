@@ -11,7 +11,7 @@ import requests
 # 0. 台股升降單位 (Tick Size) 離散化邏輯 (支援小數)
 # ==========================================
 def apply_twse_tick_size(price: float) -> float:
-    """根據台灣證券交易所規定，將價格對齊至標準 Tick Size"""
+    """根據台灣證券交易所規定對齊 Tick Size (精確至兩位小數)"""
     if price < 10:
         tick = 0.01
     elif price < 50:
@@ -24,7 +24,7 @@ def apply_twse_tick_size(price: float) -> float:
         tick = 1.0
     else:
         tick = 5.0
-    return round(price / tick) * tick
+    return round(round(price / tick) * tick, 2)
 
 # ==========================================
 # 1. TWSE 證交所官方 API 數據擷取 (含 60 秒快取)
@@ -318,9 +318,16 @@ p_score = min(100, max(0, int(50 + (price_diff / latest_price) * 1000)))
 v_score = min(100, max(0, int(50 + (est_volume - base_volume_map.get(stock_code, est_volume)) / (base_volume_map.get(stock_code, est_volume) * 0.02 + 1e-5))))
 c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
 
-# 精確小數顯示格式控制
-price_display_fmt = f"{latest_price:,.1f}" if latest_price % 1 != 0 else f"{int(latest_price):,}"
-diff_display_fmt = f"{price_diff:+,.1f}" if price_diff % 1 != 0 else f"{int(price_diff):+d}"
+# 精確小數顯示格式控制 (支援 ETF 如 85.95 的兩位小數顯示)
+if latest_price % 1 == 0:
+    price_display_fmt = f"{int(latest_price):,}"
+else:
+    price_display_fmt = f"{latest_price:,.2f}"
+
+if price_diff % 1 == 0:
+    diff_display_fmt = f"{int(price_diff):+d}"
+else:
+    diff_display_fmt = f"{price_diff:+,.2f}"
 
 # ==========================================
 # 6. 市場行情與 P/V/C 得分卡片
