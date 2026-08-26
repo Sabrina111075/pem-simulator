@@ -305,15 +305,9 @@ else:
     display_stock_name = f"{stock_code} {stock_name}".strip()
 
 st.sidebar.markdown("---")
-st.sidebar.header("📊 08:30~08:59 盤前籌碼觀察")
-premarket_gap = st.sidebar.slider("盤前試撮 / 夜盤價差 (點/%)", -150, 150, 0, 5)
-
-major_buyer_intent = st.sidebar.select_slider(
-    "主力籌碼意向 (Major Intent)",
-    options=["極度偏空", "偏空", "中立", "偏多", "極度偏多"],
-    value="中立"
-)
-premarket_vol = st.sidebar.slider("盤前預估量放量程度", 0.5, 3.0, 1.0, 0.1)
+st.sidebar.slider("盤前試撮 / 夜盤價差 (點/%)", min_value=-150.0, max_value=150.0, value=0.0, step=1.0, key="sb_spread")
+st.sidebar.selectbox("主力籌碼意向 (Major Intent)", ["極度偏多", "偏多", "中立", "偏空", "極度偏空"], index=2, key="sb_intent")
+st.sidebar.slider("盤前預估量放量程度", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key="sb_vol")
 
 st.sidebar.markdown("---")
 st.sidebar.header("⚙️ 幾何與數位分身參數")
@@ -442,47 +436,39 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 9. 圖表區：Poincaré Disk 盤前籌碼預測 (UI與算式一體化)
+# 9. 圖表區：Poincaré Disk 盤前籌碼預測 (乾淨連動版)
 # ==========================================
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 
 # ------------------------------------------
-# A. 在圖表區直接建立專屬控制器 (確保 100% 即時連動)
+# A. 直接從 Sidebar 的 key 讀取數值
 # ------------------------------------------
-c1, c2, c3 = st.columns(3)
-with c1:
-    spread_val = st.slider("盤前試撮 / 夜盤價差 (點/%)", min_value=-150.0, max_value=150.0, value=0.0, step=1.0, key="disk_spread_slider")
-with c2:
-    intent_str = st.selectbox("主力籌碼意向", ["極度偏多", "偏多", "中立", "偏空", "極度偏空"], index=2, key="disk_intent_select")
-    intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
-    intent_val = intent_map[intent_str]
-with c3:
-    vol_ratio_val = st.slider("盤前預估量放量程度", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key="disk_vol_slider")
+spread_val = st.session_state.get("sb_spread", 0.0)
+intent_str = st.session_state.get("sb_intent", "中立")
+vol_ratio_val = st.session_state.get("sb_vol", 1.0)
+
+intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
+intent_val = intent_map.get(intent_str, 0.0)
 
 # ------------------------------------------
 # B. 高敏銳幾何映射計算
 # ------------------------------------------
-# 價差正規化
 spread_norm = np.clip(spread_val / 150.0, -1.0, 1.0)
-
-# 半徑 control (0.35 ~ 0.92)
 pred_r = np.clip(0.35 + (vol_ratio_val * 0.1), 0.2, 0.92)
-
-# 綜合偏向 (價差權重 70% + 意向 30%)
 combined_bias = np.clip(spread_norm * 0.7 + intent_val * 0.3, -1.0, 1.0)
 
-# 角度極致擺盪偏轉
+# 偏轉角度計算
 pred_theta = (np.pi / 2.0) - (combined_bias * (np.pi * 0.75))
 
 pred_u = pred_r * np.cos(pred_theta)
 pred_v = pred_r * np.sin(pred_theta)
 
 # ------------------------------------------
-# C. 繪圖與呈現
+# C. Plotly 繪圖 logic
 # ------------------------------------------
 fig_disk = go.Figure()
 
-# 1. 圓盤邊界
+# 1. 圓盤邊界 Boundary
 theta_b = np.linspace(0, 2*np.pi, 200)
 fig_disk.add_trace(go.Scatter(
     x=np.cos(theta_b), y=np.sin(theta_b),
