@@ -273,21 +273,25 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 5. 數據獲取 (API 優先，靜態對照檔備援)
+# 5. 數據獲取 (精準對齊真實市場行情)
 # ==========================================
 ticker_symbol = f"{stock_code}.TW" if not stock_code.endswith((".TW", ".TWO")) else stock_code
 api_data = fetch_realtime_market_data(ticker_symbol)
 
+# 優先採用 API 真實行情，若失敗則採用靜態對照表
 if api_data and api_data["success"]:
-    base_p = api_data["price"]
-    base_v = api_data["volume_lots"]
-    api_change = api_data["change"]
+    real_price = api_data["price"]
+    real_volume = api_data["volume_lots"]
+    real_change = api_data["change"]
 else:
-    base_p = base_price_map.get(stock_code, 100)
-    base_v = base_volume_map.get(stock_code, 30000)
-    api_change = 0.0
+    # 靜態精準對照檔備援 (單位: 元 / 張)
+    real_price = float(base_price_map.get(stock_code, 100))
+    real_volume = int(base_volume_map.get(stock_code, 5000))
+    real_change = 0.0
 
-# 生成時序 PVCS 數據 (對齊現有幾何與視覺化邏輯)
+# ------------------------------------------
+# 下方 Poincaré 雙曲幾何模型所需的時序模擬 (不影響上方卡片)
+# ------------------------------------------
 try:
     code_seed = sum(ord(c) for c in stock_code)
 except Exception:
@@ -299,14 +303,18 @@ intent_val = intent_map[major_buyer_intent]
 
 time_steps = 120
 t = np.linspace(0, 12, time_steps)
-bias_offset = (premarket_gap / 100.0) + intent_val
 
-raw_price = (np.sin(t) + bias_offset) * (base_p * 0.001) + base_p + noise_level * np.random.normal(size=time_steps) * 0.2
-mock_price = np.array([apply_twse_tick_size(p) for p in raw_price], dtype=int)
+# 生成幾何軌跡用的模擬陣列 (結尾精準對齊真實收盤價與成交量)
+mock_price_seq = (np.sin(t) * 0.005 + 1.0) * real_price
+mock_price = np.array([apply_twse_tick_size(p) for p in mock_price_seq], dtype=int)
+mock_price[-1] = int(real_price)  # 強制終點對齊真實價格
 
-mock_volume = (np.cos(t * 1.5) * 0.3 + premarket_vol) * base_v + np.random.normal(scale=base_v*0.05, size=time_steps)
-mock_count = np.abs(np.gradient(mock_price)) * (base_v * 0.1) + (base_v * 0.15)
+mock_volume = (np.cos(t * 1.5) * 0.1 + 1.0) * real_volume
+mock_volume[-1] = int(real_volume) # 強制終點對齊真實張數
 
+mock_count = np.abs(np.gradient(mock_price)) * (real_volume * 0.1) + (real_volume * 0.15)
+
+# 計算 Poincaré 與曲率
 geo_engine = HyperbolicStateEngine()
 risk_engine = CurvatureRiskEngine()
 
@@ -316,12 +324,14 @@ df_res = risk_engine.compute_trajectory_curvature(df_geo)
 
 latest = df_res.iloc[-1]
 
-latest_price = int(mock_price[-1])
-price_diff = int(api_change) if api_data else int(mock_price[-1] - mock_price[-2])
-est_volume = int(mock_volume[-1])
+# 核心顯示變數綁定 (直接帶入真實數據)
+latest_price = int(real_price)
+price_diff = int(real_change)
+est_volume = int(real_volume)
+
 confidence_score = max(0.60, min(0.99, 1.0 - (noise_level * 0.8)))
 p_score = min(100, max(0, int(50 + (price_diff / latest_price) * 1000)))
-v_score = min(100, max(0, int(50 + (est_volume - base_v) / (base_v * 0.02))))
+v_score = min(100, max(0, int(50 + (est_volume - base_volume_map.get(stock_code, est_volume)) / (base_volume_map.get(stock_code, est_volume) * 0.02 + 1e-5))))
 c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
 
 price_display_fmt = f"{latest_price:,}"
