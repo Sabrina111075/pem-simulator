@@ -442,60 +442,68 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 9. 圖表區：Poincaré Disk 與 08:30~08:59 盤前籌碼預測 (唯一修正版)
+# 9. 圖表區：Poincaré Disk 與 08:30~08:59 盤前籌碼預測 (高靈敏極致連動版)
 # ==========================================
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 fig_disk = go.Figure()
 
 # ------------------------------------------
-# A. 強制從 Streamlit Session 與變數池抓取數值
+# A. 全局變數精準擷取
 # ------------------------------------------
-# 1. 抓取價差數值
-spread_val = 0.0
+# 1. 抓取價差 (優先尋找所有可能變數)
+raw_spread = 0.0
 for k, v in list(locals().items()) + list(st.session_state.items()):
-    if any(key_name in str(k).lower() for key_name in ['spread', '價差']):
+    if any(x in str(k).lower() for x in ['spread', '價差', 'pre_market']):
         try:
-            spread_val = float(v)
-            break
+            val = float(v)
+            if val != 0.0:  # 優先採用非零值
+                raw_spread = val
+                break
+            raw_spread = val
         except:
             pass
 
 # 2. 抓取主力意向
-intent_val = 0.0
 intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
+raw_intent = 0.0
 for k, v in list(locals().items()) + list(st.session_state.items()):
     if str(v) in intent_map:
-        intent_val = intent_map[str(v)]
+        raw_intent = intent_map[str(v)]
         break
 
-# 3. 抓取預估放量
-vol_ratio_val = 1.0
+# 3. 抓取放量程度
+raw_vol = 1.0
 for k, v in list(locals().items()) + list(st.session_state.items()):
-    if any(key_name in str(k).lower() for key_name in ['volume', '放量', 'ratio']):
+    if any(x in str(k).lower() for x in ['volume', '放量', 'ratio']):
         try:
             if float(v) > 0:
-                vol_ratio_val = float(v)
+                raw_vol = float(v)
                 break
         except:
             pass
 
 # ------------------------------------------
-# B. 高靈敏雙曲幾何幾何映射
+# B. 高敏銳幾何映射 (放大擺盪幅度)
 # ------------------------------------------
-spread_norm = np.clip(spread_val / 150.0, -1.0, 1.0) 
-pred_r = np.clip(0.25 + (vol_ratio_val * 0.25), 0.15, 0.95)
-combined_bias = np.clip(intent_val * 0.5 + spread_norm * 0.5, -1.0, 1.0)
+# 1. 價差放大歸一化 (除以 80.0 提升靈敏度)
+spread_norm = np.clip(raw_spread / 80.0, -1.0, 1.0) 
 
-# 角度控制：多頭向右上方/左上方偏轉，空頭向右下方/左下方偏轉
+# 2. 幾何半徑 (隨放量擴展 0.25 ~ 0.95)
+pred_r = np.clip(0.3 + (raw_vol * 0.22), 0.2, 0.95)
+
+# 3. 超廣角擺盪角度：偏多向右上/左上，偏空大角度甩向右下/左下
+combined_bias = np.clip(raw_intent * 0.6 + spread_norm * 0.6, -1.0, 1.0)
+
+# 角度可偏轉達 ±135 度 (橫跨半個圓盤)
 pred_theta = (np.pi / 2.0) - (combined_bias * (np.pi * 0.75))
 
 pred_u = pred_r * np.cos(pred_theta)
 pred_v = pred_r * np.sin(pred_theta)
 
 # ------------------------------------------
-# C. 繪製圖形
+# C. 繪圖 logic
 # ------------------------------------------
-# 1. 外圍邊界圓 (r=1)
+# 邊界圓 Boundary (r=1)
 theta_boundary = np.linspace(0, 2*np.pi, 200)
 fig_disk.add_trace(go.Scatter(
     x=np.cos(theta_boundary), y=np.sin(theta_boundary),
@@ -503,7 +511,7 @@ fig_disk.add_trace(go.Scatter(
     name='Boundary (r=1)'
 ))
 
-# 2. PVCS 歷史狀態軌跡
+# 歷史軌跡
 if 'u_coords' in locals() and 'v_coords' in locals():
     u_hist, v_hist = u_coords, v_coords
 else:
@@ -511,46 +519,39 @@ else:
     v_hist = np.array([-0.95, -0.6, -0.2, 0.2, 0.5, 0.8, 0.5, 0.2, -0.3, -0.7, -0.98])
 
 fig_disk.add_trace(go.Scatter(
-    x=u_hist, y=v_hist,
-    mode='lines+markers',
+    x=u_hist, y=v_hist, mode='lines+markers',
     line=dict(color='#3b82f6', width=2),
     marker=dict(size=6, color=np.linspace(0.3, 0.8, len(u_hist)), colorscale='Viridis', showscale=True, colorbar=dict(title="Risk", x=1.02)),
     name='PVCS State Trajectory'
 ))
 
-# 3. 最新收盤點 (紅色 X)
+# 最新收盤點 (紅 X)
 fig_disk.add_trace(go.Scatter(
-    x=[u_hist[-1]], y=[v_hist[-1]],
-    mode='markers',
+    x=[u_hist[-1]], y=[v_hist[-1]], mode='markers',
     marker=dict(symbol='x', size=14, color='red', line=dict(width=3)),
     name='Current State'
 ))
 
-# 4. 盤前推算演進趨勢 (黃色虛線)
+# 盤前推算演進趨勢 (黃虛線)
 fig_disk.add_trace(go.Scatter(
-    x=[u_hist[-1], pred_u], y=[v_hist[-1], pred_v],
-    mode='lines',
+    x=[u_hist[-1], pred_u], y=[v_hist[-1], pred_v], mode='lines',
     line=dict(color='#f59e0b', width=2, dash='dot'),
     name='盤前推算演進趨勢'
 ))
 
-# 5. 08:59 籌碼預估位 (金色星號)
+# 09:00 預估位 (金色星號)
 fig_disk.add_trace(go.Scatter(
-    x=[pred_u], y=[pred_v],
-    mode='markers+text',
+    x=[pred_u], y=[pred_v], mode='markers+text',
     text=['09:00 預估位'], textposition='top center',
     marker=dict(symbol='star', size=18, color='#f59e0b', line=dict(color='orange', width=1)),
     name='08:59 籌碼預估位'
 ))
 
-# ------------------------------------------
-# D. 佈局設定
-# ------------------------------------------
+# 畫面佈局
 fig_disk.update_xaxes(range=[-1.15, 1.15], zeroline=False)
 fig_disk.update_yaxes(range=[-1.15, 1.15], zeroline=False, scaleanchor="x", scaleratio=1)
 fig_disk.update_layout(
-    height=500,
-    margin=dict(l=20, r=40, t=40, b=20),
+    height=500, margin=dict(l=20, r=40, t=40, b=20),
     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
 )
 
