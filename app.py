@@ -442,11 +442,36 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 9. 圖表區：Poincaré Disk
+# 9. 圖表區：Poincaré Disk 與 08:30~08:59 盤前籌碼預測
 # ==========================================
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 fig_disk = go.Figure()
 
+# ------------------------------------------
+# A. 讀取側邊欄盤前籌碼參數與動態座標映射
+# ------------------------------------------
+# 將主力籌碼意向轉換為數值：偏多=1.0, 中立=0.0, 偏空=-1.0
+intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
+intent_val = intent_map.get(major_intent_choice, 0.0) if 'major_intent_choice' in locals() else 0.0
+
+# 價差與放量程度預設值容錯
+spread_val = pre_market_spread if 'pre_market_spread' in locals() else 0.0
+vol_ratio_val = volume_ratio_val if 'volume_ratio_val' in locals() else 1.0
+
+# 計算預測點的雙曲半徑 r (放量程度越高，r越逼近邊界 1)
+pred_r = np.clip(0.4 * vol_ratio_val, 0.1, 0.95)
+
+# 計算預測點的角度 theta (價差與主力意向共同決定：多頭朝上半盤，空頭朝下半盤)
+angle_bias = (intent_val * 0.6) + (np.clip(spread_val / 5.0, -1.0, 1.0) * 0.4)
+pred_theta = (np.pi / 2.0) - (angle_bias * (np.pi / 2.0))
+
+# 轉換為 Poincaré Disk 複數平面座標 (u, v)
+pred_u = pred_r * np.cos(pred_theta)
+pred_v = pred_r * np.sin(pred_theta)
+
+# ------------------------------------------
+# B. 繪製圓盤圖表 Trace
+# ------------------------------------------
 # 1. 強制畫出外圍 1:1 邊界圓環 (Boundary r=1)
 theta_grid = np.linspace(0, 2 * np.pi, 200)
 fig_disk.add_trace(go.Scatter(
@@ -458,7 +483,7 @@ fig_disk.add_trace(go.Scatter(
     hoverinfo='skip'
 ))
 
-# 2. PVCS 狀態軌跡 (與顏色條 Colorbar)
+# 2. PVCS 歷史狀態軌跡 (與 Risk 色條)
 fig_disk.add_trace(go.Scatter(
     x=df_res['Poincare_u'].to_numpy(), 
     y=df_res['Poincare_v'].to_numpy(),
@@ -469,8 +494,8 @@ fig_disk.add_trace(go.Scatter(
         colorscale='Viridis', 
         showscale=True,
         colorbar=dict(
-            x=1.02,          # 漸層條貼近右側
-            len=0.75,         # 高度適中
+            x=1.02,
+            len=0.75,
             y=0.45, 
             title="Risk",
             thickness=15
@@ -479,22 +504,46 @@ fig_disk.add_trace(go.Scatter(
     name='PVCS State Trajectory'
 ))
 
-# 3. 當前狀態點 (紅 X)
+# 3. 當前最新狀態點 (紅 X)
+latest_u = float(latest['Poincare_u'])
+latest_v = float(latest['Poincare_v'])
 fig_disk.add_trace(go.Scatter(
-    x=[float(latest['Poincare_u'])], 
-    y=[float(latest['Poincare_v'])],
+    x=[latest_u], 
+    y=[latest_v],
     mode='markers', 
     marker=dict(size=14, color='red', symbol='x'),
     name='Current State'
 ))
 
-# 4. 關鍵修復：強制 1:1 正方形比例與邊界固定
+# 4. 08:30~08:59 籌碼推算的「09:00 預估開盤點」(金黃星號)
+fig_disk.add_trace(go.Scatter(
+    x=[pred_u], 
+    y=[pred_v],
+    mode='markers+text',
+    marker=dict(size=16, color='#f59e0b', symbol='star'),
+    text=["09:00 預估位"],
+    textposition="top center",
+    name='08:59 籌碼預估位'
+))
+
+# 5. 連接「當前點」與「預估位」的動態推算演進虛線
+fig_disk.add_trace(go.Scatter(
+    x=[latest_u, pred_u],
+    y=[latest_v, pred_v],
+    mode='lines',
+    line=dict(color='#f59e0b', width=2, dash='dot'),
+    name='盤前推算演進趨勢'
+))
+
+# ------------------------------------------
+# C. 畫面比例與佈局固定
+# ------------------------------------------
 fig_disk.update_xaxes(range=[-1.15, 1.15], zeroline=False)
 fig_disk.update_yaxes(
     range=[-1.15, 1.15], 
     zeroline=False,
-    scaleanchor="x",    # 綁定 X 軸比例
-    scaleratio=1        # 強制 1:1 正方形
+    scaleanchor="x",
+    scaleratio=1
 )
 
 fig_disk.update_layout(
