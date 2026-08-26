@@ -305,9 +305,10 @@ else:
     display_stock_name = f"{stock_code} {stock_name}".strip()
 
 st.sidebar.markdown("---")
-st.sidebar.slider("盤前試撮 / 夜盤價差 (點/%)", min_value=-150.0, max_value=150.0, value=0.0, step=1.0, key="sb_spread")
-st.sidebar.selectbox("主力籌碼意向 (Major Intent)", ["極度偏多", "偏多", "中立", "偏空", "極度偏空"], index=2, key="sb_intent")
-st.sidebar.slider("盤前預估量放量程度", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key="sb_vol")
+# 側邊欄控制項宣佈 (確保變數名稱 matches 第 356 行)
+pre_market_spread = st.sidebar.slider("盤前試撮 / 夜盤價差 (點/%)", min_value=-150.0, max_value=150.0, value=0.0, step=1.0)
+major_buyer_intent = st.sidebar.selectbox("主力籌碼意向 (Major Intent)", ["極度偏多", "偏多", "中立", "偏空", "極度偏空"], index=2)
+vol_ratio = st.sidebar.slider("盤前預估量放量程度", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
 
 st.sidebar.markdown("---")
 st.sidebar.header("⚙️ 幾何與數位分身參數")
@@ -436,58 +437,23 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 9. 圖表區：Poincaré Disk 盤前籌碼預測 (安全防禦連動版)
+# 9. 圖表區：Poincaré Disk 盤前籌碼預測
 # ==========================================
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 
-# ------------------------------------------
-# A. 安全讀取 Sidebar 變數 (避免 NameError)
-# ------------------------------------------
-# 1. 抓取價差 (優先順序：st.session_state -> locals -> 預設0.0)
-spread_val = 0.0
-for k, v in list(st.session_state.items()) + list(locals().items()):
-    if any(x in str(k).lower() for x in ['spread', '價差', 'sb_spread', 'pre_market']):
-        try:
-            spread_val = float(v)
-            break
-        except: pass
-
-# 2. 抓取主力意向
+# 1. 讀取側邊欄變數與安全轉譯
 intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
-intent_val = 0.0
+intent_val = intent_map.get(major_buyer_intent, 0.0)
 
-# 安全檢查 major_buyer_intent 或其他可能名稱
-target_intent_str = "中立"
-if 'major_buyer_intent' in locals():
-    target_intent_str = locals()['major_buyer_intent']
-elif 'major_buyer_intent' in st.session_state:
-    target_intent_str = st.session_state['major_buyer_intent']
-else:
-    for k, v in list(st.session_state.items()) + list(locals().items()):
-        if str(v) in intent_map:
-            target_intent_str = str(v)
-            break
+spread_val = float(pre_market_spread) if 'pre_market_spread' in locals() else 0.0
+vol_ratio_val = float(vol_ratio) if 'vol_ratio' in locals() else 1.0
 
-intent_val = intent_map.get(str(target_intent_str), 0.0)
-
-# 3. 抓取放量程度
-vol_ratio_val = 1.0
-for k, v in list(st.session_state.items()) + list(locals().items()):
-    if any(x in str(k).lower() for x in ['volume', '放量', 'vol', 'sb_vol']):
-        try:
-            if float(v) > 0:
-                vol_ratio_val = float(v)
-                break
-        except: pass
-
-# ------------------------------------------
-# B. 高敏銳幾何映射計算
-# ------------------------------------------
+# 2. 高靈敏幾何映射 (價差 70% + 籌碼意向 30%)
 spread_norm = np.clip(spread_val / 150.0, -1.0, 1.0)
 pred_r = np.clip(0.35 + (vol_ratio_val * 0.1), 0.2, 0.92)
 combined_bias = np.clip(spread_norm * 0.7 + intent_val * 0.3, -1.0, 1.0)
 
-# 角度極致擺盪偏轉
+# 角度極致擺盪偏轉 (頂點 90 度進行偏轉)
 pred_theta = (np.pi / 2.0) - (combined_bias * (np.pi * 0.75))
 
 pred_u = pred_r * np.cos(pred_theta)
@@ -498,7 +464,7 @@ pred_v = pred_r * np.sin(pred_theta)
 # ------------------------------------------
 fig_disk = go.Figure()
 
-# 1. 圓盤邊界 Boundary
+# 圓盤邊界 Boundary
 theta_b = np.linspace(0, 2*np.pi, 200)
 fig_disk.add_trace(go.Scatter(
     x=np.cos(theta_b), y=np.sin(theta_b),
@@ -506,7 +472,7 @@ fig_disk.add_trace(go.Scatter(
     name='Boundary (r=1)'
 ))
 
-# 2. PVCS 歷史軌跡
+# PVCS 歷史軌跡
 if 'u_coords' in locals() and 'v_coords' in locals():
     u_h, v_h = u_coords, v_coords
 else:
@@ -520,21 +486,21 @@ fig_disk.add_trace(go.Scatter(
     name='PVCS State Trajectory'
 ))
 
-# 3. 當前點 (紅 X)
+# 當前點 (紅 X)
 fig_disk.add_trace(go.Scatter(
     x=[u_h[-1]], y=[v_h[-1]], mode='markers',
     marker=dict(symbol='x', size=14, color='red', line=dict(width=3)),
     name='Current State'
 ))
 
-# 4. 預測連線 (黃虛線)
+# 預測連線 (黃虛線)
 fig_disk.add_trace(go.Scatter(
     x=[u_h[-1], pred_u], y=[v_h[-1], pred_v], mode='lines',
     line=dict(color='#f59e0b', width=2, dash='dot'),
     name='盤前推算演進趨勢'
 ))
 
-# 5. 09:00 預估位 (金色星號)
+# 09:00 預估位 (金色星號)
 fig_disk.add_trace(go.Scatter(
     x=[pred_u], y=[pred_v], mode='markers+text',
     text=[f"09:00 預估位 ({spread_val:+.0f})"], textposition='top center',
