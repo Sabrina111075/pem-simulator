@@ -442,51 +442,60 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 9. 圖表區：Poincaré Disk 與 08:30~08:59 盤前籌碼預測
-# ==========================================
-st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
-fig_disk = go.Figure()
-
-# ==========================================
-# 9. 圖表區：Poincaré Disk 與 08:30~08:59 盤前籌碼預測
+# 9. 圖表區：Poincaré Disk 與 08:30~08:59 盤前籌碼預測 (唯一修正版)
 # ==========================================
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 fig_disk = go.Figure()
 
 # ------------------------------------------
-# A. 自動讀取側邊欄變數與高靈敏映射
+# A. 強制從 Streamlit Session 與變數池抓取數值
 # ------------------------------------------
-intent_str = str(locals().get('major_intent_choice', '中立'))
-intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
-intent_val = intent_map.get(intent_str, 0.0)
-
+# 1. 抓取價差數值
 spread_val = 0.0
-for k in ['pre_market_spread', 'pre_spread', 'spread_val', 'night_spread']:
-    if k in locals():
-        spread_val = float(locals()[k])
+for k, v in list(locals().items()) + list(st.session_state.items()):
+    if any(key_name in str(k).lower() for key_name in ['spread', '價差']):
+        try:
+            spread_val = float(v)
+            break
+        except:
+            pass
+
+# 2. 抓取主力意向
+intent_val = 0.0
+intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
+for k, v in list(locals().items()) + list(st.session_state.items()):
+    if str(v) in intent_map:
+        intent_val = intent_map[str(v)]
         break
 
+# 3. 抓取預估放量
 vol_ratio_val = 1.0
-for k in ['volume_ratio_val', 'volume_ratio', 'pre_vol_ratio']:
-    if k in locals():
-        vol_ratio_val = float(locals()[k])
-        break
+for k, v in list(locals().items()) + list(st.session_state.items()):
+    if any(key_name in str(k).lower() for key_name in ['volume', '放量', 'ratio']):
+        try:
+            if float(v) > 0:
+                vol_ratio_val = float(v)
+                break
+        except:
+            pass
 
 # ------------------------------------------
-# B. 高靈敏幾何算式
+# B. 高靈敏雙曲幾何幾何映射
 # ------------------------------------------
 spread_norm = np.clip(spread_val / 150.0, -1.0, 1.0) 
-pred_r = np.clip(0.3 + (vol_ratio_val * 0.22), 0.2, 0.95)
+pred_r = np.clip(0.25 + (vol_ratio_val * 0.25), 0.15, 0.95)
 combined_bias = np.clip(intent_val * 0.5 + spread_norm * 0.5, -1.0, 1.0)
+
+# 角度控制：多頭向右上方/左上方偏轉，空頭向右下方/左下方偏轉
 pred_theta = (np.pi / 2.0) - (combined_bias * (np.pi * 0.75))
 
 pred_u = pred_r * np.cos(pred_theta)
 pred_v = pred_r * np.sin(pred_theta)
 
 # ------------------------------------------
-# C. 繪製 Poincaré 圓盤圖形 (繪圖語法補回)
+# C. 繪製圖形
 # ------------------------------------------
-# 1. 邊界圓 Boundary (r=1)
+# 1. 外圍邊界圓 (r=1)
 theta_boundary = np.linspace(0, 2*np.pi, 200)
 fig_disk.add_trace(go.Scatter(
     x=np.cos(theta_boundary), y=np.sin(theta_boundary),
@@ -494,11 +503,10 @@ fig_disk.add_trace(go.Scatter(
     name='Boundary (r=1)'
 ))
 
-# 2. PVCS 歷史軌跡 (如果無歷史變數則以示範數據繪製)
+# 2. PVCS 歷史狀態軌跡
 if 'u_coords' in locals() and 'v_coords' in locals():
     u_hist, v_hist = u_coords, v_coords
 else:
-    # 預設雙曲幾何軌跡示範點
     u_hist = np.array([0, 0.1, 0.3, 0.5, 0.4, 0.1, -0.2, -0.4, -0.2, 0, 0])
     v_hist = np.array([-0.95, -0.6, -0.2, 0.2, 0.5, 0.8, 0.5, 0.2, -0.3, -0.7, -0.98])
 
@@ -506,12 +514,11 @@ fig_disk.add_trace(go.Scatter(
     x=u_hist, y=v_hist,
     mode='lines+markers',
     line=dict(color='#3b82f6', width=2),
-    marker=dict(size=6, color=np.linspace(0.3, 0.8, len(u_hist)), colorscale='Viridis', showscale=True,
-                colorbar=dict(title="Risk", x=1.02)),
+    marker=dict(size=6, color=np.linspace(0.3, 0.8, len(u_hist)), colorscale='Viridis', showscale=True, colorbar=dict(title="Risk", x=1.02)),
     name='PVCS State Trajectory'
 ))
 
-# 3. 最新收盤點 (Current State - 紅色 X)
+# 3. 最新收盤點 (紅色 X)
 fig_disk.add_trace(go.Scatter(
     x=[u_hist[-1]], y=[v_hist[-1]],
     mode='markers',
@@ -519,7 +526,7 @@ fig_disk.add_trace(go.Scatter(
     name='Current State'
 ))
 
-# 4. 08:59 盤前推算軌跡線 (黃色虛線)
+# 4. 盤前推算演進趨勢 (黃色虛線)
 fig_disk.add_trace(go.Scatter(
     x=[u_hist[-1], pred_u], y=[v_hist[-1], pred_v],
     mode='lines',
@@ -537,24 +544,14 @@ fig_disk.add_trace(go.Scatter(
 ))
 
 # ------------------------------------------
-# D. 畫面比例與佈局固定
+# D. 佈局設定
 # ------------------------------------------
 fig_disk.update_xaxes(range=[-1.15, 1.15], zeroline=False)
-fig_disk.update_yaxes(
-    range=[-1.15, 1.15],
-    zeroline=False,
-    scaleanchor="x",
-    scaleratio=1
-)
-
+fig_disk.update_yaxes(range=[-1.15, 1.15], zeroline=False, scaleanchor="x", scaleratio=1)
 fig_disk.update_layout(
     height=500,
     margin=dict(l=20, r=40, t=40, b=20),
-    legend=dict(
-        orientation="h",
-        yanchor="bottom", y=1.02,
-        xanchor="right", x=1
-    )
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
 )
 
 st.plotly_chart(fig_disk, use_container_width=True)
