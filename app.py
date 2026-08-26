@@ -7,11 +7,9 @@ from datetime import datetime
 import pytz
 import requests
 
-# ==========================================
-# 0. 台股升降單位 (Tick Size) 離散化邏輯
-# ==========================================
-def apply_twse_tick_size(price: float) -> int:
-    """根據台灣證券交易所規定，將價格對齊至標準 Tick Size 並強制取整數"""
+# 0. 台股升降單位 (Tick Size) 離散化邏輯 (支援小數點)
+def apply_twse_tick_size(price: float) -> float:
+    """根據台灣證券交易所規定，將價格對齊至標準 Tick Size"""
     if price < 10:
         tick = 0.01
     elif price < 50:
@@ -24,7 +22,52 @@ def apply_twse_tick_size(price: float) -> int:
         tick = 1.0
     else:
         tick = 5.0
-    return int(round(price / tick) * tick)
+    return round(price / tick) * tick
+
+
+# 下方為原本畫面中的區域，已更新為小數點與精確格式：
+try:
+    code_seed = sum(ord(c) for c in stock_code)
+except Exception:
+    code_seed = 9999
+np.random.seed(code_seed)
+
+intent_map = {"極度偏空": -1.5, "偏空": -0.7, "中立": 0.0, "偏多": 0.7, "極度偏多": 1.5}
+intent_val = intent_map[major_buyer_intent]
+
+time_steps = 120
+t = np.linspace(0, 12, time_steps)
+
+mock_price_seq = (np.sin(t) * 0.005 + 1.0) * real_price
+mock_price = np.array([apply_twse_tick_size(p) for p in mock_price_seq], dtype=float)
+mock_price[-1] = float(real_price)
+
+mock_volume = (np.cos(t * 1.5) * 0.1 + 1.0) * real_volume
+mock_volume[-1] = int(real_volume)
+
+mock_count = np.abs(np.gradient(mock_price)) * (real_volume * 0.1) + (real_volume * 0.15)
+
+geo_engine = HyperbolicStateEngine()
+risk_engine = CurvatureRiskEngine()
+
+df_kinematics = geo_engine.compute_kinematics_from_pvcs(mock_price, mock_volume, mock_count)
+df_geo = geo_engine.map_to_poincare_disk(df_kinematics)
+df_res = risk_engine.compute_trajectory_curvature(df_geo)
+
+latest = df_res.iloc[-1]
+
+latest_price = float(real_price)
+price_diff = float(real_change)
+est_volume = int(real_volume)
+
+confidence_score = max(0.60, min(0.99, 1.0 - (noise_level * 0.8)))
+p_score = min(100, max(0, int(50 + (price_diff / latest_price) * 1000)))
+v_score = min(100, max(0, int(50 + (est_volume - base_volume_map.get(stock_code, est_volume)) / (base_volume_map.get(stock_code, est_volume) * 0.02 + 1e-5))))
+c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
+
+# 格式化顯示：有小數點顯示 .1f，整數自動去掉小數點
+price_display_fmt = f"{latest_price:,.1f}" if latest_price % 1 != 0 else f"{int(latest_price):,}"
+diff_display_fmt = f"{price_diff:+,.1f}" if price_diff % 1 != 0 else f"{int(price_diff):+d}"
 
 # ==========================================
 # 1. TWSE 證交所官方 API 數據擷取 (含 60 秒快取)
