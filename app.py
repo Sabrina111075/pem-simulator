@@ -447,97 +447,51 @@ st.markdown("---")
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 fig_disk = go.Figure()
 
+# ==========================================
+# 9. 圖表區：Poincaré Disk 與 08:30~08:59 盤前籌碼預測
+# ==========================================
+st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
+fig_disk = go.Figure()
+
 # ------------------------------------------
-# A. 讀取側邊欄盤前籌碼參數與動態座標映射 (高靈敏度版)
+# A. 直接強制抓取側邊欄變數與高靈敏映射 (徹底修復不連動問題)
 # ------------------------------------------
-# 1. 意向映射：擴大動態範圍
+# 1. 意向映射 (若抓不到則預設中立 0.0)
+intent_str = str(locals().get('major_intent_choice', '中立'))
 intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
-intent_val = intent_map.get(major_intent_choice, 0.0) if 'major_intent_choice' in locals() else 0.0
+intent_val = intent_map.get(intent_str, 0.0)
 
-# 2. 價差映射：調整歸一化分母 (改為 / 100.0)，避免大數值直接飽和
-spread_val = pre_market_spread if 'pre_market_spread' in locals() else 0.0
-spread_norm = np.clip(spread_val / 100.0, -1.0, 1.0) 
+# 2. 價差映射 (支援 100~200 以上的大點數，自動歸一化)
+# 透過全域搜尋自動比對可能叫 pre_market_spread, pre_spread 或 spread 的變數
+spread_val = 0.0
+for k in ['pre_market_spread', 'pre_spread', 'spread_val', 'night_spread']:
+    if k in locals():
+        spread_val = float(locals()[k])
+        break
 
-# 3. 放量程度：讓半徑 r 的擴展更顯著 (0.2 ~ 0.98)
-vol_ratio_val = volume_ratio_val if 'volume_ratio_val' in locals() else 1.0
-pred_r = np.clip(0.3 + (vol_ratio_val * 0.25), 0.15, 0.98)
+# 3. 放量程度 (自動比對可能的變數名)
+vol_ratio_val = 1.0
+for k in ['volume_ratio_val', 'volume_ratio', 'pre_vol_ratio']:
+    if k in locals():
+        vol_ratio_val = float(locals()[k])
+        break
 
-# 4. 關鍵修復：大幅放寬擺盪角度 (theta) 的範圍，讓左右/上下偏轉非常明顯
-# bias > 0 (偏多) 朝上半球； bias < 0 (偏空) 朝下半球，並允許左右大幅擺盪
-combined_bias = np.clip(intent_val * 0.6 + spread_norm * 0.4, -1.0, 1.0)
+# ------------------------------------------
+# B. 高靈敏幾何算式
+# ------------------------------------------
+# 價差歸一化 (除以 150，確保像 135 這種大數值有明顯轉向但不上鎖)
+spread_norm = np.clip(spread_val / 150.0, -1.0, 1.0) 
 
-# 將偏轉角控制在 -150° 到 +150° 之間，橫跨整個圓盤
-pred_theta = (np.pi / 2.0) - (combined_bias * (np.pi * 0.8))
+# 半徑 r：放量越顯著，越往外圈邊界衝 (範圍 0.2 ~ 0.95)
+pred_r = np.clip(0.3 + (vol_ratio_val * 0.22), 0.2, 0.95)
 
-# 轉換為 Poincaré Disk 平面座標 (u, v)
+# 擺盪角度 theta：大幅度偏轉 (多頭偏向右上/左上，空頭偏向右下/左下)
+combined_bias = np.clip(intent_val * 0.5 + spread_norm * 0.5, -1.0, 1.0)
+pred_theta = (np.pi / 2.0) - (combined_bias * (np.pi * 0.75))
+
+# 轉換為 Poincaré 平面座標
 pred_u = pred_r * np.cos(pred_theta)
 pred_v = pred_r * np.sin(pred_theta)
-
-# ------------------------------------------
-# B. 繪製圓盤圖表 Trace
-# ------------------------------------------
-# 1. 強制畫出外圍 1:1 邊界圓環 (Boundary r=1)
-theta_grid = np.linspace(0, 2 * np.pi, 200)
-fig_disk.add_trace(go.Scatter(
-    x=np.cos(theta_grid), 
-    y=np.sin(theta_grid),
-    mode='lines', 
-    line=dict(color='gray', width=1.5, dash='dash'),
-    name='Boundary (r=1)',
-    hoverinfo='skip'
-))
-
-# 2. PVCS 歷史狀態軌跡 (與 Risk 色條)
-fig_disk.add_trace(go.Scatter(
-    x=df_res['Poincare_u'].to_numpy(), 
-    y=df_res['Poincare_v'].to_numpy(),
-    mode='lines+markers',
-    marker=dict(
-        size=7, 
-        color=df_res['Turning_Risk'].to_numpy(), 
-        colorscale='Viridis', 
-        showscale=True,
-        colorbar=dict(
-            x=1.02,
-            len=0.75,
-            y=0.45, 
-            title="Risk",
-            thickness=15
-        )
-    ),
-    name='PVCS State Trajectory'
-))
-
-# 3. 當前最新狀態點 (紅 X)
-latest_u = float(latest['Poincare_u'])
-latest_v = float(latest['Poincare_v'])
-fig_disk.add_trace(go.Scatter(
-    x=[latest_u], 
-    y=[latest_v],
-    mode='markers', 
-    marker=dict(size=14, color='red', symbol='x'),
-    name='Current State'
-))
-
-# 4. 08:30~08:59 籌碼推算的「09:00 預估開盤點」(金黃星號)
-fig_disk.add_trace(go.Scatter(
-    x=[pred_u], 
-    y=[pred_v],
-    mode='markers+text',
-    marker=dict(size=16, color='#f59e0b', symbol='star'),
-    text=["09:00 預估位"],
-    textposition="top center",
-    name='08:59 籌碼預估位'
-))
-
-# 5. 連接「當前點」與「預估位」的動態推算演進虛線
-fig_disk.add_trace(go.Scatter(
-    x=[latest_u, pred_u],
-    y=[latest_v, pred_v],
-    mode='lines',
-    line=dict(color='#f59e0b', width=2, dash='dot'),
-    name='盤前推算演進趨勢'
-))
 
 # ------------------------------------------
 # C. 畫面比例與佈局固定
