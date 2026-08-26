@@ -520,9 +520,6 @@ fig_wave.update_layout(
     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
 )
 
-fig_wave.update_yaxes(title_text="曲率強度 κ", secondary_y=False)
-fig_wave.update_yaxes(title_text="轉折風險 Risk", secondary_y=True)
-
 st.plotly_chart(fig_wave, use_container_width=True)
 
 st.markdown("---")
