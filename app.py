@@ -448,24 +448,28 @@ st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤"
 fig_disk = go.Figure()
 
 # ------------------------------------------
-# A. 讀取側邊欄盤前籌碼參數與動態座標映射
+# A. 讀取側邊欄盤前籌碼參數與動態座標映射 (高靈敏度版)
 # ------------------------------------------
-# 將主力籌碼意向轉換為數值：偏多=1.0, 中立=0.0, 偏空=-1.0
+# 1. 意向映射：擴大動態範圍
 intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
 intent_val = intent_map.get(major_intent_choice, 0.0) if 'major_intent_choice' in locals() else 0.0
 
-# 價差與放量程度預設值容錯
+# 2. 價差映射：調整歸一化分母 (改為 / 100.0)，避免大數值直接飽和
 spread_val = pre_market_spread if 'pre_market_spread' in locals() else 0.0
+spread_norm = np.clip(spread_val / 100.0, -1.0, 1.0) 
+
+# 3. 放量程度：讓半徑 r 的擴展更顯著 (0.2 ~ 0.98)
 vol_ratio_val = volume_ratio_val if 'volume_ratio_val' in locals() else 1.0
+pred_r = np.clip(0.3 + (vol_ratio_val * 0.25), 0.15, 0.98)
 
-# 計算預測點的雙曲半徑 r (放量程度越高，r越逼近邊界 1)
-pred_r = np.clip(0.4 * vol_ratio_val, 0.1, 0.95)
+# 4. 關鍵修復：大幅放寬擺盪角度 (theta) 的範圍，讓左右/上下偏轉非常明顯
+# bias > 0 (偏多) 朝上半球； bias < 0 (偏空) 朝下半球，並允許左右大幅擺盪
+combined_bias = np.clip(intent_val * 0.6 + spread_norm * 0.4, -1.0, 1.0)
 
-# 計算預測點的角度 theta (價差與主力意向共同決定：多頭朝上半盤，空頭朝下半盤)
-angle_bias = (intent_val * 0.6) + (np.clip(spread_val / 5.0, -1.0, 1.0) * 0.4)
-pred_theta = (np.pi / 2.0) - (angle_bias * (np.pi / 2.0))
+# 將偏轉角控制在 -150° 到 +150° 之間，橫跨整個圓盤
+pred_theta = (np.pi / 2.0) - (combined_bias * (np.pi * 0.8))
 
-# 轉換為 Poincaré Disk 複數平面座標 (u, v)
+# 轉換為 Poincaré Disk 平面座標 (u, v)
 pred_u = pred_r * np.cos(pred_theta)
 pred_v = pred_r * np.sin(pred_theta)
 
