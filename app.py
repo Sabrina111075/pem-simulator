@@ -442,59 +442,55 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 9. 圖表區：Poincaré Disk 與 08:30~08:59 盤前籌碼預測 (高靈敏極致連動版)
+# 9. 圖表區：Poincaré Disk 盤前籌碼預測 (終極強制連動版)
 # ==========================================
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
-fig_disk = go.Figure()
 
 # ------------------------------------------
-# A. 全局變數精準擷取
+# A. 強制攔截並解析 sidebar 滑桿 (解決 Session 未傳遞問題)
 # ------------------------------------------
-# 1. 抓取價差 (優先尋找所有可能變數)
-raw_spread = 0.0
-for k, v in list(locals().items()) + list(st.session_state.items()):
-    if any(x in str(k).lower() for x in ['spread', '價差', 'pre_market']):
-        try:
-            val = float(v)
-            if val != 0.0:  # 優先採用非零值
-                raw_spread = val
-                break
-            raw_spread = val
-        except:
-            pass
+# 直接掃描所有 Streamlit 內部 session key
+spread_val = 0.0
+intent_val = 0.0
+vol_ratio_val = 1.0
 
-# 2. 抓取主力意向
-intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
-raw_intent = 0.0
-for k, v in list(locals().items()) + list(st.session_state.items()):
-    if str(v) in intent_map:
-        raw_intent = intent_map[str(v)]
-        break
+# 1. 暴力掃描包含 "價差" 或 "試撮" 的 key/名稱
+for k, v in st.session_state.items():
+    k_str = str(k)
+    if '價差' in k_str or '試撮' in k_str or 'spread' in k_str.lower():
+        try: spread_val = float(v)
+        except: pass
+    elif '意向' in k_str or 'intent' in k_str.lower():
+        intent_map = {"極度偏多": 1.0, "偏多": 0.5, "中立": 0.0, "偏空": -0.5, "極度偏空": -1.0}
+        intent_val = intent_map.get(str(v), 0.0)
+    elif '放量' in k_str or 'volume' in k_str.lower():
+        try: vol_ratio_val = float(v)
+        except: pass
 
-# 3. 抓取放量程度
-raw_vol = 1.0
-for k, v in list(locals().items()) + list(st.session_state.items()):
-    if any(x in str(k).lower() for x in ['volume', '放量', 'ratio']):
-        try:
-            if float(v) > 0:
-                raw_vol = float(v)
-                break
-        except:
-            pass
+# 如果 session_state 空空如也，直接從全局變數搜尋
+if spread_val == 0.0:
+    for k, v in list(locals().items()):
+        if '價差' in str(k) or 'spread' in str(k).lower():
+            try:
+                if float(v) != 0.0:
+                    spread_val = float(v)
+                    break
+            except: pass
 
 # ------------------------------------------
-# B. 高敏銳幾何映射 (放大擺盪幅度)
+# B. 超高敏銳度動態幾何計算 (擺盪效果極致化)
 # ------------------------------------------
-# 1. 價差放大歸一化 (除以 80.0 提升靈敏度)
-spread_norm = np.clip(raw_spread / 80.0, -1.0, 1.0) 
+# 價差正規化 (-150 ~ +150 轉成 -1.0 ~ +1.0)
+spread_norm = np.clip(spread_val / 150.0, -1.0, 1.0)
 
-# 2. 幾何半徑 (隨放量擴展 0.25 ~ 0.95)
-pred_r = np.clip(0.3 + (raw_vol * 0.22), 0.2, 0.95)
+# 半徑 control (0.35 ~ 0.92)
+pred_r = np.clip(0.35 + (vol_ratio_val * 0.2), 0.2, 0.92)
 
-# 3. 超廣角擺盪角度：偏多向右上/左上，偏空大角度甩向右下/左下
-combined_bias = np.clip(raw_intent * 0.6 + spread_norm * 0.6, -1.0, 1.0)
+# 綜合偏向 (價差權重 70% + 籌碼意向 30%)
+combined_bias = np.clip(spread_norm * 0.7 + intent_val * 0.3, -1.0, 1.0)
 
-# 角度可偏轉達 ±135 度 (橫跨半個圓盤)
+# 角度計算：偏多往右(極東/極北)，偏空往左(極西/極南)
+# 0 點是頂點 90度 (π/2)， combined_bias 為 1 時偏轉到 -45度(右下)，為 -1 時偏轉到 225度(左下)
 pred_theta = (np.pi / 2.0) - (combined_bias * (np.pi * 0.75))
 
 pred_u = pred_r * np.cos(pred_theta)
@@ -503,51 +499,52 @@ pred_v = pred_r * np.sin(pred_theta)
 # ------------------------------------------
 # C. 繪圖 logic
 # ------------------------------------------
-# 邊界圓 Boundary (r=1)
-theta_boundary = np.linspace(0, 2*np.pi, 200)
+fig_disk = go.Figure()
+
+# 1. 圓盤邊界 Boundary (r=1)
+theta_b = np.linspace(0, 2*np.pi, 200)
 fig_disk.add_trace(go.Scatter(
-    x=np.cos(theta_boundary), y=np.sin(theta_boundary),
+    x=np.cos(theta_b), y=np.sin(theta_b),
     mode='lines', line=dict(color='gray', dash='dash', width=1.5),
     name='Boundary (r=1)'
 ))
 
-# 歷史軌跡
+# 2. PVCS 歷史軌跡
 if 'u_coords' in locals() and 'v_coords' in locals():
-    u_hist, v_hist = u_coords, v_coords
+    u_h, v_h = u_coords, v_coords
 else:
-    u_hist = np.array([0, 0.1, 0.3, 0.5, 0.4, 0.1, -0.2, -0.4, -0.2, 0, 0])
-    v_hist = np.array([-0.95, -0.6, -0.2, 0.2, 0.5, 0.8, 0.5, 0.2, -0.3, -0.7, -0.98])
+    u_h = np.array([0, 0.1, 0.3, 0.5, 0.4, 0.1, -0.2, -0.4, -0.2, 0, 0])
+    v_h = np.array([-0.95, -0.6, -0.2, 0.2, 0.5, 0.8, 0.5, 0.2, -0.3, -0.7, -0.98])
 
 fig_disk.add_trace(go.Scatter(
-    x=u_hist, y=v_hist, mode='lines+markers',
+    x=u_h, y=v_h, mode='lines+markers',
     line=dict(color='#3b82f6', width=2),
-    marker=dict(size=6, color=np.linspace(0.3, 0.8, len(u_hist)), colorscale='Viridis', showscale=True, colorbar=dict(title="Risk", x=1.02)),
+    marker=dict(size=6, color=np.linspace(0.3, 0.8, len(u_h)), colorscale='Viridis', showscale=True, colorbar=dict(title="Risk", x=1.02)),
     name='PVCS State Trajectory'
 ))
 
-# 最新收盤點 (紅 X)
+# 3. 當前點 (紅 X)
 fig_disk.add_trace(go.Scatter(
-    x=[u_hist[-1]], y=[v_hist[-1]], mode='markers',
+    x=[u_h[-1]], y=[v_h[-1]], mode='markers',
     marker=dict(symbol='x', size=14, color='red', line=dict(width=3)),
     name='Current State'
 ))
 
-# 盤前推算演進趨勢 (黃虛線)
+# 4. 預測連線 (黃虛線)
 fig_disk.add_trace(go.Scatter(
-    x=[u_hist[-1], pred_u], y=[v_hist[-1], pred_v], mode='lines',
+    x=[u_h[-1], pred_u], y=[v_h[-1], pred_v], mode='lines',
     line=dict(color='#f59e0b', width=2, dash='dot'),
     name='盤前推算演進趨勢'
 ))
 
-# 09:00 預估位 (金色星號)
+# 5. 09:00 預估位 (金色星號)
 fig_disk.add_trace(go.Scatter(
     x=[pred_u], y=[pred_v], mode='markers+text',
-    text=['09:00 預估位'], textposition='top center',
+    text=[f"09:00 預估位 ({spread_val:+.0f})"], textposition='top center',
     marker=dict(symbol='star', size=18, color='#f59e0b', line=dict(color='orange', width=1)),
     name='08:59 籌碼預估位'
 ))
 
-# 畫面佈局
 fig_disk.update_xaxes(range=[-1.15, 1.15], zeroline=False)
 fig_disk.update_yaxes(range=[-1.15, 1.15], zeroline=False, scaleanchor="x", scaleratio=1)
 fig_disk.update_layout(
