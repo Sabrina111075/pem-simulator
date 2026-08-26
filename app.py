@@ -1,6 +1,4 @@
 ﻿import streamlit as st
-from streamlit_autorefresh import st_autorefresh
-st_autorefresh(interval=60000, key="datarefresh")
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -8,9 +6,16 @@ from plotly.subplots import make_subplots
 from datetime import datetime
 import pytz
 import requests
+from streamlit_autorefresh import st_autorefresh
 
 # ==========================================
-# 0. 台股升降單位 (Tick Size) 離散化邏輯 (支援小數)
+# 0. 自動刷新與心跳連線燈配置
+# ==========================================
+# 每 60 秒 (60,000 毫秒) 自動刷新一次頁面
+count = st_autorefresh(interval=60000, limit=None, key="twse_heartbeat")
+
+# ==========================================
+# 1. 台股升降單位 (Tick Size) 離散化邏輯 (支援兩位小數)
 # ==========================================
 def apply_twse_tick_size(price: float) -> float:
     """根據台灣證券交易所規定對齊 Tick Size (精確至兩位小數)"""
@@ -29,7 +34,7 @@ def apply_twse_tick_size(price: float) -> float:
     return round(round(price / tick) * tick, 2)
 
 # ==========================================
-# 1. TWSE 證交所官方 API 數據擷取 (含 60 秒快取)
+# 2. TWSE 證交所官方 API 數據擷取 (含 60 秒快取)
 # ==========================================
 @st.cache_data(ttl=60)
 def fetch_twse_official_data(stock_code: str):
@@ -41,9 +46,9 @@ def fetch_twse_official_data(stock_code: str):
         data = res.json()
         
         if data.get("stat") == "OK" and "data" in data and len(data["data"]) > 0:
-            latest_row = data["data"][-1] # 最新一日交易數據
+            latest_row = data["data"][-1]
             shares = int(latest_row[1].replace(',', ''))
-            lots = shares // 1000  # 股數轉張數
+            lots = shares // 1000
             close_p = float(latest_row[6].replace(',', ''))
             
             change_str = latest_row[7].replace(',', '').replace('+', '')
@@ -64,7 +69,7 @@ def fetch_twse_official_data(stock_code: str):
     return None
 
 # ==========================================
-# 2. 核心幾何與 PVCS 風險計算邏輯
+# 3. 核心幾何與 PVCS 風險計算邏輯
 # ==========================================
 class HyperbolicStateEngine:
     def __init__(self, lambda_reg=1e-5):
@@ -127,40 +132,9 @@ class CurvatureRiskEngine:
         return res_df
 
 # ==========================================
-# 3. UI 頁面配置與 CSS 優化
+# 4. UI 頁面配置與 CSS 心跳燈視覺
 # ==========================================
 st.set_page_config(page_title="HyperFlow DMEC - 台股雙曲流形與數位分身平台", layout="wide")
-
-st.markdown("""
-<style>
-    .custom-main-title {
-        font-size: 1.85rem !important;
-        font-weight: 700 !important;
-        color: #0f172a;
-        line-height: 1.25 !important;
-        margin-bottom: 0.2rem !important;
-    }
-    
-    [data-testid="stMetric"] {
-        background-color: #f8fafc;
-        border: 1px solid #e2e8f0;
-        padding: 8px 10px !important;
-        border-radius: 8px;
-        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.02);
-    }
-    
-    [data-testid="stMetricLabel"] {
-        font-size: 0.82rem !important;
-        color: #64748b !important;
-    }
-    
-    [data-testid="stMetricValue"] {
-        font-size: 1.45rem !important;
-        font-weight: 600 !important;
-    }
-    
-# 自動刷新機制：每 60 秒 (60,000 毫秒) 自動刷新一次頁面
-count = st_autorefresh(interval=60000, limit=None, key="twse_heartbeat")
 
 st.markdown("""
 <style>
@@ -242,7 +216,6 @@ time_str = now_taipei.strftime("%H:%M:%S")
 st.markdown('<div class="custom-main-title">🛡️ HyperFlow DMEC 全日台股雙曲流形與數位分身平台</div>', unsafe_allow_html=True)
 st.caption("Micro-DMEC-G 觀察框架：結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincaré 雙曲幾何之個股動態評估面板")
 
-# 渲染心跳連線儀表板 Banner
 st.markdown(
     f'''
     <div class="live-status-box">
@@ -263,7 +236,7 @@ st.markdown(
 st.markdown("---")
 
 # ==========================================
-# 4. 側邊欄控制項與靜態備援對照表
+# 5. 側邊欄控制項與靜態備援對照表
 # ==========================================
 st.sidebar.header("📈 PVCS 台股個股選取")
 
@@ -273,18 +246,18 @@ stock_name_map = {
     "2330": "台積電", "2317": "鴻海", "2454": "聯發科", "2303": "聯電", "6770": "力積電",
     "2308": "台達電", "2357": "華碩", "3008": "大立光", "3443": "創意", "6669": "緯穎",
     "2382": "廣達", "3231": "緯創", "3481": "群創", "2409": "友達", "2324": "仁寶", 
-    "2344": "華邦電", "2603": "長榮", "2609": "陽明", "2615": "萬海"
+    "2344": "華邦電", "2603": "長榮", "2609": "陽明", "2615": "萬海", "00876": "元大全球5G"
 }
 
 base_price_map = {
     "2330": 2400, "2317": 243, "2454": 3735, "2303": 126, "6770": 27,
     "2308": 380, "2357": 490, "3008": 2550, "3443": 1350, "6669": 2100,
-    "2382": 290, "3231": 105, "3481": 46.8, "2409": 17, "2324": 38
+    "2382": 290, "3231": 105, "3481": 46.8, "2409": 17, "2324": 38, "00876": 85.95
 }
 
 base_volume_map = {
     "2330": 28000, "2317": 36819, "2454": 5403, "2303": 125000, "6770": 150000,
-    "2308": 8000, "2357": 6000, "3008": 1500, "3443": 3000, "6669": 2000, "3481": 186725
+    "2308": 8000, "2357": 6000, "3008": 1500, "3443": 3000, "6669": 2000, "3481": 186725, "00876": 423
 }
 
 hot_stock_options = [
@@ -306,7 +279,6 @@ st.sidebar.markdown("---")
 st.sidebar.header("📊 08:30~08:59 盤前籌碼觀察")
 premarket_gap = st.sidebar.slider("盤前試撮 / 夜盤價差 (點/%)", -150, 150, 0, 5)
 
-# ✅ 宣告變數處：major_buyer_intent 在這裡定義
 major_buyer_intent = st.sidebar.select_slider(
     "主力籌碼意向 (Major Intent)",
     options=["極度偏空", "偏空", "中立", "偏多", "極度偏多"],
@@ -336,7 +308,7 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 5. 數據獲取與幾何運算 (順序已校正)
+# 6. 數據獲取與幾何運算
 # ==========================================
 api_data = fetch_twse_official_data(stock_code)
 
@@ -351,14 +323,12 @@ else:
     real_change = 0.0
     data_source_label = "靜態備援對照檔"
 
-# 下方幾何軌跡運算
 try:
     code_seed = sum(ord(c) for c in stock_code)
 except Exception:
     code_seed = 9999
 np.random.seed(code_seed)
 
-# ✅ 在這裡使用 major_buyer_intent，此時變數已完全準備好
 intent_map = {"極度偏空": -1.5, "偏空": -0.7, "中立": 0.0, "偏多": 0.7, "極度偏多": 1.5}
 intent_val = intent_map[major_buyer_intent]
 
@@ -392,7 +362,7 @@ p_score = min(100, max(0, int(50 + (price_diff / latest_price) * 1000)))
 v_score = min(100, max(0, int(50 + (est_volume - base_volume_map.get(stock_code, est_volume)) / (base_volume_map.get(stock_code, est_volume) * 0.02 + 1e-5))))
 c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
 
-# 精確小數顯示格式控制 (支援 ETF 如 85.95 的兩位小數顯示)
+# 精確小數格式控制 (支援 ETF 如 00876 兩位小數顯示)
 if latest_price % 1 == 0:
     price_display_fmt = f"{int(latest_price):,}"
 else:
@@ -404,7 +374,7 @@ else:
     diff_display_fmt = f"{price_diff:+,.2f}"
 
 # ==========================================
-# 6. 市場行情與 P/V/C 得分卡片
+# 7. 市場行情與 P/V/C 得分卡片
 # ==========================================
 st.markdown("#### 📊 市場實時行情與 P/V/C 幾何評分")
 st.caption(f"ℹ️ **數據來源**：`{data_source_label}`｜行情與收盤成交量已精確同步，盤中數據快取更新頻率為 60 秒。")
@@ -419,7 +389,7 @@ m_col5.metric("價量動能分 (P/V)", f"{p_score} / {v_score}")
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
-# 7. 當前分析標的與幾何 KPI
+# 8. 當前分析標的與幾何 KPI
 # ==========================================
 st.subheader(f"📌 當前分析標的：`{display_stock_name}`")
 
@@ -435,7 +405,7 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 8. 圖表區：Poincaré Disk 與曲率時序圖
+# 9. 圖表區：Poincaré Disk 與曲率時序圖
 # ==========================================
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 fig_disk = go.Figure()
@@ -471,7 +441,6 @@ fig_disk.update_layout(
 )
 st.plotly_chart(fig_disk, use_container_width=True)
 
-# PVCS 軌跡曲率強度與轉折風險 Temporal 波動圖
 st.subheader(f"🌊 {display_stock_name} PVCS 軌跡曲率強度與轉折風險動態時序")
 
 fig_wave = make_subplots(specs=[[{"secondary_y": True}]])
@@ -513,7 +482,7 @@ st.plotly_chart(fig_wave, use_container_width=True)
 st.markdown("---")
 
 # ==========================================
-# 9. 數位分身診斷區
+# 10. 數位分身診斷區
 # ==========================================
 st.subheader("🤖 個股 PVCS 閉環數位分身診斷與處置建議")
 
