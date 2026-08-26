@@ -442,12 +442,23 @@ col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{ri
 st.markdown("---")
 
 # ==========================================
-# 9. 圖表區：Poincaré Disk 與曲率時序圖
+# 9. 圖表區：Poincaré Disk
 # ==========================================
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 fig_disk = go.Figure()
 
-# 1. 調整 trace 裡面的 colorbar 位置 (將 x 從 1.15 調小至 1.02，縮短 len 至 0.75 並垂直置中)
+# 1. 強制畫出外圍 1:1 邊界圓環 (Boundary r=1)
+theta_grid = np.linspace(0, 2 * np.pi, 200)
+fig_disk.add_trace(go.Scatter(
+    x=np.cos(theta_grid), 
+    y=np.sin(theta_grid),
+    mode='lines', 
+    line=dict(color='gray', width=1.5, dash='dash'),
+    name='Boundary (r=1)',
+    hoverinfo='skip'
+))
+
+# 2. PVCS 狀態軌跡 (與顏色條 Colorbar)
 fig_disk.add_trace(go.Scatter(
     x=df_res['Poincare_u'].to_numpy(), 
     y=df_res['Poincare_v'].to_numpy(),
@@ -458,28 +469,15 @@ fig_disk.add_trace(go.Scatter(
         colorscale='Viridis', 
         showscale=True,
         colorbar=dict(
-            x=1.02,          # 漸層條緊貼圓盤右側
-            len=0.75,         # 縮短高度，避免撞到右上角圖例
-            y=0.45,          # 稍微下移置中
+            x=1.02,          # 漸層條貼近右側
+            len=0.75,         # 高度適中
+            y=0.45, 
             title="Risk",
-            thickness=15     # 稍微放細漸層條
+            thickness=15
         )
     ),
     name='PVCS State Trajectory'
 ))
-
-# 2. 將圖例 (Legend) 放到上方水平排列，並將圓盤向左靠齊
-fig_disk.update_layout(
-    xaxis=dict(range=[-1.15, 1.15], constrain='domain'),
-    yaxis=dict(range=[-1.15, 1.15], scaleanchor="x", scaleratio=1),
-    height=420,
-    margin=dict(l=10, r=40, t=40, b=20),  # 左留白縮小至 10px，整體向左靠
-    legend=dict(
-        orientation="h",                  # 圖例改為水平橫排
-        yanchor="bottom", y=1.02, 
-        xanchor="right", x=1
-    )
-)
 
 # 3. 當前狀態點 (紅 X)
 fig_disk.add_trace(go.Scatter(
@@ -490,18 +488,26 @@ fig_disk.add_trace(go.Scatter(
     name='Current State'
 ))
 
-# 4. 圖表佈局設定
+# 4. 關鍵修復：強制 1:1 正方形比例與邊界固定
+fig_disk.update_xaxes(range=[-1.15, 1.15], zeroline=False)
+fig_disk.update_yaxes(
+    range=[-1.15, 1.15], 
+    zeroline=False,
+    scaleanchor="x",    # 綁定 X 軸比例
+    scaleratio=1        # 強制 1:1 正方形
+)
+
 fig_disk.update_layout(
-    xaxis=dict(range=[-1.1, 1.1], constrain='domain'),
-    yaxis=dict(range=[-1.1, 1.1], scaleanchor="x", scaleratio=1),
-    height=420,
-    margin=dict(l=20, r=100, t=30, b=20),
-    legend=dict(x=1.02, y=1, xanchor='left')
+    height=450,
+    margin=dict(l=20, r=40, t=40, b=20),
+    legend=dict(
+        orientation="h",
+        yanchor="bottom", y=1.02, 
+        xanchor="right", x=1
+    )
 )
 
 st.plotly_chart(fig_disk, use_container_width=True)
-
-st.markdown("---")
 
 # ==========================================
 # 10. 時序圖：PVCS 軌跡曲率強度與轉折風險
