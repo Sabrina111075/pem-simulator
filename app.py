@@ -1,4 +1,5 @@
 ﻿import streamlit as st
+import streamlit.components.v1 as components
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -9,13 +10,16 @@ import requests
 from streamlit_autorefresh import st_autorefresh
 
 # ==========================================
-# 0. 自動刷新與心跳連線燈配置
+# 0. 自動刷新機制 & 基礎時間定義
 # ==========================================
-# 每 60 秒 (60,000 毫秒) 自動刷新一次頁面
 count = st_autorefresh(interval=60000, limit=None, key="twse_heartbeat")
 
+taipei_tz = pytz.timezone('Asia/Taipei')
+now_taipei = datetime.now(taipei_tz)
+date_str = now_taipei.strftime("%Y-%m-%d")
+
 # ==========================================
-# 1. 台股升降單位 (Tick Size) 離散化邏輯 (支援兩位小數)
+# 1. 台股升降單位 (Tick Size) 離散化邏輯
 # ==========================================
 def apply_twse_tick_size(price: float) -> float:
     """根據台灣證券交易所規定對齊 Tick Size (精確至兩位小數)"""
@@ -132,7 +136,7 @@ class CurvatureRiskEngine:
         return res_df
 
 # ==========================================
-# 4. UI 頁面配置與 CSS 心跳燈視覺 (柔和科技風 + JS 實時讀秒)
+# 4. UI 頁面配置與柔和科技風 Banner (含實時秒針)
 # ==========================================
 st.set_page_config(page_title="HyperFlow DMEC - 台股雙曲流形與數位分身平台", layout="wide")
 
@@ -163,96 +167,99 @@ st.markdown("""
         font-size: 1.45rem !important;
         font-weight: 600 !important;
     }
-    
-    /* 心跳綠燈閃爍動畫 */
-    @keyframes blink {
-        0% { opacity: 1.0; transform: scale(1); }
-        50% { opacity: 0.3; transform: scale(0.85); }
-        100% { opacity: 1.0; transform: scale(1); }
-    }
-    .heartbeat-dot {
-        height: 9px;
-        width: 9px;
-        background-color: #10b981;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 6px;
-        box-shadow: 0 0 6px #10b981;
-        animation: blink 1.2s infinite ease-in-out;
-    }
-    
-    /* 柔和科技風格 Banner (明亮薄荷/藍灰調) */
-    .live-status-box {
-        background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);
-        border: 1px solid #dcfce7;
-        border-left: 4px solid #10b981;
-        padding: 8px 16px;
-        border-radius: 8px;
-        color: #1e293b;
-        font-size: 0.88rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 8px;
-        margin-bottom: 16px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-    }
-    
-    .status-tag {
-        background-color: #e0f2fe;
-        color: #0369a1;
-        padding: 3px 10px;
-        border-radius: 12px;
-        border: 1px solid #bae6fd;
-        font-size: 0.78rem;
-        font-weight: 600;
-    }
-
-    .time-code {
-        color: #0f766e;
-        font-family: monospace;
-        font-weight: 700;
-        background-color: #ccfbf1;
-        padding: 2px 6px;
-        border-radius: 4px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="custom-main-title">🛡️ HyperFlow DMEC 全日台股雙曲流形與數位分身平台</div>', unsafe_allow_html=True)
 st.caption("Micro-DMEC-G 觀察框架：結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincaré 雙曲幾何之個股動態評估面板")
 
-# 渲染柔和色調 + JavaScript 實時讀秒連線 Banner
-st.markdown(
+# 嵌入前端原生 JavaScript 實時讀秒心跳 Banner
+components.html(
     f'''
-    <div class="live-status-box">
-        <div>
-            <span class="heartbeat-dot"></span>
-            <b style="color: #0f172a;">TWSE 官方 API 實時連線中</b> &nbsp;|&nbsp; 
-            <span>台北時間：<span id="live-clock" class="time-code">載入中...</span></span> &nbsp;|&nbsp; 
-            <span>基準日：<code style="background:none; color:#475569;">{date_str}</code></span>
-        </div>
-        <div>
-            <span class="status-tag">⚡ 60s 脈衝同步 (第 {count+1} 次)</span>
-        </div>
-    </div>
-
-    <!-- 前端 JS 實時每秒更新時間 -->
-    <script>
-        function updateClock() {{
-            const now = new Date();
-            const options = {{ timeZone: 'Asia/Taipei', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }};
-            const timeStr = new Intl.DateTimeFormat('zh-TW', options).format(now);
-            const clockElem = document.getElementById('live-clock');
-            if (clockElem) {{
-                clockElem.innerText = timeStr;
-            }}
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body {{
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: transparent;
         }}
-        setInterval(updateClock, 1000);
-        updateClock();
-    </script>
+        @keyframes blink {{
+            0% {{ opacity: 1.0; transform: scale(1); }}
+            50% {{ opacity: 0.3; transform: scale(0.85); }}
+            100% {{ opacity: 1.0; transform: scale(1); }}
+        }}
+        .heartbeat-dot {{
+            height: 9px;
+            width: 9px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+            box-shadow: 0 0 6px #10b981;
+            animation: blink 1.2s infinite ease-in-out;
+        }}
+        .live-status-box {{
+            background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);
+            border: 1px solid #dcfce7;
+            border-left: 4px solid #10b981;
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: #1e293b;
+            font-size: 0.88rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        }}
+        .status-tag {{
+            background-color: #e0f2fe;
+            color: #0369a1;
+            padding: 3px 10px;
+            border-radius: 12px;
+            border: 1px solid #bae6fd;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }}
+        .time-code {{
+            color: #0f766e;
+            font-family: monospace;
+            font-weight: 700;
+            background-color: #ccfbf1;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }}
+    </style>
+    </head>
+    <body>
+        <div class="live-status-box">
+            <div>
+                <span class="heartbeat-dot"></span>
+                <b style="color: #0f172a;">TWSE 官方 API 實時連線中</b> &nbsp;|&nbsp; 
+                <span>台北時間：<span id="live-clock" class="time-code">--:--:--</span></span> &nbsp;|&nbsp; 
+                <span>基準日：<code style="background:none; color:#475569;">{date_str}</code></span>
+            </div>
+            <div>
+                <span class="status-tag">⚡ 60s 脈衝同步 (第 {count+1} 次)</span>
+            </div>
+        </div>
+
+        <script>
+            function updateClock() {{
+                const now = new Date();
+                const options = {{ timeZone: 'Asia/Taipei', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }};
+                const timeStr = new Intl.DateTimeFormat('zh-TW', options).format(now);
+                document.getElementById('live-clock').innerText = timeStr;
+            }}
+            setInterval(updateClock, 1000);
+            updateClock();
+        </script>
+    </body>
+    </html>
     ''',
-    unsafe_allow_html=True
+    height=54
 )
 
 st.markdown("---")
@@ -384,7 +391,6 @@ p_score = min(100, max(0, int(50 + (price_diff / latest_price) * 1000)))
 v_score = min(100, max(0, int(50 + (est_volume - base_volume_map.get(stock_code, est_volume)) / (base_volume_map.get(stock_code, est_volume) * 0.02 + 1e-5))))
 c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
 
-# 精確小數格式控制 (支援 ETF 如 00876 兩位小數顯示)
 if latest_price % 1 == 0:
     price_display_fmt = f"{int(latest_price):,}"
 else:
