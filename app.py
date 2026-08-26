@@ -205,7 +205,7 @@ st.markdown("---")
 # ------------------------------------------
 st.sidebar.header("📈 PVCS 台股個股選取")
 
-stock_mode = st.sidebar.radio("選擇股票模式", ["熱門標的", "自訂股票代碼"])
+mode = st.sidebar.radio("選擇股票模式", ["熱門標的", "自訂股票代碼"])
 
 stock_name_map = {
     "2330": "台積電", "2317": "鴻海", "2454": "聯發科", "2303": "聯電", "6770": "力積電",
@@ -236,14 +236,19 @@ hot_stock_options = [
     "6770 力積電", "3481 群創", "2409 友達", "2324 仁寶", "2344 華邦電", "2382 廣達"
 ]
 
-if stock_mode == "熱門標的":
-    selected_stock = st.sidebar.selectbox("熱門股票清單 (成交熱門/權值股)", hot_stock_options)
-    stock_code = selected_stock.split(" ")[0]
-    display_stock_name = selected_stock
+if mode == "熱門標的":
+
+    selected_label = st.sidebar.selectbox("熱門股票清單 (成交熱門/權值股)", list(HOT_STOCKS.keys()))
+
+    selected_ticker = HOT_STOCKS[selected_label]
+
 else:
-    stock_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 009816)", value="2454").strip().upper()
-    stock_name = stock_name_map.get(stock_code, "")
-    display_stock_name = f"{stock_code} {stock_name}".strip()
+
+    user_symbol_input = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 009816)", value="2308")
+
+    raw_symbol = user_symbol_input.strip()
+
+    selected_ticker = raw_symbol if raw_symbol.endswith((".TW", ".TWO")) else f"{raw_symbol}.TW"
 
 base_p = base_price_map.get(stock_code, 100)
 base_v = base_volume_map.get(stock_code, 30000)
@@ -326,21 +331,17 @@ c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
 price_display_fmt = f"{latest_price:,}"
 diff_display_fmt = f"{price_diff:+d}"
 
-# 依據側邊欄選取的標的取得對應 Ticker (例如: "2330.TW")
-selected_ticker = HOT_STOCKS.get(selected_label, "2330.TW")
-
-# 呼叫 API 取得真實市場數據
-market_data = get_realtime_market_data(selected_ticker)
-
-if market_data and market_data["success"]:
-    current_price = market_data["price"]
-    price_change = market_data["change"]
-    current_volume = market_data["volume_lots"]
+# 判斷使用者切換的模式 (熱門標的 vs 自訂代碼)
+if mode == "熱門標的":
+    # 確保 selected_label 有被正確讀取
+    selected_ticker = HOT_STOCKS.get(selected_label, "2330.TW")
 else:
-    # 備援機制：萬一網路斷線時的保底呈現
-    current_price = 2400.0
-    price_change = 0.0
-    current_volume = 27246
+    # 自訂代碼模式：讀取輸入框 (例如 "2308") 並自動補上 ".TW"
+    user_symbol = user_symbol_input.strip() if 'user_symbol_input' in locals() else "2308"
+    if user_symbol.endswith((".TW", ".TWO")):
+        selected_ticker = user_symbol
+    else:
+        selected_ticker = f"{user_symbol}.TW"
 
 # --- 將 current_price 與 current_volume 傳入你原本下方的雙曲圓盤與幾何模型運算 ---
 
