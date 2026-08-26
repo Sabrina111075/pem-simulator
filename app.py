@@ -5,6 +5,45 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
 import pytz
+import yfinance as yf
+
+# 1. 建立股票名稱與 yfinance Ticker 對映字典
+HOT_STOCKS = {
+    "2330 台積電": "2330.TW",
+    "2317 鴻海": "2317.TW",
+    "2454 聯發科": "2454.TW",
+    "2303 聯電": "2303.TW",
+    "2609 陽明": "2609.TW",
+    "2603 長榮": "2603.TW",
+    "6770 力積電": "6770.TW"
+}
+
+# 2. 實時 API 抓取函式 (快取 180 秒)
+@st.cache_data(ttl=180)
+def get_realtime_market_data(ticker_symbol: str):
+    try:
+        ticker = yf.Ticker(ticker_symbol)
+        df = ticker.history(period="5d")
+        
+        if df.empty:
+            return None
+            
+        latest = df.iloc[-1]
+        prev_close = df.iloc[-2]['Close'] if len(df) > 1 else latest['Open']
+        
+        real_price = float(latest['Close'])
+        change = float(real_price - prev_close)
+        volume_shares = int(latest['Volume'])
+        volume_lots = volume_shares // 1000  # 股數轉換為張數
+        
+        return {
+            "price": round(real_price, 2),
+            "change": round(change, 2),
+            "volume_lots": volume_lots,
+            "success": True
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 # ==========================================
 # 0. 台股升降單位 (Tick Size) 離散化邏輯 (強制傳回整數)
@@ -287,19 +326,23 @@ c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
 price_display_fmt = f"{latest_price:,}"
 diff_display_fmt = f"{price_diff:+d}"
 
-# ==========================================
-# 5. 市場行情與 P/V/C 得分卡片
-# ==========================================
-st.markdown("#### 📊 市場實時行情與 P/V/C 幾何評分")
+# 依據側邊欄選取的標的取得對應 Ticker (例如: "2330.TW")
+selected_ticker = HOT_STOCKS.get(selected_label, "2330.TW")
 
-m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
-m_col1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
-m_col2.metric("預估總成交量", f"{est_volume:,} 張")
-m_col3.metric("指標可信度 (Confidence)", f"{confidence_score:.1%}")
-m_col4.metric("P/V/C 綜合得分", f"{int((p_score + v_score + c_score)/3)} 分")
-m_col5.metric("價量動能分 (P/V)", f"{p_score} / {v_score}")
+# 呼叫 API 取得真實市場數據
+market_data = get_realtime_market_data(selected_ticker)
 
-st.markdown("<br>", unsafe_allow_html=True)
+if market_data and market_data["success"]:
+    current_price = market_data["price"]
+    price_change = market_data["change"]
+    current_volume = market_data["volume_lots"]
+else:
+    # 備援機制：萬一網路斷線時的保底呈現
+    current_price = 2400.0
+    price_change = 0.0
+    current_volume = 27246
+
+# --- 將 current_price 與 current_volume 傳入你原本下方的雙曲圓盤與幾何模型運算 ---
 
 # ==========================================
 # 6. 當前分析標的與幾何 KPI
