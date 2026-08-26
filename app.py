@@ -447,6 +447,7 @@ st.markdown("---")
 st.subheader(f"🌀 {display_stock_name} Poincaré Disk PVCS 雙曲狀態圓盤")
 fig_disk = go.Figure()
 
+# 1. 邊界圓環 (r=1)
 theta_grid = np.linspace(0, 2*np.pi, 100)
 fig_disk.add_trace(go.Scatter(
     x=np.cos(theta_grid), y=np.sin(theta_grid),
@@ -454,15 +455,7 @@ fig_disk.add_trace(go.Scatter(
     name='Boundary (r=1)'
 ))
 
-fig_disk.add_trace(go.Scatter(
-    x=df_res['Poincare_u'].to_numpy(), 
-    y=df_res['Poincare_v'].to_numpy(),
-    mode='lines+markers',
-    marker=dict(size=7, color=df_res['Turning_Risk'].to_numpy(), colorscale='Viridis', showscale=True),
-    name='PVCS State Trajectory'
-))
-
-# 1. 在 marker 設定中調整 colorbar 位置，讓它往右移開
+# 2. PVCS 狀態軌跡 (僅保留這一個 trace，並設定 colorbar)
 fig_disk.add_trace(go.Scatter(
     x=df_res['Poincare_u'].to_numpy(), 
     y=df_res['Poincare_v'].to_numpy(),
@@ -472,55 +465,30 @@ fig_disk.add_trace(go.Scatter(
         color=df_res['Turning_Risk'].to_numpy(), 
         colorscale='Viridis', 
         showscale=True,
-        colorbar=dict(x=1.18, len=0.85, title="Risk")  # 往右平移並縮放長度
+        colorbar=dict(x=1.15, len=0.85, title="Risk")
     ),
     name='PVCS State Trajectory'
 ))
 
-# 2. 更新 layout，調整圖例位置與右側留白 margins
+# 3. 當前狀態點 (紅 X)
+fig_disk.add_trace(go.Scatter(
+    x=[float(latest['Poincare_u'])], 
+    y=[float(latest['Poincare_v'])],
+    mode='markers', 
+    marker=dict(size=14, color='red', symbol='x'),
+    name='Current State'
+))
+
+# 4. 圖表佈局設定
 fig_disk.update_layout(
     xaxis=dict(range=[-1.1, 1.1], constrain='domain'),
     yaxis=dict(range=[-1.1, 1.1], scaleanchor="x", scaleratio=1),
     height=420,
-    margin=dict(l=20, r=100, t=30, b=20),  # 右側邊界放大到 100 避開元件
-    legend=dict(x=1.02, y=1, xanchor='left') # 圖例獨立對齊
+    margin=dict(l=20, r=100, t=30, b=20),
+    legend=dict(x=1.02, y=1, xanchor='left')
 )
+
 st.plotly_chart(fig_disk, use_container_width=True)
-
-st.subheader(f"🌊 {display_stock_name} PVCS 軌跡曲率強度與轉折風險動態時序")
-
-fig_wave = make_subplots(specs=[[{"secondary_y": True}]])
-
-fig_wave.add_trace(
-    go.Scatter(
-        x=t, 
-        y=df_res['Curvature_Intensity'].to_numpy(),
-        mode='lines',
-        name='軌跡曲率強度 (κ_intensity)',
-        line=dict(color='#3b82f6', width=2)
-    ),
-    secondary_y=False
-)
-
-fig_wave.add_trace(
-    go.Scatter(
-        x=t, 
-        y=df_res['Turning_Risk'].to_numpy(),
-        mode='lines',
-        name='個股轉折風險 (Turning Risk)',
-        line=dict(color='#ef4444', width=2, dash='dot')
-    ),
-    secondary_y=True
-)
-
-fig_wave.update_layout(
-    xaxis_title="時間軸 (Time Step t)",
-    height=320,
-    margin=dict(l=20, r=20, t=30, b=20),
-    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-)
-
-st.plotly_chart(fig_wave, use_container_width=True)
 
 st.markdown("---")
 
