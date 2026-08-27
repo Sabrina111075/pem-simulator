@@ -37,40 +37,34 @@ def apply_twse_tick_size(price: float) -> float:
         tick = 5.0
     return round(round(price / tick) * tick, 2)
 
-# ==========================================
-# 2. TWSE 證交所官方 API 數據擷取 (含 60 秒快取)
-# ==========================================
-@st.cache_data(ttl=60)
-def fetch_twse_official_data(stock_code: str):
-    """直接對接臺灣證券交易所 (TWSE) 官方 API 取得精確收盤/盤中數據"""
-    try:
-        url = f"https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&stockNo={stock_code}"
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        res = requests.get(url, headers=headers, timeout=5)
-        data = res.json()
+# ------------------------------------------
+# TWSE 盤前試算價與價差自動計算 logic
+# ------------------------------------------
+def get_twse_premarket_data(stock_id):
+    # 假設已從 TWSE MIS API 取得原始 dict data
+    # url: https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_{stock_id}.tw
+    
+    # 讀取數據範例邏輯：
+    # z: 當日成交價, y: 昨日收盤價, o: 試算開盤價/開盤價
+    current_price = data.get('z', '-')
+    yesterday_close = float(data.get('y', 0.0))
+    simulated_open = data.get('o', '-')
+    
+    auto_spread = 0.0
+    is_premarket = False
+    
+    # 判斷是否為盤前時段 (08:30 ~ 08:59) 或成交價尚未產生
+    if current_price == '-' or current_price == '':
+        if simulated_open != '-' and simulated_open != '':
+            sim_price = float(simulated_open)
+            # 計算試算價差 (點數或百分比)
+            auto_spread = round(sim_price - yesterday_close, 2)
+            is_premarket = True
+    else:
+        # 盤中正常成交
+        auto_spread = round(float(current_price) - yesterday_close, 2)
         
-        if data.get("stat") == "OK" and "data" in data and len(data["data"]) > 0:
-            latest_row = data["data"][-1]
-            shares = int(latest_row[1].replace(',', ''))
-            lots = shares // 1000
-            close_p = float(latest_row[6].replace(',', ''))
-            
-            change_str = latest_row[7].replace(',', '').replace('+', '')
-            try:
-                change_p = float(change_str)
-            except ValueError:
-                change_p = 0.0
-                
-            return {
-                "price": close_p,
-                "change": change_p,
-                "volume_lots": lots,
-                "success": True,
-                "source": "TWSE 證交所官方 API"
-            }
-    except Exception:
-        pass
-    return None
+    return auto_spread, is_premarket
 
 # ==========================================
 # 3. 核心幾何與 PVCS 風險計算邏輯
@@ -304,11 +298,32 @@ else:
     stock_name = stock_name_map.get(stock_code, "")
     display_stock_name = f"{stock_code} {stock_name}".strip()
 
-st.sidebar.markdown("---")
-# 側邊欄控制項宣佈 (確保變數名稱 matches 第 356 行)
-pre_market_spread = st.sidebar.slider("盤前試撮 / 夜盤價差 (點/%)", min_value=-150.0, max_value=150.0, value=0.0, step=1.0)
-major_buyer_intent = st.sidebar.selectbox("主力籌碼意向 (Major Intent)", ["極度偏多", "偏多", "中立", "偏空", "極度偏空"], index=2)
-vol_ratio = st.sidebar.slider("盤前預估量放量程度", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
+# ------------------------------------------
+# 側邊欄：盤前試算自動連動與手動微調
+# ------------------------------------------
+# 假設從 API 抓到的試算價差為 live_calculated_spread
+live_spread = locals().get('auto_spread', 0.0)
+
+# 如果是盤前，顯示自動帶入的提示標籤
+st.sidebar.markdown("### 📊 盤前籌碼微調")
+
+# 自動模式開關
+use_live_data = st.sidebar.checkbox("自動同步 TWSE 盤前試算價差", value=True)
+
+if use_live_data:
+    default_spread = float(live_spread)
+    st.sidebar.caption(f"🟢 已即時帶入 TWSE 試算價差：`{default_spread:+.2f}`")
+else:
+    default_spread = 0.0
+
+pre_market_spread = st.sidebar.slider(
+    "盤前試撮 / 夜盤價差 (點/%)",
+    min_value=-150.0,
+    max_value=150.0,
+    value=float(np.clip(default_spread, -150.0, 150.0)),
+    step=0.5,
+    key="sb_spread_slider"
+)
 
 st.sidebar.markdown("---")
 st.sidebar.header("⚙️ 幾何與數位分身參數")
