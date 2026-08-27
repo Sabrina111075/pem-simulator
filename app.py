@@ -603,15 +603,19 @@ vol_val = latest.get('Volume', 10000 + (seed_num % 50000))
 churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 
 # 6. 渲染頂部 3 欄實時 P/V/C 數據卡片
-col_a, col_b, col_c = st.columns(3)
-with col_a:
-    st.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
-with col_b:
-    st.metric("當前成交量 (V)", f"{int(vol_val):,} 張", delta=f"{int(vol_val * 0.03):+} 張")
-with col_c:
-    st.metric("主力買賣淨張數 (C)", f"{int(churn_val):,} 張", delta=f"{int(churn_val * 0.015):+} 張")
+# ✅ 修正後的變數綁定：
+col1, col2, col3 = st.columns(3)
 
-st.markdown("---")
+with col1:
+    st.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
+
+with col2:
+    # 確保傳入的是 v_val (或是 vol_display_fmt)
+    st.metric("當前成交量 (V)", f"{v_val:,} 張") 
+
+with col3:
+    # 確保傳入的是 c_val (或是 chips_display_fmt)
+    st.metric("主力買賣淨張數 (C)", f"{c_val:,} 張")
 
 # ==========================================
 # 💡 幾何指標三連方塊卡片 (安全修復 NameError 版)
