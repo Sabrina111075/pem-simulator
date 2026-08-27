@@ -343,18 +343,18 @@ except Exception:
 # ==========================================
 # B. 側邊欄：盤前試算自動連動與手動微調
 # ==========================================
-st.sidebar.markdown("### 📊 盤前籌碼微調")
+st.sidebar.markdown("### 📊 盤前試撮流場模擬 (08:30-09:00)")
 
 # 自動模式開關 (帶有唯一 key)
 use_live_data = st.sidebar.checkbox(
-    "自動同步 TWSE 盤前試算價差", 
+    "自動同步 TWSE 盤前試撮價差", 
     value=True, 
     key="chk_twse_live_sync"
 )
 
 if use_live_data:
     default_spread = float(live_calculated_spread)
-    st.sidebar.caption(f"🟢 已即時帶入 TWSE 試算價差：`{default_spread:+.2f}`")
+    st.sidebar.caption(f"🟢 已即時帶入 TWSE 試撮價差：`{default_spread:+.2f}`")
 else:
     default_spread = 0.0
 
