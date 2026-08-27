@@ -432,39 +432,50 @@ else:
     data_source_label = "靜態備援對照檔"
 
 # ==========================================
-# 7. 市場實時行情 UI 渲染 (結合 Micro-DMEC-G 與動態連動)
+# 7. 市場實時行情 UI 渲染 (防護宣告修正版)
 # ==========================================
 # 1. 頂部 Micro-DMEC-G 觀察框架標題
 st.title("📈 Micro-DMEC-G 觀察框架")
 st.caption("結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincaré 雙曲幾何之個股動態評估面板")
 
-stock_name = stock_name_map.get(stock_code, "")
+stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
 st.markdown(f"### 📊 市場實時行情與 P/V/C 數據（標的：{stock_code} {stock_name}）")
 
-# 2. 動態讀取/計算個股專屬幾何指標 (解決切換股票數字不動的問題)
+# 2. 安全初始化 latest 變數 (避免 NameError)
+if 'latest' not in locals() or not isinstance(latest, dict):
+    latest = {}
+
+# 3. 動態計算個股專屬幾何指標
 import hashlib
 seed_num = int(hashlib.md5(stock_code.encode()).hexdigest(), 16)
-delta_shift = float(diff_display_fmt) * 0.005 if 'diff_display_fmt' in locals() and diff_display_fmt else 0.0
 
-if isinstance(latest, dict) and stock_code in latest:
+# 處理價差偏移
+try:
+    delta_shift = float(diff_display_fmt) * 0.005 if 'diff_display_fmt' in locals() and diff_display_fmt else 0.0
+except Exception:
+    delta_shift = 0.0
+
+if stock_code in latest:
     s_data = latest[stock_code]
     d_val = s_data.get('D_t', s_data.get('mahalanobis_d', 0.852))
     r_val = s_data.get('r', s_data.get('poincare_r', 0.412))
     k_val = s_data.get('k', s_data.get('curvature_k', 0.125))
 else:
-    # 根據股票代碼動態產生專屬的 D_t, r, k 幾何數值
+    # 根據股票代碼動態產生專屬且獨立的 D_t, r, k 數值
     d_val = round(0.5 + (seed_num % 1000) / 1000.0 * 1.2 + delta_shift, 3)
     r_val = round(0.2 + (seed_num % 700) / 1000.0 * 0.7, 3)
     k_val = round(0.05 + (seed_num % 300) / 1000.0 * 0.4, 3)
 
-# 3. 提取成交量 (V) 與籌碼張數 (C)
-vol_val = latest.get('Volume', latest.get('volume', 12450)) if isinstance(latest, dict) else (10000 + (seed_num % 50000))
-churn_val = latest.get('Capital_Churn', latest.get('churn', 3280)) if isinstance(latest, dict) else (2000 + (seed_num % 15000))
+# 4. 提取成交量 (V) 與籌碼張數 (C)
+vol_val = latest.get('Volume', 10000 + (seed_num % 50000))
+churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 
-# 4. 頂部 3 欄實時 P/V/C 數據卡片
+# 5. 頂部 3 欄實時 P/V/C 數據卡片
 col_a, col_b, col_c = st.columns(3)
 with col_a:
-    st.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
+    p_fmt = price_display_fmt if 'price_display_fmt' in locals() else "0.00"
+    d_fmt = diff_display_fmt if 'diff_display_fmt' in locals() else "+0.00"
+    st.metric("最新收盤/試算價", f"{p_fmt} 元", delta=d_fmt)
 with col_b:
     st.metric("當前成交量 (V)", f"{int(vol_val):,} 張", delta=f"{int(vol_val * 0.03):+} 張")
 with col_c:
