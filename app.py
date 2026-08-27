@@ -484,73 +484,45 @@ st.caption("結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincar�
 stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
 st.markdown(f"### 📊 市場實時行情與 P/V/C 數據（標的：{stock_code} {stock_name}）")
 
-# # 2. 安全讀取真實股價與試算價（完整防呆升級版）
+# # 2. 安全讀取真實股價與試算價（yfinance + TWSE 雙重備援版）
 if "real_price" in locals() and real_price > 0:
     price_display_fmt = f"{real_price:.2f}"
     diff_display_fmt = (
         f"{real_change:+.2f}" if "real_change" in locals() else "+0.00"
     )
 else:
-    import requests
+    import yfinance as yf
 
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36"
-        )
-    }
     p_val = 0.0
     diff_val = 0.0
     fetched = False
 
-    # 依次嘗試 上市 (tse) 與 上櫃 (otc)
-    for prefix in ["tse", "otc"]:
+    # 先試 上市 (.TW)，再試 上櫃 (.TWO)
+    for suffix in [".TW", ".TWO"]:
         try:
-            url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={prefix}_{stock_code}.tw"
-            res = requests.get(url, headers=headers, timeout=3)
-            msg_list = res.json().get("msgArray", [])
-
-            if msg_list and len(msg_list) > 0:
-                info = msg_list[0]
-
-                # 拿取昨收價 y
-                y_str = info.get("y", "0")
-                y_price = (
-                    float(y_str)
-                    if y_str not in ["-", "", None]
-                    else 0.0
-                )
-
-                # 依序尋找可用價格：z (當日成交) -> a (最佳委買) -> b (最佳委賣) -> y (昨日收盤)
-                target_p_str = "-"
-                for key in ["z", "a", "b"]:
-                    val = info.get(key, "-")
-                    if val not in ["-", "", None]:
-                        # 取出多個價格中的第一個（例如委買價可能是一串數字）
-                        target_p_str = str(val).split("_")[0]
-                        break
-
-                if target_p_str != "-":
-                    p_val = float(target_p_str)
+            ticker = yf.Ticker(f"{stock_code}{suffix}")
+            # 抓取最近 2 天資料計算收盤與漲跌
+            hist = ticker.history(period="5d")
+            if not hist.empty and len(hist) >= 1:
+                p_val = float(hist["Close"].iloc[-1])
+                if len(hist) >= 2:
+                    prev_close = float(hist["Close"].iloc[-2])
+                    diff_val = p_val - prev_close
                 else:
-                    p_val = y_price  # 若盤後完全無成交，以昨日收盤價替代
-
-                # 計算價差
-                diff_val = p_val - y_price if y_price > 0 else 0.0
+                    diff_val = 0.0
 
                 if p_val > 0:
                     fetched = True
-                    break  # 成功抓到資料，跳出迴圈
-        except Exception as e:
+                    break
+        except Exception:
             pass
 
-    # 若抓取還是失敗或數值仍為 0，才使用備用值
+    # 若 yfinance 仍無法取得，才降級至預設對照
     if not fetched or p_val == 0.0:
         base_prices = {"2330": 2415.00, "2317": 252.00, "2603": 226.00}
         p_val = base_prices.get(stock_code, 100.00)
         diff_val = 0.0
 
-    price_display_fmt = f"{p_val:.2f}"
-    diff_display_fmt = f"{diff_val:+.2f}"
     price_display_fmt = f"{p_val:.2f}"
     diff_display_fmt = f"{diff_val:+.2f}"
 
