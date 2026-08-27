@@ -304,6 +304,9 @@ display_stock_name = f"{stock_code} {stock_name}".strip()
 stock_name = stock_name_map.get(stock_code, "")
 display_stock_name = f"{stock_code} {stock_name}".strip()
 
+stock_name = stock_name_map.get(stock_code, "")
+display_stock_name = f"{stock_code} {stock_name}".strip()
+
 # ==========================================
 # A. TWSE 官方 API 實時資料抓取與試算價差解析
 # ==========================================
@@ -336,6 +339,41 @@ try:
         live_calculated_spread = float(o_price) - y_close
 except Exception:
     live_calculated_spread = 0.0
+
+# ==========================================
+# B. 側邊欄：盤前試算自動連動與手動微調
+# ==========================================
+st.sidebar.markdown("### 📊 盤前籌碼微調")
+
+# 加上 key="key_sync_twse_chk" 防止元件重複 ID 衝突
+use_live_data = st.sidebar.checkbox(
+    "自動同步 TWSE 盤前試算價差", 
+    value=True, 
+    key="key_sync_twse_chk"
+)
+
+if use_live_data:
+    default_spread = float(live_calculated_spread)
+    st.sidebar.caption(f"🟢 已即時帶入 TWSE 試算價差：`{default_spread:+.2f}`")
+else:
+    default_spread = 0.0
+
+pre_market_spread = st.sidebar.slider(
+    "盤前試撮 / 夜盤價差 (點/%)",
+    min_value=-150.0,
+    max_value=150.0,
+    value=float(np.clip(default_spread, -150.0, 150.0)),
+    step=0.5,
+    key="sb_spread_slider_main"
+)
+
+st.sidebar.markdown("---")
+st.sidebar.header("⚙️ 幾何與數位分身參數")
+noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.05, key="sb_noise_slider")
+tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05, key="sb_tol_slider")
+
+st.sidebar.markdown("---")
+st.sidebar.info("📊 **資料來源與運算架構**\n\n結合 TWSE 實時 API 與雙曲流行 (Poincaré Disk) 動態演化模型。")
 
 # ==========================================
 # B. 側邊欄：盤前試算自動連動與手動微調
