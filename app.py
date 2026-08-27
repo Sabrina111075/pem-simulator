@@ -469,10 +469,19 @@ c4.metric("軌道曲率強度 (k)", f"{float(k_val):.3f}")
 st.markdown("---")
 
 # ==========================================
-# 💡 幾何指標三連方塊卡片 (採用 Streamlit 原生 metric 確保顏色質感一致)
+# 💡 幾何指標三連方塊卡片 (動態連動數據版)
 # ==========================================
+# 1. 確保最新數據動態讀取 (若有盤前試算價差微調，在此同步更新)
+if 'latest' in locals() and isinstance(latest, dict):
+    d_val = get_latest_val(latest, ['Mahalanobis_D', 'mahalanobis_d', 'D_t'], 0.852)
+    r_val = get_latest_val(latest, ['Poincare_r', 'Poincare_R', 'poincare_r', 'r'], 0.412)
+    k_val = get_latest_val(latest, ['Curvature_k', 'curvature_k', 'k_intensity'], 0.125)
+
+# 2. 標頭動態顯示
+stock_name = stock_name_map.get(stock_code, '')
 st.markdown(f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>（當前標的：:green[{stock_code} {stock_name}]）</span>", unsafe_allow_html=True)
 
+# 3. 渲染動態卡片
 col1, col2, col3 = st.columns(3)
 
 with col1:
