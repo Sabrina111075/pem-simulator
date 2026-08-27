@@ -397,69 +397,42 @@ st.sidebar.markdown("---")
 st.sidebar.info("📊 **資料來源與運算架構**\n\n結合 TWSE 實時 API 與雙曲流形 (Poincaré Disk) 動態演化模型。")
 
 # ==========================================
-# 6. 數據獲取與幾何運算
+# 6. 數據獲取與幾何運算 (安全解析防崩潰)
 # ==========================================
 api_data = fetch_twse_official_data(stock_code)
 
-if api_data and api_data["success"]:
-    real_price = api_data["price"]
-    real_volume = api_data["volume_lots"]
-    real_change = api_data["change"]
+# 安全檢查：判斷 API 是否有成功取得資料 (檢查 msgArray 或 z/o 欄位)
+is_api_success = bool(api_data and isinstance(api_data, dict) and ('z' in api_data or 'o' in api_data or 'msgArray' in api_data))
+
+if is_api_success:
+    # 嘗試抓取成交價或開盤價
+    try:
+        raw_price = api_data.get('z', '-')
+        if raw_price == '-' or not raw_price:
+            raw_price = api_data.get('o', '0')
+        real_price = float(raw_price) if raw_price != '-' else float(base_price_map.get(stock_code, 200.0))
+    except Exception:
+        real_price = float(base_price_map.get(stock_code, 200.0))
+
+    # 嘗試抓取張數與價差
+    try:
+        real_volume = int(api_data.get('v', base_volume_map.get(stock_code, 20000)))
+    except Exception:
+        real_volume = int(base_volume_map.get(stock_code, 20000))
+
+    try:
+        y_close = float(api_data.get('y', real_price))
+        real_change = real_price - y_close
+    except Exception:
+        real_change = 0.0
+
     data_source_label = "TWSE 證交所官方 API"
 else:
+    # 靜態備援方案 (Fallback)
     real_price = float(base_price_map.get(stock_code, 200.0))
     real_volume = int(base_volume_map.get(stock_code, 20000))
     real_change = 0.0
     data_source_label = "靜態備援對照檔"
-
-try:
-    code_seed = sum(ord(c) for c in stock_code)
-except Exception:
-    code_seed = 9999
-np.random.seed(code_seed)
-
-intent_map = {"極度偏空": -1.5, "偏空": -0.7, "中立": 0.0, "偏多": 0.7, "極度偏多": 1.5}
-intent_val = intent_map[major_buyer_intent]
-
-time_steps = 120
-t = np.linspace(0, 12, time_steps)
-
-mock_price_seq = (np.sin(t) * 0.005 + 1.0) * real_price
-mock_price = np.array([apply_twse_tick_size(p) for p in mock_price_seq], dtype=float)
-mock_price[-1] = float(real_price)
-
-mock_volume = (np.cos(t * 1.5) * 0.1 + 1.0) * real_volume
-mock_volume[-1] = int(real_volume)
-
-mock_count = np.abs(np.gradient(mock_price)) * (real_volume * 0.1) + (real_volume * 0.15)
-
-geo_engine = HyperbolicStateEngine()
-risk_engine = CurvatureRiskEngine()
-
-df_kinematics = geo_engine.compute_kinematics_from_pvcs(mock_price, mock_volume, mock_count)
-df_geo = geo_engine.map_to_poincare_disk(df_kinematics)
-df_res = risk_engine.compute_trajectory_curvature(df_geo)
-
-latest = df_res.iloc[-1]
-
-latest_price = float(real_price)
-price_diff = float(real_change)
-est_volume = int(real_volume)
-
-confidence_score = max(0.60, min(0.99, 1.0 - (noise_level * 0.8)))
-p_score = min(100, max(0, int(50 + (price_diff / latest_price) * 1000)))
-v_score = min(100, max(0, int(50 + (est_volume - base_volume_map.get(stock_code, est_volume)) / (base_volume_map.get(stock_code, est_volume) * 0.02 + 1e-5))))
-c_score = min(100, max(0, int(100 - (latest['Turning_Risk'] * 100))))
-
-if latest_price % 1 == 0:
-    price_display_fmt = f"{int(latest_price):,}"
-else:
-    price_display_fmt = f"{latest_price:,.2f}"
-
-if price_diff % 1 == 0:
-    diff_display_fmt = f"{int(price_diff):+d}"
-else:
-    diff_display_fmt = f"{price_diff:+,.2f}"
 
 # ==========================================
 # 7. 市場行情與 P/V/C 得分卡片
