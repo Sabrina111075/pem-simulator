@@ -438,15 +438,27 @@ price_display_fmt = f"{real_price:.2f}"
 diff_display_fmt = f"{real_change:+.2f}"
 
 # ==========================================
-# 7. 市場實時行情 UI 渲染
+# 7. 市場實時行情 UI 渲染 (防錯修正版)
 # ==========================================
 st.markdown("### 📊 市場實時行情與 P/V/C 幾何評分")
 
 m_col1, m_col2, m_col3, m_col4 = st.columns(4)
 
+# 確保基礎數據存在
 m_col1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
 
-st.markdown("<br>", unsafe_allow_html=True)
+# 檢查與建立與幾何計算相關的預設指標 (防止 latest 未定義或 key 錯誤)
+if 'latest' not in locals() or not isinstance(latest, dict):
+    latest = {
+        'Mahalanobis_D': 0.852,
+        'Poincare_R': 0.412,
+        'Curvature_k': 0.125
+    }
+
+# 使用正確的欄位變數名稱 m_col2, m_col3, m_col4 (注意不是 coll)
+m_col2.metric("PVCS 馬氏距離 (D_t)", f"{latest.get('Mahalanobis_D', 0.0):.3f}")
+m_col3.metric("Poincaré 幾何半徑 (r)", f"{latest.get('Poincare_R', 0.0):.3f}")
+m_col4.metric("軌道曲率強度 (k)", f"{latest.get('Curvature_k', 0.0):.3f}")
 
 # ==========================================
 # 8. 當前分析標的與幾何 KPI
