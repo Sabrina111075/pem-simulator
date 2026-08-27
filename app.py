@@ -397,15 +397,14 @@ st.sidebar.markdown("---")
 st.sidebar.info("📊 **資料來源與運算架構**\n\n結合 TWSE 實時 API 與雙曲流形 (Poincaré Disk) 動態演化模型。")
 
 # ==========================================
-# 6. 數據獲取與幾何運算 (安全解析防崩潰)
+# 6. 數據獲取與幾何運算 (安全解析與顯示格式化)
 # ==========================================
 api_data = fetch_twse_official_data(stock_code)
 
-# 安全檢查：判斷 API 是否有成功取得資料 (檢查 msgArray 或 z/o 欄位)
+# 判斷 API 是否成功回傳資料
 is_api_success = bool(api_data and isinstance(api_data, dict) and ('z' in api_data or 'o' in api_data or 'msgArray' in api_data))
 
 if is_api_success:
-    # 嘗試抓取成交價或開盤價
     try:
         raw_price = api_data.get('z', '-')
         if raw_price == '-' or not raw_price:
@@ -414,7 +413,6 @@ if is_api_success:
     except Exception:
         real_price = float(base_price_map.get(stock_code, 200.0))
 
-    # 嘗試抓取張數與價差
     try:
         real_volume = int(api_data.get('v', base_volume_map.get(stock_code, 20000)))
     except Exception:
@@ -428,33 +426,25 @@ if is_api_success:
 
     data_source_label = "TWSE 證交所官方 API"
 else:
-    # 靜態備援方案 (Fallback)
     real_price = float(base_price_map.get(stock_code, 200.0))
     real_volume = int(base_volume_map.get(stock_code, 20000))
     real_change = 0.0
     data_source_label = "靜態備援對照檔"
 
 # ==========================================
-# 7. 市場行情與 P/V/C 得分卡片
+# 安全建立 UI 格式化顯示變數 (防止 NameError)
 # ==========================================
-st.markdown(
-    f'''
-    <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
-        <span style="font-size: 1.3rem; font-weight: 700; color: #0f172a;">📊 市場實時行情與 P/V/C 幾何評分</span>
-        <span style="font-size: 0.85rem; color: #64748b;">
-            ℹ️行情與收盤成交量已精確同步。
-        </span>
-    </div>
-    ''',
-    unsafe_allow_html=True
-)
+price_display_fmt = f"{real_price:.2f}"
+diff_display_fmt = f"{real_change:+.2f}"
 
-m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
+# ==========================================
+# 7. 市場實時行情 UI 渲染
+# ==========================================
+st.markdown("### 📊 市場實時行情與 P/V/C 幾何評分")
+
+m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+
 m_col1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
-m_col2.metric("最新總成交量", f"{est_volume:,} 張")
-m_col3.metric("指標可信度 (Confidence)", f"{confidence_score:.1%}")
-m_col4.metric("P/V/C 綜合得分", f"{int((p_score + v_score + c_score)/3)} 分")
-m_col5.metric("價量動能分 (P/V)", f"{p_score} / {v_score}")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
