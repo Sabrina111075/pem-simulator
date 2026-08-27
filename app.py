@@ -447,16 +447,6 @@ def get_latest_val(d, keys, default=0.0):
                 return d[k]
     return default
 
-# ==========================================
-# 📊 市場實時行情與 P/V/C 幾何評分 (精簡不重複版)
-# ==========================================
-def get_latest_val(d, keys, default=0.0):
-    if isinstance(d, dict):
-        for k in keys:
-            if k in d:
-                return d[k]
-    return default
-
 # 1. 標題與股票名稱結合
 stock_name = stock_name_map.get(stock_code, '')
 st.markdown(f"### 📊 市場實時行情與 P/V/C 幾何評分（標的：{stock_code} {stock_name}）")
