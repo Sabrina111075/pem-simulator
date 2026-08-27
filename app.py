@@ -164,8 +164,25 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="custom-main-title">🛡️ HyperFlow DMEC 全日台股雙曲流形與數位分身平台</div>', unsafe_allow_html=True)
-st.caption("Micro-DMEC-G 觀察框架：結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincaré 雙曲幾何之個股動態評估面板")
+# ==========================================
+# 🚀 頂部平台主標題 (自適應 100% 寬度防吃字版)
+# ==========================================
+st.markdown("""
+    <div style="width: 100%; max-width: 100%; overflow: hidden;">
+        <h1 style="
+            font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+            font-weight: 800;
+            line-height: 1.25;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.2rem;
+            word-break: keep-all;
+            white-space: normal;
+            color: #1e293b;
+        ">
+            📈 HyperFlow DMEC 全日台股雙曲流形與數位分身平台
+        </h1>
+    </div>
+""", unsafe_allow_html=True)
 
 # 嵌入前端原生 JavaScript 實時讀秒心跳 Banner
 components.html(
