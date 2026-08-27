@@ -678,15 +678,23 @@ fig_wave.update_layout(
 st.plotly_chart(fig_wave, use_container_width=True)
 
 # ==========================================
-# 🎯 個股 PVCS 閉環數位分身診斷與處置建議 (高度一致 + 自適應字體防換行)
+# 🎯 個股 PVCS 閉環數位分身診斷與處置建議 (含下方詳細處置說明框)
 # ==========================================
 st.markdown("### 🎯 個股 PVCS 閉環數位分身診斷與處置建議")
 
-# 假設變數（若原本程式碼已有變數會自動套用）
+# 1. 取得當前動態數據與建議文字
 val_price = price_display_fmt if 'price_display_fmt' in locals() else "69.60"
-state_label = "幾何偏離警示 (Geometric Deviation)"
-risk_label = "中等風險 (Moderate Risk)"
+curr_d = float(d_val) if 'd_val' in locals() else 0.852
 
+# 根據 d_val 動態生成處置建議文字
+if curr_d > 1.2:
+    action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 呈現顯著擴張，顯示價量與籌碼流向發生強烈幾何偏離。建議調降倉位風控門檻，並緊盯轉折風險指標。"
+elif curr_d > 0.8:
+    action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 出現輕微擴張，顯示量價流向出現微幅擾動。建議密切觀察轉折風險指標，維持既有部位。"
+else:
+    action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 處於收斂平穩區間，雙曲幾何流場運作正常。建議按原閉環策略持續持有。"
+
+# 2. 渲染上方 3 欄等高卡片
 col_d1, col_d2, col_d3 = st.columns(3)
 
 with col_d1:
@@ -696,7 +704,7 @@ with col_d1:
             border: 1px solid #bfdbfe;
             border-radius: 12px;
             padding: 18px 15px;
-            height: 120px;
+            height: 110px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -710,13 +718,13 @@ with col_d1:
     """, unsafe_allow_html=True)
 
 with col_d2:
-    st.markdown(f"""
+    st.markdown("""
         <div style="
             background-color: #fefce8;
             border: 1px solid #fef08a;
             border-radius: 12px;
             padding: 18px 15px;
-            height: 120px;
+            height: 110px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -730,13 +738,13 @@ with col_d2:
     """, unsafe_allow_html=True)
 
 with col_d3:
-    st.markdown(f"""
+    st.markdown("""
         <div style="
             background-color: #fef2f2;
             border: 1px solid #fecaca;
             border-radius: 12px;
             padding: 18px 15px;
-            height: 120px;
+            height: 110px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -749,4 +757,22 @@ with col_d3:
         </div>
     """, unsafe_allow_html=True)
 
-st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+# 3. 渲染下方「閉環控制處置建議」標題與詳細說明框
+st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+st.markdown("##### 💡 閉環控制處置建議 (Closed-Loop Action Control)")
+
+st.markdown(f"""
+    <div style="
+        background-color: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 8px;
+        padding: 14px 18px;
+        color: #166534;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-top: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.01);
+    ">
+        {action_msg}
+    </div>
+""", unsafe_allow_html=True)
