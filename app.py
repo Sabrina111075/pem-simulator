@@ -298,20 +298,52 @@ else:
     stock_name = stock_name_map.get(stock_code, "")
     display_stock_name = f"{stock_code} {stock_name}".strip()
 
-# ------------------------------------------
-# 側邊欄：盤前試算自動連動與手動微調
-# ------------------------------------------
-# 假設從 API 抓到的試算價差為 live_calculated_spread
-live_spread = locals().get('auto_spread', 0.0)
+stock_name = stock_name_map.get(stock_code, "")
+display_stock_name = f"{stock_code} {stock_name}".strip()
 
-# 如果是盤前，顯示自動帶入的提示標籤
+# ==========================================
+# A. TWSE 官方 API 實時資料抓取與試算價差解析
+# ==========================================
+import requests
+
+def fetch_twse_official_data(code):
+    try:
+        url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_{code}.tw"
+        res = requests.get(url, timeout=3)
+        data = res.json()
+        if "msgArray" in data and len(data["msgArray"]) > 0:
+            return data["msgArray"][0]
+    except Exception:
+        pass
+    return {}
+
+# 執行抓取
+api_data = fetch_twse_official_data(stock_code)
+
+# 計算盤前 / 盤中價差
+live_calculated_spread = 0.0
+try:
+    y_close = float(api_data.get('y', 0.0))
+    z_price = api_data.get('z', '-')
+    o_price = api_data.get('o', '-')
+
+    if z_price != '-' and z_price != '':
+        live_calculated_spread = float(z_price) - y_close
+    elif o_price != '-' and o_price != '':
+        live_calculated_spread = float(o_price) - y_close
+except Exception:
+    live_calculated_spread = 0.0
+
+# ==========================================
+# B. 側邊欄：盤前試算自動連動與手動微調
+# ==========================================
 st.sidebar.markdown("### 📊 盤前籌碼微調")
 
 # 自動模式開關
 use_live_data = st.sidebar.checkbox("自動同步 TWSE 盤前試算價差", value=True)
 
 if use_live_data:
-    default_spread = float(live_spread)
+    default_spread = float(live_calculated_spread)
     st.sidebar.caption(f"🟢 已即時帶入 TWSE 試算價差：`{default_spread:+.2f}`")
 else:
     default_spread = 0.0
@@ -334,17 +366,10 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("""
 <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 0.78rem; color: #475569; line-height: 1.5;">
     <div style="font-weight: bold; color: #1e293b; margin-bottom: 6px; font-size: 0.82rem;">
-        🌐 資料來源與運算架構
-    </div>
-    • <b>行情數據來源</b>：臺灣證券交易所 (TWSE) 官方 OpenAPI 實時同步<br>
-    • <b>雙曲幾何引擎</b>：Poincaré Disk Metric & Mahalanobis PVCS Field<br>
-    • <b>閉環分身技術</b>：Micro-DMEC-G (Digital Twin Engine)<br>
-    <hr style="margin: 8px 0; border: none; border-top: 1px dashed #cbd5e1;">
-    <div style="color: #94a3b8; font-size: 0.72rem;">
-        ⚠️ <b>免責聲明</b>：本平台僅供學術研究與 PVCS 雙曲幾何演算法決策模擬使用，不構成投資建議。
+        📊 資料來源與運算架構
     </div>
 </div>
-""", unsafe_allow_html=True)
+""", unsafe_allow_ascii=False)
 
 # ==========================================
 # 6. 數據獲取與幾何運算
