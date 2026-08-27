@@ -469,14 +469,15 @@ c4.metric("軌道曲率強度 (k)", f"{float(k_val):.3f}")
 st.markdown("---")
 
 # ==========================================
-# 💡 個股幾何流場狀態動態解析方塊 (補回)
+# 💡 個股幾何流場狀態動態解析方塊 (白色卡片樣式)
 # ==========================================
-st.info(
-    f"💡 **PVCS 幾何流場實時診斷**：\n"
-    f"當前 **{stock_code} {stock_name}** 之馬氏距離 $D_t = {float(d_val):.3f}$，"
-    f"雙曲空間半徑 $r = {float(r_val):.3f}$，軌道曲率強度 $k = {float(k_val):.3f}$。"
-    f"系統已將盤前籌碼微調數據動態注入三維 P/V/C 向量場，請參考下方 Poincaré Disk 圓盤軌跡與轉折風險時序。"
-)
+with st.container(border=True):
+    st.markdown(
+        f"💡 **PVCS 幾何流場實時診斷**：\n\n"
+        f"當前 **{stock_code} {stock_name}** 之馬氏距離 $D_t = {float(d_val):.3f}$，"
+        f"雙曲空間半徑 $r = {float(r_val):.3f}$，軌道曲率強度 $k = {float(k_val):.3f}$。"
+        f"系統已將盤前籌碼微調數據動態注入三維 P/V/C 向量場，請參考下方 Poincaré Disk 圓盤軌跡與轉折風險時序。"
+    )
 
 # ==========================================
 # 9. 圖表區：Poincaré Disk 盤前籌碼預測
