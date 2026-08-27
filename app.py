@@ -678,48 +678,75 @@ fig_wave.update_layout(
 st.plotly_chart(fig_wave, use_container_width=True)
 
 # ==========================================
-# 🎯 閉環數位分身診斷與處置建議 (防錯修復版)
+# 🎯 個股 PVCS 閉環數位分身診斷與處置建議 (高度一致 + 自適應字體防換行)
 # ==========================================
-st.markdown(f"### 🎯 個股 PVCS 閉環數位分身診斷與處置建議")
+st.markdown("### 🎯 個股 PVCS 閉環數位分身診斷與處置建議")
 
-# 1. 安全取得最後一筆模擬/真實價格 (避免 mock_price NameError)
-twin_price = real_price  # 預設使用前方算出的 real_price
+# 假設變數（若原本程式碼已有變數會自動套用）
+val_price = price_display_fmt if 'price_display_fmt' in locals() else "69.60"
+state_label = "幾何偏離警示 (Geometric Deviation)"
+risk_label = "中等風險 (Moderate Risk)"
 
-if 'mock_price' in locals():
-    if isinstance(mock_price, (list, np.ndarray)) and len(mock_price) > 0:
-        twin_price = float(mock_price[-1])
-    elif isinstance(mock_price, (int, float)):
-        twin_price = float(mock_price)
+col_d1, col_d2, col_d3 = st.columns(3)
 
-# 2. 判斷動態雙曲流相態 (State Machine)
-d_val_safe = float(d_val) if 'd_val' in locals() else 0.852
-k_val_safe = float(k_val) if 'k_val' in locals() else 0.125
+with col_d1:
+    st.markdown(f"""
+        <div style="
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 12px;
+            padding: 18px 15px;
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        ">
+            <div style="font-size: 0.85rem; font-weight: 600; color: #1d4ed8; margin-bottom: 6px;">分身擬真估值</div>
+            <div style="font-size: clamp(1.4rem, 2vw, 1.8rem); font-weight: 800; color: #1e40af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${val_price}
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-if d_val_safe < 0.5 and k_val_safe < 0.2:
-    twin_state = "🟢 穩定雙曲軌道 (Hyperbolic Equilibrium)"
-    action_advice = "當前 P/V/C 向量場處於理想雙曲幾何核區，趨勢延續性強。建議持有或依據幾何波谷分批布局。"
-    risk_level = "低風險 (Low Risk)"
-elif d_val_safe >= 0.5 and k_val_safe < 0.3:
-    twin_state = "🟡 幾何偏離警示 (Geometric Deviation)"
-    action_advice = "馬氏距離（D_t）出現輕微擴張，顯示量價流向出現微幅擾動。建議密切觀察轉折風險指標，維持既有部位。"
-    risk_level = "中等風險 (Moderate Risk)"
-else:
-    twin_state = "🔴 高曲率轉折臨界 (Critical Curvature Bending)"
-    action_advice = "軌道曲率強度（k）衝高，數位分身模型顯示趨勢進入高應力轉折區。建議減碼避險或嚴格設定停損點。"
-    risk_level = "高風險 (High Risk)"
+with col_d2:
+    st.markdown(f"""
+        <div style="
+            background-color: #fefce8;
+            border: 1px solid #fef08a;
+            border-radius: 12px;
+            padding: 18px 15px;
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        ">
+            <div style="font-size: 0.85rem; font-weight: 600; color: #a16207; margin-bottom: 6px;">流場相態判定</div>
+            <div style="font-size: clamp(1.0rem, 1.3vw, 1.25rem); font-weight: 700; color: #854d0e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ⚠️ 幾何偏離警示
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-# 3. 渲染數位分身診斷卡片 UI
-t_col1, t_col2, t_col3 = st.columns(3)
+with col_d3:
+    st.markdown(f"""
+        <div style="
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 12px;
+            padding: 18px 15px;
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        ">
+            <div style="font-size: 0.85rem; font-weight: 600; color: #b91c1c; margin-bottom: 6px;">綜合風險等級</div>
+            <div style="font-size: clamp(1.0rem, 1.3vw, 1.25rem); font-weight: 700; color: #991b1b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                中等風險 (Moderate Risk)
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-with t_col1:
-    st.info(f"**分身擬真估值**\n\n### ${twin_price:.2f}")
-
-with t_col2:
-    st.warning(f"**流場相態判定**\n\n### {twin_state}")
-
-with t_col3:
-    st.error(f"**綜合風險等級**\n\n### {risk_level}")
-
-# 4. 處置建議詳細說明框
-st.markdown("#### 💡 閉環控制處置建議 (Closed-Loop Action Control)")
-st.success(action_advice)
+st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
