@@ -491,27 +491,33 @@ with col_c:
 st.markdown("---")
 
 # ==========================================
-# 💡 幾何指標三連方塊卡片 (動態連動數據版)
+# 💡 幾何指標三連方塊卡片 (安全修復 NameError 版)
 # ==========================================
-# 1. 確保最新數據動態讀取 (若有盤前試算價差微調，在此同步更新)
-if 'latest' in locals() and isinstance(latest, dict):
+# 1. 補回輔助取值函式 (避免 NameError)
+def get_latest_val(d, keys, default=0.0):
+    if isinstance(d, dict):
+        for k in keys:
+            if k in d:
+                return d[k]
+    return default
+
+# 2. 若上方的 d_val, r_val, k_val 未定義，在此進行自動安全補補
+if 'd_val' not in locals():
     d_val = get_latest_val(latest, ['Mahalanobis_D', 'mahalanobis_d', 'D_t'], 0.852)
+if 'r_val' not in locals():
     r_val = get_latest_val(latest, ['Poincare_r', 'Poincare_R', 'poincare_r', 'r'], 0.412)
+if 'k_val' not in locals():
     k_val = get_latest_val(latest, ['Curvature_k', 'curvature_k', 'k_intensity'], 0.125)
 
-# 2. 標頭動態顯示
-stock_name = stock_name_map.get(stock_code, '')
+# 3. 渲染診斷卡片
+stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
 st.markdown(f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>（當前標的：:green[{stock_code} {stock_name}]）</span>", unsafe_allow_html=True)
 
-# 3. 渲染動態卡片
 col1, col2, col3 = st.columns(3)
-
 with col1:
     st.metric("馬氏距離 (D_t)", f"{float(d_val):.3f}")
-
 with col2:
     st.metric("雙曲空間半徑 (r)", f"{float(r_val):.3f}")
-
 with col3:
     st.metric("軌道曲率強度 (k)", f"{float(k_val):.3f}")
 
