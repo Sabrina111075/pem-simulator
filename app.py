@@ -484,16 +484,54 @@ st.caption("結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincar�
 stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
 st.markdown(f"### 📊 市場實時行情與 P/V/C 數據（標的：{stock_code} {stock_name}）")
 
-# 2. 安全讀取真實股價與試算價 (修復 0.00 元問題)
-if 'real_price' in locals() and real_price > 0:
+# # 2. 安全讀取真實股價與試算價（支援上市 tse 與上櫃 otc）
+if "real_price" in locals() and real_price > 0:
     price_display_fmt = f"{real_price:.2f}"
-    diff_display_fmt = f"{real_change:+.2f}" if 'real_change' in locals() else "+0.00"
-elif 'price_display_fmt' not in locals():
-    # 備用真實股價資料庫映射
-    base_prices = {"2330": 2415.00, "2317": 252.00, "2603": 226.00}
-    p_val = base_prices.get(stock_code, 100.00)
+    diff_display_fmt = (
+        f"{real_change:+.2f}" if "real_change" in locals() else "+0.00"
+    )
+else:
+    # 當前面沒有 real_price 時，即時向 TWSE / TPEx 查詢
+    import requests
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36"
+        )
+    }
+    p_val = 100.00
+    diff_val = 0.00
+    fetched = False
+
+    # 先查上市 (tse)，若無資料再查上櫃 (otc)
+    for prefix in ["tse", "otc"]:
+        try:
+            url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={prefix}_{stock_code}.tw"
+            res = requests.get(url, headers=headers, timeout=3)
+            msg_list = res.json().get("msgArray", [])
+            if msg_list:
+                info = msg_list[0]
+                # 取得成交價 z，若無成交價則取昨收 y
+                z_price = info.get("z", "-")
+                y_price = float(info.get("y", 0.0))
+                if z_price != "-" and z_price != "":
+                    p_val = float(z_price)
+                    diff_val = p_val - y_price
+                else:
+                    p_val = y_price
+                    diff_val = 0.0
+                fetched = True
+                break
+        except Exception:
+            pass
+
+    # 若抓取失敗，才使用寫死的備用字典
+    if not fetched:
+        base_prices = {"2330": 2415.00, "2317": 252.00, "2603": 226.00}
+        p_val = base_prices.get(stock_code, 100.00)
+
     price_display_fmt = f"{p_val:.2f}"
-    diff_display_fmt = "+5.50"
+    diff_display_fmt = f"{diff_val:+.2f}"
 
 # 3. 安全初始化 latest 變數
 if 'latest' not in locals() or not isinstance(latest, dict):
