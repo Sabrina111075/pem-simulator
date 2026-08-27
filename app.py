@@ -438,9 +438,8 @@ price_display_fmt = f"{real_price:.2f}"
 diff_display_fmt = f"{real_change:+.2f}"
 
 # ==========================================
-# 7. 市場實時行情 UI 渲染 (修正執行順序與防崩版)
+# 7. 市場實時行情 UI 渲染
 # ==========================================
-# 1. 先定義取值函式 (確保呼叫時已存在，避免 NameError)
 def get_latest_val(d, keys, default=0.0):
     if isinstance(d, dict):
         for k in keys:
@@ -452,11 +451,10 @@ st.markdown("### 📊 市場實時行情與 P/V/C 幾何評分")
 
 col1, col2, col3, col4 = st.columns(4)
 
-# 2. 渲染第一張卡片：價格指標
+# 1. 最新收盤/試算價
 col1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
 
-# 3. 安全讀取 latest 字典裡面的幾何指標
-# 確保 latest 變數存在，若未定義則自動給予預設字典
+# 2. 安全讀取幾何指標
 if 'latest' not in locals() or not isinstance(latest, dict):
     latest = {}
 
@@ -464,10 +462,12 @@ d_val = get_latest_val(latest, ['Mahalanobis_D', 'mahalanobis_d', 'D_t'], 0.852)
 r_val = get_latest_val(latest, ['Poincare_r', 'Poincare_R', 'poincare_r', 'r'], 0.412)
 k_val = get_latest_val(latest, ['Curvature_k', 'curvature_k', 'k_intensity'], 0.125)
 
-# 4. 渲染其餘三張卡片
+# 3. 渲染其餘三張卡片
 col2.metric("PVCS 馬氏距離 (D_t)", f"{float(d_val):.3f}")
 col3.metric("雙曲半徑 (Poincaré r)", f"{float(r_val):.3f}")
 col4.metric("軌道曲率強度 (k)", f"{float(k_val):.3f}")
+
+# ⚠️ 請確保這行下方「沒有」任何舊的 coll.metric(...) 或 duplicate code 囉！
 
 # ==========================================
 # 8. 當前分析標的與幾何 KPI
