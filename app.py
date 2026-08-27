@@ -345,11 +345,11 @@ except Exception:
 # ==========================================
 st.sidebar.markdown("### 📊 盤前籌碼微調")
 
-# 加上 key="key_sync_twse_chk" 防止元件重複 ID 衝突
+# 自動模式開關 (帶有唯一 key)
 use_live_data = st.sidebar.checkbox(
     "自動同步 TWSE 盤前試算價差", 
     value=True, 
-    key="key_sync_twse_chk"
+    key="chk_twse_live_sync"
 )
 
 if use_live_data:
@@ -364,7 +364,7 @@ pre_market_spread = st.sidebar.slider(
     max_value=150.0,
     value=float(np.clip(default_spread, -150.0, 150.0)),
     step=0.5,
-    key="sb_spread_slider_main"
+    key="sb_spread_slider"
 )
 
 st.sidebar.markdown("---")
@@ -373,74 +373,7 @@ noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.
 tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05, key="sb_tol_slider")
 
 st.sidebar.markdown("---")
-st.sidebar.info("📊 **資料來源與運算架構**\n\n結合 TWSE 實時 API 與雙曲流行 (Poincaré Disk) 動態演化模型。")
-
-# ==========================================
-# B. 側邊欄：盤前試算自動連動與手動微調
-# ==========================================
-st.sidebar.markdown("### 📊 盤前籌碼微調")
-
-# 自動模式開關
-use_live_data = st.sidebar.checkbox("自動同步 TWSE 盤前試算價差", value=True)
-
-if use_live_data:
-    default_spread = float(live_calculated_spread)
-    st.sidebar.caption(f"🟢 已即時帶入 TWSE 試算價差：`{default_spread:+.2f}`")
-else:
-    default_spread = 0.0
-
-pre_market_spread = st.sidebar.slider(
-    "盤前試撮 / 夜盤價差 (點/%)",
-    min_value=-150.0,
-    max_value=150.0,
-    value=float(np.clip(default_spread, -150.0, 150.0)),
-    step=0.5,
-    key="sb_spread_slider"
-)
-
-st.sidebar.markdown("---")
-st.sidebar.header("⚙️ 幾何與數位分身參數")
-noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.05)
-tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05)
-
-st.sidebar.markdown("---")
-st.sidebar.info("📊 **資料來源與運算架構**\n\n結合 TWSE 實時 API 與雙曲流行 (Poincaré Disk) 動態演化模型。")
-# ==========================================
-# B. 側邊欄：盤前試算自動連動與手動微調
-# ==========================================
-st.sidebar.markdown("### 📊 盤前籌碼微調")
-
-# 自動模式開關
-use_live_data = st.sidebar.checkbox("自動同步 TWSE 盤前試算價差", value=True)
-
-if use_live_data:
-    default_spread = float(live_calculated_spread)
-    st.sidebar.caption(f"🟢 已即時帶入 TWSE 試算價差：`{default_spread:+.2f}`")
-else:
-    default_spread = 0.0
-
-pre_market_spread = st.sidebar.slider(
-    "盤前試撮 / 夜盤價差 (點/%)",
-    min_value=-150.0,
-    max_value=150.0,
-    value=float(np.clip(default_spread, -150.0, 150.0)),
-    step=0.5,
-    key="sb_spread_slider"
-)
-
-st.sidebar.markdown("---")
-st.sidebar.header("⚙️ 幾何與數位分身參數")
-noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.05)
-tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05)
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("""
-<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 0.78rem; color: #475569; line-height: 1.5;">
-    <div style="font-weight: bold; color: #1e293b; margin-bottom: 6px; font-size: 0.82rem;">
-        📊 資料來源與運算架構
-    </div>
-</div>
-""", unsafe_allow_ascii=False)
+st.sidebar.info("📊 **資料來源與運算架構**\n\n結合 TWSE 實時 API 與雙曲流形 (Poincaré Disk) 動態演化模型。")
 
 # ==========================================
 # 6. 數據獲取與幾何運算
