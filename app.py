@@ -37,23 +37,49 @@ def apply_twse_tick_size(price: float) -> float:
         tick = 5.0
     return round(round(price / tick) * tick, 2)
 
-# ------------------------------------------
-# TWSE 盤前試算價與價差自動計算 logic
-# ------------------------------------------
+# ----------------------------------------------------
+# TWSE/TPEx 盤前試算價與價差自動計算 logic
+# ----------------------------------------------------
 def get_twse_premarket_data(stock_id):
-    # 假設已從 TWSE MIS API 取得原始 dict data
-    # url: https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_{stock_id}.tw
-    
-    # 讀取數據範例邏輯：
+    import requests
+
+    headers = {
+        'User-Agent': (
+            'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36'
+            ' (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
+        )
+    }
+
+    # 1. 先嘗試上市 (tse)
+    data = {}
+    url_tse = f'https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_{stock_id}.tw'
+    try:
+        res = requests.get(url_tse, headers=headers, timeout=3)
+        res_json = res.json()
+        msg_list = res_json.get('msgArray', [])
+
+        # 如果上市抓不到資料，嘗試上櫃 (otc)
+        if not msg_list:
+            url_otc = f'https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=otc_{stock_id}.tw'
+            res = requests.get(url_otc, headers=headers, timeout=3)
+            res_json = res.json()
+            msg_list = res_json.get('msgArray', [])
+
+        if msg_list:
+            data = msg_list[0]
+    except Exception as e:
+        print(f'API Fetch Error: {e}')
+
+    # 2. 讀取數據範例邏輯
     # z: 當日成交價, y: 昨日收盤價, o: 試算開盤價/開盤價
     current_price = data.get('z', '-')
     yesterday_close = float(data.get('y', 0.0))
     simulated_open = data.get('o', '-')
-    
+
     auto_spread = 0.0
     is_premarket = False
-    
-    # 判斷是否為盤前時段 (08:30 ~ 08:59) 或成交價尚未產生
+
+    # 3. 判斷是否為盤前時段 (08:30 ~ 08:59) 或成交價尚未產生
     if current_price == '-' or current_price == '':
         if simulated_open != '-' and simulated_open != '':
             sim_price = float(simulated_open)
@@ -63,7 +89,7 @@ def get_twse_premarket_data(stock_id):
     else:
         # 盤中正常成交
         auto_spread = round(float(current_price) - yesterday_close, 2)
-        
+
     return auto_spread, is_premarket
 
 # ==========================================
