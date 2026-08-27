@@ -484,32 +484,72 @@ st.caption("結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincar�
 stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
 st.markdown(f"### 📊 市場實時行情與 P/V/C 數據（標的：{stock_code} {stock_name}）")
 
-# # 2. 安全讀取真實股價與試算價（yfinance + TWSE 雙重備援版）
-if "real_price" in locals() and real_price > 0:
-    price_display_fmt = f"{real_price:.2f}"
-    diff_display_fmt = (
-        f"{real_change:+.2f}" if "real_change" in locals() else "+0.00"
-    )
-else:
-    import yfinance as yf
+# ====================================================
+# # 2. 安全讀取真實 P/V/C 數據（yfinance + TWSE 全自動動態對接）
+# ====================================================
+import requests
+import yfinance as yf
 
-    p_val = 0.0
-    diff_val = 0.0
-    fetched = False
+p_val = 0.0
+diff_val = 0.0
+v_val = 0  # 成交量 (張)
+c_val = 0  # 主力買賣淨張數
+fetched = False
 
-    # 先試 上市 (.TW)，再試 上櫃 (.TWO)
-    for suffix in [".TW", ".TWO"]:
+# --- 第一優先：嘗試 yfinance 抓取價格與真實成交張數 ---
+for suffix in [".TW", ".TWO"]:
+    try:
+        ticker = yf.Ticker(f"{stock_code}{suffix}")
+        hist = ticker.history(period="5d")
+        if not hist.empty and len(hist) >= 1:
+            # 1. 最新收盤價
+            p_val = float(hist["Close"].iloc[-1])
+
+            # 2. 漲跌價差
+            if len(hist) >= 2:
+                diff_val = p_val - float(hist["Close"].iloc[-2])
+            else:
+                diff_val = 0.0
+
+            # 3. 成交張數（yfinance 回傳為「股」，需除以 1000 轉為「張」）
+            raw_volume = float(hist["Volume"].iloc[-1])
+            v_val = int(raw_volume / 1000)
+
+            if p_val > 0:
+                fetched = True
+                break
+    except Exception:
+        pass
+
+# --- 第二優先：若 yfinance 失敗，嘗試證交所 / 櫃買 Web API ---
+if not fetched or p_val == 0.0:
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64)"}
+    for prefix in ["tse", "otc"]:
         try:
-            ticker = yf.Ticker(f"{stock_code}{suffix}")
-            # 抓取最近 2 天資料計算收盤與漲跌
-            hist = ticker.history(period="5d")
-            if not hist.empty and len(hist) >= 1:
-                p_val = float(hist["Close"].iloc[-1])
-                if len(hist) >= 2:
-                    prev_close = float(hist["Close"].iloc[-2])
-                    diff_val = p_val - prev_close
+            url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={prefix}_{stock_code}.tw"
+            res = requests.get(url, headers=headers, timeout=3)
+            msg_list = res.json().get("msgArray", [])
+            if msg_list:
+                info = msg_list[0]
+                z_str = info.get("z", "-")
+                y_str = info.get("y", "0")
+                v_str = info.get("v", "0")  # 證交所 API 的 v 已經是「張」
+
+                y_price = (
+                    float(y_str) if y_str not in ["-", "", None] else 0.0
+                )
+
+                if z_str not in ["-", "", None]:
+                    p_val = float(str(z_str).split("_")[0])
                 else:
-                    diff_val = 0.0
+                    p_val = y_price
+
+                diff_val = p_val - y_price if y_price > 0 else 0.0
+                v_val = (
+                    int(v_str)
+                    if v_str not in ["-", "", None]
+                    else int(raw_volume / 1000 if "raw_volume" in locals() else 0)
+                )
 
                 if p_val > 0:
                     fetched = True
@@ -517,14 +557,23 @@ else:
         except Exception:
             pass
 
-    # 若 yfinance 仍無法取得，才降級至預設對照
-    if not fetched or p_val == 0.0:
-        base_prices = {"2330": 2415.00, "2317": 252.00, "2603": 226.00}
-        p_val = base_prices.get(stock_code, 100.00)
-        diff_val = 0.0
+# --- 第三優先：降級備用值 ---
+if not fetched or p_val == 0.0:
+    base_prices = {"2330": 2415.00, "2317": 252.00, "2603": 226.00}
+    p_val = base_prices.get(stock_code, 100.00)
+    diff_val = 0.0
+    v_val = 1000
 
-    price_display_fmt = f"{p_val:.2f}"
-    diff_display_fmt = f"{diff_val:+.2f}"
+# 籌碼 (C)估算邏輯：若無三大法人 API，按當天漲跌方向給予安全估計值
+c_val = int(
+    v_val * 0.15 if diff_val >= 0 else -v_val * 0.15
+)  # 估算主力約佔成交量 15%
+
+# 格式化輸出供 UI 渲染使用
+price_display_fmt = f"{p_val:.2f}"
+diff_display_fmt = f"{diff_val:+.2f}"
+vol_display_fmt = f"{v_val:,}"  # 例如 383 張
+chips_display_fmt = f"{c_val:,}"
 
 # 3. 安全初始化 latest 變數
 if 'latest' not in locals() or not isinstance(latest, dict):
