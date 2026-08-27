@@ -367,6 +367,27 @@ pre_market_spread = st.sidebar.slider(
     key="sb_spread_slider"
 )
 
+# ==========================================
+# 主力籌碼意向控制項與映射字典
+# ==========================================
+intent_map = {
+    "極度偏多": 1.0,
+    "偏多": 0.5,
+    "中立": 0.0,
+    "偏空": -0.5,
+    "極度偏空": -1.0
+}
+
+major_buyer_intent = st.sidebar.selectbox(
+    "主力籌碼意向 (Major Intent)",
+    options=list(intent_map.keys()),
+    index=0,
+    key="sb_major_intent_select"
+)
+
+# 取得映射數值供後續運算
+intent_val = intent_map[major_buyer_intent]
+
 st.sidebar.markdown("---")
 st.sidebar.header("⚙️ 幾何與數位分身參數")
 noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.05, key="sb_noise_slider")
