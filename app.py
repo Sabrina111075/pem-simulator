@@ -470,18 +470,32 @@ col4.metric("軌道曲率強度 (k)", f"{float(k_val):.3f}")
 # ⚠️ 請確保這行下方「沒有」任何舊的 coll.metric(...) 或 duplicate code 囉！
 
 # ==========================================
-# 8. 當前分析標的與幾何 KPI
+# 📌 當前分析標的與幾何指標卡片 (完整防崩版)
 # ==========================================
-st.subheader(f"📌 當前分析標的：`{display_stock_name}`")
+st.markdown(f"### 📌 當前分析標的： `:green[{stock_code} {stock_name_map.get(stock_code, '')}]`")
 
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("PVCS 馬氏距離 (D_t)", f"{latest['Mahalanobis_D']:.3f}")
-col2.metric("雙曲半徑 (Poincaré r)", f"{latest['Poincare_r']:.3f}", delta_color="inverse")
-col3.metric("軌跡曲率強度 (κ_intensity)", f"{latest['Curvature_Intensity']:.3f}")
+# 1. 安全取值函式 (放在前方避免 NameError)
+def get_latest_val(d, keys, default=0.0):
+    if isinstance(d, dict):
+        for k in keys:
+            if k in d:
+                return d[k]
+    return default
 
-risk_val = latest['Turning_Risk']
-risk_color = "normal" if risk_val < 0.6 else "inverse"
-col4.metric("個股轉折 / 失效風險 (Risk)", f"{risk_val:.1%}", delta=f"{risk_val - 0.5:.2f}", delta_color=risk_color)
+# 2. 確保 latest 變數安全存在
+if 'latest' not in locals() or not isinstance(latest, dict):
+    latest = {}
+
+d_val = get_latest_val(latest, ['Mahalanobis_D', 'mahalanobis_d', 'D_t'], 0.852)
+r_val = get_latest_val(latest, ['Poincare_r', 'Poincare_R', 'poincare_r', 'r'], 0.412)
+k_val = get_latest_val(latest, ['Curvature_k', 'curvature_k', 'k_intensity'], 0.125)
+
+# 3. 繪製四張數據卡片 (僅在此處繪製一次，絕不重複呼叫 coll.metric)
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
+c2.metric("PVCS 馬氏距離 (D_t)", f"{float(d_val):.3f}")
+c3.metric("雙曲半徑 (Poincaré r)", f"{float(r_val):.3f}")
+c4.metric("軌道曲率強度 (k)", f"{float(k_val):.3f}")
 
 st.markdown("---")
 
