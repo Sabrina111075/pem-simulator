@@ -484,14 +484,13 @@ st.caption("結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincar�
 stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
 st.markdown(f"### 📊 市場實時行情與 P/V/C 數據（標的：{stock_code} {stock_name}）")
 
-# # 2. 安全讀取真實股價與試算價（支援上市 tse 與上櫃 otc）
+# # 2. 安全讀取真實股價與試算價（完整防呆升級版）
 if "real_price" in locals() and real_price > 0:
     price_display_fmt = f"{real_price:.2f}"
     diff_display_fmt = (
         f"{real_change:+.2f}" if "real_change" in locals() else "+0.00"
     )
 else:
-    # 當前面沒有 real_price 時，即時向 TWSE / TPEx 查詢
     import requests
 
     headers = {
@@ -499,37 +498,59 @@ else:
             "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36"
         )
     }
-    p_val = 100.00
-    diff_val = 0.00
+    p_val = 0.0
+    diff_val = 0.0
     fetched = False
 
-    # 先查上市 (tse)，若無資料再查上櫃 (otc)
+    # 依次嘗試 上市 (tse) 與 上櫃 (otc)
     for prefix in ["tse", "otc"]:
         try:
             url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={prefix}_{stock_code}.tw"
             res = requests.get(url, headers=headers, timeout=3)
             msg_list = res.json().get("msgArray", [])
-            if msg_list:
+
+            if msg_list and len(msg_list) > 0:
                 info = msg_list[0]
-                # 取得成交價 z，若無成交價則取昨收 y
-                z_price = info.get("z", "-")
-                y_price = float(info.get("y", 0.0))
-                if z_price != "-" and z_price != "":
-                    p_val = float(z_price)
-                    diff_val = p_val - y_price
+
+                # 拿取昨收價 y
+                y_str = info.get("y", "0")
+                y_price = (
+                    float(y_str)
+                    if y_str not in ["-", "", None]
+                    else 0.0
+                )
+
+                # 依序尋找可用價格：z (當日成交) -> a (最佳委買) -> b (最佳委賣) -> y (昨日收盤)
+                target_p_str = "-"
+                for key in ["z", "a", "b"]:
+                    val = info.get(key, "-")
+                    if val not in ["-", "", None]:
+                        # 取出多個價格中的第一個（例如委買價可能是一串數字）
+                        target_p_str = str(val).split("_")[0]
+                        break
+
+                if target_p_str != "-":
+                    p_val = float(target_p_str)
                 else:
-                    p_val = y_price
-                    diff_val = 0.0
-                fetched = True
-                break
-        except Exception:
+                    p_val = y_price  # 若盤後完全無成交，以昨日收盤價替代
+
+                # 計算價差
+                diff_val = p_val - y_price if y_price > 0 else 0.0
+
+                if p_val > 0:
+                    fetched = True
+                    break  # 成功抓到資料，跳出迴圈
+        except Exception as e:
             pass
 
-    # 若抓取失敗，才使用寫死的備用字典
-    if not fetched:
+    # 若抓取還是失敗或數值仍為 0，才使用備用值
+    if not fetched or p_val == 0.0:
         base_prices = {"2330": 2415.00, "2317": 252.00, "2603": 226.00}
         p_val = base_prices.get(stock_code, 100.00)
+        diff_val = 0.0
 
+    price_display_fmt = f"{p_val:.2f}"
+    diff_display_fmt = f"{diff_val:+.2f}"
     price_display_fmt = f"{p_val:.2f}"
     diff_display_fmt = f"{diff_val:+.2f}"
 
