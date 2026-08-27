@@ -469,26 +469,31 @@ c4.metric("軌道曲率強度 (k)", f"{float(k_val):.3f}")
 st.markdown("---")
 
 # ==========================================
-# 💡 個股幾何流場狀態動態解析方塊 (純白卡片 CSS 版)
+# 💡 個股幾何流場狀態動態解析方塊 (完全對齊 Streamlit 卡片風格)
 # ==========================================
 st.markdown(
     f"""
     <div style="
-        background-color: #ffffff;
+        background-color: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
         padding: 16px 20px;
         margin-top: 10px;
         margin-bottom: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        color: #1e293b;
-        font-size: 15px;
-        line-height: 1.6;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     ">
-        <span style="font-size: 18px;">💡</span> <b>PVCS 幾何流場實時診斷</b>：<br>
-        當前 <b>{stock_code} {stock_name}</b> 之馬氏距離 <i>D<sub>t</sub></i> = <b>{float(d_val):.3f}</b>，
-        雙曲空間半徑 <i>r</i> = <b>{float(r_val):.3f}</b>，軌道曲率強度 <i>k</i> = <b>{float(k_val):.3f}</b>。<br>
-        <span style="color: #64748b; font-size: 14px;">系統已將盤前籌碼微調數據動態注入三維 P/V/C 向量場，請參考下方 Poincaré Disk 圓盤軌跡與轉折風險時序。</span>
+        <div style="font-size: 13px; color: #64748b; font-weight: 600; margin-bottom: 6px;">
+            💡 PVCS 幾何流場實時診斷
+        </div>
+        <div style="font-size: 15px; color: #1e293b; line-height: 1.6;">
+            當前 <b style="color: #0f172a;">{stock_code} {stock_name}</b> 之馬氏距離 <i>D<sub>t</sub></i> = <b style="color: #0284c7;">{float(d_val):.3f}</b>，
+            雙曲空間半徑 <i>r</i> = <b style="color: #0284c7;">{float(r_val):.3f}</b>，
+            軌道曲率強度 <i>k</i> = <b style="color: #0284c7;">{float(k_val):.3f}</b>。
+        </div>
+        <div style="font-size: 13px; color: #94a3b8; margin-top: 6px;">
+            系統已將盤前籌碼微調數據動態注入三維 P/V/C 向量場，請參考下方 Poincaré Disk 圓盤軌跡與轉折風險時序。
+        </div>
     </div>
     """,
     unsafe_allow_html=True
