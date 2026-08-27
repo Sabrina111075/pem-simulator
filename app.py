@@ -438,7 +438,7 @@ price_display_fmt = f"{real_price:.2f}"
 diff_display_fmt = f"{real_change:+.2f}"
 
 # ==========================================
-# 7. 市場實時行情 UI 渲染
+# 7. 市場實時行情 UI 渲染 (唯一渲染區塊)
 # ==========================================
 def get_latest_val(d, keys, default=0.0):
     if isinstance(d, dict):
@@ -447,7 +447,7 @@ def get_latest_val(d, keys, default=0.0):
                 return d[k]
     return default
 
-# 1. 標題與股票名稱結合
+# 1. 結合標題與當前分析標的
 stock_name = stock_name_map.get(stock_code, '')
 st.markdown(f"### 📊 市場實時行情與 P/V/C 幾何評分（標的：{stock_code} {stock_name}）")
 
@@ -459,7 +459,7 @@ d_val = get_latest_val(latest, ['Mahalanobis_D', 'mahalanobis_d', 'D_t'], 0.852)
 r_val = get_latest_val(latest, ['Poincare_r', 'Poincare_R', 'poincare_r', 'r'], 0.412)
 k_val = get_latest_val(latest, ['Curvature_k', 'curvature_k', 'k_intensity'], 0.125)
 
-# 3. 繪製單一組卡片 (僅渲染一次)
+# 3. 繪製單一組卡片 (全程式僅在此處渲染一次)
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
 c2.metric("PVCS 馬氏距離 (D_t)", f"{float(d_val):.3f}")
