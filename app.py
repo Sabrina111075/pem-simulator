@@ -438,27 +438,31 @@ price_display_fmt = f"{real_price:.2f}"
 diff_display_fmt = f"{real_change:+.2f}"
 
 # ==========================================
-# 7. 市場實時行情 UI 渲染 (防錯修正版)
+# 7. 市場實時行情 UI 渲染 (大寫/小寫 Key 相容防崩版)
 # ==========================================
 st.markdown("### 📊 市場實時行情與 P/V/C 幾何評分")
 
-m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+col1, col2, col3, col4 = st.columns(4)
 
-# 確保基礎數據存在
-m_col1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
+# 1. 價格指標
+col1.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
 
-# 檢查與建立與幾何計算相關的預設指標 (防止 latest 未定義或 key 錯誤)
-if 'latest' not in locals() or not isinstance(latest, dict):
-    latest = {
-        'Mahalanobis_D': 0.852,
-        'Poincare_R': 0.412,
-        'Curvature_k': 0.125
-    }
+# 2. 安全讀取 latest 字典裡面的數值 (不論大寫、小寫或缺失皆不會崩潰)
+def get_latest_val(d, keys, default=0.0):
+    if isinstance(d, dict):
+        for k in keys:
+            if k in d:
+                return d[k]
+    return default
 
-# 使用正確的欄位變數名稱 m_col2, m_col3, m_col4 (注意不是 coll)
-m_col2.metric("PVCS 馬氏距離 (D_t)", f"{latest.get('Mahalanobis_D', 0.0):.3f}")
-m_col3.metric("Poincaré 幾何半徑 (r)", f"{latest.get('Poincare_R', 0.0):.3f}")
-m_col4.metric("軌道曲率強度 (k)", f"{latest.get('Curvature_k', 0.0):.3f}")
+d_val = get_latest_val(latest, ['Mahalanobis_D', 'mahalanobis_d', 'D_t'], 0.852)
+r_val = get_latest_val(latest, ['Poincare_r', 'Poincare_R', 'poincare_r', 'r'], 0.412)
+k_val = get_latest_val(latest, ['Curvature_k', 'curvature_k', 'k_intensity'], 0.125)
+
+# 3. 渲染其餘三張卡片
+col2.metric("PVCS 馬氏距離 (D_t)", f"{float(d_val):.3f}")
+col3.metric("雙曲半徑 (Poincaré r)", f"{float(r_val):.3f}")
+col4.metric("軌道曲率強度 (k)", f"{float(k_val):.3f}")
 
 # ==========================================
 # 8. 當前分析標的與幾何 KPI
