@@ -469,47 +469,20 @@ c4.metric("軌道曲率強度 (k)", f"{float(k_val):.3f}")
 st.markdown("---")
 
 # ==========================================
-# 💡 幾何指標三連方塊卡片 (樣式完全對齊上方卡片)
+# 💡 幾何指標三連方塊卡片 (採用 Streamlit 原生 metric 確保顏色質感一致)
 # ==========================================
-st.markdown("##### 💡 PVCS 幾何流場實時診斷卡片")
+st.markdown(f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>（當前標的：:green[{stock_code} {stock_name}]）</span>", unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.markdown(
-        f"""
-        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-            <div style="font-size: 13px; color: #64748b; font-weight: 500;">馬氏距離 (D_t)</div>
-            <div style="font-size: 28px; color: #0f172a; font-weight: 700; margin: 4px 0;">{float(d_val):.3f}</div>
-            <div style="font-size: 12px; color: #64748b;">當前標的：{stock_code} {stock_name}</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.metric("馬氏距離 (D_t)", f"{float(d_val):.3f}")
 
 with col2:
-    st.markdown(
-        f"""
-        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-            <div style="font-size: 13px; color: #64748b; font-weight: 500;">雙曲空間半徑 (r)</div>
-            <div style="font-size: 28px; color: #0f172a; font-weight: 700; margin: 4px 0;">{float(r_val):.3f}</div>
-            <div style="font-size: 12px; color: #64748b;">Poincaré 幾何對應值</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.metric("雙曲空間半徑 (r)", f"{float(r_val):.3f}")
 
 with col3:
-    st.markdown(
-        f"""
-        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-            <div style="font-size: 13px; color: #64748b; font-weight: 500;">軌道曲率強度 (k)</div>
-            <div style="font-size: 28px; color: #0f172a; font-weight: 700; margin: 4px 0;">{float(k_val):.3f}</div>
-            <div style="font-size: 12px; color: #64748b;">P/V/C 向量場轉折強度</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.metric("軌道曲率強度 (k)", f"{float(k_val):.3f}")
 
 st.caption("※ 系統已將盤前籌碼微調數據動態注入三維 P/V/C 向量場，請參考下方圓盤軌跡與轉折風險時序。")
 
