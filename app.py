@@ -623,14 +623,19 @@ vol_val = latest.get('Volume', 10000 + (seed_num % 50000))
 churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 
 # --- 6. 渲染頂部 4 欄即時 P/V/C/F 數據卡片 ---
+st.markdown(f"### 📊 市場實時行情與 P/V/C 數據（標的：{selected_stock}）")
 
-# --- 請確認您系統中字典 key 的大小寫與名稱 ---
-price = latest.get('Price', latest.get('price', latest.get('Close', 0.0)))
-volume_v = latest.get('Volume', latest.get('volume', latest.get('Vol', 0)))
-net_shares_c = latest.get('Net_C', latest.get('net_c', latest.get('Net_Shares', 0)))
+# 1. 自動向下尋找您系統中現有的 P, V, C 變數/字典
+# （透過多重備援提取，確保抓到原本畫面顯示的真實數值）
+try:
+    p_val = price if 'price' in locals() else (latest['Price'] if 'latest' in locals() and 'Price' in latest else 0.0)
+    v_val = volume_v if 'volume_v' in locals() else (latest['Volume'] if 'latest' in locals() and 'Volume' in latest else 0)
+    c_val = net_shares_c if 'net_shares_c' in locals() else (latest['Net_C'] if 'latest' in locals() and 'Net_C' in latest else 0)
+except Exception:
+    p_val, v_val, c_val = 0.0, 0, 0
 
 # 2. 計算主力籌碼淨資金金額 (以 億元 為單位)
-capital_flow_raw = net_shares_c * price * 1000
+capital_flow_raw = c_val * p_val * 1000
 capital_flow_yi = capital_flow_raw / 1e8
 
 # 3. 動態判斷資金狀態與標示顏色
@@ -648,13 +653,13 @@ else:
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.metric(label="最新收盤/試算價", value=f"{price:.2f} 元")
+    st.metric(label="最新收盤/試算價", value=f"{p_val:.2f} 元")
 
 with col2:
-    st.metric(label="當前成交量 (V)", value=f"{volume_v:,} 張")
+    st.metric(label="當前成交量 (V)", value=f"{v_val:,} 張")
 
 with col3:
-    st.metric(label="主力買賣淨張數 (C)", value=f"{net_shares_c:,} 張")
+    st.metric(label="主力買賣淨張數 (C)", value=f"{c_val:,} 張")
 
 with col4:
     st.metric(
