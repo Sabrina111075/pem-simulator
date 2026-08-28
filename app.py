@@ -622,13 +622,18 @@ else:
 vol_val = latest.get('Volume', 10000 + (seed_num % 50000))
 churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 
-# 6. 渲染頂部 3 欄實時 P/V/C 數據卡片
-# --- 新程式碼 (擴充為 4 欄，加入主力資金 F) ---
-st.markdown("### 📊 市場實時行情與 P/V/C 數據（標的：2454 聯發科）")
+# --- 6. 渲染頂部 4 欄即時 P/V/C/F 數據卡片 ---
+st.markdown(f"### 📊 市場實時行情與 P/V/C 數據（標的：{selected_stock}）")
+
+# 【關鍵】先從您系統的 API 或 Dictionary 取得當前真實數值
+# （請確保這三行變數有順利取到值，若變數名不同請對應修改）
+price = price  # 或從您的即時資料字典取得，如 latest.get('Price', 0)
+volume_v = volume_v  # 如 latest.get('Volume', 0)
+net_shares_c = net_shares_c  # 如 latest.get('Net_C', 0)
 
 # 1. 計算主力籌碼淨資金金額 (以 億元 為單位)
-capital_flow_raw = net_shares_c * price * 1000  # 張數 * 股價 * 1000股
-capital_flow_yi = capital_flow_raw / 1e8         # 換算為億元
+capital_flow_raw = net_shares_c * price * 1000
+capital_flow_yi = capital_flow_raw / 1e8
 
 # 2. 動態判斷資金狀態與標示顏色
 if capital_flow_yi > 0.5:
@@ -641,7 +646,7 @@ else:
     status_str = "► 中性籌碼輪動"
     delta_color = "off"
 
-# 3. 改為 4 欄位佈局
+# 3. 佈局 4 欄
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
@@ -653,7 +658,6 @@ with col2:
 with col3:
     st.metric(label="主力買賣淨張數 (C)", value=f"{net_shares_c:,} 張")
 
-# 4. 新增第 4 欄：主力籌碼資金淨流向
 with col4:
     st.metric(
         label="主力籌碼淨資金 (F)", 
