@@ -623,12 +623,11 @@ vol_val = latest.get('Volume', 10000 + (seed_num % 50000))
 churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 
 # --- 6. 渲染頂部 4 欄即時 P/V/C/F 數據卡片 ---
-st.markdown(f"### 📊 市場實時行情與 P/V/C 數據（標的：{selected_stock}）")
 
-# 1. 直接從 latest 字典安全提取即時數據
-price = latest.get('Price', 0.0)
-volume_v = latest.get('Volume', 0)
-net_shares_c = latest.get('Net_C', 0) if 'Net_C' in latest else latest.get('Net_Shares', 0)
+# --- 請確認您系統中字典 key 的大小寫與名稱 ---
+price = latest.get('Price', latest.get('price', latest.get('Close', 0.0)))
+volume_v = latest.get('Volume', latest.get('volume', latest.get('Vol', 0)))
+net_shares_c = latest.get('Net_C', latest.get('net_c', latest.get('Net_Shares', 0)))
 
 # 2. 計算主力籌碼淨資金金額 (以 億元 為單位)
 capital_flow_raw = net_shares_c * price * 1000
