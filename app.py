@@ -625,17 +625,16 @@ churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 # --- 6. 渲染頂部 4 欄即時 P/V/C/F 數據卡片 ---
 st.markdown(f"### 📊 市場實時行情與 P/V/C 數據（標的：{selected_stock}）")
 
-# 【關鍵】先從您系統的 API 或 Dictionary 取得當前真實數值
-# （請確保這三行變數有順利取到值，若變數名不同請對應修改）
-price = price  # 或從您的即時資料字典取得，如 latest.get('Price', 0)
-volume_v = volume_v  # 如 latest.get('Volume', 0)
-net_shares_c = net_shares_c  # 如 latest.get('Net_C', 0)
+# 1. 直接從 latest 字典安全提取即時數據
+price = latest.get('Price', 0.0)
+volume_v = latest.get('Volume', 0)
+net_shares_c = latest.get('Net_C', 0) if 'Net_C' in latest else latest.get('Net_Shares', 0)
 
-# 1. 計算主力籌碼淨資金金額 (以 億元 為單位)
+# 2. 計算主力籌碼淨資金金額 (以 億元 為單位)
 capital_flow_raw = net_shares_c * price * 1000
 capital_flow_yi = capital_flow_raw / 1e8
 
-# 2. 動態判斷資金狀態與標示顏色
+# 3. 動態判斷資金狀態與標示顏色
 if capital_flow_yi > 0.5:
     status_str = "▲ 強勢流入 (Risk-on)"
     delta_color = "normal"
@@ -646,7 +645,7 @@ else:
     status_str = "► 中性籌碼輪動"
     delta_color = "off"
 
-# 3. 佈局 4 欄
+# 4. 佈局 4 欄位卡片
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
