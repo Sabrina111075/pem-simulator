@@ -622,12 +622,11 @@ else:
 vol_val = latest.get('Volume', 10000 + (seed_num % 50000))
 churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 
-# 6. 渲染頂部 4 欄實時 P/V/C/F 數據卡片
-# --- 新程式碼 (擴充為 4 欄，加入主力資金 F) ---
-col1, col2, col3, col4 = st.columns(4)
+# 6. 渲染頂部 5 欄實時 P/V/C/F/S 數據卡片 (含主力籌碼飽和度)
+# --- 擴充為 5 欄位 ---
+col1, col2, col3, col4, col5 = st.columns(5)
 
-# 1. 計算主力籌碼淨資金金額 (以 億元 為單位)
-# 安全取得浮點數價格 (若 price_display_fmt 是字串則嘗試轉為 float，否則備用最新價格)
+# 1. 安全提取價格與主力籌碼數據
 try:
     p_num = float(str(price_display_fmt).replace(',', ''))
 except (ValueError, NameError):
@@ -635,10 +634,11 @@ except (ValueError, NameError):
 
 c_num = c_val if 'c_val' in locals() else (churn_val if 'churn_val' in locals() else 0)
 
+# 計算主力資金 (億元)
 capital_flow_raw = c_num * p_num * 1000
 capital_flow_yi = capital_flow_raw / 1e8
 
-# 2. 動態判斷資金狀態與標示顏色
+# 2. 動態判斷主力資金 (F) 狀態與顏色
 if capital_flow_yi > 0.5:
     status_str = "▲ 強勢流入 (Risk-on)"
     delta_color = "normal"
@@ -649,7 +649,33 @@ else:
     status_str = "► 中性籌碼輪動"
     delta_color = "off"
 
-# 3. 渲染 4 欄數據卡片
+# 3. 計算「主力籌碼飽和度 (S)」邏輯
+# 從 latest 提取累積買賣超對比最大通道容量，或進行動態比率估算
+saturability_pct = latest.get('Major_Saturability', latest.get('sat_pct', None)) if 'latest' in locals() and isinstance(latest, dict) else None
+
+if saturability_pct is None:
+    # 預設保護：若無歷史通道基準，以當前淨張數相對於常規單日飽和臨界值 (例如 5,000 張) 進行推估
+    base_limit = 5000.0
+    saturability_pct = min(max((c_num / base_limit) * 100, -100.0), 100.0)
+
+# 根據飽和度數值進行幾何診斷與警示標籤
+if saturability_pct >= 80.0:
+    sat_status = "⚠️ 極度飽和 (防高檔倒貨)"
+    sat_delta_color = "inverse"
+elif saturability_pct <= -80.0:
+    sat_status = "🛡️ 賣壓枯竭 (底部醞釀)"
+    sat_delta_color = "normal"
+elif saturability_pct > 20.0:
+    sat_status = "📈 籌碼吸納中"
+    sat_delta_color = "normal"
+elif saturability_pct < -20.0:
+    sat_status = "📉 籌碼派發中"
+    sat_delta_color = "inverse"
+else:
+    sat_status = "⚖️ 籌碼平衡均衡"
+    sat_delta_color = "off"
+
+# 4. 渲染 5 欄數據卡片
 with col1:
     st.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
 
@@ -665,6 +691,14 @@ with col4:
         value=f"{capital_flow_yi:+.2f} 億元", 
         delta=status_str,
         delta_color=delta_color
+    )
+
+with col5:
+    st.metric(
+        label="主力籌碼飽和度 (S)", 
+        value=f"{saturability_pct:+.1f} %", 
+        delta=sat_status,
+        delta_color=sat_delta_color
     )
 
 # ==========================================
