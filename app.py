@@ -623,19 +623,44 @@ vol_val = latest.get('Volume', 10000 + (seed_num % 50000))
 churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 
 # 6. 渲染頂部 3 欄實時 P/V/C 數據卡片
-# ✅ 修正後的變數綁定：
-col1, col2, col3 = st.columns(3)
+# --- 新程式碼 (擴充為 4 欄，加入主力資金 F) ---
+st.markdown("### 📊 市場實時行情與 P/V/C 數據（標的：2454 聯發科）")
+
+# 1. 計算主力籌碼淨資金金額 (以 億元 為單位)
+capital_flow_raw = net_shares_c * price * 1000  # 張數 * 股價 * 1000股
+capital_flow_yi = capital_flow_raw / 1e8         # 換算為億元
+
+# 2. 動態判斷資金狀態與標示顏色
+if capital_flow_yi > 0.5:
+    status_str = "▲ 強勢流入 (Risk-on)"
+    delta_color = "normal"
+elif capital_flow_yi < -0.5:
+    status_str = "▼ 強勢流出 (Risk-off)"
+    delta_color = "inverse"
+else:
+    status_str = "► 中性籌碼輪動"
+    delta_color = "off"
+
+# 3. 改為 4 欄位佈局
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
+    st.metric(label="最新收盤/試算價", value=f"{price:.2f} 元")
 
 with col2:
-    # 確保傳入的是 v_val (或是 vol_display_fmt)
-    st.metric("當前成交量 (V)", f"{v_val:,} 張") 
+    st.metric(label="當前成交量 (V)", value=f"{volume_v:,} 張")
 
 with col3:
-    # 確保傳入的是 c_val (或是 chips_display_fmt)
-    st.metric("主力買賣淨張數 (C)", f"{c_val:,} 張")
+    st.metric(label="主力買賣淨張數 (C)", value=f"{net_shares_c:,} 張")
+
+# 4. 新增第 4 欄：主力籌碼資金淨流向
+with col4:
+    st.metric(
+        label="主力籌碼淨資金 (F)", 
+        value=f"{capital_flow_yi:+.2f} 億元", 
+        delta=status_str,
+        delta_color=delta_color
+    )
 
 # ==========================================
 # 💡 幾何指標三連方塊卡片 (安全修復 NameError 版)
