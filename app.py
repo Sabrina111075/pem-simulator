@@ -478,7 +478,7 @@ if is_api_success:
             pass
         
         if real_volume == 0:
-            real_volume = int(base_volume_map.get(stock_code, 1000))
+            real_volume = int(base_volume_map.get(stock_code, 12000))
 
     # --- 原本計算 y_close 區塊 (同樣 4 個空格縮排) ---
     try:
