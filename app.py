@@ -622,21 +622,23 @@ else:
 vol_val = latest.get('Volume', 10000 + (seed_num % 50000))
 churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 
-# --- 6. 渲染頂部 4 欄即時 P/V/C/F 數據卡片 ---
+# 6. 渲染頂部 4 欄實時 P/V/C/F 數據卡片
+# --- 新程式碼 (擴充為 4 欄，加入主力資金 F) ---
+col1, col2, col3, col4 = st.columns(4)
 
-# 1. 從即時字典 latest 安全提取 P, V, C 數值
-if 'latest' in locals() and isinstance(latest, dict):
-    p_val = latest.get('Price', latest.get('price', latest.get('Close', 0.0)))
-    v_val = latest.get('Volume', latest.get('volume', 0))
-    c_val = latest.get('Net_C', latest.get('net_c', latest.get('Net_Shares', 0)))
-else:
-    p_val, v_val, c_val = 0.0, 0, 0
+# 1. 計算主力籌碼淨資金金額 (以 億元 為單位)
+# 安全取得浮點數價格 (若 price_display_fmt 是字串則嘗試轉為 float，否則備用最新價格)
+try:
+    p_num = float(str(price_display_fmt).replace(',', ''))
+except (ValueError, NameError):
+    p_num = 0.0
 
-# 2. 計算主力籌碼淨資金金額 (以 億元 為單位)
-capital_flow_raw = c_val * p_val * 1000
+c_num = c_val if 'c_val' in locals() else (churn_val if 'churn_val' in locals() else 0)
+
+capital_flow_raw = c_num * p_num * 1000
 capital_flow_yi = capital_flow_raw / 1e8
 
-# 3. 動態判斷資金狀態與標示顏色
+# 2. 動態判斷資金狀態與標示顏色
 if capital_flow_yi > 0.5:
     status_str = "▲ 強勢流入 (Risk-on)"
     delta_color = "normal"
@@ -647,17 +649,15 @@ else:
     status_str = "► 中性籌碼輪動"
     delta_color = "off"
 
-# 4. 佈局 4 欄位卡片
-col1, col2, col3, col4 = st.columns(4)
-
+# 3. 渲染 4 欄數據卡片
 with col1:
-    st.metric(label="最新收盤/試算價", value=f"{p_val:.2f} 元")
+    st.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
 
 with col2:
-    st.metric(label="當前成交量 (V)", value=f"{v_val:,} 張")
+    st.metric("當前成交量 (V)", f"{v_val:,} 張")
 
 with col3:
-    st.metric(label="主力買賣淨張數 (C)", value=f"{c_val:,} 張")
+    st.metric("主力買賣淨張數 (C)", f"{c_val:,} 張")
 
 with col4:
     st.metric(
