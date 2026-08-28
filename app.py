@@ -456,18 +456,15 @@ if is_api_success:
     except Exception:
         real_price = float(base_price_map.get(stock_code, 200.0))
 
-try:
+    try:
         real_volume = int(api_data.get('v', base_volume_map.get(stock_code, 20000)))
     except Exception:
         real_volume = int(base_volume_map.get(stock_code, 20000))
 
-    # ====================================================
-    # 🎯 盤前成交量防呆補丁 (安插在中間，不刪除下方代碼)
-    # ====================================================
+    # --- 盤前補丁 (縮排必須與 try / except 同級，即 4 個空格) ---
     if real_volume == 0:
         import yfinance as yf
         try:
-            # 先試上市，再試上櫃
             for suffix in [".TW", ".TWO"]:
                 ticker = yf.Ticker(f"{stock_code}{suffix}")
                 hist = ticker.history(period="5d")
@@ -480,12 +477,10 @@ try:
         except Exception:
             pass
         
-        # 若仍為 0，讀取備援預設值
         if real_volume == 0:
             real_volume = int(base_volume_map.get(stock_code, 1000))
-    # ====================================================
 
-    # 🔽 原本藍色反白的部分完整保留 🔽
+    # --- 原本計算 y_close 區塊 (同樣 4 個空格縮排) ---
     try:
         y_close = float(api_data.get('y', real_price))
         real_change = real_price - y_close
