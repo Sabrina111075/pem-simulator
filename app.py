@@ -624,13 +624,12 @@ churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 
 # --- 6. 渲染頂部 4 欄即時 P/V/C/F 數據卡片 ---
 
-# 1. 自動向下尋找您系統中現有的 P, V, C 變數/字典
-# （透過多重備援提取，確保抓到原本畫面顯示的真實數值）
-try:
-    p_val = price if 'price' in locals() else (latest['Price'] if 'latest' in locals() and 'Price' in latest else 0.0)
-    v_val = volume_v if 'volume_v' in locals() else (latest['Volume'] if 'latest' in locals() and 'Volume' in latest else 0)
-    c_val = net_shares_c if 'net_shares_c' in locals() else (latest['Net_C'] if 'latest' in locals() and 'Net_C' in latest else 0)
-except Exception:
+# 1. 從即時字典 latest 安全提取 P, V, C 數值
+if 'latest' in locals() and isinstance(latest, dict):
+    p_val = latest.get('Price', latest.get('price', latest.get('Close', 0.0)))
+    v_val = latest.get('Volume', latest.get('volume', 0))
+    c_val = latest.get('Net_C', latest.get('net_c', latest.get('Net_Shares', 0)))
+else:
     p_val, v_val, c_val = 0.0, 0, 0
 
 # 2. 計算主力籌碼淨資金金額 (以 億元 為單位)
@@ -663,7 +662,7 @@ with col3:
 with col4:
     st.metric(
         label="主力籌碼淨資金 (F)", 
-        value=f"{df['price'].iloc[-1]:.2f} 元", 
+        value=f"{capital_flow_yi:+.2f} 億元", 
         delta=status_str,
         delta_color=delta_color
     )
