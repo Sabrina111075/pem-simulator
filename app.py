@@ -461,6 +461,26 @@ if is_api_success:
     except Exception:
         real_volume = int(base_volume_map.get(stock_code, 20000))
 
+    # --- 盤前補丁 (縮排必須與 try / except 同級，即 4 個空格) ---
+    if real_volume == 0:
+        import yfinance as yf
+        try:
+            for suffix in [".TW", ".TWO"]:
+                ticker = yf.Ticker(f"{stock_code}{suffix}")
+                hist = ticker.history(period="5d")
+                if not hist.empty and len(hist) >= 2:
+                    real_volume = int(float(hist['Volume'].iloc[-2]) / 1000)
+                    break
+                elif not hist.empty:
+                    real_volume = int(float(hist['Volume'].iloc[-1]) / 1000)
+                    break
+        except Exception:
+            pass
+        
+        if real_volume == 0:
+            real_volume = int(base_volume_map.get(stock_code, 12000))
+
+    # --- 原本計算 y_close 區塊 (同樣 4 個空格縮排) ---
     try:
         y_close = float(api_data.get('y', real_price))
         real_change = real_price - y_close
@@ -485,53 +505,72 @@ stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() 
 st.markdown(f"### 📊 市場實時行情與 P/V/C 數據（標的：{stock_code} {stock_name}）")
 
 # ====================================================
-# # 2. 安全讀取真實股價與試算價（直連 yfinance/TWSE 無條件覆蓋版）
+# # 2. 安全讀取真實 P/V/C 數據（yfinance + TWSE 全自動動態對接）
 # ====================================================
-import yfinance as yf
 import requests
+import yfinance as yf
 
 p_val = 0.0
 diff_val = 0.0
+v_val = 0  # 成交量 (張)
+c_val = 0  # 主力買賣淨張數
 fetched = False
 
-# --- 第一優先：嘗試 yfinance ---
-for suffix in [".TWO", ".TW"]:  # 上櫃冷門股居多，優先試 .TWO
+# --- 第一優先：嘗試 yfinance 抓取價格與真實成交張數 ---
+for suffix in [".TW", ".TWO"]:
     try:
         ticker = yf.Ticker(f"{stock_code}{suffix}")
         hist = ticker.history(period="5d")
         if not hist.empty and len(hist) >= 1:
-            p_val = float(hist['Close'].iloc[-1])
+            # 1. 最新收盤價
+            p_val = float(hist["Close"].iloc[-1])
+
+            # 2. 漲跌價差
             if len(hist) >= 2:
-                diff_val = p_val - float(hist['Close'].iloc[-2])
+                diff_val = p_val - float(hist["Close"].iloc[-2])
             else:
                 diff_val = 0.0
+
+            # 3. 成交張數（yfinance 回傳為「股」，需除以 1000 轉為「張」）
+            raw_volume = float(hist["Volume"].iloc[-1])
+            v_val = int(raw_volume / 1000)
+
             if p_val > 0:
                 fetched = True
                 break
     except Exception:
         pass
 
-# --- 第二優先：若 yfinance 失敗，嘗試證交所/櫃買 Web API ---
+# --- 第二優先：若 yfinance 失敗，嘗試證交所 / 櫃買 Web API ---
 if not fetched or p_val == 0.0:
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'}
-    for prefix in ["otc", "tse"]:
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64)"}
+    for prefix in ["tse", "otc"]:
         try:
             url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={prefix}_{stock_code}.tw"
             res = requests.get(url, headers=headers, timeout=3)
-            msg_list = res.json().get('msgArray', [])
+            msg_list = res.json().get("msgArray", [])
             if msg_list:
                 info = msg_list[0]
-                z_str = info.get('z', '-')
-                y_str = info.get('y', '0')
-                y_price = float(y_str) if y_str not in ['-', '', None] else 0.0
-                
-                # 拿取成交價或昨收價
-                if z_str not in ['-', '', None]:
-                    p_val = float(str(z_str).split('_')[0])
+                z_str = info.get("z", "-")
+                y_str = info.get("y", "0")
+                v_str = info.get("v", "0")  # 證交所 API 的 v 已經是「張」
+
+                y_price = (
+                    float(y_str) if y_str not in ["-", "", None] else 0.0
+                )
+
+                if z_str not in ["-", "", None]:
+                    p_val = float(str(z_str).split("_")[0])
                 else:
                     p_val = y_price
-                
+
                 diff_val = p_val - y_price if y_price > 0 else 0.0
+                v_val = (
+                    int(v_str)
+                    if v_str not in ["-", "", None]
+                    else int(raw_volume / 1000 if "raw_volume" in locals() else 0)
+                )
+
                 if p_val > 0:
                     fetched = True
                     break
@@ -543,10 +582,18 @@ if not fetched or p_val == 0.0:
     base_prices = {"2330": 2415.00, "2317": 252.00, "2603": 226.00}
     p_val = base_prices.get(stock_code, 100.00)
     diff_val = 0.0
+    v_val = 1000
 
-# 格式化輸出
+# 籌碼 (C)估算邏輯：若無三大法人 API，按當天漲跌方向給予安全估計值
+c_val = int(
+    v_val * 0.15 if diff_val >= 0 else -v_val * 0.15
+)  # 估算主力約佔成交量 15%
+
+# 格式化輸出供 UI 渲染使用
 price_display_fmt = f"{p_val:.2f}"
 diff_display_fmt = f"{diff_val:+.2f}"
+vol_display_fmt = f"{v_val:,}"  # 例如 383 張
+chips_display_fmt = f"{c_val:,}"
 
 # 3. 安全初始化 latest 變數
 if 'latest' not in locals() or not isinstance(latest, dict):
@@ -576,15 +623,44 @@ vol_val = latest.get('Volume', 10000 + (seed_num % 50000))
 churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 
 # 6. 渲染頂部 3 欄實時 P/V/C 數據卡片
-col_a, col_b, col_c = st.columns(3)
-with col_a:
-    st.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
-with col_b:
-    st.metric("當前成交量 (V)", f"{int(vol_val):,} 張", delta=f"{int(vol_val * 0.03):+} 張")
-with col_c:
-    st.metric("主力買賣淨張數 (C)", f"{int(churn_val):,} 張", delta=f"{int(churn_val * 0.015):+} 張")
+# --- 新程式碼 (擴充為 4 欄，加入主力資金 F) ---
+st.markdown("### 📊 市場實時行情與 P/V/C 數據（標的：2454 聯發科）")
 
-st.markdown("---")
+# 1. 計算主力籌碼淨資金金額 (以 億元 為單位)
+capital_flow_raw = net_shares_c * price * 1000  # 張數 * 股價 * 1000股
+capital_flow_yi = capital_flow_raw / 1e8         # 換算為億元
+
+# 2. 動態判斷資金狀態與標示顏色
+if capital_flow_yi > 0.5:
+    status_str = "▲ 強勢流入 (Risk-on)"
+    delta_color = "normal"
+elif capital_flow_yi < -0.5:
+    status_str = "▼ 強勢流出 (Risk-off)"
+    delta_color = "inverse"
+else:
+    status_str = "► 中性籌碼輪動"
+    delta_color = "off"
+
+# 3. 改為 4 欄位佈局
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.metric(label="最新收盤/試算價", value=f"{price:.2f} 元")
+
+with col2:
+    st.metric(label="當前成交量 (V)", value=f"{volume_v:,} 張")
+
+with col3:
+    st.metric(label="主力買賣淨張數 (C)", value=f"{net_shares_c:,} 張")
+
+# 4. 新增第 4 欄：主力籌碼資金淨流向
+with col4:
+    st.metric(
+        label="主力籌碼淨資金 (F)", 
+        value=f"{capital_flow_yi:+.2f} 億元", 
+        delta=status_str,
+        delta_color=delta_color
+    )
 
 # ==========================================
 # 💡 幾何指標三連方塊卡片 (安全修復 NameError 版)
