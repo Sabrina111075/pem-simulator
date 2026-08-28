@@ -623,7 +623,6 @@ vol_val = latest.get('Volume', 10000 + (seed_num % 50000))
 churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 
 # --- 6. 渲染頂部 4 欄即時 P/V/C/F 數據卡片 ---
-st.markdown(f"### 📊 市場實時行情與 P/V/C 數據（標的：{selected_stock}）")
 
 # 1. 自動向下尋找您系統中現有的 P, V, C 變數/字典
 # （透過多重備援提取，確保抓到原本畫面顯示的真實數值）
@@ -664,7 +663,7 @@ with col3:
 with col4:
     st.metric(
         label="主力籌碼淨資金 (F)", 
-        value=f"{capital_flow_yi:+.2f} 億元", 
+        value=f"{df['price'].iloc[-1]:.2f} 元", 
         delta=status_str,
         delta_color=delta_color
     )
