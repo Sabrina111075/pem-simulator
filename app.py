@@ -382,16 +382,6 @@ else:
 real_data = fetch_twse_official_data(stock_code)
 
 # ==========================================
-# 4. 渲染主畫面 UI (此時 display_stock_name 已是完整中文名稱)
-# ==========================================
-st.subheader(f"📊 市場實時行情與 P/V/C 數據 ( 標的：{display_stock_name} )")
-
-st.markdown(
-    f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的：:green[{display_stock_name}] )</span>", 
-    unsafe_allow_html=True
-)
-
-# ==========================================
 # B. 側邊欄：盤前試算自動連動與手動微調
 # ==========================================
 st.sidebar.markdown("### 📊 盤前試撮流場模擬 (08:30-09:00)")
