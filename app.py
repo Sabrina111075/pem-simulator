@@ -333,6 +333,7 @@ hot_stock_options = [
     "6770 力積電", "3481 群創", "2409 友達", "2324 仁寶", "2344 華邦電", "2382 廣達"
 ]
 
+# --- 1. 側邊欄選取 ---
 if stock_mode == "熱門標的":
     selected_stock = st.sidebar.selectbox("熱門股票清單 (成交熱門/權值股)", hot_stock_options)
     stock_code = selected_stock.split(" ")[0]
@@ -342,6 +343,17 @@ else:
     stock_code = user_input_code if user_input_code else "2317"
     stock_name = stock_name_map.get(stock_code, "")
     display_stock_name = f"{stock_code} {stock_name}".strip() if stock_name else stock_code
+
+# --- 2. 【關鍵修正】在渲染主畫面標題之前，先呼叫 API 取得最新股票名稱 ---
+real_data = fetch_twse_official_data(stock_code)
+
+# --- 3. 開始渲染主畫面 UI (此時 display_stock_name 已經被 API 升級更新了) ---
+st.subheader(f"📊 市場實時行情與 P/V/C 數據 ( 標的：{display_stock_name} )")
+
+st.markdown(
+    f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的：:green[{display_stock_name}] )</span>", 
+    unsafe_allow_html=True
+)
 
 # ==========================================
 # A. TWSE 官方 API 實時資料抓取與試算價差解析
