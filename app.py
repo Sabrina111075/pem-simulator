@@ -304,21 +304,23 @@ st.markdown("---")
 # ==========================================
 # 5. 側邊欄控制項與靜態備援對照表
 # ==========================================
-st.sidebar.header("📈 PVCS 台股個股選取")
+st.sidebar.header("📊 PVCS 台股個股選取")
 
 stock_mode = st.sidebar.radio("選擇股票模式", ["熱門標的", "自訂股票代碼"])
 
 stock_name_map = {
     "2330": "台積電", "2317": "鴻海", "2454": "聯發科", "2303": "聯電", "6770": "力積電",
     "2308": "台達電", "2357": "華碩", "3008": "大立光", "3443": "創意", "6669": "緯穎",
-    "2382": "廣達", "3231": "緯創", "3481": "群創", "2409": "友達", "2324": "仁寶", 
-    "2344": "華邦電", "2603": "長榮", "2609": "陽明", "2615": "萬海", "00876": "元大全球5G"
+    "2382": "廣達", "3231": "緯創", "3481": "群創", "2409": "友達", "2324": "仁寶",
+    "2344": "華邦電", "2603": "長榮", "2609": "陽明", "2615": "萬海", "00876": "元大全球5G",
+    "0050": "元大台灣50", "0056": "元大高股息", "2059": "川湖"
 }
 
 base_price_map = {
     "2330": 2400, "2317": 243, "2454": 3735, "2303": 126, "6770": 27,
     "2308": 380, "2357": 490, "3008": 2550, "3443": 1350, "6669": 2100,
-    "2382": 290, "3231": 105, "3481": 46.8, "2409": 17, "2324": 38, "00876": 85.95
+    "2382": 290, "3231": 105, "3481": 46.8, "2409": 17, "2324": 38, "00876": 85.95,
+    "0050": 195, "0056": 38.5, "2059": 1400
 }
 
 base_volume_map = {
@@ -339,16 +341,7 @@ else:
     user_input_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 2317)", value="2317").strip().upper()
     stock_code = user_input_code if user_input_code else "2317"
     stock_name = stock_name_map.get(stock_code, "")
-    display_stock_name = f"{stock_code} {stock_name}".strip()
-
-stock_name = stock_name_map.get(stock_code, "")
-display_stock_name = f"{stock_code} {stock_name}".strip()
-
-stock_name = stock_name_map.get(stock_code, "")
-display_stock_name = f"{stock_code} {stock_name}".strip()
-
-stock_name = stock_name_map.get(stock_code, "")
-display_stock_name = f"{stock_code} {stock_name}".strip()
+    display_stock_name = f"{stock_code} {stock_name}".strip() if stock_name else stock_code
 
 # ==========================================
 # A. TWSE 官方 API 實時資料抓取與試算價差解析
