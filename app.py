@@ -726,19 +726,58 @@ st.markdown(f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-s
 
 col1, col2, col3 = st.columns(3)
 with col1:
+# --- 動態判斷狀態標籤 ---
+# 1. 馬氏距離 (D_t)
+d_num = float(d_val)
+if d_num < 1.0:
+    d_status = "🟢 常態區間"
+    d_color = "normal"
+elif d_num <= 2.0:
+    d_status = "🟡 輕微偏離"
+    d_color = "off"  # 灰色/警告標示
+else:
+    d_status = "🔴 顯著異常"
+    d_color = "inverse" # 醒目顏色
+
+# 2. 雙曲半徑 (r)
+r_num = float(r_val)
+if r_num < 0.5:
+    r_status = "🟢 穩定盤整"
+elif r_num <= 0.8:
+    r_status = "🟡 趨勢成型"
+else:
+    r_status = "🔴 臨界極端"
+
+# 3. 曲率強度 (k)
+k_num = float(k_val)
+if k_num < 0.15:
+    k_status = "🟢 平順運轉"
+elif k_num <= 0.30:
+    k_status = "🟡 轉折準備"
+else:
+    k_status = "🔴 急劇變軌"
+
+# --- 渲染卡片 ---
+col1, col2, col3 = st.columns(3)
+
+with col1:
     st.metric(
         "馬氏距離 (D_t)", 
-        f"{float(d_val):.3f}",
+        f"{d_num:.3f}",
+        delta=d_status,
+        delta_color="off", # 保持文字與圓點顏色清晰
         help="【偏離常態程度】衡量當前 P/V/C 相對歷史常態的偏離距離。\n\n"
              "• < 1.0：常態區間\n"
              "• 1.0 ~ 2.0：輕微偏離\n"
-             "• > 2.5：顯著異常"
+             "• > 2.0：顯著異常"
     )
 
 with col2:
     st.metric(
         "雙曲空間半徑 (r)", 
-        f"{float(r_val):.3f}",
+        f"{r_num:.3f}",
+        delta=r_status,
+        delta_color="off",
         help="【臨界邊緣度】龐加萊圓盤中的徑向距離 (0~1)。\n\n"
              "• < 0.5：穩定盤整\n"
              "• 0.5 ~ 0.8：趨勢成型\n"
@@ -748,7 +787,9 @@ with col2:
 with col3:
     st.metric(
         "軌道曲率強度 (k)", 
-        f"{float(k_val):.3f}",
+        f"{k_num:.3f}",
+        delta=k_status,
+        delta_color="off",
         help="【轉折變軌力】評估動態軌道在相空間中的彎曲程度。\n\n"
              "• < 0.15：平順運轉\n"
              "• 0.15 ~ 0.30：轉折準備\n"
