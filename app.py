@@ -724,22 +724,15 @@ if 'k_val' not in locals():
 stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
 st.markdown(f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的：:green[{stock_code} {stock_name}] )</span>", unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns(3)
-with col1:
-# --- 動態判斷狀態標籤 ---
-# 1. 馬氏距離 (D_t)
+# --- 1. 計算數值與狀態標籤（在最外層，不縮排） ---
 d_num = float(d_val)
 if d_num < 1.0:
     d_status = "🟢 常態區間"
-    d_color = "normal"
 elif d_num <= 2.0:
     d_status = "🟡 輕微偏離"
-    d_color = "off"  # 灰色/警告標示
 else:
     d_status = "🔴 顯著異常"
-    d_color = "inverse" # 醒目顏色
 
-# 2. 雙曲半徑 (r)
 r_num = float(r_val)
 if r_num < 0.5:
     r_status = "🟢 穩定盤整"
@@ -748,7 +741,6 @@ elif r_num <= 0.8:
 else:
     r_status = "🔴 臨界極端"
 
-# 3. 曲率強度 (k)
 k_num = float(k_val)
 if k_num < 0.15:
     k_status = "🟢 平順運轉"
@@ -757,7 +749,7 @@ elif k_num <= 0.30:
 else:
     k_status = "🔴 急劇變軌"
 
-# --- 渲染卡片 ---
+# --- 2. 渲染卡片（只有 with 內部需要縮排） ---
 col1, col2, col3 = st.columns(3)
 
 with col1:
@@ -765,11 +757,8 @@ with col1:
         "馬氏距離 (D_t)", 
         f"{d_num:.3f}",
         delta=d_status,
-        delta_color="off", # 保持文字與圓點顏色清晰
-        help="【偏離常態程度】衡量當前 P/V/C 相對歷史常態的偏離距離。\n\n"
-             "• < 1.0：常態區間\n"
-             "• 1.0 ~ 2.0：輕微偏離\n"
-             "• > 2.0：顯著異常"
+        delta_color="off",
+        help="【偏離常態程度】衡量當前 P/V/C 相對歷史常態的偏離距離。\n\n• < 1.0：常態區間\n• 1.0 ~ 2.0：輕微偏離\n• > 2.0：顯著異常"
     )
 
 with col2:
@@ -778,10 +767,7 @@ with col2:
         f"{r_num:.3f}",
         delta=r_status,
         delta_color="off",
-        help="【臨界邊緣度】龐加萊圓盤中的徑向距離 (0~1)。\n\n"
-             "• < 0.5：穩定盤整\n"
-             "• 0.5 ~ 0.8：趨勢成型\n"
-             "• > 0.8：臨界極端（變盤風險高）"
+        help="【臨界邊緣度】龐加萊圓盤中的徑向距離 (0~1)。\n\n• < 0.5：穩定盤整\n• 0.5 ~ 0.8：趨勢成型\n• > 0.8：臨界極端（變盤風險高）"
     )
 
 with col3:
@@ -790,10 +776,7 @@ with col3:
         f"{k_num:.3f}",
         delta=k_status,
         delta_color="off",
-        help="【轉折變軌力】評估動態軌道在相空間中的彎曲程度。\n\n"
-             "• < 0.15：平順運轉\n"
-             "• 0.15 ~ 0.30：轉折準備\n"
-             "• > 0.30：急劇變軌（方向強烈扭轉）"
+        help="【轉折變軌力】評估動態軌道在相空間中的彎曲程度。\n\n• < 0.15：平順運轉\n• 0.15 ~ 0.30：轉折準備\n• > 0.30：急劇變軌（方向強烈扭轉）"
     )
 
 st.caption("※ 系統已將盤前籌碼微調振動注入三維 P/V/C 向量場，請參考下方圓盤軌跡與轉折風險時序。")
