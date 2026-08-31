@@ -729,13 +729,13 @@ capital_flow_yi = capital_flow_raw / 1e8
 
 # 2. 動態判斷主力資金 (F) 狀態與顏色
 if capital_flow_yi > 0.5:
-    status_str = "▲ 強勢流入 (Risk-on)"
-    delta_color = "normal"
+    status_str = "強勢流入 (Risk-on)"
+    delta_color = "normal"  # 綠/紅 依平台設定，正數向上
 elif capital_flow_yi < -0.5:
-    status_str = "▼ 強勢流出 (Risk-off)"
-    delta_color = "inverse"
+    status_str = "強勢流出 (Risk-off)"
+    delta_color = "inverse"  # 負數自動轉為紅燈/向下箭頭
 else:
-    status_str = "► 中性籌碼輪動"
+    status_str = "中性籌碼輪動"
     delta_color = "off"
 
 # 3. 計算「主力籌碼飽和度 (S)」邏輯
