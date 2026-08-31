@@ -329,7 +329,26 @@ def fetch_twse_official_data(code):
     return {}
 
 # ==========================================
-# 側邊欄控制項與股票選取 (含基期字典)
+# 0. 側邊欄寬度 CSS 微調 (解決選單吃字問題)
+# ==========================================
+st.markdown(
+    """
+    <style>
+        /* 稍微拉寬側邊欄，確保下拉選單文字完整顯示 */
+        [data-testid="stSidebar"] {
+            min-width: 300px !important;
+        }
+        /* 確保 selectbox 選項不會溢出被裁切 */
+        div[data-baseweb="select"] {
+            width: 100% !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# ==========================================
+# 1. 側邊欄控制項與股票選取邏輯
 # ==========================================
 st.sidebar.header("📊 PVCS 台股個股選取")
 
@@ -343,18 +362,6 @@ stock_name_map = {
     "0050": "元大台灣50", "0056": "元大高股息", "2059": "川湖", "3017": "奇鋐"
 }
 
-base_price_map = {
-    "2330": 2400, "2317": 243, "2454": 3735, "2303": 126, "6770": 27,
-    "2308": 380, "2357": 490, "3008": 2550, "3443": 1350, "6669": 2100,
-    "2382": 290, "3231": 105, "3481": 46.8, "2409": 17, "2324": 38, "00876": 85.95,
-    "0050": 195, "0056": 38.5, "2059": 1400, "3017": 750
-}
-
-base_volume_map = {
-    "2330": 28000, "2317": 36819, "2454": 5403, "2303": 125000, "6770": 150000,
-    "2308": 8000, "2357": 6000, "3008": 1500, "3443": 3000, "6669": 2000, "3481": 186725, "00876": 423
-}
-
 hot_stock_options = [
     "2330 台積電", "2317 鴻海", "2454 聯發科", "2303 聯電", "2609 陽明", "2603 長榮",
     "6770 力積電", "3481 群創", "2409 友達", "2324 仁寶", "2344 華邦電", "2382 廣達", "3017 奇鋐"
@@ -365,22 +372,32 @@ if stock_mode == "熱門標的":
     stock_code = selected_stock.split(" ")[0]
     display_stock_name = selected_stock
 else:
-    user_input_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 2317)", value="2317").strip().upper()
+    user_input_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 2317)", value="00881").strip().upper()
     stock_code = user_input_code if user_input_code else "2317"
+    
+    # 先從本地字典找，找不到則暫存純代碼
     stock_name = stock_name_map.get(stock_code, "")
     display_stock_name = f"{stock_code} {stock_name}".strip() if stock_name else stock_code
 
 # ==========================================
-# 呼叫 API 取得動態名稱 (必須放在 st.subheader 渲染前！)
+# 2. 呼叫 API 並強制「同步更新」上方顯示名稱
 # ==========================================
 real_data = fetch_twse_official_data(stock_code)
 
-# 渲染主畫面標題與診斷卡片
+# 若為自訂代碼且 API 成功傳回中文名稱 (例如 00881 國泰台灣科技龍頭)，強行將 display_stock_name 更新！
+if stock_mode == "自訂股票代碼" and real_data.get("n"):
+    api_stock_name = real_data.get("n").strip()
+    if api_stock_name:
+        display_stock_name = f"{stock_code} {api_stock_name}"
+
+# ==========================================
+# 3. 渲染主畫面 UI (此時 display_stock_name 已含有完整中文名稱)
+# ==========================================
 st.subheader(f"📊 市場實時行情與 P/V/C 數據 ( 標的：{display_stock_name} )")
 
 st.markdown(
-    f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的：:green[{display_stock_name}] )</span>",
-    unsafe_allow_html=True,
+    f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的：:green[{display_stock_name}] )</span>", 
+    unsafe_allow_html=True
 )
 
 # ==========================================
