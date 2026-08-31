@@ -529,16 +529,6 @@ else:
     real_change = 0.0
     data_source_label = "靜態備援對照檔"
 
-# ==========================================
-# 7. 市場實時行情 UI 渲染 (完整修復：價格 + 幾何指標 + 下方圖形連動)
-# ==========================================
-# 1. 頂部 Micro-DMEC-G 觀察框架標題
-st.title("📈 Micro-DMEC-G 觀察框架")
-st.caption("結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincaré 雙曲幾何之個股動態評估面板")
-
-stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
-st.markdown(f"### 📊 市場實時行情與 P/V/C 數據（標的：{stock_code} {stock_name}）")
-
 # ====================================================
 # # 2. 安全讀取真實 P/V/C 數據（yfinance + TWSE 全自動動態對接）
 # ====================================================
