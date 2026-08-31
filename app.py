@@ -725,6 +725,7 @@ stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() 
 st.markdown(f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的：:green[{stock_code} {stock_name}] )</span>", unsafe_allow_html=True)
 
 # --- 1. 計算數值與狀態標籤（在最外層，不縮排） ---
+# --- 1. 計算數值與狀態標籤（在最外層，不縮排） ---
 d_num = float(d_val)
 if d_num < 1.0:
     d_status = "🟢 常態區間"
@@ -749,7 +750,7 @@ elif k_num <= 0.30:
 else:
     k_status = "🔴 急劇變軌"
 
-# --- 2. 渲染卡片（只有 with 內部需要縮排） ---
+# --- 2. 渲染卡片 ---
 col1, col2, col3 = st.columns(3)
 
 with col1:
