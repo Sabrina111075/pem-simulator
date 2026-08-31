@@ -393,22 +393,23 @@ else:
     display_stock_name = f"{stock_code} {stock_name}".strip() if stock_name else stock_code
 
 # ==========================================
-# 2. 呼叫 API 並更新全域顯示名稱
+# 1. 呼叫 API 並強制更新 display_stock_name (必須放在 UI 渲染前！)
 # ==========================================
 real_data = fetch_twse_official_data(stock_code)
 
-# 針對自訂股票：若 API 有回傳名稱 (info.get("n"))，強制寫入 display_stock_name
 if stock_mode == "自訂股票代碼":
+    # 優先嘗試從 TWSE API 取得官方中文名稱
     api_name = real_data.get("n", "").strip() if isinstance(real_data, dict) else ""
+    
     if api_name:
         display_stock_name = f"{stock_code} {api_name}"
     else:
-        # 若 API 暫未回傳，嘗試從字典找
+        # 若 API 未回傳，退回檢查本地字典
         local_name = stock_name_map.get(stock_code, "")
         display_stock_name = f"{stock_code} {local_name}".strip() if local_name else stock_code
 
 # ==========================================
-# 3. 渲染主畫面 UI (確保此時名稱已結合中文)
+# 2. 渲染主畫面 UI (此時名稱已注入中文)
 # ==========================================
 st.subheader(f"📊 市場實時行情與 P/V/C 數據 ( 標的：{display_stock_name} )")
 
