@@ -722,17 +722,29 @@ if 'k_val' not in locals():
 
 # 3. 渲染診斷卡片
 stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
-st.markdown(f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>（當前標的：:green[{stock_code} {stock_name}]）</span>", unsafe_allow_html=True)
+st.markdown(f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的：:green[{stock_code} {stock_name}] )</span>", unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.metric("馬氏距離 (D_t)", f"{float(d_val):.3f}")
+    st.metric(
+        "馬氏距離 (D_t)", 
+        f"{float(d_val):.3f}",
+        help="【偏離常態程度】衡量當前 P/V/C 向量相對於歷史常態均值的偏離距離。數值越大，代表當前市場結構越脫離常態。"
+    )
 with col2:
-    st.metric("雙曲空間半徑 (r)", f"{float(r_val):.3f}")
+    st.metric(
+        "雙曲空間半徑 (r)", 
+        f"{float(r_val):.3f}",
+        help="【臨界邊緣度】龐加萊圓盤（Poincaré Disk）中的徑向距離 (0~1)。越接近 1，代表動態越貼近圓盤邊界，極端行情或動能臨界點風險越高。"
+    )
 with col3:
-    st.metric("軌道曲率強度 (k)", f"{float(k_val):.3f}")
+    st.metric(
+        "軌道曲率強度 (k)", 
+        f"{float(k_val):.3f}",
+        help="【轉折變軌力】評估動態軌道在相空間中的彎曲程度。曲率突增代表市場運動方向正在快速扭轉（變軌/轉折風險高）。"
+    )
 
-st.caption("※ 系統已將盤前籌碼微調數據動態注入三維 P/V/C 向量場，請參考下方圓盤軌跡與轉折風險時序。")
+st.caption("※ 系統已將盤前籌碼微調振動注入三維 P/V/C 向量場，請參考下方圓盤軌跡與轉折風險時序。")
 
 # ==========================================
 # 9. 圖表區：Poincaré Disk 盤前籌碼預測
