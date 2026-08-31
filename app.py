@@ -309,31 +309,23 @@ import requests
 live_calculated_spread = 0.0
 
 def fetch_twse_official_data(code):
-    global display_stock_name, live_calculated_spread
+    global display_stock_name, live_calculated_spread  # 關鍵！必須加 global 才能修改外部的名稱變數
     try:
         url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_{code}.tw"
         res = requests.get(url, timeout=3)
         data = res.json()
         if "msgArray" in data and len(data["msgArray"]) > 0:
             info = data["msgArray"][0]
-            
-            # 動態更新股票名稱
-            api_name = info.get("n", "")
+
+            # 自動把 TWSE API 回傳的股票中文名稱帶入
+            api_name = info.get("n", "").strip()
             if api_name and stock_mode == "自訂股票代碼":
                 display_stock_name = f"{code} {api_name}"
-                
-            try:
-                z_price = float(info.get("z", 0) or info.get("y", 0))
-                o_price = float(info.get("o", 0) or z_price)
-                live_calculated_spread = round(z_price - o_price, 2)
-            except Exception:
-                live_calculated_spread = 0.0
 
             return info
     except Exception as e:
         pass
-    
-    live_calculated_spread = 0.0
+
     return {}
 
 # ==========================================
@@ -378,8 +370,18 @@ else:
     stock_name = stock_name_map.get(stock_code, "")
     display_stock_name = f"{stock_code} {stock_name}".strip() if stock_name else stock_code
 
-# 呼叫 API 更新資料與動態名稱
+# ==========================================
+# 呼叫 API 取得動態名稱 (必須放在 st.subheader 渲染前！)
+# ==========================================
 real_data = fetch_twse_official_data(stock_code)
+
+# 渲染主畫面標題與診斷卡片
+st.subheader(f"📊 市場實時行情與 P/V/C 數據 ( 標的：{display_stock_name} )")
+
+st.markdown(
+    f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的：:green[{display_stock_name}] )</span>",
+    unsafe_allow_html=True,
+)
 
 # ==========================================
 # B. 側邊欄：盤前試算自動連動與手動微調
