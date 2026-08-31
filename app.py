@@ -647,9 +647,73 @@ else:
 vol_val = latest.get('Volume', 10000 + (seed_num % 50000))
 churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 
-# 6. 渲染頂部 5 欄實時 P/V/C/F/S 數據卡片 (含主力籌碼飽和度)
+# --- [新增] 計算預測激勵值 (Incentive Score) 與三階段判讀 ---
+try:
+    # 取得最新價與價差
+    p_now = float(price_display_fmt) if "price_display_fmt" in locals() else p_val
+    diff_now = float(diff_val) if "diff_val" in locals() else 0.0
+    v_now = float(v_val) if "v_val" in locals() else 1000.0
+
+    # 籌碼/主力買賣方向模擬 (c_val > 0 為主動買盤強)
+    c_now = float(c_val) if "c_val" in locals() else 0.0
+
+    # 1. 主動買賣不平衡度 TI (-1 ~ +1)
+    # 以 c_now 相對於 v_now 的比例估算 TI
+    ti_score = c_now / (v_now + 1e-5) if v_now > 0 else 0.0
+    ti_score = max(min(ti_score, 1.0), -1.0)
+
+    # 2. 綜合預測激勵值 Incentive Score (-100 ~ +100)
+    # 當動能 (diff_now) 與買賣不平衡 (ti_score) 正向共振時激勵值最高
+    raw_incentive = (ti_score * 0.7) + (
+        (1.0 if diff_now > 0 else (-1.0 if diff_now < 0 else 0.0)) * 0.3
+    )
+    incentive_score = round(raw_incentive * 100, 1)
+
+    # 3. 判斷三階段 (上盤 / 中盤 / 下降)
+    if incentive_score > 20 and diff_now >= 0:
+        phase_status = "🟢 上盤階段"
+        phase_desc = "動能共振，主動買盤擴張"
+        phase_color = "#28a745"
+    elif incentive_score < -20 and diff_now <= 0:
+        phase_status = "🔴 下降階段"
+        phase_desc = "賣壓貫穿，恐慌釋放中"
+        phase_color = "#dc3545"
+    else:
+        phase_status = "🟡 中盤階段"
+        phase_desc = "能量蓄積，多空動能平衡"
+        phase_color = "#ffc107"
+
+except Exception as e:
+    incentive_score = 0.0
+    phase_status = "🟡 中盤階段"
+    phase_desc = "資料計算中"
+    phase_color = "#ffc107"
+
+#6. 渲染頂部5欄實時 P/V/C/F/S 數據卡片 (含主力籌碼飽和度)
 # --- 擴充為 5 欄位 ---
 col1, col2, col3, col4, col5 = st.columns(5)
+
+#1. 安全提取價格與主力籌碼數據
+try:
+    p_num = float(str(price_display_fmt).replace(',', ''))
+except (ValueError, NameError):
+    p_num = 0.0
+
+c_num = c_val if 'c_val' in locals() else (churn_val if 'churn_val' in locals() else 0)
+
+# (注意：請保留原本 col1 到 col5 裡面渲染 st.metric 的程式碼...)
+
+# --- [新增] 在 5 欄卡片渲染完成後，貼上這段激勵值視覺 Banner ---
+st.markdown(
+    f"""
+    <div style="background-color: {phase_color}22; border-left: 5px solid {phase_color}; padding: 8px 15px; border-radius: 5px; margin-top: 10px; margin-bottom: 15px;">
+        <span style="font-weight: bold; font-size: 16px; color: {phase_color};">{phase_status}</span> 
+        <span style="margin-left: 15px; font-size: 14px; color: #333;"><b>預測激勵值 (Incentive Score)：</b> {incentive_score:+.1f}</span>
+        <span style="margin-left: 15px; font-size: 13px; color: #666;">（{phase_desc}）</span>
+    </div>
+""",
+    unsafe_allow_html=True
+)
 
 # 1. 安全提取價格與主力籌碼數據
 try:
