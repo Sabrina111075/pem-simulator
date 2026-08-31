@@ -336,6 +336,37 @@ def fetch_twse_official_data(code):
     live_calculated_spread = 0.0
     return {}
 
+# ==========================================
+# 側邊欄控制項與股票選取
+# ==========================================
+st.sidebar.header("📊 PVCS 台股個股選取")
+
+# 1. 先讓使用者選擇模式 (關鍵！必須放在 if 前面)
+stock_mode = st.sidebar.radio("選擇股票模式", ["熱門標的", "自訂股票代碼"])
+
+stock_name_map = {
+    "2330": "台積電", "2317": "鴻海", "2454": "聯發科", "2303": "聯電", "6770": "力積電",
+    "2308": "台達電", "2357": "華碩", "3008": "大立光", "3443": "創意", "6669": "緯穎",
+    "2382": "廣達", "3231": "緯創", "3481": "群創", "2409": "友達", "2324": "仁寶",
+    "2344": "華邦電", "2603": "長榮", "2609": "陽明", "2615": "萬海", "00876": "元大全球5G",
+    "0050": "元大台灣50", "0056": "元大高股息", "2059": "川湖", "3017": "奇鋐"
+}
+
+hot_stock_options = [
+    "2330 台積電", "2317 鴻海", "2454 聯發科", "2303 聯電", "2609 陽明", "2603 長榮",
+    "6770 力積電", "3481 群創", "2409 友達", "2324 仁寶", "2344 華邦電", "2382 廣達", "3017 奇鋐"
+]
+
+# 2. 這時候才能進行 if 判斷！
+if stock_mode == "熱門標的":
+    selected_stock = st.sidebar.selectbox("熱門股票清單 (成交熱門/權值股)", hot_stock_options)
+    stock_code = selected_stock.split(" ")[0]
+    display_stock_name = selected_stock
+else:
+    user_input_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 2317)", value="2317").strip().upper()
+    stock_code = user_input_code if user_input_code else "2317"
+    stock_name = stock_name_map.get(stock_code, "")
+    display_stock_name = f"{stock_code} {stock_name}".strip() if stock_name else stock_code
 
 # ==========================================
 # 2. 側邊欄與股票選取邏輯
