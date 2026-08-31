@@ -348,7 +348,11 @@ else:
 # ==========================================
 import requests
 
+# 預先初始化變數，避免 NameError 崩潰
+live_calculated_spread = 0.0
+
 def fetch_twse_official_data(code):
+    global display_stock_name, live_calculated_spread
     try:
         url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_{code}.tw"
         res = requests.get(url, timeout=3)
@@ -356,16 +360,25 @@ def fetch_twse_official_data(code):
         if "msgArray" in data and len(data["msgArray"]) > 0:
             info = data["msgArray"][0]
             
-            # --- 💡 動態讀取 TWSE API 股票名稱重點 ---
-            api_name = info.get("n", "")  # TWSE API 的個股中文簡稱欄位為 'n'
-            global display_stock_name
+            # 1. 動態更新股票名稱
+            api_name = info.get("n", "")
             if api_name and stock_mode == "自訂股票代碼":
                 display_stock_name = f"{code} {api_name}"
                 
+            # 2. 計算試算價差 (若有試算買賣價)
+            try:
+                z_price = float(info.get("z", 0) or info.get("y", 0))
+                o_price = float(info.get("o", 0) or z_price)
+                live_calculated_spread = round(z_price - o_price, 2)
+            except Exception:
+                live_calculated_spread = 0.0
+
             return info
     except Exception as e:
         pass
-    return None
+    
+    live_calculated_spread = 0.0
+    return {}
 
 # ==========================================
 # B. 側邊欄：盤前試算自動連動與手動微調
