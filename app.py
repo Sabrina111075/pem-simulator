@@ -393,18 +393,22 @@ else:
     display_stock_name = f"{stock_code} {stock_name}".strip() if stock_name else stock_code
 
 # ==========================================
-# 2. 呼叫 API 並強制「同步更新」上方顯示名稱
+# 2. 呼叫 API 並更新全域顯示名稱
 # ==========================================
 real_data = fetch_twse_official_data(stock_code)
 
-# 若為自訂代碼且 API 成功傳回中文名稱 (例如 00881 國泰台灣科技龍頭)，強行將 display_stock_name 更新！
-if stock_mode == "自訂股票代碼" and real_data.get("n"):
-    api_stock_name = real_data.get("n").strip()
-    if api_stock_name:
-        display_stock_name = f"{stock_code} {api_stock_name}"
+# 針對自訂股票：若 API 有回傳名稱 (info.get("n"))，強制寫入 display_stock_name
+if stock_mode == "自訂股票代碼":
+    api_name = real_data.get("n", "").strip() if isinstance(real_data, dict) else ""
+    if api_name:
+        display_stock_name = f"{stock_code} {api_name}"
+    else:
+        # 若 API 暫未回傳，嘗試從字典找
+        local_name = stock_name_map.get(stock_code, "")
+        display_stock_name = f"{stock_code} {local_name}".strip() if local_name else stock_code
 
 # ==========================================
-# 3. 渲染主畫面 UI (此時 display_stock_name 已含有完整中文名稱)
+# 3. 渲染主畫面 UI (確保此時名稱已結合中文)
 # ==========================================
 st.subheader(f"📊 市場實時行情與 P/V/C 數據 ( 標的：{display_stock_name} )")
 
