@@ -354,27 +354,18 @@ def fetch_twse_official_data(code):
         res = requests.get(url, timeout=3)
         data = res.json()
         if "msgArray" in data and len(data["msgArray"]) > 0:
-            return data["msgArray"][0]
-    except Exception:
+            info = data["msgArray"][0]
+            
+            # --- 💡 動態讀取 TWSE API 股票名稱重點 ---
+            api_name = info.get("n", "")  # TWSE API 的個股中文簡稱欄位為 'n'
+            global display_stock_name
+            if api_name and stock_mode == "自訂股票代碼":
+                display_stock_name = f"{code} {api_name}"
+                
+            return info
+    except Exception as e:
         pass
-    return {}
-
-# 執行抓取
-api_data = fetch_twse_official_data(stock_code)
-
-# 計算盤前 / 盤中價差
-live_calculated_spread = 0.0
-try:
-    y_close = float(api_data.get('y', 0.0))
-    z_price = api_data.get('z', '-')
-    o_price = api_data.get('o', '-')
-
-    if z_price != '-' and z_price != '':
-        live_calculated_spread = float(z_price) - y_close
-    elif o_price != '-' and o_price != '':
-        live_calculated_spread = float(o_price) - y_close
-except Exception:
-    live_calculated_spread = 0.0
+    return None
 
 # ==========================================
 # B. 側邊欄：盤前試算自動連動與手動微調
