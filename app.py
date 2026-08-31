@@ -356,11 +356,10 @@ st.markdown(
 )
 
 # ==========================================
-# A. TWSE 官方 API 實時資料抓取與試算價差解析
+# 1. 先定義 API 抓取函式 (必須放在最上面)
 # ==========================================
 import requests
 
-# 預先初始化變數，避免 NameError 崩潰
 live_calculated_spread = 0.0
 
 def fetch_twse_official_data(code):
@@ -372,12 +371,11 @@ def fetch_twse_official_data(code):
         if "msgArray" in data and len(data["msgArray"]) > 0:
             info = data["msgArray"][0]
             
-            # 1. 動態更新股票名稱
+            # 動態更新股票名稱
             api_name = info.get("n", "")
             if api_name and stock_mode == "自訂股票代碼":
                 display_stock_name = f"{code} {api_name}"
                 
-            # 2. 計算試算價差 (若有試算買賣價)
             try:
                 z_price = float(info.get("z", 0) or info.get("y", 0))
                 o_price = float(info.get("o", 0) or z_price)
@@ -391,6 +389,38 @@ def fetch_twse_official_data(code):
     
     live_calculated_spread = 0.0
     return {}
+
+
+# ==========================================
+# 2. 側邊欄控制項與股票選取
+# ==========================================
+st.sidebar.header("📊 PVCS 台股個股選取")
+
+stock_mode = st.sidebar.radio("選擇股票模式", ["熱門標的", "自訂股票代碼"])
+
+stock_name_map = {
+    "2330": "台積電", "2317": "鴻海", "2454": "聯發科", "2303": "聯電", "6770": "力積電",
+    "2308": "台達電", "2357": "華碩", "3008": "大立光", "3443": "創意", "6669": "緯穎",
+    "2382": "廣達", "3231": "緯創", "3481": "群創", "2409": "友達", "2324": "仁寶",
+    "2344": "華邦电", "2603": "長榮", "2609": "陽明", "2615": "萬海", "00876": "元大全球5G",
+    "0050": "元大台灣50", "0056": "元大高股息", "2059": "川湖"
+}
+
+if stock_mode == "熱門標的":
+    selected_stock = st.sidebar.selectbox("熱門股票清單 (成交熱門/權值股)", hot_stock_options)
+    stock_code = selected_stock.split(" ")[0]
+    display_stock_name = selected_stock
+else:
+    user_input_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 2317)", value="2317").strip().upper()
+    stock_code = user_input_code if user_input_code else "2317"
+    stock_name = stock_name_map.get(stock_code, "")
+    display_stock_name = f"{stock_code} {stock_name}".strip() if stock_name else stock_code
+
+
+# ==========================================
+# 3. 呼叫 API 取得動態名稱 (此時函式已定義完成，不會 NameError)
+# ==========================================
+real_data = fetch_twse_official_data(stock_code)
 
 # ==========================================
 # B. 側邊欄：盤前試算自動連動與手動微調
