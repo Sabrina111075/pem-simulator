@@ -435,13 +435,24 @@ if use_live_data:
     now_time = datetime.datetime.now()
     time_num = now_time.hour * 100 + now_time.minute
     
-    # 判斷是否在 08:30 ~ 09:00 盤前試撮時段
     if 830 <= time_num < 900:
         default_spread = float(live_calculated_spread)
         st.sidebar.caption(f"已即時帶入 TWSE 試撮價差：`{default_spread:+.2f}`")
     else:
-        # 非試撮時段，自動帶入盤中實時價差 (若 live_calculated_spread 有值則使用，否則備援帶入 diff_val)
-        default_spread = float(live_calculated_spread) if live_calculated_spread != 0.0 else float(diff_val if 'diff_val' in locals() else 0.0)
+        # 嘗試從 live_calculated_spread 或全域變數讀取，若為 0 則直接算「最新價 - 昨收」
+        calc_diff = float(live_calculated_spread)
+        if calc_diff == 0.0 and 'diff_val' in locals():
+            calc_diff = float(diff_val)
+            
+        # 若仍抓不到價差，直接由最新價差卡片數據補救
+        if calc_diff == 0.0 and 'stock_data' in locals() and stock_data is not None:
+            try:
+                # 計算 (當前價 - 昨收價)
+                calc_diff = float(stock_data.get('close', 0) - stock_data.get('yesterday_close', 0))
+            except:
+                calc_diff = 0.0
+                
+        default_spread = calc_diff
         st.sidebar.caption(f"非試撮時段，自動同步盤中價差：`{default_spread:+.2f}`")
 else:
     default_spread = 0.0
