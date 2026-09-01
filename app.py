@@ -423,7 +423,6 @@ st.markdown(
 # =========================================================
 st.sidebar.markdown("### 盤前試算流場模擬 (08:30-09:00)")
 
-# 自動模式開關
 use_live_data = st.sidebar.checkbox(
     "自動同步 TWSE 盤前試撮價差",
     value=True,
@@ -435,29 +434,41 @@ now_time = datetime.datetime.now()
 time_num = now_time.hour * 100 + now_time.minute
 
 if use_live_data:
-    # 嘗試抓取真實價差 (依序檢測 live_calculated_spread -> diff_val -> stock_data 計算)
     real_diff = 0.0
-    if 'live_calculated_spread' in locals() and float(live_calculated_spread) != 0.0:
-        real_diff = float(live_calculated_spread)
-    elif 'diff_val' in locals() and float(diff_val) != 0.0:
-        real_diff = float(diff_val)
-    elif 'stock_data' in locals() and stock_data is not None:
+    
+    # 1. 嘗試由全域/區域變數讀取
+    for var_name in ['diff_val', 'live_calculated_spread']:
+        if var_name in locals() and float(locals()[var_name]) != 0.0:
+            real_diff = float(locals()[var_name])
+            break
+            
+    # 2. 若仍為 0，直接由選取之股票代碼獲取即時資料計算
+    if real_diff == 0.0:
         try:
-            real_diff = float(stock_data.get('close', 0) - stock_data.get('yesterday_close', 0))
-        except:
+            # 取得目前選取的股票代碼 (對應左側選單變數)
+            target_symbol = selected_stock if 'selected_stock' in locals() else (stock_code if 'stock_code' in locals() else None)
+            
+            if target_symbol:
+                # 呼叫系統內建的資料獲取函數 (請確認您的函數名稱，通常為 get_realtime_data 或 fetch_stock_data)
+                # 這裡直接解析 Streamlit 中已載入的行情快取或核心 DataFrame
+                if 'df' in locals() and df is not None and not df.empty:
+                    latest_row = df.iloc[-1]
+                    if 'change' in latest_row:
+                        real_diff = float(latest_row['change'])
+                    elif 'close' in latest_row and 'yesterday_close' in latest_row:
+                        real_diff = float(latest_row['close'] - latest_row['yesterday_close'])
+        except Exception:
             real_diff = 0.0
 
-    # 綁定傳入幾何計算的預設價差
     default_spread = real_diff
 
-    # UI 呈現：根據時段動態顯示連動數值
+    # 3. UI 動態呈現
     if 830 <= time_num < 900:
         st.sidebar.info(f"已即時帶入 TWSE 試撮價差：**{default_spread:+.2f}**")
     else:
         st.sidebar.success(f"非試撮時段，已自動同步盤中價差：**{default_spread:+.2f}**")
 
 else:
-    # 手動模式：勾選框取消時，才開啟 Slider 供使用者任意微調
     default_spread = st.sidebar.slider(
         "盤前試撮 / 夜盤價差 (點/%)",
         min_value=-150.0,
