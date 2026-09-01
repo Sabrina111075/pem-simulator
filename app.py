@@ -418,54 +418,54 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ==========================================
+# =========================================================
 # B. 側邊欄：盤前試算自動連動與手動微調
-# ==========================================
-st.sidebar.markdown("### 📊 盤前試撮流場模擬 (08:30-09:00)")
+# =========================================================
+st.sidebar.markdown("### 盤前試算流場模擬 (08:30-09:00)")
 
-# 自動模式開關 (帶有唯一 key)
+# 自動模式開關
 use_live_data = st.sidebar.checkbox(
-    "自動同步 TWSE 盤前試撮價差", 
-    value=True, 
+    "自動同步 TWSE 盤前試撮價差",
+    value=True,
     key="chk_twse_live_sync"
 )
 
+import datetime
+now_time = datetime.datetime.now()
+time_num = now_time.hour * 100 + now_time.minute
+
 if use_live_data:
-    import datetime
-    now_time = datetime.datetime.now()
-    time_num = now_time.hour * 100 + now_time.minute
-    
+    # 嘗試抓取真實價差 (依序檢測 live_calculated_spread -> diff_val -> stock_data 計算)
+    real_diff = 0.0
+    if 'live_calculated_spread' in locals() and float(live_calculated_spread) != 0.0:
+        real_diff = float(live_calculated_spread)
+    elif 'diff_val' in locals() and float(diff_val) != 0.0:
+        real_diff = float(diff_val)
+    elif 'stock_data' in locals() and stock_data is not None:
+        try:
+            real_diff = float(stock_data.get('close', 0) - stock_data.get('yesterday_close', 0))
+        except:
+            real_diff = 0.0
+
+    # 綁定傳入幾何計算的預設價差
+    default_spread = real_diff
+
+    # UI 呈現：根據時段動態顯示連動數值
     if 830 <= time_num < 900:
-        default_spread = float(live_calculated_spread)
-        st.sidebar.caption(f"已即時帶入 TWSE 試撮價差：`{default_spread:+.2f}`")
+        st.sidebar.info(f"已即時帶入 TWSE 試撮價差：**{default_spread:+.2f}**")
     else:
-        calc_diff = float(live_calculated_spread)
-        if calc_diff == 0.0 and 'diff_val' in locals():
-            calc_diff = float(diff_val)
-            
-        if calc_diff == 0.0 and 'stock_data' in locals() and stock_data is not None:
-            try:
-                calc_diff = float(stock_data.get('close', 0) - stock_data.get('yesterday_close', 0))
-            except:
-                calc_diff = 0.0
-                
-        default_spread = calc_diff
-        st.sidebar.caption(f"非試撮時段，自動同步盤中價差：`{default_spread:+.2f}`")
+        st.sidebar.success(f"非試撮時段，已自動同步盤中價差：**{default_spread:+.2f}**")
 
-    # 【關鍵修復】強制作廢舊 Session 紀錄，將最新價差直接覆寫進 Slider 的 Key 內！
-    st.session_state["sb_spread_slider"] = float(np.clip(default_spread, -150.0, 150.0))
 else:
-    default_spread = 0.0
-    st.session_state["sb_spread_slider"] = 0.0
-
-pre_market_spread = st.sidebar.slider(
-    "盤前試撮 / 夜盤價差 (點/%)",
-    min_value=-150.0,
-    max_value=150.0,
-    value=float(np.clip(default_spread, -150.0, 150.0)),
-    step=0.5,
-    key="sb_spread_slider"
-)
+    # 手動模式：勾選框取消時，才開啟 Slider 供使用者任意微調
+    default_spread = st.sidebar.slider(
+        "盤前試撮 / 夜盤價差 (點/%)",
+        min_value=-150.0,
+        max_value=150.0,
+        value=0.0,
+        step=0.5,
+        key="sb_spread_slider"
+    )
 
 # ==========================================
 # 主力籌碼意向控制項與映射字典
