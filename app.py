@@ -861,12 +861,12 @@ with col3:
     st.metric("主力買賣淨張數 (C)", f"{c_val:,} 張")
 
 with col4:
-st.metric(
-    label="主力籌碼淨資金 (F)",
-    value=f"{capital_flow_yi:.2f} 億元",
-    delta=f"{capital_flow_yi:+.2f} 億 ({status_str})", # 這裡帶入 +/-, Streamlit 就會自動變紅向下箭頭
-    delta_color="normal"
-)
+    st.metric(
+        label="主力籌碼淨資金 (F)",
+        value=f"{capital_flow_yi:.2f} 億元",
+        delta=f"{capital_flow_yi:+.2f} 億 ({status_str})",
+        delta_color="normal"
+    )
 
 with col5:
     st.metric(
