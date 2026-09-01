@@ -421,35 +421,39 @@ st.markdown(
 # =========================================================
 # B. 側邊欄：盤前試算自動連動（定義函數，延遲渲染）
 # =========================================================
-def render_premarket_sidebar(current_diff=0.0):
-    st.sidebar.markdown("### 盤前試算流場模擬 (08:30-09:00)")
-    
-    use_live_data = st.sidebar.checkbox(
-        "自動同步 TWSE 盤前試撮價差",
-        value=True,
-        key="chk_twse_live_sync"
-    )
+# 在側邊欄頂部預留位置，等待資料計算完後填充
+sidebar_container = st.sidebar.empty()
 
-    import datetime
-    now_time = datetime.datetime.now()
-    time_num = now_time.hour * 100 + now_time.minute
-
-    if use_live_data:
-        default_spread = float(current_diff)
-        if 830 <= time_num < 900:
-            st.sidebar.info(f"已即時帶入 TWSE 試撮價差：**{default_spread:+.2f}**")
-        else:
-            st.sidebar.success(f"非試撮時段，已自動同步盤中價差：**{default_spread:+.2f}**")
-    else:
-        default_spread = st.sidebar.slider(
-            "盤前試撮 / 夜盤價差 (點/%)",
-            min_value=-150.0,
-            max_value=150.0,
-            value=0.0,
-            step=0.5,
-            key="sb_spread_slider"
+def render_premarket_sidebar(container, current_diff=0.0):
+    with container.container():
+        st.markdown("### 盤前試算流場模擬 (08:30-09:00)")
+        
+        use_live_data = st.checkbox(
+            "自動同步 TWSE 盤前試撮價差",
+            value=True,
+            key="chk_twse_live_sync"
         )
-    return default_spread
+
+        import datetime
+        now_time = datetime.datetime.now()
+        time_num = now_time.hour * 100 + now_time.minute
+
+        if use_live_data:
+            default_spread = float(current_diff)
+            if 830 <= time_num < 900:
+                st.info(f"已即時帶入 TWSE 試撮價差：**{default_spread:+.2f}**")
+            else:
+                st.success(f"非試撮時段，已自動同步盤中價差：**{default_spread:+.2f}**")
+        else:
+            default_spread = st.slider(
+                "盤前試撮 / 夜盤價差 (點/%)",
+                min_value=-150.0,
+                max_value=150.0,
+                value=0.0,
+                step=0.5,
+                key="sb_spread_slider"
+            )
+        return default_spread
 
 # ==========================================
 # 主力籌碼意向控制項與映射字典
@@ -816,17 +820,28 @@ if 'k_val' not in locals():
     k_val = get_latest_val(latest, ['Curvature_k', 'curvature_k', 'k_intensity'], 0.125)
 
 # 3. 渲染診斷卡片
-# --- 提取實時價差並呼叫側邊欄渲染 ---
+# --- 提取實時價差並填入側邊欄頂部 ---
 price_diff = 0.0
+
 if 'latest' in locals() and isinstance(latest, dict):
-    # 依序尋找字典中代表漲跌價差的欄位
-    for key in ['Change', 'diff', 'spread', 'p_change', 'change']:
-        if key in latest:
-            price_diff = float(latest[key])
+    # 先列印 debug 訊息，排查 latest 的真實欄位 key
+    # st.write("Debug latest keys:", list(latest.keys())) 
+    
+    # 強制檢索數值型態欄位，或匹配行情卡片使用的變數
+    for k, v in latest.items():
+        if k.lower() in ['change', 'diff', 'spread', 'price_change', 'p_change'] and isinstance(v, (int, float)):
+            price_diff = float(v)
             break
 
-# 呼叫函數渲染側邊欄，將算好的實時價差傳進去
-default_spread = render_premarket_sidebar(current_diff=price_diff)
+# 若抓不到，直接借用卡片渲染時可能存在的區域變數 (如 change, diff_val, price_diff)
+if price_diff == 0.0:
+    for var in ['diff_val', 'change_val', 'stock_change']:
+        if var in locals() and isinstance(locals()[var], (int, float)):
+            price_diff = float(locals()[var])
+            break
+
+# 渲染回側邊欄頂部佔位器
+default_spread = render_premarket_sidebar(sidebar_container, current_diff=price_diff)
 
 stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
 st.markdown(f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的：:green[{stock_code} {stock_name}] )</span>", unsafe_allow_html=True)
