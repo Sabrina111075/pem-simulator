@@ -419,52 +419,37 @@ st.markdown(
 )
 
 # =========================================================
-# B. 側邊欄：盤前試算自動連動與手動微調
+# B. 側邊欄：盤前試算自動連動（定義函數，延遲渲染）
 # =========================================================
-st.sidebar.markdown("### 盤前試算流場模擬 (08:30-09:00)")
-
-use_live_data = st.sidebar.checkbox(
-    "自動同步 TWSE 盤前試撮價差",
-    value=True,
-    key="chk_twse_live_sync"
-)
-
-import datetime
-now_time = datetime.datetime.now()
-time_num = now_time.hour * 100 + now_time.minute
-
-if use_live_data:
-    real_diff = 0.0
+def render_premarket_sidebar(current_diff=0.0):
+    st.sidebar.markdown("### 盤前試算流場模擬 (08:30-09:00)")
     
-    # 1. 優先從已解析的字典變數中提取價差
-    if 'latest' in locals() and isinstance(latest, dict):
-        real_diff = float(latest.get('Change', latest.get('diff', 0.0)))
-    elif 'diff_val' in locals():
-        real_diff = float(diff_val)
-        
-    # 2. 若變數尚未生成，直接從全域快取或目前選擇的個股獲取即時價差
-    if real_diff == 0.0 and 'df_latest' in locals() and df_latest is not None:
-        try:
-            real_diff = float(df_latest['Change'].iloc[-1])
-        except:
-            real_diff = 0.0
-
-    default_spread = real_diff
-
-    if 830 <= time_num < 900:
-        st.sidebar.info(f"已即時帶入 TWSE 試撮價差：**{default_spread:+.2f}**")
-    else:
-        st.sidebar.success(f"非試撮時段，已自動同步盤中價差：**{default_spread:+.2f}**")
-
-else:
-    default_spread = st.sidebar.slider(
-        "盤前試撮 / 夜盤價差 (點/%)",
-        min_value=-150.0,
-        max_value=150.0,
-        value=0.0,
-        step=0.5,
-        key="sb_spread_slider"
+    use_live_data = st.sidebar.checkbox(
+        "自動同步 TWSE 盤前試撮價差",
+        value=True,
+        key="chk_twse_live_sync"
     )
+
+    import datetime
+    now_time = datetime.datetime.now()
+    time_num = now_time.hour * 100 + now_time.minute
+
+    if use_live_data:
+        default_spread = float(current_diff)
+        if 830 <= time_num < 900:
+            st.sidebar.info(f"已即時帶入 TWSE 試撮價差：**{default_spread:+.2f}**")
+        else:
+            st.sidebar.success(f"非試撮時段，已自動同步盤中價差：**{default_spread:+.2f}**")
+    else:
+        default_spread = st.sidebar.slider(
+            "盤前試撮 / 夜盤價差 (點/%)",
+            min_value=-150.0,
+            max_value=150.0,
+            value=0.0,
+            step=0.5,
+            key="sb_spread_slider"
+        )
+    return default_spread
 
 # ==========================================
 # 主力籌碼意向控制項與映射字典
@@ -831,6 +816,18 @@ if 'k_val' not in locals():
     k_val = get_latest_val(latest, ['Curvature_k', 'curvature_k', 'k_intensity'], 0.125)
 
 # 3. 渲染診斷卡片
+# --- 提取實時價差並呼叫側邊欄渲染 ---
+price_diff = 0.0
+if 'latest' in locals() and isinstance(latest, dict):
+    # 依序尋找字典中代表漲跌價差的欄位
+    for key in ['Change', 'diff', 'spread', 'p_change', 'change']:
+        if key in latest:
+            price_diff = float(latest[key])
+            break
+
+# 呼叫函數渲染側邊欄，將算好的實時價差傳進去
+default_spread = render_premarket_sidebar(current_diff=price_diff)
+
 stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
 st.markdown(f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的：:green[{stock_code} {stock_name}] )</span>", unsafe_allow_html=True)
 
