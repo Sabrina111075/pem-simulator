@@ -436,33 +436,21 @@ time_num = now_time.hour * 100 + now_time.minute
 if use_live_data:
     real_diff = 0.0
     
-    # 1. 嘗試由全域/區域變數讀取
-    for var_name in ['diff_val', 'live_calculated_spread']:
-        if var_name in locals() and float(locals()[var_name]) != 0.0:
-            real_diff = float(locals()[var_name])
-            break
-            
-    # 2. 若仍為 0，直接由選取之股票代碼獲取即時資料計算
-    if real_diff == 0.0:
+    # 1. 優先從已解析的字典變數中提取價差
+    if 'latest' in locals() and isinstance(latest, dict):
+        real_diff = float(latest.get('Change', latest.get('diff', 0.0)))
+    elif 'diff_val' in locals():
+        real_diff = float(diff_val)
+        
+    # 2. 若變數尚未生成，直接從全域快取或目前選擇的個股獲取即時價差
+    if real_diff == 0.0 and 'df_latest' in locals() and df_latest is not None:
         try:
-            # 取得目前選取的股票代碼 (對應左側選單變數)
-            target_symbol = selected_stock if 'selected_stock' in locals() else (stock_code if 'stock_code' in locals() else None)
-            
-            if target_symbol:
-                # 呼叫系統內建的資料獲取函數 (請確認您的函數名稱，通常為 get_realtime_data 或 fetch_stock_data)
-                # 這裡直接解析 Streamlit 中已載入的行情快取或核心 DataFrame
-                if 'df' in locals() and df is not None and not df.empty:
-                    latest_row = df.iloc[-1]
-                    if 'change' in latest_row:
-                        real_diff = float(latest_row['change'])
-                    elif 'close' in latest_row and 'yesterday_close' in latest_row:
-                        real_diff = float(latest_row['close'] - latest_row['yesterday_close'])
-        except Exception:
+            real_diff = float(df_latest['Change'].iloc[-1])
+        except:
             real_diff = 0.0
 
     default_spread = real_diff
 
-    # 3. UI 動態呈現
     if 830 <= time_num < 900:
         st.sidebar.info(f"已即時帶入 TWSE 試撮價差：**{default_spread:+.2f}**")
     else:
