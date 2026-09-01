@@ -334,14 +334,24 @@ def fetch_twse_official_data(code):
 st.markdown(
     """
     <style>
-        /* 稍微拉寬側邊欄，確保下拉選單文字完整顯示 */
-        [data-testid="stSidebar"] {
-            min-width: 300px !important;
-        }
-        /* 確保 selectbox 選項不會溢出被裁切 */
-        div[data-baseweb="select"] {
-            width: 100% !important;
-        }
+    /* 稍微拉寬側邊欄，確保下拉選單文字完整顯示 */
+    [data-testid="stSidebar"] {
+        min-width: 300px !important;
+    }
+    /* 確保 selectbox 選項不會溢出被裁切 */
+    div[data-baseweb="select"] {
+        width: 100% !important;
+    }
+    /* 強制壓低橫向分隔線 (hr) 的留白間距 */
+    hr {
+        margin-top: 0px !important;
+        margin-bottom: 2px !important;
+    }
+    /* 清除 h3 標題上方被 Streamlit 預設注入的 Padding */
+    h3 {
+        padding-top: 0px !important;
+        margin-top: 0px !important;
+    }
     </style>
     """,
     unsafe_allow_html=True
