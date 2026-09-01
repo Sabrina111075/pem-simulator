@@ -431,8 +431,18 @@ use_live_data = st.sidebar.checkbox(
 )
 
 if use_live_data:
-    default_spread = float(live_calculated_spread)
-    st.sidebar.caption(f"🟢 已即時帶入 TWSE 試撮價差：`{default_spread:+.2f}`")
+    import datetime
+    now_time = datetime.datetime.now()
+    time_num = now_time.hour * 100 + now_time.minute
+    
+    # 判斷是否在 08:30 ~ 09:00 盤前試撮時段
+    if 830 <= time_num < 900:
+        default_spread = float(live_calculated_spread)
+        st.sidebar.caption(f"已即時帶入 TWSE 試撮價差：`{default_spread:+.2f}`")
+    else:
+        # 非試撮時段，自動帶入盤中實時價差 (若 live_calculated_spread 有值則使用，否則備援帶入 diff_val)
+        default_spread = float(live_calculated_spread) if live_calculated_spread != 0.0 else float(diff_val if 'diff_val' in locals() else 0.0)
+        st.sidebar.caption(f"非試撮時段，自動同步盤中價差：`{default_spread:+.2f}`")
 else:
     default_spread = 0.0
 
