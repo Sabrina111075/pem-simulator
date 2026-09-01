@@ -331,18 +331,19 @@ def fetch_twse_official_data(code):
 # ==========================================
 # 0. 側邊欄寬度 CSS 微調 (解決選單吃字問題)
 # ==========================================
-st.markdown(
-    """
-    <style>
-        /* 稍微拉寬側邊欄，確保下拉選單文字完整顯示 */
-        [data-testid="stSidebar"] {
-            min-width: 300px !important;
-        }
-        /* 確保 selectbox 選項不會溢出被裁切 */
-        div[data-baseweb="select"] {
-            width: 100% !important;
-        }
-    </style>
+st.sidebar.markdown(
+    f"""
+    <div style="
+        background-color: #d4edda; 
+        color: #155724; 
+        padding: 8px 12px; 
+        border-radius: 6px; 
+        font-size: 13.5px; 
+        line-height: 1.4; 
+        margin-top: 6px;
+    ">
+        非試撮時段，已自動同步盤中價差：<b>+{diff_now:.2f}</b>
+    </div>
     """,
     unsafe_allow_html=True
 )
