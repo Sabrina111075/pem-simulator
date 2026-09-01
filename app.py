@@ -746,21 +746,24 @@ with col_p1:
     st.metric(
         label="預估價格動態幅度", 
         value=f"{pred_delta:+.2f} 元", 
-        delta=f"{delta_pct:+.2f}%"
+        delta=f"{delta_pct:+.2f}%",
+        help="透過雙曲正切函數 (Tanh) 將無單位的激勵值轉換為價格波動率，反映當前流場動態對股價的即時推升/壓制金額。"
     )
 
 with col_p2:
     st.metric(
         label="模型預測目標價", 
         value=f"{pred_target_price:.2f} 元", 
-        delta=f"{pred_delta:+.2f} 元"
+        delta=f"{pred_delta:+.2f} 元",
+        help="以當前最新成交價為基底，疊加流場雙曲映射算出之預估動態變動金額後得到的短線理論目標價位。"
     )
 
 with col_p3:
     st.metric(
         label="預估資金推升規模", 
         value=f"{pred_capital_impact:+.2f} 億元", 
-        delta="主力籌碼推升估算"
+        delta="主力籌碼推升估算",
+        help="將主力買賣淨張數與即時成交價結合計算，估算出當前動能背後對應的主力資金淨流入/流出規模。"
     )
 
 # 1. 安全提取價格與主力籌碼數據
