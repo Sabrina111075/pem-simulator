@@ -675,12 +675,42 @@ try:
     ti_score = c_now / (v_now + 1e-5) if v_now > 0 else 0.0
     ti_score = max(min(ti_score, 1.0), -1.0)
 
-    # 2. 綜合預測激勵值 Incentive Score (-100 ~ +100)
-    # 當動能 (diff_now) 與買賣不平衡 (ti_score) 正向共振時激勵值最高
-    raw_incentive = (ti_score * 0.7) + (
-        (1.0 if diff_now > 0 else (-1.0 if diff_now < 0 else 0.0)) * 0.3
-    )
-    incentive_score = round(raw_incentive * 100, 1)
+# 2. 綜合預測激勵值 Incentive Score (-100 ~ +100)
+# 當動能 (diff_now) 與買賣不平衡 (ti_score) 正向共振時激勵值最高
+raw_incentive = (ti_score * 0.7) + (
+    (1.0 if diff_now > 0 else (-1.0 if diff_now < 0 else 0.0)) * 0.3
+)
+incentive_score = round(raw_incentive * 100, 1)
+
+# --- [新增] 2.1 激勵值轉換為預測價差與目標價 ---
+    # 建立雙曲映射 (Tanh Bound)，並依當前股價 p_now 進行比例動態映射
+    # 假設全日預期最大合理衝擊幅度為當前股價的 3% (約當前股價的 +/-3%)
+    import numpy as np
+
+    # 雙曲非線性映射 (範圍介於 -1 ~ +1)
+    scale_factor = np.tanh(incentive_score / 50.0)
+
+    # 計算預測股價動態變動金額 (以百分比為基礎)
+    pred_delta = round(p_now * scale_factor * 0.03, 2)
+
+    # 計算預測目標價
+    pred_target_price = round(p_now + pred_delta, 2)
+
+    # 計算預估推升資金規模 (以億元為單位估算，結合主力買賣張數)
+    pred_capital_impact = round(c_now * p_now * 1000 / 1e8, 2)
+
+    # 3. 判斷三階段 (上盤/中盤/下降)
+    if incentive_score > 20 and diff_now >= 0:
+        phase_status = "↗️ 上盤階段"
+        phase_desc = "動能共振，主動買盤擴張"
+        phase_color = "#28a745"
+    elif incentive_score < -20 and diff_now <= 0:
+        phase_status = "↘️ 下降階段"
+        phase_desc = "賣壓貫穿，恐慌釋放中"
+        phase_color = "#dc3545"
+    else:
+        phase_status = "➡️ 中盤階段"
+        phase_desc = "能量蓄積，多空動能平衡"
 
     # 3. 判斷三階段 (上盤 / 中盤 / 下降)
     if incentive_score > 20 and diff_now >= 0:
