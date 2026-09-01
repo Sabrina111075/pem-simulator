@@ -854,7 +854,7 @@ with col4:
     st.metric(
         label="主力籌碼淨資金 (F)",
         value=f"{capital_flow_yi:.2f} 億元",
-        delta=f"{capital_flow_yi:+.2f} 億 ({status_str})",
+        delta=f"{capital_flow_yi:+.2f} 億",
         delta_color="normal"
     )
 
