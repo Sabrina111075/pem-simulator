@@ -820,20 +820,15 @@ if 'k_val' not in locals():
     k_val = get_latest_val(latest, ['Curvature_k', 'curvature_k', 'k_intensity'], 0.125)
 
 # 3. 渲染診斷卡片
-# --- 提取實時價差並填入側邊欄頂部 ---
+# --- 1. 提取實時價差並填入側邊欄頂部 ---
 price_diff = 0.0
 
 if 'latest' in locals() and isinstance(latest, dict):
-    # 先列印 debug 訊息，排查 latest 的真實欄位 key
-    # st.write("Debug latest keys:", list(latest.keys())) 
-    
-    # 強制檢索數值型態欄位，或匹配行情卡片使用的變數
     for k, v in latest.items():
         if k.lower() in ['change', 'diff', 'spread', 'price_change', 'p_change'] and isinstance(v, (int, float)):
             price_diff = float(v)
             break
 
-# 若抓不到，直接借用卡片渲染時可能存在的區域變數 (如 change, diff_val, price_diff)
 if price_diff == 0.0:
     for var in ['diff_val', 'change_val', 'stock_change']:
         if var in locals() and isinstance(locals()[var], (int, float)):
@@ -843,8 +838,15 @@ if price_diff == 0.0:
 # 渲染回側邊欄頂部佔位器
 default_spread = render_premarket_sidebar(sidebar_container, current_diff=price_diff)
 
+# --- 2. 補回 DMEC-GF 幾何雙曲流場主標題 ---
 stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
-st.markdown(f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的：:green[{stock_code} {stock_name}] )</span>", unsafe_allow_html=True)
+
+st.markdown(
+    f"### 💡 DMEC-GF 幾何雙曲流場實時診斷 "
+    f"<span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>"
+    f"( 當前標的：:green[{stock_code} {stock_name}] )</span>", 
+    unsafe_allow_html=True
+)
 
 # --- 1. 計算數值、HTML 燈號與文字標籤 ---
 d_num = float(d_val)
