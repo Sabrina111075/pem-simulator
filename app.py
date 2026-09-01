@@ -814,15 +814,15 @@ capital_flow_raw = c_num * p_num * 1000
 capital_flow_yi = capital_flow_raw / 1e8
 
 # 2. 動態判斷主力資金 (F) 狀態與顏色
-if capital_flow_yi > 0.5:
-    status_str = "強勢流入 (Risk-on)"
-    delta_color = "normal"  # 綠/紅 依平台設定，正數向上
-elif capital_flow_yi < -0.5:
+if capital_flow_yi <= -0.5:
     status_str = "強勢流出 (Risk-off)"
-    delta_color = "inverse"  # 負數自動轉為紅燈/向下箭頭
+    delta_color = "normal"  # 負值自然顯示紅色 + 向下箭頭 ↓
+elif capital_flow_yi >= 0.5:
+    status_str = "強勢流入 (Risk-on)"
+    delta_color = "normal"  # 正值自然顯示綠色 + 向上箭頭 ↑
 else:
     status_str = "中性籌碼輪動"
-    delta_color = "off"
+    delta_color = "off"     # 中性不顯示箭頭
 
 # 3. 計算「主力籌碼飽和度 (S)」邏輯
 # 從 latest 提取累積買賣超對比最大通道容量，或進行動態比率估算
@@ -833,19 +833,19 @@ if saturability_pct is None:
     base_limit = 5000.0
     saturability_pct = min(max((c_num / base_limit) * 100, -100.0), 100.0)
 
-# 根據飽和度數值進行幾何診斷與警示標籤
+# 根據飽和度數值進行幾何診斷與警示標籤 (統一箭頭語意)
 if saturability_pct >= 80.0:
     sat_status = "⚠️ 極度飽和 (防高檔倒貨)"
     sat_delta_color = "inverse"
 elif saturability_pct <= -80.0:
-    sat_status = "🛡️ 賣壓枯竭 (底部醞釀)"
+    sat_status = "⚠️ 賣壓枯竭 (底部醞釀)"
     sat_delta_color = "normal"
 elif saturability_pct > 20.0:
     sat_status = "📈 籌碼吸納中"
     sat_delta_color = "normal"
 elif saturability_pct < -20.0:
     sat_status = "📉 籌碼派發中"
-    sat_delta_color = "inverse"
+    sat_delta_color = "normal"
 else:
     sat_status = "⚖️ 籌碼平衡均衡"
     sat_delta_color = "off"
