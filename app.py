@@ -411,7 +411,16 @@ if stock_mode == "自訂股票代碼":
 # ==========================================
 # 2. 渲染主畫面 UI (此時名稱已注入中文)
 # ==========================================
-st.subheader(f"📊 市場實時行情與 P/V/C 數據 ( 標的：{display_stock_name} )")
+st.markdown(
+    f"""
+    <div style="margin-top: -15px; margin-bottom: 10px;">
+        <h3 style="font-size: 24px; font-weight: 600; color: #1f2937; margin: 0;">
+            📊 市場實時行情與 P/V/C 數據 ( 標的：{display_stock_name} )
+        </h3>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 st.markdown(
     f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的：:green[{display_stock_name}] )</span>", 
