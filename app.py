@@ -736,6 +736,33 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("##### 🎯 激勵值價格轉換與目標價預測 (Price Incentive Mapping)")
+
+col_p1, col_p2, col_p3 = st.columns(3)
+
+with col_p1:
+    delta_pct = (pred_delta / p_now * 100) if p_now > 0 else 0.0
+    st.metric(
+        label="預估價格動態幅度", 
+        value=f"{pred_delta:+.2f} 元", 
+        delta=f"{delta_pct:+.2f}%"
+    )
+
+with col_p2:
+    st.metric(
+        label="模型預測目標價", 
+        value=f"{pred_target_price:.2f} 元", 
+        delta=f"{pred_delta:+.2f} 元"
+    )
+
+with col_p3:
+    st.metric(
+        label="預估資金推升規模", 
+        value=f"{pred_capital_impact:+.2f} 億元", 
+        delta="主力籌碼推升估算"
+    )
+
 # 1. 安全提取價格與主力籌碼數據
 try:
     p_num = float(str(price_display_fmt).replace(',', ''))
