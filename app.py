@@ -793,14 +793,6 @@ with col_p2:
         help="以當前最新成交價為基底，疊加流場雙曲映射算出之預估動態變動金額後得到的短線理論目標價位。"
     )
 
-with col_p3:
-    st.metric(
-        label="預估資金推升規模", 
-        value=f"{pred_capital_impact:+.2f} 億元", 
-        delta="主力籌碼推升估算",
-        help="將主力買賣淨張數與即時成交價結合計算，估算出當前動能背後對應的主力資金淨流入/流出規模。"
-    )
-
 # 1. 安全提取價格與主力籌碼數據
 try:
     p_num = float(str(price_display_fmt).replace(',', ''))
@@ -813,16 +805,14 @@ c_num = c_val if 'c_val' in locals() else (churn_val if 'churn_val' in locals() 
 capital_flow_raw = c_num * p_num * 1000
 capital_flow_yi = capital_flow_raw / 1e8
 
-# 2. 動態判斷主力資金 (F) 狀態與顏色
-if capital_flow_yi <= -0.5:
-    status_str = "強勢流出 (Risk-off)"
-    delta_color = "normal"  # 負值自然顯示紅色 + 向下箭頭 ↓
-elif capital_flow_yi >= 0.5:
-    status_str = "強勢流入 (Risk-on)"
-    delta_color = "normal"  # 正值自然顯示綠色 + 向上箭頭 ↑
-else:
-    status_str = "中性籌碼輪動"
-    delta_color = "off"     # 中性不顯示箭頭
+# 2. 渲染卡片
+with col_p3:
+    st.metric(
+        label="預估資金推升規模",
+        value=f"{capital_flow_yi:.2f} 億元",
+        delta=f"{capital_flow_yi:+.2f} 億 (籌碼推升估算)",
+        delta_color="normal"
+    )
 
 # 3. 計算「主力籌碼飽和度 (S)」邏輯
 # 從 latest 提取累積買賣超對比最大通道容量，或進行動態比率估算
@@ -847,7 +837,7 @@ elif saturability_pct < -20.0:
     sat_status = "📉 籌碼派發中"
     sat_delta_color = "normal"
 else:
-    sat_status = "⚖️ 籌碼平衡均衡"
+    sat_status = "⚖️ 籌碼均衡"
     sat_delta_color = "off"
 
 # 4. 渲染 5 欄數據卡片
