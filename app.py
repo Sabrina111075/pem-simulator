@@ -426,28 +426,9 @@ sidebar_container = st.sidebar.empty()
 
 def render_premarket_sidebar(container, current_diff=0.0):
     with container.container():
-        # 1. 調整標題字體大小與換行，縮減佔用寬度
-        st.markdown(
-            """
-            <style>
-            /* 讓側邊欄提示框文字更緊湊 */
-            .sidebar-caption {
-                font-size: 13px !important;
-                font-weight: 600;
-                line-height: 1.4;
-                color: #1e293b;
-                margin-bottom: 6px;
-            }
-            .sidebar-status-box {
-                font-size: 12px !important;
-                line-height: 1.5;
-                padding: 8px 10px !important;
-            }
-            </style>
-            <div class="sidebar-caption">盤前試算流場模擬<br><span style="font-size:11px; color:#64748b; font-weight:normal;">(08:30-09:00)</span></div>
-            """, 
-            unsafe_allow_html=True
-        )
+        # 對齊「PVCS 台股個股選取」標題大小，加上副標題
+        st.markdown("### 盤前試算流場模擬")
+        st.caption("(08:30-09:00)")
         
         use_live_data = st.checkbox(
             "自動同步 TWSE 盤前試撮價差",
@@ -461,13 +442,11 @@ def render_premarket_sidebar(container, current_diff=0.0):
 
         if use_live_data:
             default_spread = float(current_diff)
-            # 2. 自動換行提示，並將字體縮小
+            # 使用 Streamlit 原生 Markdown 格式，避免 HTML 標籤爆發
             if 830 <= time_num < 900:
-                msg = f"<b>已帶入 TWSE 試撮價差：</b><br><span style='font-size:14px; color:#059669;'>{default_spread:+.2f}</span>"
-                st.info(msg, icon="ℹ️")
+                st.info(f"已帶入 TWSE 試撮價差：**{default_spread:+.2f}**")
             else:
-                msg = f"<b>非試撮時段</b><br>已自動同步盤中價差：<span style='font-size:14px; color:#059669;'><b>{default_spread:+.2f}</b></span>"
-                st.success(msg, icon="✅")
+                st.success(f"非試撮時段，已自動同步盤中價差：**{default_spread:+.2f}**")
         else:
             default_spread = st.slider(
                 "盤前試撮 / 夜盤價差 (點/%)",
