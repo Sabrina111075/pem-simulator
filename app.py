@@ -342,10 +342,11 @@ st.markdown(
     div[data-baseweb="select"] {
         width: 100% !important;
     }
-    /* 強制壓低橫向分隔線 (hr) 的留白間距 */
+    /* 強制壓低橫向分隔線 (hr) 的留白間距並將線條隱藏 */
     hr {
         margin-top: 0px !important;
         margin-bottom: 2px !important;
+        border: none !important; /* <--- 加入這一行 */
     }
     /* 清除 h3 標題上方被 Streamlit 預設注入的 Padding */
     h3 {
