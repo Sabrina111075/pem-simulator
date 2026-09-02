@@ -841,17 +841,29 @@ else:
     sat_delta_color = "off"
 
 # 4. 渲染 5 欄數據卡片
-# 1. 判斷主力籌碼淨資金 (F) 狀態文字（手動加上對應方向箭頭）
+# 1. 判斷主力籌碼淨資金 (F) 狀態文字與顏色邏輯
 if capital_flow_yi >= 10.0:
-    flow_status = "↑ 強力灌入"
+    flow_status = "強力灌入"
+    flow_delta_color = "normal"
 elif capital_flow_yi > 0:
-    flow_status = "↑ 資金流入"
+    flow_status = "資金流入"
+    flow_delta_color = "normal"
 elif capital_flow_yi <= -10.0:
-    flow_status = "↓ 強力流出"
+    flow_status = "強力流出"
+    flow_delta_color = "normal"
 elif capital_flow_yi < 0:
-    flow_status = "↓ 資金流出"
+    flow_status = "資金流出"
+    flow_delta_color = "normal"
 else:
     flow_status = "資金平穩"
+    flow_delta_color = "off"
+
+# 2. 如果是負數（流出），在文字前面加一個減號 "-"
+# 這樣 Streamlit 就會自動將箭頭轉為向下 (↓)，並自動塗上負向顏色 (紅/綠)
+if capital_flow_yi < 0:
+    flow_delta_str = f"- {flow_status}"
+else:
+    flow_delta_str = flow_status
 
 with col1:
     st.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
@@ -866,8 +878,8 @@ with col4:
     st.metric(
         label="主力籌碼淨資金 (F)",
         value=f"{capital_flow_yi:.2f} 億元",
-        delta=flow_status,
-        delta_color="off"  # 👈 關閉 Streamlit 自動繪製的向上箭頭
+        delta=flow_delta_str,            # 傳入帶有 "-" 的文字，如 "- 強力流出"
+        delta_color=flow_delta_color
     )
 
 with col5:
