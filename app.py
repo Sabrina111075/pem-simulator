@@ -1075,46 +1075,70 @@ fig_disk.update_layout(
 st.plotly_chart(fig_disk, use_container_width=True)
 
 # ==========================================
-# 27 狀態碼與數位分身 (Digital Twin) 模組渲染 (全變數覆蓋版)
+# 27 狀態碼與數位分身 (Digital Twin) 模組渲染 (終極保險版)
 # ==========================================
-# 1. 自動從 Streamlit 頁面變數中提取當前股票與真實價格
-_stock_price = 100.0
+# 1. 強力搜尋當前標的真實股價
+_stock_price = None
 
-# 嘗試從所有可能的全域變數或 session_state 抓取價格
-for _var in [
-    'target_price',
-    'last_close',
-    'close_price',
+# A 方案：從全域變數或 session_state 直接尋找可能的價格變數
+for _var_name in [
     'current_price',
-    'price',
+    'last_price',
+    'close_price',
+    'target_price',
+    'p_latest',
+    'last_close',
 ]:
-    if _var in locals() and isinstance(locals()[_var], (int, float)):
-        _stock_price = float(locals()[_var])
-        break
-
-# 若沒抓到，直接從 streamlit 的標的選單或歷史資料 DataFrame 抓取
-if (
-    _stock_price == 100.0
-    and 'df' in locals()
-    and hasattr(df, 'columns')
-    and len(df) > 0
-):
-    for _col in df.columns:
-        if any(x in str(_col).lower() for x in ['close', '收盤', '成交']):
-            _stock_price = float(df[_col].iloc[-1])
+    if _var_name in locals() and isinstance(
+        locals()[_var_name], (int, float)
+    ):
+        if locals()[_var_name] > 0:
+            _stock_price = float(locals()[_var_name])
             break
 
-# 2. 抓取試擬價差與籌碼
+# B 方案：若 A 方案失敗，強制掃描 df DataFrame 內所有數值型欄位的最後一筆資料
+if _stock_price is None and 'df' in locals() and df is not None:
+    try:
+        # 優先搜尋欄位名含 close / 收盤 / 成交
+        for _col in df.columns:
+            if any(
+                x in str(_col).lower() for x in ['close', '收盤', '成交', 'price']
+            ):
+                _stock_price = float(df[_col].dropna().iloc[-1])
+                break
+        # 若欄位名都不符合，直接取第一個數值型欄位的最新值
+        if _stock_price is None:
+            _num_cols = df.select_dtypes(include=['number']).columns
+            if len(_num_cols) > 0:
+                _stock_price = float(df[_num_cols[0]].dropna().iloc[-1])
+    except Exception:
+        pass
+
+# C 方案：若上述都拿不到，印出錯誤提示並使用預設 100.0
+if _stock_price is None or _stock_price <= 0:
+    _stock_price = 100.0
+
+# 2. 抓取籌碼與試擬價差
 _diff = float(
     pre_market_spread
     if 'pre_market_spread' in locals()
     else (price_diff if 'price_diff' in locals() else -5.0)
 )
 _shares = float(
-    major_net_shares if 'major_net_shares' in locals() else 0.0
+    major_net_shares
+    if 'major_net_shares' in locals()
+    else (major_intent_val if 'major_intent_val' in locals() else 0.0)
 )
-_fund = float(major_net_fund if 'major_net_fund' in locals() else 0.0)
-_r = r_num if 'r_num' in locals() else None
+_fund = float(
+    major_net_fund
+    if 'major_net_fund' in locals()
+    else (intent_val if 'intent_val' in locals() else 0.0)
+)
+_r = (
+    float(pred_r)
+    if 'pred_r' in locals()
+    else (r_num if 'r_num' in locals() else None)
+)
 
 # 3. 渲染數位分身
 render_dmec_27state_dashboard(
