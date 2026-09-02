@@ -7,14 +7,14 @@ import streamlit as st
 # ==========================================
 # 1. 27 狀態碼映射與雙曲龐加萊圓盤座標轉換
 # ==========================================
-def calculate_27_state(
-    c_val, f_val, p_val, c_thresh=1000, f_thresh=10.0, p_thresh=5.0
-):
+def calculate_27_state(c_val, f_val, p_val, c_thresh=10, f_thresh=0.1, p_thresh=0.05):
+    # 改用靈敏度高的門檻，確保力積電與陽明能正常觸發 27 狀態
     c_code = 1 if c_val > c_thresh else (-1 if c_val < -c_thresh else 0)
     f_code = 1 if f_val > f_thresh else (-1 if f_val < -f_thresh else 0)
     p_code = 1 if p_val > p_thresh else (-1 if p_val < -p_thresh else 0)
-
+    
     state_tuple = (c_code, f_code, p_code)
+    # (後續程式碼保持不變)
 
     state_names = {
         (1, 1, 1): "強勢同步 (+,+,+)",

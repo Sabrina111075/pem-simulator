@@ -994,41 +994,41 @@ with col3:
 st.caption("※ 系統已將盤前籌碼微調振動注入三維 P/V/C 向量場，請參考下方圓盤軌跡與轉折風險時序。")
 
 # ==========================================
-# 27 狀態碼與數位分身 (Digital Twin) 模組渲染 (精準連動版)
+# 27 狀態碼與數位分身 (Digital Twin) 模組渲染 (全變數動態捕捉版)
 # ==========================================
-# 1. 自動從全域環境安全提取當前股票的實時價格與籌碼變數
-_c_price = (
-    current_price
-    if "current_price" in locals()
-    else locals().get(
-        "close_price",
-        locals().get("price", locals().get("latest_price", 1000.0)),
-    )
-)
-_c_shares = (
-    major_net_shares
-    if "major_net_shares" in locals()
-    else locals().get("net_shares", 0.0)
-)
-_c_fund = (
-    major_net_fund
-    if "major_net_fund" in locals()
-    else locals().get("net_fund", 0.0)
-)
-_c_diff = (
-    pre_market_spread
-    if "pre_market_spread" in locals()
-    else locals().get("price_diff", locals().get("diff", 0.0))
-)
-_c_r = r_num if "r_num" in locals() else None
+# 1. 動態抓取當前股票價格與籌碼變數
+_c_price = 0.0
+for _k in ['current_price', 'close_price', 'last_price', 'price', 'selected_price']:
+    if _k in locals() and isinstance(locals()[_k], (int, float)) and locals()[_k] > 0:
+        _c_price = float(locals()[_k])
+        break
+
+# 若全域變數未找到，嘗試從 df 的最後一筆資料抓取收盤價
+if _c_price == 0.0 and 'df' in locals() and hasattr(locals()['df'], 'iloc'):
+    try:
+        for _col in ['close', 'Close', '收盤價', '成交']:
+            if _col in locals()['df'].columns:
+                _c_price = float(locals()['df'][_col].iloc[-1])
+                break
+    except Exception:
+        pass
+
+# 預設保護 (若仍未抓到，改設為 100 以利觀察)
+if _c_price == 0.0:
+    _c_price = 100.0
+
+_c_shares = float(locals().get('major_net_shares', locals().get('net_shares', 0.0)))
+_c_fund = float(locals().get('major_net_fund', locals().get('net_fund', 0.0)))
+_c_diff = float(locals().get('pre_market_spread', locals().get('price_diff', locals().get('diff', 0.0))))
+_c_r = locals().get('r_num', None)
 
 # 2. 渲染數位分身引擎
 render_dmec_27state_dashboard(
-    current_price=float(_c_price),
-    c_val=float(_c_shares),
-    f_val=float(_c_fund),
-    p_val=float(_c_diff),
-    r_override=_c_r,
+    current_price=_c_price,
+    c_val=_c_shares,
+    f_val=_c_fund,
+    p_val=_c_diff,
+    r_override=_c_r
 )
 
 # ==========================================
