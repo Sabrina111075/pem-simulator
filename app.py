@@ -1,4 +1,5 @@
-﻿import streamlit as st
+﻿from dmec_27state_component import render_dmec_27state_dashboard
+import streamlit as st
 import streamlit.components.v1 as components
 import numpy as np
 import pandas as pd
@@ -434,8 +435,18 @@ st.markdown(
 )
 
 st.markdown(
-    f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的：:green[{display_stock_name}] )</span>",
-    unsafe_allow_html=True
+    f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的： :green[{display_stock_name}] )</span>",
+    unsafe_allow_html=True,
+)
+
+# ==========================================
+# 27 狀態碼與數位分身 (Digital Twin) 模組渲染
+# ==========================================
+render_dmec_27state_dashboard(
+    current_price=float(price),
+    c_val=float(major_net_shares),
+    f_val=float(major_net_fund),
+    p_val=float(price_diff),
 )
 
 # =========================================================
