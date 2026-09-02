@@ -996,23 +996,39 @@ st.caption("※ 系統已將盤前籌碼微調振動注入三維 P/V/C 向量場
 # ==========================================
 # 27 狀態碼與數位分身 (Digital Twin) 模組渲染 (精準連動版)
 # ==========================================
-_c_price = locals().get(
-    "price",
-    locals().get("latest_price", locals().get("close_price", 4275.0)),
+# 1. 自動從全域環境安全提取當前股票的實時價格與籌碼變數
+_c_price = (
+    current_price
+    if "current_price" in locals()
+    else locals().get(
+        "close_price",
+        locals().get("price", locals().get("latest_price", 1000.0)),
+    )
 )
-_c_shares = locals().get(
-    "major_net_shares", locals().get("net_shares", -3527.0)
+_c_shares = (
+    major_net_shares
+    if "major_net_shares" in locals()
+    else locals().get("net_shares", 0.0)
 )
-_c_fund = locals().get("major_net_fund", locals().get("net_fund", -150.78))
-_c_diff = locals().get("price_diff", locals().get("diff", -40.0))
-_c_r = locals().get("r_num", None)  # 自動抓取上方算出的 r_num (如 0.286)
+_c_fund = (
+    major_net_fund
+    if "major_net_fund" in locals()
+    else locals().get("net_fund", 0.0)
+)
+_c_diff = (
+    pre_market_spread
+    if "pre_market_spread" in locals()
+    else locals().get("price_diff", locals().get("diff", 0.0))
+)
+_c_r = r_num if "r_num" in locals() else None
 
+# 2. 渲染數位分身引擎
 render_dmec_27state_dashboard(
     current_price=float(_c_price),
     c_val=float(_c_shares),
     f_val=float(_c_fund),
     p_val=float(_c_diff),
-    r_override=_c_r,  # 帶入連動半徑
+    r_override=_c_r,
 )
 
 # ==========================================
