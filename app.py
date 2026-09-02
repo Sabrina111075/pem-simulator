@@ -442,11 +442,17 @@ st.markdown(
 # ==========================================
 # 27 狀態碼與數位分身 (Digital Twin) 模組渲染
 # ==========================================
+# 自動取得變數，若未定義則使用預設欄位值
+_c_price = locals().get("price", locals().get("latest_price", locals().get("close_price", 4275.0)))
+_c_shares = locals().get("major_net_shares", locals().get("net_shares", -3527.0))
+_c_fund = locals().get("major_net_fund", locals().get("net_fund", -150.78))
+_c_diff = locals().get("price_diff", locals().get("diff", -40.0))
+
 render_dmec_27state_dashboard(
-    current_price=float(price),
-    c_val=float(major_net_shares),
-    f_val=float(major_net_fund),
-    p_val=float(price_diff),
+    current_price=float(_c_price),
+    c_val=float(_c_shares),
+    f_val=float(_c_fund),
+    p_val=float(_c_diff),
 )
 
 # =========================================================
