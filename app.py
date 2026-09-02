@@ -841,6 +841,23 @@ else:
     sat_delta_color = "off"
 
 # 4. 渲染 5 欄數據卡片
+# 判斷主力籌碼淨資金 (F) 狀態文字
+if capital_flow_yi >= 10.0:
+    flow_status = "強力灌入"
+    flow_delta_color = "normal"
+elif capital_flow_yi > 0:
+    flow_status = "資金流入"
+    flow_delta_color = "normal"
+elif capital_flow_yi <= -10.0:
+    flow_status = "強力流出"
+    flow_delta_color = "normal"
+elif capital_flow_yi < 0:
+    flow_status = "資金流出"
+    flow_delta_color = "normal"
+else:
+    flow_status = "資金平穩"
+    flow_delta_color = "off"
+
 with col1:
     st.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
 
@@ -854,8 +871,8 @@ with col4:
     st.metric(
         label="主力籌碼淨資金 (F)",
         value=f"{capital_flow_yi:.2f} 億元",
-        delta=f"{capital_flow_yi:+.2f} 億",
-        delta_color="normal"
+        delta=flow_status,
+        delta_color=flow_delta_color
     )
 
 with col5:
