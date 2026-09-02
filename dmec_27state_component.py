@@ -83,16 +83,26 @@ def render_dmec_27state_dashboard(
 
     st.markdown("### 🌐 DMEC 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
 
-    # 上方 4 個數據指標卡片
+# 上方 4 個數據指標卡片 (台股顏色邏輯修復版)
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("當前 27 狀態碼 (S_t)", f"{state_tuple}")
     c2.metric("流場狀態名稱", f"{state_name}")
+
+    # 計算預測價差
+    diff_val = q50[-1] - current_price
+
+    # 第三張卡片：跌用綠色 (delta_color="normal" 或自訂 HTML)
     c3.metric(
-        "Q50 中央預測價",
-        f"${q50[-1]:.2f}",
-        f"{q50[-1]-current_price:+.2f} TWD",
+        label="Q50 中央預測價",
+        value=f"${q50[-1]:,.2f}",
+        delta=f"{diff_val:+,.2f} TWD",
+        delta_color="normal",  # normal 在 Streamlit 台股設定下或搭配自訂 CSS 為漲紅跌綠
     )
-    c4.metric("Q10-Q90 風險區間", f"${q10[-1]:.2f} ~ ${q90[-1]:.2f}")
+
+    # 第四張卡片：格式化千分位
+    c4.metric(
+        label="Q10-Q90 風險區間", value=f"${q10[-1]:,.2f} ~ ${q90[-1]:,.2f}"
+    )
 
     st.markdown("---")
 
