@@ -69,10 +69,16 @@ def simulate_digital_twin_paths(
 # ==========================================
 # 3. Streamlit 展示介面渲染函數 (視覺排版完美優化版)
 # ==========================================
-def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val):
+def render_dmec_27state_dashboard(
+    current_price, c_val, f_val, p_val, r_override=None
+):
     state_tuple, state_name, r, angle = calculate_27_state(
         c_val, f_val, p_val
     )
+    # 若有傳入上方 DMEC-GF 實時計算出的 r_num，則直接採用連動值
+    if r_override is not None:
+        r = np.clip(float(r_override), 0.05, 0.9)
+
     q10, q50, q90 = simulate_digital_twin_paths(current_price, state_tuple)
 
     st.markdown("### 🌐 DMEC 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
