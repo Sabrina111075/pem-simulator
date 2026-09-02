@@ -439,22 +439,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ==========================================
-# 27 狀態碼與數位分身 (Digital Twin) 模組渲染
-# ==========================================
-# 自動取得變數，若未定義則使用預設欄位值
-_c_price = locals().get("price", locals().get("latest_price", locals().get("close_price", 4275.0)))
-_c_shares = locals().get("major_net_shares", locals().get("net_shares", -3527.0))
-_c_fund = locals().get("major_net_fund", locals().get("net_fund", -150.78))
-_c_diff = locals().get("price_diff", locals().get("diff", -40.0))
-
-render_dmec_27state_dashboard(
-    current_price=float(_c_price),
-    c_val=float(_c_shares),
-    f_val=float(_c_fund),
-    p_val=float(_c_diff),
-)
-
 # =========================================================
 # B. 側邊欄：盤前試算自動連動（定義函數，延遲渲染）
 # =========================================================
@@ -1008,6 +992,26 @@ with col3:
     st.markdown(k_label, unsafe_allow_html=True)
 
 st.caption("※ 系統已將盤前籌碼微調振動注入三維 P/V/C 向量場，請參考下方圓盤軌跡與轉折風險時序。")
+
+# ==========================================
+# 27 狀態碼與數位分身 (Digital Twin) 模組渲染
+# ==========================================
+_c_price = locals().get(
+    "price",
+    locals().get("latest_price", locals().get("close_price", 4275.0)),
+)
+_c_shares = locals().get(
+    "major_net_shares", locals().get("net_shares", -3527.0)
+)
+_c_fund = locals().get("major_net_fund", locals().get("net_fund", -150.78))
+_c_diff = locals().get("price_diff", locals().get("diff", -40.0))
+
+render_dmec_27state_dashboard(
+    current_price=float(_c_price),
+    c_val=float(_c_shares),
+    f_val=float(_c_fund),
+    p_val=float(_c_diff),
+)
 
 # ==========================================
 # 9. 圖表區：Poincaré Disk 盤前籌碼預測
