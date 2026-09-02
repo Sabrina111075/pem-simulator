@@ -994,35 +994,54 @@ with col3:
 st.caption("※ 系統已將盤前籌碼微調振動注入三維 P/V/C 向量場，請參考下方圓盤軌跡與轉折風險時序。")
 
 # ==========================================
-# 27 狀態碼與數位分身 (Digital Twin) 模組渲染 (精準變數對接版)
+# 27 狀態碼與數位分身 (Digital Twin) 模組渲染 (全變數覆蓋版)
 # ==========================================
-# 1. 優先使用 app.py 中 TWSE API / YFinance 抓到的真實收盤價
-real_price = 100.0
-if "df" in locals() and df is not None and not df.empty:
-    for col in ["close", "Close", "收盤價", "成交"]:
-        if col in df.columns:
-            real_price = float(df[col].iloc[-1])
+# 1. 自動從 Streamlit 頁面變數中提取當前股票與真實價格
+_stock_price = 100.0
+
+# 嘗試從所有可能的全域變數或 session_state 抓取價格
+for _var in [
+    'target_price',
+    'last_close',
+    'close_price',
+    'current_price',
+    'price',
+]:
+    if _var in locals() and isinstance(locals()[_var], (int, float)):
+        _stock_price = float(locals()[_var])
+        break
+
+# 若沒抓到，直接從 streamlit 的標的選單或歷史資料 DataFrame 抓取
+if (
+    _stock_price == 100.0
+    and 'df' in locals()
+    and hasattr(df, 'columns')
+    and len(df) > 0
+):
+    for _col in df.columns:
+        if any(x in str(_col).lower() for x in ['close', '收盤', '成交']):
+            _stock_price = float(df[_col].iloc[-1])
             break
 
-# 2. 捕捉盤前試擬價差與籌碼意向
-real_diff = float(
+# 2. 抓取試擬價差與籌碼
+_diff = float(
     pre_market_spread
-    if "pre_market_spread" in locals()
-    else (price_diff if "price_diff" in locals() else -5.0)
+    if 'pre_market_spread' in locals()
+    else (price_diff if 'price_diff' in locals() else -5.0)
 )
-real_shares = float(
-    major_net_shares if "major_net_shares" in locals() else 0.0
+_shares = float(
+    major_net_shares if 'major_net_shares' in locals() else 0.0
 )
-real_fund = float(major_net_fund if "major_net_fund" in locals() else 0.0)
-real_r = r_num if "r_num" in locals() else None
+_fund = float(major_net_fund if 'major_net_fund' in locals() else 0.0)
+_r = r_num if 'r_num' in locals() else None
 
-# 3. 帶入真實數據渲染
+# 3. 渲染數位分身
 render_dmec_27state_dashboard(
-    current_price=real_price,
-    c_val=real_shares,
-    f_val=real_fund,
-    p_val=real_diff,
-    r_override=real_r,
+    current_price=_stock_price,
+    c_val=_shares,
+    f_val=_fund,
+    p_val=_diff,
+    r_override=_r,
 )
 
 # ==========================================
