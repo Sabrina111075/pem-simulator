@@ -67,7 +67,7 @@ def simulate_digital_twin_paths(
 
 
 # ==========================================
-# 3. Streamlit 展示介面渲染函數 (優化版 Layout)
+# 3. Streamlit 展示介面渲染函數 (視覺排版完美優化版)
 # ==========================================
 def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val):
     state_tuple, state_name, r, angle = calculate_27_state(
@@ -90,14 +90,14 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val):
 
     st.markdown("---")
 
-    # 下方圖形區域：左右 1:1 等寬均衡對稱 (5:5 比例)
-    chart_left, chart_right = st.columns([1, 1], gap="medium")
+    # 下方圖形區域：左右 1:1 等寬對稱
+    chart_left, chart_right = st.columns([1, 1], gap="large")
 
     # 1. 左側：龐加萊圓盤雙曲幾何圖
     with chart_left:
         fig_poincare = go.Figure()
 
-        # 畫龐加萊邊界單位圓
+        # 龐加萊圓盤外框
         theta_ring = np.linspace(0, 2 * np.pi, 100)
         fig_poincare.add_trace(
             go.Scatter(
@@ -110,7 +110,7 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val):
             )
         )
 
-        # 座標轉換與點位繪製
+        # 當前狀態極座標點
         rad = np.radians(angle)
         px, py = r * np.cos(rad), r * np.sin(rad)
 
@@ -120,25 +120,29 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val):
                 y=[py],
                 mode="markers+text",
                 marker=dict(
-                    size=18, color="#ef4444", symbol="diamond", line=dict(width=1, color="white")
+                    size=20,
+                    color="#ef4444",
+                    symbol="diamond",
+                    line=dict(width=1.5, color="white"),
                 ),
                 text=[f"S_t {state_tuple}"],
                 textposition="top center",
-                name="當前流場狀態",
+                textfont=dict(size=14, color="#1e293b"),
+                showlegend=False,
             )
         )
 
         fig_poincare.update_layout(
             title=dict(
-                text="雙曲流形龐加萊狀態空間 (Poincaré Disk)",
+                text="<b>龐加萊狀態空間 (Poincaré Disk)</b>",
+                font=dict(size=16),
                 x=0.5,
                 xanchor="center",
             ),
-            xaxis=dict(range=[-1.2, 1.2], visible=False, scaleanchor="y"),
-            yaxis=dict(range=[-1.2, 1.2], visible=False),
-            height=380,
-            margin=dict(l=20, r=20, t=50, b=20),
-            showlegend=False,
+            xaxis=dict(range=[-1.15, 1.15], visible=False, scaleanchor="y"),
+            yaxis=dict(range=[-1.15, 1.15], visible=False),
+            height=360,
+            margin=dict(l=10, r=10, t=40, b=10),
         )
         st.plotly_chart(fig_poincare, use_container_width=True)
 
@@ -158,7 +162,7 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val):
                 fillcolor="rgba(56, 189, 248, 0.25)",
                 line=dict(color="rgba(255,255,255,0)"),
                 hoverinfo="skip",
-                name="Q10-Q90 風險區間 (80%)",
+                name="Q10-Q90 80% 覆蓋區間",
             )
         )
 
@@ -170,22 +174,27 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val):
                 mode="lines+markers",
                 line=dict(color="#0284c7", width=3),
                 marker=dict(size=6),
-                name="Q50 數位分身撮合路徑",
+                name="Q50 數位分身預測路徑",
             )
         )
 
         fig_dt.update_layout(
             title=dict(
-                text="數位分身 (Digital Twin) 未來 10 步價格模擬 (Q10/Q50/Q90)",
+                text="<b>數位分身 10 步價格模擬</b>",
+                font=dict(size=16),
                 x=0.5,
                 xanchor="center",
             ),
-            xaxis_title="未來時間步 (Steps)",
-            yaxis_title="價格 (TWD)",
-            height=380,
-            margin=dict(l=20, r=20, t=50, b=20),
+            xaxis=dict(title="未來時間步 (Steps)", tickmode="linear", dtick=2),
+            yaxis=dict(title="價格 (TWD)"),
+            height=360,
+            margin=dict(l=10, r=10, t=40, b=60),
             legend=dict(
-                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+                orientation="h",
+                yanchor="top",
+                y=-0.25,
+                xanchor="center",
+                x=0.5,
             ),
         )
         st.plotly_chart(fig_dt, use_container_width=True)
