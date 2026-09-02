@@ -1,216 +1,162 @@
 ﻿import numpy as np
-import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
 
-# ==========================================
-# 1. 27 狀態碼映射與雙曲龐加萊圓盤座標轉換
-# ==========================================
-def calculate_27_state(c_val, f_val, p_val, c_thresh=10, f_thresh=0.1, p_thresh=0.05):
-    # 改用靈敏度高的門檻，確保力積電與陽明能正常觸發 27 狀態
+# 1. 27 狀態碼判斷函數
+def calculate_27_state(
+    c_val, f_val, p_val, c_thresh=0.1, f_thresh=0.1, p_thresh=0.05
+):
     c_code = 1 if c_val > c_thresh else (-1 if c_val < -c_thresh else 0)
     f_code = 1 if f_val > f_thresh else (-1 if f_val < -f_thresh else 0)
     p_code = 1 if p_val > p_thresh else (-1 if p_val < -p_thresh else 0)
-    
+
     state_tuple = (c_code, f_code, p_code)
-    # (後續程式碼保持不變)
-
     state_names = {
-        (1, 1, 1): "強勢同步 (+,+,+)",
-        (1, 1, 0): "資金吸收 (+,+,0)",
-        (1, 1, -1): "逆勢承接 (+,+,-)",
-        (1, 0, 1): "籌碼先行 (+,0,+)",
-        (1, 0, 0): "安靜累積 (+,0,0)",
-        (1, 0, -1): "逆勢收籌 (+,0,-)",
+        (1, 1, 1): "極度牛市 (1,1,1)",
         (0, 0, 0): "動態平衡 (0,0,0)",
-        (-1, -1, 1): "強烈背離 (-,-,+)",
-        (-1, -1, -1): "全面弱勢 (-,-,-)",
+        (-1, -1, -1): "極度熊市 (-1,-1,-1)",
     }
-    state_name = state_names.get(
-        state_tuple, f"狀態碼 ({c_code},{f_code},{p_code})"
-    )
-
-    magnitude = np.sqrt(c_code**2 + f_code**2 + p_code**2) / np.sqrt(3)
-    r = np.clip(magnitude * 0.85, 0.05, 0.9)
-    angle = (c_code * 45 + f_code * 90 + p_code * 135) % 360
-
-    return state_tuple, state_name, r, angle
+    name = state_names.get(state_tuple, f"狀態碼 {state_tuple}")
+    return state_tuple, name
 
 
-# ==========================================
-# 2. 輕量化 27x27 轉移機率與數位分身 Q10/Q50/Q90 模擬器
-# ==========================================
+# 2. 數位分身 10 步價格路徑模擬
 def simulate_digital_twin_paths(
-    current_price, state_tuple, n_paths=1000, steps=10
+    current_price, state_tuple, steps=10, n_sims=500
 ):
     c, f, p = state_tuple
-    drift = (c * 0.4 + f * 0.4 + p * 0.2) * 0.002
-    volatility = 0.008 if (c == f == p) else 0.015
+    drift = (c * 0.4 + f * 0.4 + p * 0.2) * 0.005
+    vol = 0.015
 
-    np.random.seed(42)
-    shocks = np.random.normal(0, volatility, (n_paths, steps))
-
-    price_paths = np.zeros((n_paths, steps + 1))
-    price_paths[:, 0] = current_price
+    dt = 1
+    paths = np.zeros((n_sims, steps + 1))
+    paths[:, 0] = current_price
 
     for t in range(1, steps + 1):
-        price_paths[:, t] = price_paths[:, t - 1] * np.exp(
-            drift + shocks[:, t - 1]
+        z = np.random.standard_normal(n_sims)
+        paths[:, t] = paths[:, t - 1] * np.exp(
+            (drift - 0.5 * vol**2) * dt + vol * np.sqrt(dt) * z
         )
 
-    q10 = np.percentile(price_paths, 10, axis=0)
-    q50 = np.percentile(price_paths, 50, axis=0)
-    q90 = np.percentile(price_paths, 90, axis=0)
+    q10 = np.percentile(paths, 10, axis=0)
+    q50 = np.percentile(paths, 50, axis=0)
+    q90 = np.percentile(paths, 90, axis=0)
 
     return q10, q50, q90
 
 
-# ==========================================
-# 3. Streamlit 展示介面渲染函數 (視覺排版完美優化版)
-# ==========================================
+# 3. Streamlit 模組主渲染函數
 def render_dmec_27state_dashboard(
-    current_price, c_val, f_val, p_val, r_override=None
+    current_price=100.0, c_val=0.0, f_val=0.0, p_val=0.0, r_override=None
 ):
-    state_tuple, state_name, r, angle = calculate_27_state(
-        c_val, f_val, p_val
-    )
-    # 若有傳入上方 DMEC-GF 實時計算出的 r_num，則直接採用連動值
-    if r_override is not None:
-        r = np.clip(float(r_override), 0.05, 0.9)
+    # 確保價格非零與型態正確
+    try:
+        base_price = float(current_price)
+        if base_price <= 0:
+            base_price = 100.0
+    except Exception:
+        base_price = 100.0
 
-    q10, q50, q90 = simulate_digital_twin_paths(current_price, state_tuple)
+    state_tuple, state_name = calculate_27_state(c_val, f_val, p_val)
+    q10, q50, q90 = simulate_digital_twin_paths(base_price, state_tuple)
 
-    st.markdown("### 🌐 DMEC 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
+    pred_q50 = q50[-1]
+    diff_val = pred_q50 - base_price
 
-# 上方 4 個數據指標卡片 (台股顏色邏輯修復版)
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("當前 27 狀態碼 (S_t)", f"{state_tuple}")
-    c2.metric("流場狀態名稱", f"{state_name}")
+    # 頂部 4 個 Metric 卡片渲染
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("當前 27 狀態碼 (S_t)", f"{state_tuple}")
+    with col2:
+        st.metric("流場狀態名稱", f"{state_name}")
+    with col3:
+        st.metric(
+            "Q50 中央預測價",
+            f"${pred_q50:,.2f}",
+            delta=f"{diff_val:+.2f} TWD",
+        )
+    with col4:
+        st.metric(
+            "Q10-Q90 風險區間",
+            f"{q10[-1]:.2f} ~ {q90[-1]:.2f}",
+        )
 
-    # 計算預測價差
-    diff_val = q50[-1] - current_price
+    # 下方雙圖表（Poincaré Disk 與 10 步模擬路徑）
+    g1, g2 = st.columns(2)
 
-    # 第三張卡片：跌用綠色 (delta_color="normal" 或自訂 HTML)
-    c3.metric(
-        label="Q50 中央預測價",
-        value=f"${q50[-1]:,.2f}",
-        delta=f"{diff_val:+,.2f} TWD",
-        delta_color="normal",  # normal 在 Streamlit 台股設定下或搭配自訂 CSS 為漲紅跌綠
-    )
+    with g1:
+        st.write("**龐加萊狀態空間 (Poincaré Disk)**")
+        r_val = r_override if r_override is not None else 0.35
+        theta = np.pi / 4 if sum(state_tuple) >= 0 else 5 * np.pi / 4
 
-    # 第四張卡片：格式化千分位
-    c4.metric(
-        label="Q10-Q90 風險區間", value=f"${q10[-1]:,.2f} ~ ${q90[-1]:,.2f}"
-    )
-
-    st.markdown("---")
-
-    # 下方圖形區域：左右 1:1 等寬對稱
-    chart_left, chart_right = st.columns([1, 1], gap="large")
-
-    # 1. 左側：龐加萊圓盤雙曲幾何圖
-    with chart_left:
-        fig_poincare = go.Figure()
-
-        # 龐加萊圓盤外框
-        theta_ring = np.linspace(0, 2 * np.pi, 100)
-        fig_poincare.add_trace(
+        fig_p = go.Figure()
+        # 繪製外圓邊界
+        t_arr = np.linspace(0, 2 * np.pi, 100)
+        fig_p.add_trace(
             go.Scatter(
-                x=np.cos(theta_ring),
-                y=np.sin(theta_ring),
+                x=np.cos(t_arr),
+                y=np.sin(t_arr),
                 mode="lines",
-                line=dict(color="#94a3b8", width=2, dash="dash"),
-                hoverinfo="none",
+                line=dict(dash="dash", color="gray"),
                 showlegend=False,
             )
         )
-
-        # 當前狀態極座標點
-        rad = np.radians(angle)
-        px, py = r * np.cos(rad), r * np.sin(rad)
-
-        fig_poincare.add_trace(
+        # 繪製狀態點
+        fig_p.add_trace(
             go.Scatter(
-                x=[px],
-                y=[py],
+                x=[r_val * np.cos(theta)],
+                y=[r_val * np.sin(theta)],
                 mode="markers+text",
-                marker=dict(
-                    size=20,
-                    color="#ef4444",
-                    symbol="diamond",
-                    line=dict(width=1.5, color="white"),
-                ),
                 text=[f"S_t {state_tuple}"],
                 textposition="top center",
-                textfont=dict(size=14, color="#1e293b"),
+                marker=dict(size=14, color="red", symbol="diamond"),
                 showlegend=False,
             )
         )
-
-        fig_poincare.update_layout(
-            title=dict(
-                text="<b>龐加萊狀態空間 (Poincaré Disk)</b>",
-                font=dict(size=16),
-                x=0.5,
-                xanchor="center",
-            ),
-            xaxis=dict(range=[-1.15, 1.15], visible=False, scaleanchor="y"),
-            yaxis=dict(range=[-1.15, 1.15], visible=False),
-            height=360,
-            margin=dict(l=10, r=10, t=40, b=10),
+        fig_p.update_layout(
+            xaxis=dict(range=[-1.1, 1.1], visible=False),
+            yaxis=dict(range=[-1.1, 1.1], visible=False),
+            height=300,
+            margin=dict(l=10, r=10, t=10, b=10),
         )
-        st.plotly_chart(fig_poincare, use_container_width=True)
+        st.plotly_chart(fig_p, use_container_width=True)
 
-    # 2. 右側：Q10/Q50/Q90 數位分身價格區間圖
-    with chart_right:
-        steps = len(q50)
-        x_axis = list(range(steps))
+    with g2:
+        st.write("**數位分身 10 步價格模擬**")
+        steps = np.arange(11)
+        fig_s = go.Figure()
 
-        fig_dt = go.Figure()
-
-        # Q10-Q90 陰影區間
-        fig_dt.add_trace(
+        # 90% 覆蓋區間
+        fig_s.add_trace(
             go.Scatter(
-                x=x_axis + x_axis[::-1],
+                x=np.concatenate([steps, steps[::-1]]),
                 y=np.concatenate([q90, q10[::-1]]),
                 fill="toself",
-                fillcolor="rgba(56, 189, 248, 0.25)",
+                fillcolor="rgba(135, 206, 250, 0.3)",
                 line=dict(color="rgba(255,255,255,0)"),
-                hoverinfo="skip",
                 name="Q10-Q90 80% 覆蓋區間",
             )
         )
 
-        # Q50 主路徑
-        fig_dt.add_trace(
+        # Q50 路徑
+        fig_s.add_trace(
             go.Scatter(
-                x=x_axis,
+                x=steps,
                 y=q50,
                 mode="lines+markers",
-                line=dict(color="#0284c7", width=3),
-                marker=dict(size=6),
+                line=dict(color="#008080", width=3),
                 name="Q50 數位分身預測路徑",
             )
         )
 
-        fig_dt.update_layout(
-            title=dict(
-                text="<b>數位分身 10 步價格模擬</b>",
-                font=dict(size=16),
-                x=0.5,
-                xanchor="center",
-            ),
-            xaxis=dict(title="未來時間步 (Steps)", tickmode="linear", dtick=2),
-            yaxis=dict(title="價格 (TWD)"),
-            height=360,
-            margin=dict(l=10, r=10, t=40, b=60),
+        fig_s.update_layout(
+            xaxis_title="未來時間步 (Steps)",
+            yaxis_title="價格 (TWD)",
+            height=300,
+            margin=dict(l=10, r=10, t=10, b=10),
             legend=dict(
-                orientation="h",
-                yanchor="top",
-                y=-0.25,
-                xanchor="center",
-                x=0.5,
+                orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5
             ),
         )
-        st.plotly_chart(fig_dt, use_container_width=True)
+        st.plotly_chart(fig_s, use_container_width=True)
