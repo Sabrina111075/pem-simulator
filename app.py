@@ -841,22 +841,17 @@ else:
     sat_delta_color = "off"
 
 # 4. 渲染 5 欄數據卡片
-# 判斷主力籌碼淨資金 (F) 狀態文字與對應顏色（移除字串內的箭頭）
+# 1. 判斷主力籌碼淨資金 (F) 狀態文字（手動加上對應方向箭頭）
 if capital_flow_yi >= 10.0:
-    flow_status = "強力灌入"
-    flow_delta_color = "normal"
+    flow_status = "↑ 強力灌入"
 elif capital_flow_yi > 0:
-    flow_status = "資金流入"
-    flow_delta_color = "normal"
+    flow_status = "↑ 資金流入"
 elif capital_flow_yi <= -10.0:
-    flow_status = "強力流出"
-    flow_delta_color = "inverse"  # 反轉色（套用負向紅色/綠色警示）
+    flow_status = "↓ 強力流出"
 elif capital_flow_yi < 0:
-    flow_status = "資金流出"
-    flow_delta_color = "inverse"
+    flow_status = "↓ 資金流出"
 else:
     flow_status = "資金平穩"
-    flow_delta_color = "off"
 
 with col1:
     st.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
@@ -872,7 +867,7 @@ with col4:
         label="主力籌碼淨資金 (F)",
         value=f"{capital_flow_yi:.2f} 億元",
         delta=flow_status,
-        delta_color=flow_delta_color
+        delta_color="off"  # 👈 關閉 Streamlit 自動繪製的向上箭頭
     )
 
 with col5:
