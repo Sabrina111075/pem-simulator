@@ -841,19 +841,19 @@ else:
     sat_delta_color = "off"
 
 # 4. 渲染 5 欄數據卡片
-# 判斷主力籌碼淨資金 (F) 狀態文字
+# 判斷主力籌碼淨資金 (F) 狀態文字與對應顏色
 if capital_flow_yi >= 10.0:
-    flow_status = "強力灌入"
-    flow_delta_color = "normal"
+    flow_status = "↑ 強力灌入"
+    flow_delta_color = "normal"   # 正值：綠色/紅色 (依系統預設)
 elif capital_flow_yi > 0:
-    flow_status = "資金流入"
+    flow_status = "↑ 資金流入"
     flow_delta_color = "normal"
 elif capital_flow_yi <= -10.0:
-    flow_status = "強力流出"
-    flow_delta_color = "normal"
+    flow_status = "↓ 強力流出"
+    flow_delta_color = "inverse"  # 👈 改為 inverse，強制反轉顏色 (變紅/綠區隔)
 elif capital_flow_yi < 0:
-    flow_status = "資金流出"
-    flow_delta_color = "normal"
+    flow_status = "↓ 資金流出"
+    flow_delta_color = "inverse"  # 👈 改為 inverse
 else:
     flow_status = "資金平穩"
     flow_delta_color = "off"
