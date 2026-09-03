@@ -50,7 +50,8 @@ def simulate_digital_twin_paths(
 def render_dmec_27state_dashboard(
     current_price=100.0, c_val=0.0, f_val=0.0, p_val=0.0, r_override=None
 ):
-    # 確保價格非零與型態正確
+    st.markdown("### ☒ DMEC 27 狀態碼與數位分身 (Digital Twin) 預測引擎"
+    )
     try:
         base_price = float(current_price)
         if base_price <= 0:
