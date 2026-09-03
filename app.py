@@ -761,15 +761,24 @@ c_num = c_val if 'c_val' in locals() else (churn_val if 'churn_val' in locals() 
 # (注意：請保留原本 col1 到 col5 裡面渲染 st.metric 的程式碼...)
 
 # --- [新增] 在 5 欄卡片渲染完成後，貼上這段激勵值視覺 Banner ---
+_p_color = phase_color if 'phase_color' in locals() else '#ffc107'
+_p_status = phase_status if 'phase_status' in locals() else '中盤階段'
+_p_desc = phase_desc if 'phase_desc' in locals() else '資料計算中'
+_inc_score = (
+    incentive_score
+    if 'incentive_score' in locals()
+    else (score if 'score' in locals() else 0.0)
+)
+
 st.markdown(
     f"""
-    <div style="background-color: {phase_color}22; border-left: 5px solid {phase_color}; padding: 8px 15px; border-radius: 5px; margin-top: 10px; margin-bottom: 15px;">
-        <span style="font-weight: bold; font-size: 16px; color: {phase_color};">{phase_status}</span> 
-        <span style="margin-left: 15px; font-size: 14px; color: #333;"><b>預測激勵值 (Incentive Score)：</b> {incentive_score:+.1f}</span>
-        <span style="margin-left: 15px; font-size: 13px; color: #666;">（{phase_desc}）</span>
-    </div>
+<div style="background-color: {_p_color}22; border-left: 5px solid {_p_color}; padding: 8px 15px; border-radius: 5px; margin-top: 10px; margin-bottom: 15px;">
+    <span style="font-weight: bold; font-size: 16px; color: {_p_color};">{_p_status}</span>
+    <span style="margin-left: 15px; font-size: 14px; color: #333;"><b>預測激勵值 (Incentive Score)</b> : {_inc_score:+.1f}</span>
+    <span style="margin-left: 15px; font-size: 13px; color: #666;">（{_p_desc}）</span>
+</div>
 """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 st.markdown("<br>", unsafe_allow_html=True)
