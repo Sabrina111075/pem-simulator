@@ -80,34 +80,35 @@ def get_twse_premarket_data(stock_id):
     auto_spread = 0.0
     is_premarket = False
 
-# 3. 判斷是否為盤前時段 (08:30 ~ 08:59) 或成交價尚未產生
-from datetime import datetime
-import pytz
+def calculate_premarket_spread(current_price, yesterday_close, simulated_open):
+    # 3. 判斷是否為盤前時段 (08:30 ~ 08:59) 或成交價尚未產生
+    from datetime import datetime
+    import pytz
 
-tw_tz = pytz.timezone('Asia/Taipei')
-now_tw = datetime.now(tw_tz)
-current_time = now_tw.time()
+    tw_tz = pytz.timezone('Asia/Taipei')
+    now_tw = datetime.now(tw_tz)
+    current_time = now_tw.time()
 
-start_trial = datetime.strptime("08:30", "%H:%M").time()
-end_trial = datetime.strptime("09:00", "%H:%M").time()
-is_trial_time = start_trial <= current_time < end_trial
+    start_trial = datetime.strptime("08:30", "%H:%M").time()
+    end_trial = datetime.strptime("09:00", "%H:%M").time()
+    is_trial_time = start_trial <= current_time < end_trial
 
-if is_trial_time or current_price in ['-', '']:
-    if simulated_open not in ['-', '']:
-        sim_price = float(simulated_open)
-        auto_spread = round(sim_price - yesterday_close, 2)
-        is_premarket = True
+    if is_trial_time or current_price in ['-', '']:
+        if simulated_open not in ['-', '']:
+            sim_price = float(simulated_open)
+            auto_spread = round(sim_price - yesterday_close, 2)
+            is_premarket = True
+        else:
+            auto_spread = 0.0
+            is_premarket = is_trial_time
     else:
-        auto_spread = 0.0
-        is_premarket = is_trial_time
-else:
-    try:
-        auto_spread = round(float(current_price) - yesterday_close, 2)
-    except ValueError:
-        auto_spread = 0.0
-    is_premarket = False
+        try:
+            auto_spread = round(float(current_price) - yesterday_close, 2)
+        except ValueError:
+            auto_spread = 0.0
+        is_premarket = False
 
-return auto_spread, is_premarket
+    return auto_spread, is_premarket
 
 # ==========================================
 # 3. 核心幾何與 PVCS 風險計算邏輯
