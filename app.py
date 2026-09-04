@@ -1148,7 +1148,6 @@ _r = (
 )
 
 # 3. 補回模組區塊標題與渲染
-st.subheader("☒ DMEC 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
 render_dmec_27state_dashboard(
     current_price=_real_price,
     c_val=_shares,
