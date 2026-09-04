@@ -515,10 +515,27 @@ major_buyer_intent = st.sidebar.selectbox(
 # 取得映射數值供後續運算
 intent_val = intent_map[major_buyer_intent]
 
-st.sidebar.markdown("---")
-st.sidebar.header("⚙️ 幾何與數位分身參數")
-noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.05, key="sb_noise_slider")
-tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05, key="sb_tol_slider")
+st.sidebar.markdown("⚙️ **幾何與數位分身參數**")
+
+# 1. 訊號雜訊強度
+noise = st.sidebar.slider(
+    "訊號雜訊強度 (Noise)",
+    min_value=0.0,
+    max_value=0.5,
+    value=0.15,
+    step=0.01,
+    help="影響龐加萊圓盤上紅點的穩定度與擴散半徑。數值越高代表市場雜訊越大，預測區間 (Q10~Q90) 會顯著擴大。",
+)
+
+# 2. 閉環預警殘差閾值
+tolerance = st.sidebar.slider(
+    "閉環預警殘差閾值 (Tolerance)",
+    min_value=0.05,
+    max_value=0.50,
+    value=0.20,
+    step=0.01,
+    help="設定轉折風險預警的敏感度。閾值越低代表預警機制越敏感，容易提前觸發轉折風險提示。",
+)
 
 st.sidebar.markdown("---")
 st.sidebar.info("📊 **資料來源與運算架構**\n\n結合 TWSE 實時 API 與雙曲流形 (Poincaré Disk) 動態演化模型。")
