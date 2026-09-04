@@ -123,41 +123,23 @@ def render_dmec_27state_dashboard(
         )
         st.plotly_chart(fig_p, use_container_width=True)
 
-    with g2:
-        st.write("**數位分身 10 步價格模擬**")
-        steps = np.arange(11)
-        fig_s = go.Figure()
+with g2:
+    st.write("**數位分身 10 步價格模擬**")
 
-        # 90% 覆蓋區間
-        fig_s.add_trace(
-            go.Scatter(
-                x=np.concatenate([steps, steps[::-1]]),
-                y=np.concatenate([q90, q10[::-1]]),
-                fill="toself",
-                fillcolor="rgba(135, 206, 250, 0.3)",
-                line=dict(color="rgba(255,255,255,0)"),
-                name="Q10-Q90 80% 覆蓋區間",
-            )
-        )
+    # --- 彈窗說明 ---
+    with st.popover("ℹ️ 時間步 (Steps) 說明與單位對照"):
+        st.markdown("""
+        **【數位分身 10 步價格模擬說明】**
+        * **Step 0**：**當前基準時刻**（當前實時價格 / 最新收盤價）。
+        * **Step 1 ~ 10**：代表從當前時刻開始，向未來推進 **1 至 10 個離散時間區間** 的價格走勢預測。
 
-        # Q50 路徑
-        fig_s.add_trace(
-            go.Scatter(
-                x=steps,
-                y=q50,
-                mode="lines+markers",
-                line=dict(color="#008080", width=3),
-                name="Q50 數位分身預測路徑",
-            )
-        )
+        ---
+        **⏱️ 時間單位對照（視資料頻率而定）：**
+        * **分時/盤中模式**：1 Step = 1 分鐘（Step 10 即未來第 10 分鐘）。
+        * **日線模式**：1 Step = 1 交易日（Step 10 即未來第 10 個交易日）。
 
-        fig_s.update_layout(
-            xaxis_title="未來時間步 (Steps)",
-            yaxis_title="價格 (TWD)",
-            height=300,
-            margin=dict(l=10, r=10, t=10, b=10),
-            legend=dict(
-                orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5
-            ),
-        )
-        st.plotly_chart(fig_s, use_container_width=True)
+        *※ 青色區間（Q10~Q90）代表 Monte Carlo 幾何流場模擬下的 80% 風險包絡範圍。*
+        """)
+
+    # 圖表渲染
+    st.plotly_chart(fig_twin, use_container_width=True)
