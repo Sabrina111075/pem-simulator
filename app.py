@@ -1084,12 +1084,12 @@ fig_disk.update_layout(
 st.plotly_chart(fig_disk, use_container_width=True)
 
 # ==========================================
-# 27 狀態碼與數位分身 (Digital Twin) 模組渲染 (全變數掃描與 Session 抓取版)
+# 27 狀態碼與數位分身 (Digital Twin) 模組渲染 (字典迭代安全修正版)
 # ==========================================
-# 1. 優先從系統所有可能存放『真實股價』的物件中抓取最新值
+# 1. 安全抓取真實股價
 _real_price = 0.0
 
-# 檢查是否有全局的 df 或 df_stock
+# A 方案：從 DataFrame 讀取
 for _df_name in ['df', 'df_stock', 'stock_df', 'data', 'hist']:
     if _df_name in locals() and locals()[_df_name] is not None:
         _target_df = locals()[_df_name]
@@ -1108,9 +1108,10 @@ for _df_name in ['df', 'df_stock', 'stock_df', 'data', 'hist']:
         if _real_price > 0:
             break
 
-# 2. 若仍沒抓到，嘗試搜尋包含千元等級或非 100 數值的浮點數變數
+# B 方案：使用 list(locals().items()) 建立快照，避免迭代過程中字典長度改變
 if _real_price == 0.0:
-    for _v_name, _v_val in locals().items():
+    _locals_snapshot = list(locals().items())
+    for _v_name, _v_val in _locals_snapshot:
         if (
             isinstance(_v_val, (int, float))
             and _v_val > 0
@@ -1124,19 +1125,17 @@ if _real_price == 0.0:
                 'p_thresh',
             ]
         ):
-            # 若找到像聯發科幾百幾千的價格變數直接採用
             if _v_val > 10:
                 _real_price = float(_v_val)
 
-# 防護機制 (若完全抓不到才退回 100)
 if _real_price == 0.0:
     _real_price = 100.0
 
-# 3. 抓取試擬價差與籌碼
+# 2. 安全抓取籌碼與試擬價差
 _diff = float(
     pre_market_spread
     if 'pre_market_spread' in locals()
-    else (price_diff if 'price_diff' in locals() else -40.0)
+    else (price_diff if 'price_diff' in locals() else -5.0)
 )
 _shares = float(
     major_intent_val if 'major_intent_val' in locals() else 0.0
@@ -1148,7 +1147,8 @@ _r = (
     else (r_num if 'r_num' in locals() else None)
 )
 
-# 4. 渲染數位分身
+# 3. 補回模組區塊標題與渲染
+st.subheader("☒ DMEC 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
 render_dmec_27state_dashboard(
     current_price=_real_price,
     c_val=_shares,
