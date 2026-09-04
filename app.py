@@ -92,7 +92,7 @@ def get_twse_premarket_data(stock_id):
     end_trial = datetime.strptime("09:00", "%H:%M").time()
     
     # 💡【測試專用】如果想現在立刻測試，可暫時把下一行改為：is_trial_time = True
-    is_trial_time = start_trial <= current_time < end_trial
+    is_trial_time = True
 
     if is_trial_time or current_price in ['-', '']:
         if simulated_open not in ['-', '']:
