@@ -91,7 +91,7 @@ def calculate_premarket_spread(current_price, yesterday_close, simulated_open):
 
     start_trial = datetime.strptime("08:30", "%H:%M").time()
     end_trial = datetime.strptime("09:00", "%H:%M").time()
-    is_trial_time = start_trial <= current_time < end_trial
+    is_trial_time = start_trial <= current_time < end_trial  # 👈 確定此處為時間比較
 
     if is_trial_time or current_price in ['-', '']:
         if simulated_open not in ['-', '']:
