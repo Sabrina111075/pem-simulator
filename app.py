@@ -1081,6 +1081,8 @@ fig_disk.update_layout(
     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
 )
 
+st.plotly_chart(fig_disk, use_container_width=True)
+
 # ==========================================
 # 27 狀態碼與數位分身 (Digital Twin) 模組渲染 (字典迭代安全修正版)
 # ==========================================
