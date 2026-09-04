@@ -464,10 +464,9 @@ sidebar_container = st.sidebar.empty()
 
 def render_premarket_sidebar(container, current_diff=0.0):
     with container.container():
-        # 對齊「PVCS 台股個股選取」標題大小，加上副標題
         st.markdown("### 盤前試算流場模擬")
         st.caption("(08:30-09:00)")
-        
+
         use_live_data = st.checkbox(
             "自動同步 TWSE 盤前試撮價差",
             value=True,
@@ -477,15 +476,15 @@ def render_premarket_sidebar(container, current_diff=0.0):
         import datetime
         import pytz
 
-        # 強制使用台灣時區 (Asia/Taipei)
+        # 1. 強制使用台灣時區
         tw_tz = pytz.timezone('Asia/Taipei')
         now_time = datetime.datetime.now(tw_tz)
         time_num = now_time.hour * 100 + now_time.minute
 
         if use_live_data:
             default_spread = float(current_diff)
-            # 判斷台灣時間 08:30 ~ 08:59 之間
-            if True:  # 👈 暫時強制觸發 UI 提示測試
+            # 2. 精準判定台灣時間 08:30 ~ 08:59
+            if 830 <= time_num < 900:
                 st.success(f"已帶入 TWSE 試撮價差：**{default_spread:+.2f}**")
             else:
                 st.markdown(
@@ -513,7 +512,7 @@ def render_premarket_sidebar(container, current_diff=0.0):
                 step=0.5,
                 key="sb_spread_slider"
             )
-            
+
         return default_spread
 
 # ==========================================
