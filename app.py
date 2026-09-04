@@ -1331,7 +1331,7 @@ with col_d3:
             綜合風險等級 <span style="cursor:help;">ℹ️</span>
         </div>
         <div style="font-size: clamp(1.1rem, 1.6vw, 1.4rem); font-weight: 800; color: #991b1b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            {risk_status}
+            中等風險 (Moderate Risk)
         </div>
     </div>
     """, unsafe_allow_html=True)
