@@ -83,49 +83,15 @@ def render_dmec_27state_dashboard(
             f"{q10[-1]:.2f} ~ {q90[-1]:.2f}",
         )
 
-    # 下方雙圖表（Poincaré Disk 與 10 步模擬路徑）
+# --------------------------------------------------
+    # 2. 龐加萊與數位分身雙圖表 (請注意此區塊行首皆有 4 個空白)
+    # --------------------------------------------------
     g1, g2 = st.columns(2)
 
     with g1:
         st.write("**龐加萊狀態空間 (Poincaré Disk)**")
-        r_val = r_override if r_override is not None else 0.35
-        theta = np.pi / 4 if sum(state_tuple) >= 0 else 5 * np.pi / 4
-
-        fig_p = go.Figure()
-        # 繪製外圓邊界
-        t_arr = np.linspace(0, 2 * np.pi, 100)
-        fig_p.add_trace(
-            go.Scatter(
-                x=np.cos(t_arr),
-                y=np.sin(t_arr),
-                mode="lines",
-                line=dict(dash="dash", color="gray"),
-                showlegend=False,
-            )
-        )
-        # 繪製狀態點
-        fig_p.add_trace(
-            go.Scatter(
-                x=[r_val * np.cos(theta)],
-                y=[r_val * np.sin(theta)],
-                mode="markers+text",
-                text=[f"S_t {state_tuple}"],
-                textposition="top center",
-                marker=dict(size=14, color="red", symbol="diamond"),
-                showlegend=False,
-            )
-        )
-        fig_p.update_layout(
-            xaxis=dict(range=[-1.1, 1.1], visible=False),
-            yaxis=dict(range=[-1.1, 1.1], visible=False),
-            height=300,
-            margin=dict(l=10, r=10, t=10, b=10),
-        )
         st.plotly_chart(fig_p, use_container_width=True)
 
-# --------------------------------------------------
-    # 數位分身圖表與彈窗說明 (請注意前面要有 4 個空白縮排)
-    # --------------------------------------------------
     with g2:
         st.write("**數位分身 10 步價格模擬**")
 
