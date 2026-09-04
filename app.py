@@ -80,13 +80,27 @@ def get_twse_premarket_data(stock_id):
     auto_spread = 0.0
     is_premarket = False
 
-    # 3. 判斷是否為盤前時段 (08:30 ~ 08:59) 或成交價尚未產生
-    if current_price == '-' or current_price == '':
+# 3. 判斷是否為盤前時段 (08:30 ~ 08:59) 或成交價尚未產生
+    from datetime import datetime
+    import pytz
+    
+    tw_tz = pytz.timezone('Asia/Taipei')
+    now_tw = datetime.now(tw_tz)
+    current_time = now_tw.time()
+    
+    start_trial = datetime.strptime("08:30", "%H:%M").time()
+    end_trial = datetime.strptime("09:00", "%H:%M").time()
+    is_trial_time = start_trial <= current_time < end_trial
+
+    # 時間在 08:30~09:00 之間，或是未有成交價且有試撮開盤價時，強制判定為盤前試撮
+    if is_trial_time or current_price == '-' or current_price == '':
         if simulated_open != '-' and simulated_open != '':
             sim_price = float(simulated_open)
-            # 計算試算價差 (點數或百分比)
+            # 計算試算價差(點數或百分比)
             auto_spread = round(sim_price - yesterday_close, 2)
             is_premarket = True
+        else:
+            is_premarket = is_trial_time
     else:
         # 盤中正常成交
         auto_spread = round(float(current_price) - yesterday_close, 2)
