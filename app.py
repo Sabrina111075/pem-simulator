@@ -905,16 +905,18 @@ with col4:
     st.metric(
         label="主力籌碼淨資金 (F)",
         value=f"{capital_flow_yi:.2f} 億元",
-        delta=flow_delta_str,            # 傳入帶有 "-" 的文字，如 "- 強力流出"
-        delta_color=flow_delta_color
+        delta=flow_delta_str,
+        delta_color=flow_delta_color,
+        help="估算主力大戶當前淨投入的資金總額（買張減賣張乘以價格）。數值為正代表大戶資金淨流入，為負代表主力資金流出。"
     )
 
 with col5:
     st.metric(
-        label="主力籌碼飽和度 (S)", 
-        value=f"{saturability_pct:+.1f} %", 
+        label="主力籌碼飽和度 (S)",
+        value=f"{saturability_pct:+.1f} %",
         delta=sat_status,
-        delta_color=sat_delta_color
+        delta_color=sat_delta_color,
+        help="衡量主力買賣張數占當前總成交量的比例。百分比越高代表主力掌控度與拉抬意願越強；低於 0% 代表散戶賣壓較大。"
     )
 
 # ==========================================
