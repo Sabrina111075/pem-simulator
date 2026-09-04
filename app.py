@@ -477,31 +477,35 @@ def render_premarket_sidebar(container, current_diff=0.0):
         )
 
         import datetime
-        now_time = datetime.datetime.now()
+        import pytz
+
+        # 強制使用台灣時區 (Asia/Taipei)
+        tw_tz = pytz.timezone('Asia/Taipei')
+        now_time = datetime.datetime.now(tw_tz)
         time_num = now_time.hour * 100 + now_time.minute
 
         if use_live_data:
             default_spread = float(current_diff)
-            # 使用 Streamlit 原生 Markdown 格式，避免 HTML 標籤爆發
+            # 判斷台灣時間 08:30 ~ 08:59 之間
             if 830 <= time_num < 900:
-                st.info(f"已帶入 TWSE 試撮價差：**{default_spread:+.2f}**")
+                st.success(f"已帶入 TWSE 試撮價差：**{default_spread:+.2f}**")
             else:
                 st.markdown(
-            f"""
-            <div style="
-                background-color: #d4edda; 
-                color: #155724; 
-                padding: 6px 10px; 
-                border-radius: 6px; 
-                font-size: 13.5px; 
-                line-height: 1.4; 
-                margin-top: 6px;
-            ">
-                非試撮時段，已自動同步盤中價差：<b>{default_spread:+.2f}</b>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+                    f"""
+                    <div style="
+                        background-color: #d4edda;
+                        color: #155724;
+                        padding: 6px 10px;
+                        border-radius: 6px;
+                        font-size: 13.5px;
+                        line-height: 1.4;
+                        margin-top: 6px;
+                    ">
+                        非試撮時段，已自動同步盤中價差：<b>{default_spread:+.2f}</b>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
         else:
             default_spread = st.slider(
                 "盤前試撮 / 夜盤價差 (點/%)",
@@ -511,6 +515,7 @@ def render_premarket_sidebar(container, current_diff=0.0):
                 step=0.5,
                 key="sb_spread_slider"
             )
+            
         return default_spread
 
 # ==========================================
