@@ -25,7 +25,7 @@ def render_dmec_27state_dashboard(
 # 上方 4 張指標卡片說明補強
     c1, c2, c3, c4 = st.columns(4)
 
-with c1:
+    with c1:
         st.metric(
             label="當前 27 狀態碼 (S_t)",
             value=f"{state_tuple}",
