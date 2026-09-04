@@ -838,7 +838,8 @@ with col_p3:
         label="預估資金推升規模",
         value=f"{capital_flow_yi:.2f} 億元",
         delta=f"{capital_flow_yi:+.2f} 億 (籌碼推升估算)",
-        delta_color="normal"
+        delta_color="normal",
+        help="運算邏輯：結合當前主力買賣淨張數與預估價格動態幅度的邊際資金效應。代表欲將股價推升至模型目標價，雙曲幾何場預估所需的主力資金淨注入規模。"
     )
 
 # 3. 計算「主力籌碼飽和度 (S)」邏輯
