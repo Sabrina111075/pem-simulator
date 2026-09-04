@@ -90,20 +90,25 @@ def get_twse_premarket_data(stock_id):
     
     start_trial = datetime.strptime("08:30", "%H:%M").time()
     end_trial = datetime.strptime("09:00", "%H:%M").time()
+    
+    # 💡【測試專用】如果想現在立刻測試，可暫時把下一行改為：is_trial_time = True
     is_trial_time = start_trial <= current_time < end_trial
 
-    # 時間在 08:30~09:00 之間，或是未有成交價且有試撮開盤價時，強制判定為盤前試撮
-    if is_trial_time or current_price == '-' or current_price == '':
-        if simulated_open != '-' and simulated_open != '':
+    if is_trial_time or current_price in ['-', '']:
+        if simulated_open not in ['-', '']:
             sim_price = float(simulated_open)
-            # 計算試算價差(點數或百分比)
             auto_spread = round(sim_price - yesterday_close, 2)
             is_premarket = True
         else:
+            auto_spread = 0.0
             is_premarket = is_trial_time
     else:
-        # 盤中正常成交
-        auto_spread = round(float(current_price) - yesterday_close, 2)
+        # 盤中正常成交（加載安全轉換）
+        try:
+            auto_spread = round(float(current_price) - yesterday_close, 2)
+        except ValueError:
+            auto_spread = 0.0
+        is_premarket = False
 
     return auto_spread, is_premarket
 
