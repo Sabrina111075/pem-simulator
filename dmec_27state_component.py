@@ -22,23 +22,40 @@ def render_dmec_27state_dashboard(
     p_state = 1 if p_val > 0.1 else (-1 if p_val < -0.1 else 0)
     state_tuple = (c_state, f_state, p_state)
 
-    # 上方指標卡片
+# 上方 4 張指標卡片說明補強
     c1, c2, c3, c4 = st.columns(4)
+
     with c1:
-        st.metric("當前 27 狀態碼 (S_t)", f"{state_tuple}")
+        st.metric(
+            label="當前 27 狀態碼 (S_t)",
+            value=f"{state_tuple}",
+            help="將籌碼 (C)、資金 (F) 與試撮價差 (P) 三維指標量化為 (+1, 0, -1) 後構成的幾何狀態向量，共有 3³ = 27 種組合。",
+        )
+
     with c2:
-        st.metric("流場狀態名稱", f"狀態碼 {state_tuple}")
+        st.metric(
+            label="流場狀態名稱",
+            value=f"狀態碼 {state_tuple}",
+            help="根據當前 27 狀態碼映射出的雙曲幾何流場特徵名稱，用以判讀當前市場處於多頭共振、空頭擠壓或觀望狀態。",
+        )
+
     with c3:
         q50_price = base_price * (1 + 0.005 * (c_state + f_state + p_state))
         st.metric(
-            "Q50 中央預測價",
-            f"${q50_price:.2f}",
+            label="Q50 中央預測價",
+            value=f"${q50_price:.2f}",
             delta=f"{q50_price - base_price:+.2f} TWD",
+            help="數位分身 Monte Carlo 幾何模擬的中位數（Q50）預期價格，代表市場在當前流場動力下最可能的走勢終點。",
         )
+
     with c4:
         low_p = base_price * 0.95
         high_p = base_price * 1.05
-        st.metric("Q10-Q90 風險區間", f"{low_p:.2f} ~ {high_p:.2f}")
+        st.metric(
+            label="Q10-Q90 風險區間",
+            value=f"{low_p:.2f} ~ {high_p:.2f}",
+            help="代表 80% 的高機率價格波動包絡區間。Q10 為下檔支撐風險價，Q90 為上檔壓力預測價。",
+        )
 
     # 2. 龐加萊圓盤 (Poincaré Disk) 圖表繪製
     theta = np.linspace(0, 2 * np.pi, 100)
