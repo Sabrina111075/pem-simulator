@@ -487,7 +487,7 @@ def render_premarket_sidebar(container, current_diff=0.0):
         if use_live_data:
             default_spread = float(current_diff)
             # 判斷台灣時間 08:30 ~ 08:59 之間
-            if 830 <= time_num < 900:
+            if True:  # 👈 暫時強制觸發 UI 提示測試
                 st.success(f"已帶入 TWSE 試撮價差：**{default_spread:+.2f}**")
             else:
                 st.markdown(
