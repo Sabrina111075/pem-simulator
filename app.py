@@ -1272,62 +1272,68 @@ col_d1, col_d2, col_d3 = st.columns(3)
 
 with col_d1:
     st.markdown(f"""
-        <div style="
-            background-color: #eff6ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 12px;
-            padding: 18px 15px;
-            height: 110px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        ">
-            <div style="font-size: 0.85rem; font-weight: 600; color: #1d4ed8; margin-bottom: 6px;">分身擬真估值</div>
-            <div style="font-size: clamp(1.4rem, 2vw, 1.8rem); font-weight: 800; color: #1e40af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                ${val_price}
-            </div>
+    <div style="
+        background-color: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        padding: 18px 15px;
+        height: 110px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    ">
+        <div style="font-size: 0.85rem; font-weight: 600; color: #1d4ed8; margin-bottom: 6px;" title="【數位分身核心估值】&#10;結合馬氏距離 (D_t) 與流場曲率 (k)，透過幾何雙曲空間對當前股價進行動態校正後的理論擬真價值。">
+            分身擬真估值 <span style="cursor:help;">ℹ️</span>
         </div>
+        <div style="font-size: clamp(1.4rem, 2vw, 1.8rem); font-weight: 800; color: #1e40af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${val_price}
+        </div>
+    </div>
     """, unsafe_allow_html=True)
 
 with col_d2:
-    st.markdown("""
-        <div style="
-            background-color: #fefce8;
-            border: 1px solid #fef08a;
-            border-radius: 12px;
-            padding: 18px 15px;
-            height: 110px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        ">
-            <div style="font-size: 0.85rem; font-weight: 600; color: #a16207; margin-bottom: 6px;">流場相態判定</div>
-            <div style="font-size: clamp(1.0rem, 1.3vw, 1.25rem); font-weight: 700; color: #854d0e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                ⚠️ 幾何偏離警示
-            </div>
+    st.markdown(f"""
+    <div style="
+        background-color: #fefce8;
+        border: 1px solid #fef08a;
+        border-radius: 12px;
+        padding: 18px 15px;
+        height: 110px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    ">
+        <div style="font-size: 0.85rem; font-weight: 600; color: #a16207; margin-bottom: 6px;" title="【流場相態與動態診斷】&#10;• 穩定盤整：軌跡位於中央沉積區&#10;• 幾何偏離警示：馬氏距離拉大，價格與籌碼發生非線性背離&#10;• 強烈變盤/轉折：接近圓盤無窮遠邊界">
+            流場相態判定 <span style="cursor:help;">ℹ️</span>
         </div>
+        <div style="font-size: clamp(1.2rem, 1.8vw, 1.5rem); font-weight: 800; color: #854d0e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {phase_status}
+        </div>
+    </div>
     """, unsafe_allow_html=True)
 
 with col_d3:
-    st.markdown("""
-        <div style="
-            background-color: #fef2f2;
-            border: 1px solid #fecaca;
-            border-radius: 12px;
-            padding: 18px 15px;
-            height: 110px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        ">
-            <div style="font-size: 0.85rem; font-weight: 600; color: #b91c1c; margin-bottom: 6px;">綜合風險等級</div>
-            <div style="font-size: clamp(1.0rem, 1.3vw, 1.25rem); font-weight: 700; color: #991b1b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                中等風險 (Moderate Risk)
-            </div>
+    st.markdown(f"""
+    <div style="
+        background-color: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 12px;
+        padding: 18px 15px;
+        height: 110px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    ">
+        <div style="font-size: 0.85rem; font-weight: 600; color: #dc2626; margin-bottom: 6px;" title="【閉環風控評級】&#10;整合雙曲空間半徑 (r)、軌跡曲率強度 (k) 與試撮殘差進行綜合量化分析：&#10;• 低風險：趨勢動態穩定&#10;• 中等風險：動能擴張中，留意幾何偏離&#10;• 高風險：面臨強烈轉折/變盤風險">
+            綜合風險等級 <span style="cursor:help;">ℹ️</span>
         </div>
+        <div style="font-size: clamp(1.1rem, 1.6vw, 1.4rem); font-weight: 800; color: #991b1b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {risk_status}
+        </div>
+    </div>
     """, unsafe_allow_html=True)
 
 # 3. 渲染下方「閉環控制處置建議」標題與詳細說明框
