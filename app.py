@@ -1191,39 +1191,6 @@ q90_path = q50_path + margin_of_error
 # 4. 繪製「數位分身 10 步價格模擬」Plotly 圖表
 st.subheader("🤖 數位分身 10 步價格模擬與風險區間")
 
-fig_sim = go.Figure()
-
-# 繪製 Q10 ~ Q90 風險陰影通道
-fig_sim.add_trace(go.Scatter(
-    x=np.concatenate([steps, steps[::-1]]),
-    y=np.concatenate([q90_path, q10_path[::-1]]),
-    fill='toself',
-    fillcolor='rgba(255, 165, 0, 0.2)',
-    line=dict(color='rgba(255, 255, 255, 0)'),
-    hoverinfo="skip",
-    showlegend=True,
-    name='Q10-Q90 預測風險區間'
-))
-
-# 繪製 Q50 預測主軌跡線
-fig_sim.add_trace(go.Scatter(
-    x=steps,
-    y=q50_path,
-    mode='lines+markers',
-    name='Q50 期望價格軌跡',
-    line=dict(color='#FFA500', width=3)
-))
-
-fig_sim.update_layout(
-    xaxis_title="未來預測步數 (Steps)",
-    yaxis_title="預估價格 (TWD)",
-    hovermode="x unified",
-    margin=dict(l=20, r=20, t=30, b=20),
-    template="plotly_dark"
-)
-
-st.plotly_chart(fig_sim, use_container_width=True)
-
 # ==========================================
 # 27 狀態碼與數位分身 (Digital Twin) 模組渲染 (字典迭代安全修正版)
 # ==========================================
