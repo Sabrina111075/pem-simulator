@@ -546,6 +546,7 @@ noise = st.sidebar.slider(
     value=0.15,
     step=0.01,
     help="數值越高代表市場雜訊越大，將顯著擴大『數位分身 10 步價格模擬』的 Q10~Q90 風險通道寬度，並影響『PVCS 軌跡曲率強度與轉折風險』時序動態。"
+)
 
 # 2. 閉環預警殘差閾值
 tolerance = st.sidebar.slider(
