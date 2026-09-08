@@ -1268,18 +1268,35 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
     diff_val = float(p_q50 - current_price)
     sign_str = "+" if diff_val >= 0 else ""
 
-    # 3. 渲染上方 4 張指標卡片
+    # 3. 渲染上方 4 張指標卡片 (完整補回 help 說明註解)
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("當前 27 狀態碼 (S_t)", f"{s_t_calc}", help="雙曲流場動態狀態碼")
+        st.metric(
+            "當前 27 狀態碼 (S_t)", 
+            f"{s_t_calc}", 
+            help="雙曲流場動態狀態碼，由 (幾何曲率, 籌碼動量, 轉折訊號) 組成"
+        )
     with col2:
-        st.metric("流場狀態名稱", f"狀態碼 {s_t_calc}")
+        st.metric(
+            "流場狀態名稱", 
+            f"狀態碼 {s_t_calc}", 
+            help="根據 27 種流場幾何狀態所對應的當前籌碼與價格結構分類"
+        )
     with col3:
-        st.metric("Q50 中央預測價", f"${p_q50:.2f}", delta=f"{sign_str}{diff_val:.2f} TWD")
+        st.metric(
+            "Q50 中央預測價", 
+            f"${p_q50:.2f}", 
+            delta=f"{sign_str}{diff_val:.2f} TWD", 
+            help="數位分身 (Digital Twin) 模擬未來 10 步價格分佈之中央期望值 (50 百分位數)"
+        )
     with col4:
-        st.metric("Q10-Q90 風險區間", f"{p_q10:.2f} ~ {p_q90:.2f}")
+        st.metric(
+            "Q10-Q90 風險區間", 
+            f"{p_q10:.2f} ~ {p_q90:.2f}", 
+            help="未來 10 步價格擴散之 80% 信賴區間，反映極端波幅與下方防守水位"
+        )
 
-    # 4. 智慧總結：拆分為雙卡片排版
+    # 4. 智慧總結：雙卡片排版
     _signal = s_t_calc[2] if len(s_t_calc) > 2 else 0
     _trend_desc = "強勢偏多" if _signal == 1 else ("偏空修正" if _signal == -1 else "區間整理")
     _action_desc = "市場具備向上推進動能，多頭結構完整。" if _signal == 1 else ("市場下方防守壓力增加，需注意獲利回吐風險。" if _signal == -1 else "籌碼動態尚待釐清，價格於通道內區間整理。")
