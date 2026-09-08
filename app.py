@@ -9,6 +9,7 @@ from datetime import datetime
 import pytz
 import requests
 from streamlit_autorefresh import st_autorefresh
+import uuid
 
 # ==========================================
 # 0. 自動刷新機制 & 基礎時間定義
