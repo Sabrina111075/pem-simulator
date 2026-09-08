@@ -1189,7 +1189,6 @@ q10_path = q50_path - margin_of_error
 q90_path = q50_path + margin_of_error
 
 # 4. 繪製「數位分身 10 步價格模擬」Plotly 圖表
-st.subheader("🤖 數位分身 10 步價格模擬與風險區間")
 
 # ==========================================
 # 27 狀態碼與數位分身 (Digital Twin) 模組渲染 (字典迭代安全修正版)
