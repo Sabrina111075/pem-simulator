@@ -1146,9 +1146,20 @@ with st.popover("ℹ️ 雙曲狀態圓盤 (PVCS) 與 Risk 色柱說明"):
       * **綠/黃色區 (High Risk > 0.7)**：接近無窮遠邊界或場域極限，代表**短線面臨強烈轉折/變盤風險**。
     """)
 
-# 原本圖表渲染
+# 安全圖表渲染機制（防護 NameError 與 DuplicateID）
+target_fig = None
 if 'fig_disk' in locals() and fig_disk is not None:
-    st.plotly_chart(fig_disk, use_container_width=True, key=f"poincare_dash_{time.time()}")
+    target_fig = fig_disk
+elif 'fig_poincare' in locals() and fig_poincare is not None:
+    target_fig = fig_poincare
+
+if target_fig is not None:
+    try:
+        st.plotly_chart(target_fig, use_container_width=True, key=f"poincare_dash_{time.time()}")
+    except Exception:
+        pass
+else:
+    st.warning("⚠️ Poincaré Disk 雙曲圖表資料準備中...")
 
 # =========================================================
 # 插入：數位分身 10 步價格模擬與風險區間
