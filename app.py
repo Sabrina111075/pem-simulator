@@ -1263,17 +1263,17 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         _signal = -1
         s_t_calc = (1, 0, 0)
         _trend_desc = "弱勢偏空"
-        action_desc = "市場面臨回檔壓力，空頭結構明確。"
+        _action_desc = "市場面臨回檔壓力，空頭結構明確。"
     elif p_val > 0:
         _signal = 1
         s_t_calc = (0, 1, 1)
         _trend_desc = "強勢偏多"
-        action_desc = "市場具備向上推進動能，多頭結構完整。"
+        _action_desc = "市場具備向上推進動能，多頭結構完整。"
     else:
         _signal = 0
         s_t_calc = (0, 0, 1)
         _trend_desc = "盤整觀望"
-        action_desc = "市場動能收斂，維持區間震盪。"
+        _action_desc = "市場動能收斂，維持區間震盪。"
 
     # 2. 核心指標運算 (將 p_val 當作預測漲跌金額，直接加到現價上)
     # 這樣預測目標價 (p_q50) 才會與上方的預測目標價完全連動！
