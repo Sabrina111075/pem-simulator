@@ -1257,43 +1257,41 @@ _r = (
 
 # 3. 補回模組區塊標題與渲染
 st.subheader("💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
-def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0.0, r_override=None):
-    # 1. 真正的三維 27 狀態碼動態演算
-    # 三維指標：[動量 m, 籌碼 c, 盤差 p] 各自歸類為 (1: 多, 0: 中立, -1: 空)
+def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val=0.0, r_override=None):
+    # 1. 精準方向訊號判定 (嚴禁取 abs，保留正負號)
     m_sig = 1 if p_val > 5.0 else (-1 if p_val < -5.0 else 0)
     c_sig = 1 if f_val > 0.5 else (-1 if f_val < -0.5 else 0)
     p_sig = 1 if p_val > 0 else (-1 if p_val < 0 else 0)
     
     s_t_calc = (m_sig, c_sig, p_sig)
-    
-    # 綜合動能得分 (-3 ~ +3)
     score = m_sig + c_sig + p_sig
     
-    if score >= 2:
+    # 全局方向導向
+    if score >= 1:
         _trend_desc = "強勢偏多"
-        _action_desc = "市場具備強勁向上推進動能，多頭結構完整。"
+        _action_desc = "市場具備向上推進動能，多頭結構完整。"
         _signal = 1
-    elif score <= -2:
+    elif score <= -1:
         _trend_desc = "弱勢偏空"
-        _action_desc = "市場面臨強烈回檔壓力，空頭籌碼與盤差同步承壓。"
+        _action_desc = "市場面臨回檔壓力，空頭籌碼與盤差同步承壓。"
         _signal = -1
     else:
         _trend_desc = "盤整觀望"
-        _action_desc = "市場多空動能收斂震盪，方向尚待確立。"
+        _action_desc = "市場動能收斂，多空結構維持區間震盪。"
         _signal = 0
 
-    # 2. 核心價格動態推算 (根據真實方向動態加減)
-    # 依據盤差與籌碼計算合理波幅比例
-    direction = 1 if score > 0 else (-1 if score < 0 else 0)
-    abs_p_ratio = min(abs(p_val) / current_price, 0.02) if current_price > 0 else 0.01
-    
-    # 若 score 為負，強迫預測價往下跌落
-    p_ratio = direction * max(abs_p_ratio, 0.005)
+    # 2. 核心價格動態推算 (基於 current_price 動態加減)
+    # 依據盤差相對於現價的比例決定幅度，並精準帶入正負號
+    ratio_mag = min(abs(p_val) / current_price, 0.03) if current_price > 0 else 0.01
+    direction = 1 if p_val >= 0 else -1
+    p_ratio = direction * max(ratio_mag, 0.005)
 
     p_q50 = float(current_price * (1.0 + p_ratio))
+    diff_val = float(p_q50 - current_price)
+    
+    # 風險區間隨價格波動比例計算
     p_q10 = float(min(current_price, p_q50) - (current_price * 0.01))
     p_q90 = float(max(current_price, p_q50) + (current_price * 0.01))
-    diff_val = float(p_q50 - current_price)
     sign_str = "+" if diff_val >= 0 else ""
 
     # 3. 渲染 4 張 KPI 數據指標卡片
@@ -1332,7 +1330,6 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
     # 4. 版面劃分：左右雙圖卡片
     sub_col1, sub_col2 = st.columns(2)
 
-    # 左卡片：狀態碼與龐加萊圓形圖
     with sub_col1:
         st.info(
             f"🎯 **27 狀態碼與流場結構**\n\n"
@@ -1341,7 +1338,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         )
         st.write("")
 
-        # 龐加萊圖表繪製 (精準雙曲座標 mapping)
+        # 龐加萊圖表繪製 (固定 [-1.15, 1.15] 保持正圓與精準象限)
         theta = np.linspace(0, 2 * np.pi, 100)
         fig_poincare = go.Figure()
         fig_poincare.add_trace(go.Scatter(
@@ -1350,7 +1347,6 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
             showlegend=False, hoverinfo='skip'
         ))
         
-        # 根據 signal 精準定位象限 (多頭: 第一象限右上, 空頭: 第三象限左下)
         u_val = 0.45 * _signal
         v_val = 0.45 * _signal
         
@@ -1365,22 +1361,13 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         
         fig_poincare.update_layout(
             title=dict(text="龐加萊圓形雙曲流場映射", y=0.98, x=0.0, xanchor='left', yanchor='top'),
-            xaxis=dict(range=[-1.15, 1.15], scaleanchor="y", scaleratio=1, zeroline=True, zerolinecolor='#bdc3c7'),
+            xaxis=dict(range=[-1.15, 1.15], scaleanchor="y", scaleratio=1, zeroline=True, zerolinecolor='#bdc3c7', constrained=True),
             yaxis=dict(range=[-1.15, 1.15], zeroline=True, zerolinecolor='#bdc3c7'),
             height=300,
             margin=dict(l=10, r=10, t=40, b=10)
         )
         st.plotly_chart(fig_poincare, use_container_width=True)
 
-        st.caption("""
-        📌 **龐加萊圓盤象限速覽**：
-        * **第一象限 (右上)**：強勢多頭，動量與籌碼雙強。
-        * **第二象限 (左上)**：轉折警戒，高檔籌碼震盪。
-        * **第三象限 (左下)**：空頭修正，動量籌碼偏弱。
-        * **第四象限 (右下)**：低檔築底，動能復甦沉澱中。
-        """)
-
-    # 右卡片：數位分身預測與軌跡圖
     with sub_col2:
         st.success(
             f"📊 **數位分身 (Digital Twin) 期望預測**\n\n"
@@ -1430,19 +1417,12 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         )
         st.plotly_chart(fig_dt, use_container_width=True)
 
-        st.caption("""
-        📌 **軌跡預測與風險區間說明**：
-        * **中央實線 (Q50)**：數位分身模擬之未來 10 步價格期望路徑（綠漲紅跌）。
-        * **藍色陰影 (Q10-Q90)**：未來 10 步價格波動之 80% 信賴擴散區間，隨步數增加而擴大。
-        """)
-
-# ✅ 修正後的安全呼叫方式：
+# ⚠️ 請確保 current_price 傳入的是 12590.0，且 p_val 傳入的是 -1315.0 (帶負號)
 render_dmec_27state_dashboard(
-    current_price=real_price if 'real_price' in locals() or 'real_price' in globals() else 100.0,
-    c_val=shares if 'shares' in locals() or 'shares' in globals() else (c_val if 'c_val' in locals() or 'c_val' in globals() else 0),
-    f_val=fund if 'fund' in locals() or 'fund' in globals() else (f_val if 'f_val' in locals() or 'f_val' in globals() else 0),
-    p_val=diff if 'diff' in locals() or 'diff' in globals() else (p_val if 'p_val' in locals() or 'p_val' in globals() else 0.0),
-    r_override=r if 'r' in locals() or 'r' in globals() else None
+    current_price=realtime_price,  # 必須為當前最新價 (12590.0)
+    c_val=net_buy_shares,          # 主力買賣超張數 (-176)
+    f_val=chip_fund_net,           # 主力淨資金 (-22.16)
+    p_val=auto_spread              # 盤前試算盤差 (-1315.0)
 )
 
 # ==========================================
