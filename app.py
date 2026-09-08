@@ -1417,11 +1417,17 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
         )
         st.plotly_chart(fig_dt, use_container_width=True)
 
+# 防呆相容傳參：自動抓取 app.py 前面已算好的價格與籌碼變數
+_curr_p = locals().get('price', locals().get('latest_price', locals().get('current_price', 12590.0)))
+_c_v = locals().get('major_volume', locals().get('c_val', 0))
+_f_v = locals().get('chip_fund_net', locals().get('f_val', 0.0))
+_p_v = locals().get('auto_spread', locals().get('p_val', 0.0))
+
 render_dmec_27state_dashboard(
-    current_price=latest_price,  # 替換為你 app.py 前面定義的價格變數
-    c_val=major_volume, 
-    f_val=chip_fund_net, 
-    p_val=auto_spread
+    current_price=_curr_p, 
+    c_val=_c_v, 
+    f_val=_f_v, 
+    p_val=_p_v
 )
 
 # ==========================================
