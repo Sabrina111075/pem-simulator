@@ -1310,6 +1310,11 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
             f"* **當前狀態碼**：`{s_t_calc}` ({_trend_desc})\n\n"
             f"* **動態趨勢解讀**：{_action_desc}"
         )
+
+        st.write("")
+
+        st.write("")
+
         # --- 補回龐加萊圓形圖 ---
         import numpy as np
         import plotly.graph_objects as go
@@ -1337,6 +1342,11 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
             f"* **未來 10 步 Q50 中央價**：`${p_q50:.2f}` ({sign_str}{diff_val:.2f} TWD)\n\n"
             f"* **Q10~Q90 風險擴散區間**：`${p_q10:.2f} ~ ${p_q90:.2f}`"
         )
+
+        st.write("")
+
+        st.write("")
+
         # --- 補回 10 步預測線圖 ---
         steps = np.arange(11)
         q50_path = np.linspace(current_price, p_q50, 11)
@@ -1346,12 +1356,13 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
         fig_dt = go.Figure()
         fig_dt.add_trace(go.Scatter(x=np.concatenate([steps, steps[::-1]]), y=np.concatenate([q90_path, q10_path[::-1]]), fill='toself', fillcolor='rgba(46, 204, 113, 0.2)', line=dict(color='rgba(255,255,255,0)'), name='Q10-Q90 區間'))
         fig_dt.add_trace(go.Scatter(x=steps, y=q50_path, mode='lines+markers', line=dict(color='#2ecc71', width=3), name='Q50 期望軌跡'))
+
         fig_dt.update_layout(
             title="未來 10 步數位分身軌跡預測",
             xaxis_title="預測步數",
             yaxis_title="價格 (TWD)",
             height=300,
-            margin=dict(l=10, r=10, t=35, b=10)
+            margin=dict(l=10, r=10, t=45, b=10)
         )
         st.plotly_chart(fig_dt, use_container_width=True)
 
