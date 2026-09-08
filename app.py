@@ -1257,23 +1257,21 @@ _r = (
 # 3. 補回模組區塊標題與渲染
 st.subheader("💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
 def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override=None):
-    # 1. 內部核心指標計算 (加入防錯轉型，避免 float 導致 TypeError)
+    # 1. 狀態碼解析與防錯
     raw_st = r_override if r_override is not None else (0, 1, 1)
-    
-    # 確保 s_t_calc 必為包含 3 個元素的 tuple/list
     if isinstance(raw_st, (tuple, list)) and len(raw_st) >= 3:
         s_t_calc = raw_st
     else:
-        # 若傳入 float/int 等單一數值，自動對齊預設狀態碼 tuple
         s_t_calc = (0, 1, 1)
 
-    p_q50 = current_price + (p_val * 1.2) if 'p_q50' not in locals() else p_q50
-    p_q10 = p_q50 - (current_price * 0.06) if 'p_q10' not in locals() else p_q10
-    p_q90 = p_q50 + (current_price * 0.04) if 'p_q90' not in locals() else p_q90
-    diff_val = p_q50 - current_price
+    # 2. 核心指標運算 (確保變數必存在)
+    p_q50 = float(current_price + (p_val * 1.2))
+    p_q10 = float(p_q50 - (current_price * 0.06))
+    p_q90 = float(p_q50 + (current_price * 0.04))
+    diff_val = float(p_q50 - current_price)
     sign_str = "+" if diff_val >= 0 else ""
 
-    # 2. 渲染上方 4 張指標卡片
+    # 3. 渲染上方 4 張指標卡片
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("當前 27 狀態碼 (S_t)", f"{s_t_calc}", help="雙曲流場動態狀態碼")
@@ -1284,7 +1282,7 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
     with col4:
         st.metric("Q10-Q90 風險區間", f"{p_q10:.2f} ~ {p_q90:.2f}")
 
-    # 3. 智慧總結 (安全讀取狀態碼)
+    # 4. 智慧總結
     _signal = s_t_calc[2] if len(s_t_calc) > 2 else 0
     if _signal == 1:
         _trend_desc = "強勢偏多"
