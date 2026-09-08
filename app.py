@@ -1258,7 +1258,8 @@ _r = (
 # 3. 補回模組區塊標題與渲染
 st.subheader("💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
 def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val=0.0, r_override=None):
-    # 1. 精準方向訊號判定 (嚴禁取 abs，保留正負號)
+    # 1. 精準三維狀態碼動態演算 (保留正負號)
+    # m: 動量 (依據盤差), c: 籌碼 (依據淨資金), p: 盤差方向
     m_sig = 1 if p_val > 5.0 else (-1 if p_val < -5.0 else 0)
     c_sig = 1 if f_val > 0.5 else (-1 if f_val < -0.5 else 0)
     p_sig = 1 if p_val > 0 else (-1 if p_val < 0 else 0)
@@ -1280,8 +1281,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
         _action_desc = "市場動能收斂，多空結構維持區間震盪。"
         _signal = 0
 
-    # 2. 核心價格動態推算 (基於 current_price 動態加減)
-    # 依據盤差相對於現價的比例決定幅度，並精準帶入正負號
+    # 2. 核心價格動態推算 (方向完全連動 score/p_val)
     ratio_mag = min(abs(p_val) / current_price, 0.03) if current_price > 0 else 0.01
     direction = 1 if p_val >= 0 else -1
     p_ratio = direction * max(ratio_mag, 0.005)
@@ -1289,12 +1289,11 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
     p_q50 = float(current_price * (1.0 + p_ratio))
     diff_val = float(p_q50 - current_price)
     
-    # 風險區間隨價格波動比例計算
     p_q10 = float(min(current_price, p_q50) - (current_price * 0.01))
     p_q90 = float(max(current_price, p_q50) + (current_price * 0.01))
     sign_str = "+" if diff_val >= 0 else ""
 
-    # 3. 渲染 4 張 KPI 數據指標卡片
+    # 3. 渲染 4 張 KPI 指標卡片
     kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
     with kpi_col1:
         st.metric(
@@ -1327,7 +1326,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
 
     st.write("")
 
-    # 4. 版面劃分：左右雙圖卡片
+    # 4. 左右圖卡：龐加萊圖與軌跡圖
     sub_col1, sub_col2 = st.columns(2)
 
     with sub_col1:
@@ -1338,7 +1337,6 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
         )
         st.write("")
 
-        # 龐加萊圖表繪製 (固定 [-1.15, 1.15] 保持正圓與精準象限)
         theta = np.linspace(0, 2 * np.pi, 100)
         fig_poincare = go.Figure()
         fig_poincare.add_trace(go.Scatter(
@@ -1359,7 +1357,6 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
             showlegend=False
         ))
         
-# 龐加萊圖表 layout 修正（移除無效的 constrained 參數）
         fig_poincare.update_layout(
             title=dict(text="龐加萊圓形雙曲流場映射", y=0.98, x=0.0, xanchor='left', yanchor='top'),
             xaxis=dict(range=[-1.15, 1.15], scaleanchor="y", scaleratio=1, zeroline=True, zerolinecolor='#bdc3c7'),
