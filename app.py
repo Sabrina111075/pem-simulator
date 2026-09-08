@@ -1257,12 +1257,16 @@ _r = (
 # 3. 補回模組區塊標題與渲染
 st.subheader("💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
 def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override=None):
-    # 1. 內部核心指標計算
-    # (此處保持你原有的狀態碼計算邏輯，以下自動綁定卡片數值)
-    s_t_calc = r_override if r_override is not None else (0, 1, 1)
+    # 1. 內部核心指標計算 (加入防錯轉型，避免 float 導致 TypeError)
+    raw_st = r_override if r_override is not None else (0, 1, 1)
     
-    # 假設內部計算出的 Q50 / Q10 / Q90 數值為 p_q50, p_q10, p_q90
-    # 若你原函式內部變數名為 final_q50 等，請依原內部變數為準
+    # 確保 s_t_calc 必為包含 3 個元素的 tuple/list
+    if isinstance(raw_st, (tuple, list)) and len(raw_st) >= 3:
+        s_t_calc = raw_st
+    else:
+        # 若傳入 float/int 等單一數值，自動對齊預設狀態碼 tuple
+        s_t_calc = (0, 1, 1)
+
     p_q50 = current_price + (p_val * 1.2) if 'p_q50' not in locals() else p_q50
     p_q10 = p_q50 - (current_price * 0.06) if 'p_q10' not in locals() else p_q10
     p_q90 = p_q50 + (current_price * 0.04) if 'p_q90' not in locals() else p_q90
@@ -1280,11 +1284,12 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
     with col4:
         st.metric("Q10-Q90 風險區間", f"{p_q10:.2f} ~ {p_q90:.2f}")
 
-    # 3. 智慧總結（直接放在函式內部，保證 100% 抓取與卡片完全相同的變數）
-    if s_t_calc[2] == 1:
+    # 3. 智慧總結 (安全讀取狀態碼)
+    _signal = s_t_calc[2] if len(s_t_calc) > 2 else 0
+    if _signal == 1:
         _trend_desc = "強勢偏多"
         _action_desc = "市場具備向上推進動能，多頭結構完整。"
-    elif s_t_calc[2] == -1:
+    elif _signal == -1:
         _trend_desc = "偏空修正"
         _action_desc = "市場下方防守壓力增加，需注意獲利回吐風險。"
     else:
