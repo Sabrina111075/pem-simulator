@@ -1146,7 +1146,7 @@ with st.popover("ℹ️ 雙曲狀態圓盤 (PVCS) 與 Risk 色柱說明"):
     """)
 
 # 原本圖表渲染
-st.plotly_chart(fig_poincare, use_container_width=True, key="dmec_poincare_chart")
+st.plotly_chart(fig_poincare, use_container_width=True, key=f"poincare_{uuid.uuid4().hex[:8]}")
 
 # =========================================================
 # 插入：數位分身 10 步價格模擬與風險區間
