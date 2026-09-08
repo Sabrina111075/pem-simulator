@@ -1266,7 +1266,6 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
     _action_desc = "市場具備向上推進動能，多頭結構完整。" if _signal == 1 else ("市場面臨回檔壓力，空頭結構明確。" if _signal == -1 else "市場動能收斂，維持區間震盪。")
 
     # 2. 核心指標運算 (依據真實高價基期，計算相對百分比波幅)
-    # 限制 10 步最大預測變動比例在 ±1.5% 的合理日內擴散區間
     base_ratio = (p_val / current_price) if current_price > 0 else 0.0
     p_ratio = max(min(base_ratio, 0.015), -0.015)
 
@@ -1276,9 +1275,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
     diff_val = float(p_q50 - current_price)
     sign_str = "+" if diff_val >= 0 else ""
 
-    # 3. 渲染頂部大標題與 4 張 KPI 數據指標卡片
-    st.markdown("### 💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
-    
+    # 3. 渲染 4 張 KPI 數據指標卡片 (完整補回 help 註解說明，並已移除重複標題)
     kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
     with kpi_col1:
         st.metric(
@@ -1291,20 +1288,22 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
             label="流場狀態名稱",
             value=f"狀態碼 {s_t_calc}",
             delta=_trend_desc,
-            delta_color="normal" if _signal >= 0 else "inverse"
+            delta_color="normal" if _signal >= 0 else "inverse",
+            help="當前雙曲流場之方向動態與趨勢強度"
         )
     with kpi_col3:
         st.metric(
             label="Q50 中央預測價",
             value=f"${p_q50:.2f}",
             delta=f"{sign_str}{diff_val:.2f} TWD",
-            delta_color="normal" if diff_val >= 0 else "inverse"
+            delta_color="normal" if diff_val >= 0 else "inverse",
+            help="未來 10 步價格期待值與相較當前盤價之預估漲跌"
         )
     with kpi_col4:
         st.metric(
             label="Q10-Q90 風險區間",
             value=f"{p_q10:.2f} ~ {p_q90:.2f}",
-            help="未來 10 步 80% 信賴區間"
+            help="未來 10 步價格波動之 80% 信賴擴散區間"
         )
 
     st.write("")
