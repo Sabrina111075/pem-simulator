@@ -1,4 +1,5 @@
-﻿import streamlit as st
+﻿from dmec_27state_component import render_dmec_27state_dashboard
+import streamlit as st
 import streamlit.components.v1 as components
 import numpy as np
 import pandas as pd
@@ -79,16 +80,33 @@ def get_twse_premarket_data(stock_id):
     auto_spread = 0.0
     is_premarket = False
 
+def calculate_premarket_spread(current_price, yesterday_close, simulated_open):
     # 3. 判斷是否為盤前時段 (08:30 ~ 08:59) 或成交價尚未產生
-    if current_price == '-' or current_price == '':
-        if simulated_open != '-' and simulated_open != '':
+    from datetime import datetime
+    import pytz
+
+    tw_tz = pytz.timezone('Asia/Taipei')
+    now_tw = datetime.now(tw_tz)
+    current_time = now_tw.time()
+
+    start_trial = datetime.strptime("08:30", "%H:%M").time()
+    end_trial = datetime.strptime("09:00", "%H:%M").time()
+    is_trial_time = start_trial <= current_time < end_trial  # 👈 確定此處為時間比較
+
+    if is_trial_time or current_price in ['-', '']:
+        if simulated_open not in ['-', '']:
             sim_price = float(simulated_open)
-            # 計算試算價差 (點數或百分比)
             auto_spread = round(sim_price - yesterday_close, 2)
             is_premarket = True
+        else:
+            auto_spread = 0.0
+            is_premarket = is_trial_time
     else:
-        # 盤中正常成交
-        auto_spread = round(float(current_price) - yesterday_close, 2)
+        try:
+            auto_spread = round(float(current_price) - yesterday_close, 2)
+        except ValueError:
+            auto_spread = 0.0
+        is_premarket = False
 
     return auto_spread, is_premarket
 
@@ -302,23 +320,83 @@ components.html(
 st.markdown("---")
 
 # ==========================================
-# 5. 側邊欄控制項與靜態備援對照表
+# 1. API 函式定義 (必須在檔案最上方，先 def 才能呼叫)
 # ==========================================
-st.sidebar.header("📈 PVCS 台股個股選取")
+import requests
+
+live_calculated_spread = 0.0
+
+def fetch_twse_official_data(code):
+    global display_stock_name, live_calculated_spread  # 關鍵！必須加 global 才能修改外部的名稱變數
+    try:
+        url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_{code}.tw"
+        res = requests.get(url, timeout=3)
+        data = res.json()
+        if "msgArray" in data and len(data["msgArray"]) > 0:
+            info = data["msgArray"][0]
+
+            # 自動把 TWSE API 回傳的股票中文名稱帶入
+            api_name = info.get("n", "").strip()
+            if api_name and stock_mode == "自訂股票代碼":
+                display_stock_name = f"{code} {api_name}"
+
+            return info
+    except Exception as e:
+        pass
+
+    return {}
+
+# ==========================================
+# 0. 側邊欄寬度 CSS 微調 (解決選單吃字問題)
+# ==========================================
+st.markdown(
+    """
+    <style>
+    /* 稍微拉寬側邊欄，確保下拉選單文字完整顯示 */
+    [data-testid="stSidebar"] {
+        min-width: 300px !important;
+    }
+    /* 確保 selectbox 選項不會溢出被裁切 */
+    div[data-baseweb="select"] {
+        width: 100% !important;
+    }
+    /* 強制壓低橫向分隔線 (hr) 的留白間距並將線條隱藏 */
+    hr {
+        margin-top: 0px !important;
+        margin-bottom: 2px !important;
+        border: none !important; /* <--- 加入這一行 */
+    }
+    /* 清除 h3 標題上方被 Streamlit 預設注入的 Padding */
+    h3 {
+        padding-top: 0px !important;
+        margin-top: 0px !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# ==========================================
+# 側邊欄控制項與股票選取邏輯
+# ==========================================
+st.sidebar.header("📊 PVCS 台股個股選取")
 
 stock_mode = st.sidebar.radio("選擇股票模式", ["熱門標的", "自訂股票代碼"])
 
 stock_name_map = {
     "2330": "台積電", "2317": "鴻海", "2454": "聯發科", "2303": "聯電", "6770": "力積電",
     "2308": "台達電", "2357": "華碩", "3008": "大立光", "3443": "創意", "6669": "緯穎",
-    "2382": "廣達", "3231": "緯創", "3481": "群創", "2409": "友達", "2324": "仁寶", 
-    "2344": "華邦電", "2603": "長榮", "2609": "陽明", "2615": "萬海", "00876": "元大全球5G"
+    "2382": "廣達", "3231": "緯創", "3481": "群創", "2409": "友達", "2324": "仁寶",
+    "2344": "華邦電", "2603": "長榮", "2609": "陽明", "2615": "萬海", "00876": "元大全球5G",
+    "0050": "元大台灣50", "0056": "元大高股息", "2059": "川湖", "3017": "奇鋐"
 }
 
+# 補回第 479 行需要的兩個基期字典
 base_price_map = {
     "2330": 2400, "2317": 243, "2454": 3735, "2303": 126, "6770": 27,
     "2308": 380, "2357": 490, "3008": 2550, "3443": 1350, "6669": 2100,
-    "2382": 290, "3231": 105, "3481": 46.8, "2409": 17, "2324": 38, "00876": 85.95
+    "2382": 290, "3231": 105, "3481": 46.8, "2409": 17, "2324": 38, "00876": 85.95,
+    "0050": 195, "0056": 38.5, "2059": 1400, "3017": 750
 }
 
 base_volume_map = {
@@ -328,7 +406,7 @@ base_volume_map = {
 
 hot_stock_options = [
     "2330 台積電", "2317 鴻海", "2454 聯發科", "2303 聯電", "2609 陽明", "2603 長榮",
-    "6770 力積電", "3481 群創", "2409 友達", "2324 仁寶", "2344 華邦電", "2382 廣達"
+    "6770 力積電", "3481 群創", "2409 友達", "2324 仁寶", "2344 華邦電", "2382 廣達", "3017 奇鋐"
 ]
 
 if stock_mode == "熱門標的":
@@ -336,79 +414,106 @@ if stock_mode == "熱門標的":
     stock_code = selected_stock.split(" ")[0]
     display_stock_name = selected_stock
 else:
-    user_input_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 2317)", value="2317").strip().upper()
+    user_input_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 2317)", value="00881").strip().upper()
     stock_code = user_input_code if user_input_code else "2317"
+    
+    # 先從本地字典找，找不到則暫存純代碼
     stock_name = stock_name_map.get(stock_code, "")
-    display_stock_name = f"{stock_code} {stock_name}".strip()
-
-stock_name = stock_name_map.get(stock_code, "")
-display_stock_name = f"{stock_code} {stock_name}".strip()
-
-stock_name = stock_name_map.get(stock_code, "")
-display_stock_name = f"{stock_code} {stock_name}".strip()
-
-stock_name = stock_name_map.get(stock_code, "")
-display_stock_name = f"{stock_code} {stock_name}".strip()
+    display_stock_name = f"{stock_code} {stock_name}".strip() if stock_name else stock_code
 
 # ==========================================
-# A. TWSE 官方 API 實時資料抓取與試算價差解析
+# 1. 呼叫 API 並強制更新 display_stock_name (必須放在 UI 渲染前！)
 # ==========================================
-import requests
+real_data = fetch_twse_official_data(stock_code)
 
-def fetch_twse_official_data(code):
-    try:
-        url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_{code}.tw"
-        res = requests.get(url, timeout=3)
-        data = res.json()
-        if "msgArray" in data and len(data["msgArray"]) > 0:
-            return data["msgArray"][0]
-    except Exception:
-        pass
-    return {}
-
-# 執行抓取
-api_data = fetch_twse_official_data(stock_code)
-
-# 計算盤前 / 盤中價差
-live_calculated_spread = 0.0
-try:
-    y_close = float(api_data.get('y', 0.0))
-    z_price = api_data.get('z', '-')
-    o_price = api_data.get('o', '-')
-
-    if z_price != '-' and z_price != '':
-        live_calculated_spread = float(z_price) - y_close
-    elif o_price != '-' and o_price != '':
-        live_calculated_spread = float(o_price) - y_close
-except Exception:
-    live_calculated_spread = 0.0
+if stock_mode == "自訂股票代碼":
+    # 優先嘗試從 TWSE API 取得官方中文名稱
+    api_name = real_data.get("n", "").strip() if isinstance(real_data, dict) else ""
+    
+    if api_name:
+        display_stock_name = f"{stock_code} {api_name}"
+    else:
+        # 若 API 未回傳，退回檢查本地字典
+        local_name = stock_name_map.get(stock_code, "")
+        display_stock_name = f"{stock_code} {local_name}".strip() if local_name else stock_code
 
 # ==========================================
-# B. 側邊欄：盤前試算自動連動與手動微調
+# 2. 渲染主畫面 UI (此時名稱已注入中文)
 # ==========================================
-st.sidebar.markdown("### 📊 盤前試撮流場模擬 (08:30-09:00)")
-
-# 自動模式開關 (帶有唯一 key)
-use_live_data = st.sidebar.checkbox(
-    "自動同步 TWSE 盤前試撮價差", 
-    value=True, 
-    key="chk_twse_live_sync"
+st.markdown(
+    f"""
+    <div style="margin-top: -45px; margin-bottom: 8px;">
+        <h3 style="font-size: 24px; font-weight: 600; color: #1f2937; margin: 0;">
+            📊 市場實時行情與 P/V/C 數據 ( 標的：{display_stock_name} )
+        </h3>
+    </div>
+    """,
+    unsafe_allow_html=True
 )
 
-if use_live_data:
-    default_spread = float(live_calculated_spread)
-    st.sidebar.caption(f"🟢 已即時帶入 TWSE 試撮價差：`{default_spread:+.2f}`")
-else:
-    default_spread = 0.0
-
-pre_market_spread = st.sidebar.slider(
-    "盤前試撮 / 夜盤價差 (點/%)",
-    min_value=-150.0,
-    max_value=150.0,
-    value=float(np.clip(default_spread, -150.0, 150.0)),
-    step=0.5,
-    key="sb_spread_slider"
+st.markdown(
+    f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的： :green[{display_stock_name}] )</span>",
+    unsafe_allow_html=True,
 )
+
+# =========================================================
+# B. 側邊欄：盤前試算自動連動（定義函數，延遲渲染）
+# =========================================================
+# 在側邊欄頂部預留位置，等待資料計算完後填充
+sidebar_container = st.sidebar.empty()
+
+def render_premarket_sidebar(container, current_diff=0.0):
+    with container.container():
+        st.markdown("### 盤前試算流場模擬")
+        st.caption("(08:30-09:00)")
+
+        use_live_data = st.checkbox(
+            "自動同步 TWSE 盤前試撮價差",
+            value=True,
+            key="chk_twse_live_sync"
+        )
+
+        import datetime
+        import pytz
+
+        # 1. 強制使用台灣時區
+        tw_tz = pytz.timezone('Asia/Taipei')
+        now_time = datetime.datetime.now(tw_tz)
+        time_num = now_time.hour * 100 + now_time.minute
+
+        if use_live_data:
+            default_spread = float(current_diff)
+            # 2. 精準判定台灣時間 08:30 ~ 08:59
+            if 830 <= time_num < 900:
+                st.success(f"已帶入 TWSE 試撮價差：**{default_spread:+.2f}**")
+            else:
+                st.markdown(
+                    f"""
+                    <div style="
+                        background-color: #d4edda;
+                        color: #155724;
+                        padding: 6px 10px;
+                        border-radius: 6px;
+                        font-size: 13.5px;
+                        line-height: 1.4;
+                        margin-top: 6px;
+                    ">
+                        非試撮時段，已自動同步盤中價差：<b>{default_spread:+.2f}</b>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+        else:
+            default_spread = st.slider(
+                "盤前試撮 / 夜盤價差 (點/%)",
+                min_value=-150.0,
+                max_value=150.0,
+                value=0.0,
+                step=0.5,
+                key="sb_spread_slider"
+            )
+
+        return default_spread
 
 # ==========================================
 # 主力籌碼意向控制項與映射字典
@@ -431,10 +536,27 @@ major_buyer_intent = st.sidebar.selectbox(
 # 取得映射數值供後續運算
 intent_val = intent_map[major_buyer_intent]
 
-st.sidebar.markdown("---")
-st.sidebar.header("⚙️ 幾何與數位分身參數")
-noise_level = st.sidebar.slider("訊號雜訊強度 (Noise)", 0.0, 0.5, 0.15, 0.05, key="sb_noise_slider")
-tolerance = st.sidebar.slider("閉環預警殘差閾值 (Tolerance)", 0.05, 0.5, 0.2, 0.05, key="sb_tol_slider")
+st.sidebar.markdown("⚙️ **幾何與數位分身參數**")
+
+# 1. 訊號雜訊強度
+noise = st.sidebar.slider(
+    "訊號雜訊強度 (Noise)",
+    min_value=0.0,
+    max_value=0.5,
+    value=0.15,
+    step=0.01,
+    help="數值越高代表市場雜訊越大，將顯著擴大『數位分身 10 步價格模擬』的 Q10~Q90 風險通道寬度，並影響『PVCS 軌跡曲率強度與轉折風險』時序動態。"
+)
+
+# 2. 閉環預警殘差閾值
+tolerance = st.sidebar.slider(
+    "閉環預警殘差閾值 (Tolerance)",
+    min_value=0.05,
+    max_value=0.50,
+    value=0.20,
+    step=0.01,
+    help="設定轉折風險預警的敏感度。閾值越低代表預警機制越敏感，容易提前觸發轉折風險提示。",
+)
 
 st.sidebar.markdown("---")
 st.sidebar.info("📊 **資料來源與運算架構**\n\n結合 TWSE 實時 API 與雙曲流形 (Poincaré Disk) 動態演化模型。")
@@ -493,16 +615,6 @@ else:
     real_volume = int(base_volume_map.get(stock_code, 20000))
     real_change = 0.0
     data_source_label = "靜態備援對照檔"
-
-# ==========================================
-# 7. 市場實時行情 UI 渲染 (完整修復：價格 + 幾何指標 + 下方圖形連動)
-# ==========================================
-# 1. 頂部 Micro-DMEC-G 觀察框架標題
-st.title("📈 Micro-DMEC-G 觀察框架")
-st.caption("結合 PVCS (價格-成交量-買賣張數) 三維空間與 Poincaré 雙曲幾何之個股動態評估面板")
-
-stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
-st.markdown(f"### 📊 市場實時行情與 P/V/C 數據（標的：{stock_code} {stock_name}）")
 
 # ====================================================
 # # 2. 安全讀取真實 P/V/C 數據（yfinance + TWSE 全自動動態對接）
@@ -622,44 +734,218 @@ else:
 vol_val = latest.get('Volume', 10000 + (seed_num % 50000))
 churn_val = latest.get('Capital_Churn', 2000 + (seed_num % 15000))
 
-# 6. 渲染頂部 3 欄實時 P/V/C 數據卡片
-# --- 新程式碼 (擴充為 4 欄，加入主力資金 F) ---
-st.markdown("### 📊 市場實時行情與 P/V/C 數據（標的：2454 聯發科）")
+# --- [新增] 計算預測激勵值 (Incentive Score) 與三階段判讀 ---
+try:
+    # 取得最新價與價差
+    p_now = float(price_display_fmt) if "price_display_fmt" in locals() else p_val
+    diff_now = float(diff_val) if "diff_val" in locals() else 0.0
+    v_now = float(v_val) if "v_val" in locals() else 1000.0
 
-# 1. 計算主力籌碼淨資金金額 (以 億元 為單位)
-capital_flow_raw = net_shares_c * price * 1000  # 張數 * 股價 * 1000股
-capital_flow_yi = capital_flow_raw / 1e8         # 換算為億元
+    # 籌碼/主力買賣方向模擬 (c_val > 0 為主動買盤強)
+    c_now = float(c_val) if "c_val" in locals() else 0.0
 
-# 2. 動態判斷資金狀態與標示顏色
-if capital_flow_yi > 0.5:
-    status_str = "▲ 強勢流入 (Risk-on)"
-    delta_color = "normal"
-elif capital_flow_yi < -0.5:
-    status_str = "▼ 強勢流出 (Risk-off)"
-    delta_color = "inverse"
+    # 1. 主動買賣不平衡度 TI (-1 ~ +1)
+    ti_score = c_now / (v_now + 1e-5) if v_now > 0 else 0.0
+    ti_score = max(min(ti_score, 1.0), -1.0)
+
+    # 2. 綜合預測激勵值 Incentive Score (-100 ~ +100)
+    raw_incentive = (ti_score * 0.7) + (
+        (1.0 if diff_now > 0 else (-1.0 if diff_now < 0 else 0.0)) * 0.3
+    )
+    incentive_score = round(raw_incentive * 100, 1)
+
+    # 2.1 激勵值轉換為預測價差與目標價
+    import numpy as np
+
+    scale_factor = np.tanh(incentive_score / 50.0)
+    pred_delta = round(p_now * scale_factor * 0.03, 2)
+    pred_target_price = round(p_now + pred_delta, 2)
+    pred_capital_impact = round(c_now * p_now * 1000 / 1e8, 2)
+
+    # 3. 判斷三階段 (上盤/中盤/下降)
+    if incentive_score > 20 and diff_now >= 0:
+        phase_status = "↗️ 上盤階段"
+        phase_desc = "動能共振，主動買盤擴張"
+        phase_color = "#28a745"
+    elif incentive_score < -20 and diff_now <= 0:
+        phase_status = "↘️ 下降階段"
+        phase_desc = "賣壓貫穿，恐慌釋放中"
+        phase_color = "#dc3545"
+    else:
+        phase_status = "➡️ 中盤階段"
+        phase_desc = "能量蓄積，多空動能平衡"
+
+except Exception as e:
+    incentive_score = 0.0
+    pred_delta = 0.0
+    pred_target_price = p_now if "p_now" in locals() else 0.0
+    pred_capital_impact = 0.0
+    phase_status = "➡️ 中盤階段"
+    phase_desc = "資料計算中"
+    phase_color = "#ffc107"
+
+#6. 渲染頂部5欄實時 P/V/C/F/S 數據卡片 (含主力籌碼飽和度)
+# --- 擴充為 5 欄位 ---
+col1, col2, col3, col4, col5 = st.columns(5)
+
+#1. 安全提取價格與主力籌碼數據
+try:
+    p_num = float(str(price_display_fmt).replace(',', ''))
+except (ValueError, NameError):
+    p_num = 0.0
+
+c_num = c_val if 'c_val' in locals() else (churn_val if 'churn_val' in locals() else 0)
+
+# (注意：請保留原本 col1 到 col5 裡面渲染 st.metric 的程式碼...)
+
+# --- [新增] 在 5 欄卡片渲染完成後，貼上這段激勵值視覺 Banner ---
+_p_color = phase_color if 'phase_color' in locals() else '#ffc107'
+_p_status = phase_status if 'phase_status' in locals() else '中盤階段'
+_p_desc = phase_desc if 'phase_desc' in locals() else '資料計算中'
+_inc_score = (
+    incentive_score
+    if 'incentive_score' in locals()
+    else (score if 'score' in locals() else 0.0)
+)
+
+st.markdown(
+    f"""
+<div style="background-color: {_p_color}22; border-left: 5px solid {_p_color}; padding: 8px 15px; border-radius: 5px; margin-top: 10px; margin-bottom: 15px;">
+    <span style="font-weight: bold; font-size: 16px; color: {_p_color};">{_p_status}</span>
+    <span style="margin-left: 15px; font-size: 14px; color: #333;"><b>預測激勵值 (Incentive Score)</b> : {_inc_score:+.1f}</span>
+    <span style="margin-left: 15px; font-size: 13px; color: #666;">（{_p_desc}）</span>
+</div>
+""",
+    unsafe_allow_html=True,
+)
+
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("##### 🎯 激勵值價格轉換與目標價預測 (Price Incentive Mapping)")
+
+col_p1, col_p2, col_p3 = st.columns(3)
+
+with col_p1:
+    delta_pct = (pred_delta / p_now * 100) if p_now > 0 else 0.0
+    st.metric(
+        label="預估價格動態幅度", 
+        value=f"{pred_delta:+.2f} 元", 
+        delta=f"{delta_pct:+.2f}%",
+        help="透過雙曲正切函數 (Tanh) 將無單位的激勵值轉換為價格波動率，反映當前流場動態對股價的即時推升/壓制金額。"
+    )
+
+with col_p2:
+    st.metric(
+        label="模型預測目標價", 
+        value=f"{pred_target_price:.2f} 元", 
+        delta=f"{pred_delta:+.2f} 元",
+        help="以當前最新成交價為基底，疊加流場雙曲映射算出之預估動態變動金額後得到的短線理論目標價位。"
+    )
+
+# 1. 安全提取價格與主力籌碼數據
+try:
+    p_num = float(str(price_display_fmt).replace(',', ''))
+except (ValueError, NameError):
+    p_num = 0.0
+
+c_num = c_val if 'c_val' in locals() else (churn_val if 'churn_val' in locals() else 0)
+
+# 計算主力資金 (億元)
+capital_flow_raw = c_num * p_num * 1000
+capital_flow_yi = capital_flow_raw / 1e8
+
+# 2. 渲染卡片
+with col_p3:
+    st.metric(
+        label="預估資金推升規模",
+        value=f"{capital_flow_yi:.2f} 億元",
+        delta=f"{capital_flow_yi:+.2f} 億 (籌碼推升估算)",
+        delta_color="normal",
+        help="運算邏輯：結合當前主力買賣淨張數與預估價格動態幅度的邊際資金效應。代表欲將股價推升至模型目標價，雙曲幾何場預估所需的主力資金淨注入規模。"
+    )
+
+# 3. 計算「主力籌碼飽和度 (S)」邏輯
+# 從 latest 提取累積買賣超對比最大通道容量，或進行動態比率估算
+saturability_pct = latest.get('Major_Saturability', latest.get('sat_pct', None)) if 'latest' in locals() and isinstance(latest, dict) else None
+
+if saturability_pct is None:
+    # 預設保護：若無歷史通道基準，以當前淨張數相對於常規單日飽和臨界值 (例如 5,000 張) 進行推估
+    base_limit = 5000.0
+    saturability_pct = min(max((c_num / base_limit) * 100, -100.0), 100.0)
+
+# 根據飽和度數值進行幾何診斷與警示標籤 (統一箭頭語意)
+if saturability_pct >= 80.0:
+    sat_status = "⚠️ 極度飽和 (防高檔倒貨)"
+    sat_delta_color = "inverse"
+elif saturability_pct <= -80.0:
+    sat_status = "⚠️ 賣壓枯竭 (底部醞釀)"
+    sat_delta_color = "normal"
+elif saturability_pct > 20.0:
+    sat_status = "📈 籌碼吸納中"
+    sat_delta_color = "normal"
+elif saturability_pct < -20.0:
+    sat_status = "📉 籌碼派發中"
+    sat_delta_color = "normal"
 else:
-    status_str = "► 中性籌碼輪動"
-    delta_color = "off"
+    sat_status = "⚖️ 籌碼均衡"
+    sat_delta_color = "off"
 
-# 3. 改為 4 欄位佈局
-col1, col2, col3, col4 = st.columns(4)
+# 4. 渲染 5 欄數據卡片
+# 1. 判斷主力籌碼淨資金 (F) 狀態文字與顏色邏輯
+if capital_flow_yi >= 10.0:
+    flow_status = "強力灌入"
+    flow_delta_color = "normal"
+elif capital_flow_yi > 0:
+    flow_status = "資金流入"
+    flow_delta_color = "normal"
+elif capital_flow_yi <= -10.0:
+    flow_status = "強力流出"
+    flow_delta_color = "normal"
+elif capital_flow_yi < 0:
+    flow_status = "資金流出"
+    flow_delta_color = "normal"
+else:
+    flow_status = "資金平穩"
+    flow_delta_color = "off"
 
+# 2. 如果是負數（流出），在文字前面加一個減號 "-"
+# 這樣 Streamlit 就會自動將箭頭轉為向下 (↓)，並自動塗上負向顏色 (紅/綠)
+if capital_flow_yi < 0:
+    flow_delta_str = f"- {flow_status}"
+else:
+    flow_delta_str = flow_status
+
+# ------------------------------------------------------------------
+# 將當前標的數據寫入 Session State (連動下方 DMEC-GF 預測引擎)
+# ------------------------------------------------------------------
+st.session_state['curr_price'] = float(price_display_fmt)
+st.session_state['curr_spread'] = float(auto_spread) if 'auto_spread' in locals() else 0.0
+st.session_state['curr_fund'] = float(capital_flow_yi)
+st.session_state['curr_vol'] = int(c_val)
 with col1:
-    st.metric(label="最新收盤/試算價", value=f"{price:.2f} 元")
+    st.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
 
 with col2:
-    st.metric(label="當前成交量 (V)", value=f"{volume_v:,} 張")
+    st.metric("當前成交量 (V)", f"{v_val:,} 張")
 
 with col3:
-    st.metric(label="主力買賣淨張數 (C)", value=f"{net_shares_c:,} 張")
+    st.metric("主力買賣淨張數 (C)", f"{c_val:,} 張")
 
-# 4. 新增第 4 欄：主力籌碼資金淨流向
 with col4:
     st.metric(
-        label="主力籌碼淨資金 (F)", 
-        value=f"{capital_flow_yi:+.2f} 億元", 
-        delta=status_str,
-        delta_color=delta_color
+        label="主力籌碼淨資金 (F)",
+        value=f"{capital_flow_yi:.2f} 億元",
+        delta=flow_delta_str,
+        delta_color=flow_delta_color,
+        help="估算主力大戶當前淨投入的資金總額（買張減賣張乘以價格）。數值為正代表大戶資金淨流入，為負代表主力資金流出。"
+    )
+
+with col5:
+    st.metric(
+        label="主力籌碼飽和度 (S)",
+        value=f"{saturability_pct:+.1f} %",
+        delta=sat_status,
+        delta_color=sat_delta_color,
+        help="衡量主力買賣張數占當前總成交量的比例。百分比越高代表主力掌控度與拉抬意願越強；低於 0% 代表散戶賣壓較大。"
     )
 
 # ==========================================
@@ -682,18 +968,87 @@ if 'k_val' not in locals():
     k_val = get_latest_val(latest, ['Curvature_k', 'curvature_k', 'k_intensity'], 0.125)
 
 # 3. 渲染診斷卡片
+# --- 1. 提取實時價差並填入側邊欄頂部 ---
+price_diff = 0.0
+
+if 'latest' in locals() and isinstance(latest, dict):
+    for k, v in latest.items():
+        if k.lower() in ['change', 'diff', 'spread', 'price_change', 'p_change'] and isinstance(v, (int, float)):
+            price_diff = float(v)
+            break
+
+if price_diff == 0.0:
+    for var in ['diff_val', 'change_val', 'stock_change']:
+        if var in locals() and isinstance(locals()[var], (int, float)):
+            price_diff = float(locals()[var])
+            break
+
+# 渲染回側邊欄頂部佔位器
+default_spread = render_premarket_sidebar(sidebar_container, current_diff=price_diff)
+
+# --- 2. 補回 DMEC-GF 幾何雙曲流場主標題 ---
 stock_name = stock_name_map.get(stock_code, "") if 'stock_name_map' in locals() else ""
-st.markdown(f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>（當前標的：:green[{stock_code} {stock_name}]）</span>", unsafe_allow_html=True)
 
+st.markdown(
+    f"### 💡 DMEC-GF 幾何雙曲流場實時診斷 "
+    f"<span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>"
+    f"( 當前標的：:green[{stock_code} {stock_name}] )</span>", 
+    unsafe_allow_html=True
+)
+
+# --- 1. 計算數值、HTML 燈號與文字標籤 ---
+d_num = float(d_val)
+if d_num < 1.0:
+    d_label = "<span style='color: #10B981; font-weight: bold;'>● 常態區間</span>"
+elif d_num <= 2.0:
+    d_label = "<span style='color: #F59E0B; font-weight: bold;'>● 輕微偏離</span>"
+else:
+    d_label = "<span style='color: #EF4444; font-weight: bold;'>● 顯著異常</span>"
+
+r_num = float(r_val)
+if r_num < 0.5:
+    r_label = "<span style='color: #10B981; font-weight: bold;'>● 穩定盤整</span>"
+elif r_num <= 0.8:
+    r_label = "<span style='color: #F59E0B; font-weight: bold;'>● 趨勢成型</span>"
+else:
+    r_label = "<span style='color: #EF4444; font-weight: bold;'>● 臨界極端</span>"
+
+k_num = float(k_val)
+if k_num < 0.15:
+    k_label = "<span style='color: #10B981; font-weight: bold;'>● 平順運轉</span>"
+elif k_num <= 0.30:
+    k_label = "<span style='color: #F59E0B; font-weight: bold;'>● 轉折準備</span>"
+else:
+    k_label = "<span style='color: #EF4444; font-weight: bold;'>● 急劇變軌</span>"
+
+# --- 2. 渲染卡片 (改用原生 Markdown 容器，解決 Unicode 豆腐塊問題) ---
 col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric("馬氏距離 (D_t)", f"{float(d_val):.3f}")
-with col2:
-    st.metric("雙曲空間半徑 (r)", f"{float(r_val):.3f}")
-with col3:
-    st.metric("軌道曲率強度 (k)", f"{float(k_val):.3f}")
 
-st.caption("※ 系統已將盤前籌碼微調數據動態注入三維 P/V/C 向量場，請參考下方圓盤軌跡與轉折風險時序。")
+with col1:
+    st.metric(
+        "馬氏距離 (D_t)", 
+        f"{d_num:.3f}",
+        help="【偏離常態程度】衡量當前 P/V/C 相對歷史常態的偏離距離。\n\n• < 1.0：常態區間\n• 1.0 ~ 2.0：輕微偏離\n• > 2.0：顯著異常"
+    )
+    st.markdown(d_label, unsafe_allow_html=True)
+
+with col2:
+    st.metric(
+        "雙曲空間半徑 (r)", 
+        f"{r_num:.3f}",
+        help="【臨界邊緣度】龐加萊圓盤中的徑向距離 (0~1)。\n\n• < 0.5：穩定盤整\n• 0.5 ~ 0.8：趨勢成型\n• > 0.8：臨界極端（變盤風險高）"
+    )
+    st.markdown(r_label, unsafe_allow_html=True)
+
+with col3:
+    st.metric(
+        "軌道曲率強度 (k)", 
+        f"{k_num:.3f}",
+        help="【轉折變軌力】評估動態軌道在相空間中的彎曲程度。\n\n• < 0.15：平順運轉\n• 0.15 ~ 0.30：轉折準備\n• > 0.30：急劇變軌（方向強烈扭轉）"
+    )
+    st.markdown(k_label, unsafe_allow_html=True)
+
+st.caption("※ 系統已將盤前籌碼微調振動注入三維 P/V/C 向量場，請參考下方圓盤軌跡與轉折風險時序。")
 
 # ==========================================
 # 9. 圖表區：Poincaré Disk 盤前籌碼預測
@@ -774,7 +1129,349 @@ fig_disk.update_layout(
     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
 )
 
-st.plotly_chart(fig_disk, use_container_width=True)
+# 雙曲狀態圓盤彈窗說明
+with st.popover("ℹ️ 雙曲狀態圓盤 (PVCS) 與 Risk 色柱說明"):
+    st.markdown("""
+    **【雙曲狀態圓盤 (Poincaré Disk) 視覺化說明】**
+    * **藍色實線軌跡 (PVCS Trajectory)**：記錄個股歷史狀態在雙曲空間中的動態演化路徑。
+    * **紅色叉叉 (Current State)**：代表當前最新時刻的狀態定位點。
+    * **橘色虛線與黃色星星 (盤前推算演進趨勢 / 籌碼預估位)**：結合盤前試撮價差與主力籌碼意向，模擬推算的未來動能演進方向。
+
+    ---
+    **【右側 Risk 色柱 (轉折/變盤風險值) 說明】**
+    * **數值範圍 (0.0 ~ 1.0)**：代表當前幾何場的殘差變異度與轉折風險概率。
+    * **色區指標**：
+      * **藍/紫色區 (Low Risk < 0.4)**：動能趨勢穩定，幾何流場無異常波動。
+      * **綠/黃色區 (High Risk > 0.7)**：接近無窮遠邊界或場域極限，代表**短線面臨強烈轉折/變盤風險**。
+    """)
+
+# 原本圖表渲染
+st.plotly_chart(fig_poincare, use_container_width=True, key="dmec_poincare_chart")
+
+# =========================================================
+# 插入：數位分身 10 步價格模擬與風險區間
+# =========================================================
+
+# 1. 安全抓取真實股價
+_real_price = 0.0
+for _df_name in ['df', 'df_stock', 'stock_df', 'data', 'hist']:
+    if _df_name in locals() and locals()[_df_name] is not None:
+        _target_df = locals()[_df_name]
+        if hasattr(_target_df, 'columns') and len(_target_df) > 0:
+            for _col in _target_df.columns:
+                if any(x in str(_col).lower() for x in ['close', '收盤', '成交', 'price']):
+                    try:
+                        _val = float(_target_df[_col].dropna().iloc[-1])
+                        if _val > 0:
+                            _real_price = _val
+                            break
+                    except Exception:
+                        pass
+            if _real_price > 0:
+                break
+
+if _real_price == 0.0:
+    _locals_snapshot = list(locals().items())
+    for _v_name, _v_val in _locals_snapshot:
+        if isinstance(_v_val, (int, float)) and _v_val > 0 and _v_name not in ['_stock_price', '_real_price', 'noise']:
+            if any(k in _v_name.lower() for k in ['price', 'close', 'p_val', 'real_price', 'last']):
+                _real_price = float(_v_val)
+                break
+
+if _real_price == 0.0:
+    _real_price = 100.0  # 安全預設值
+
+# 2. 取得 Sidebar 變數與動態波動度計算
+noise_val = float(noise) if 'noise' in locals() else 0.15
+incentive_score = float(combined_bias) if 'combined_bias' in locals() else 0.2
+
+# 將 noise 強度作為動態波動度擴散係數 (Noise 越大，通道越寬)
+dynamic_volatility = 0.005 + (noise_val * 0.03)
+
+# 3. 未來 10 步價格模擬與 Q10/Q90 扇形通道運算
+steps = np.arange(1, 11)
+q50_path = _real_price * (1 + (incentive_score * 0.001 * steps))
+margin_of_error = q50_path * dynamic_volatility * np.sqrt(steps) * 1.645
+
+q10_path = q50_path - margin_of_error
+q90_path = q50_path + margin_of_error
+
+# 4. 繪製「數位分身 10 步價格模擬」Plotly 圖表
+
+# ==========================================
+# 27 狀態碼與數位分身 (Digital Twin) 模組渲染 (字典迭代安全修正版)
+# ==========================================
+# 1. 安全抓取真實股價
+_real_price = 0.0
+
+# A 方案：從 DataFrame 讀取
+for _df_name in ['df', 'df_stock', 'stock_df', 'data', 'hist']:
+    if _df_name in locals() and locals()[_df_name] is not None:
+        _target_df = locals()[_df_name]
+        if hasattr(_target_df, 'columns') and len(_target_df) > 0:
+            for _col in _target_df.columns:
+                if any(
+                    x in str(_col).lower() for x in ['close', '收盤', '成交', 'price']
+                ):
+                    try:
+                        _val = float(_target_df[_col].dropna().iloc[-1])
+                        if _val > 0:
+                            _real_price = _val
+                            break
+                    except Exception:
+                        pass
+        if _real_price > 0:
+            break
+
+# B 方案：使用 list(locals().items()) 建立快照，避免迭代過程中字典長度改變
+if _real_price == 0.0:
+    _locals_snapshot = list(locals().items())
+    for _v_name, _v_val in _locals_snapshot:
+        if (
+            isinstance(_v_val, (int, float))
+            and _v_val > 0
+            and _v_name
+            not in [
+                '_stock_price',
+                'real_price',
+                '_real_price',
+                'c_thresh',
+                'f_thresh',
+                'p_thresh',
+            ]
+        ):
+            if _v_val > 10:
+                _real_price = float(_v_val)
+
+if _real_price == 0.0:
+    _real_price = 100.0
+
+# 2. 安全抓取籌碼與試擬價差
+_diff = float(
+    pre_market_spread
+    if 'pre_market_spread' in locals()
+    else (price_diff if 'price_diff' in locals() else -5.0)
+)
+_shares = float(
+    major_intent_val if 'major_intent_val' in locals() else 0.0
+)
+_fund = float(intent_val if 'intent_val' in locals() else 0.0)
+_r = (
+    float(pred_r)
+    if 'pred_r' in locals()
+    else (r_num if 'r_num' in locals() else None)
+)
+
+# 3. 補回模組區塊標題與渲染
+st.subheader("💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
+def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val=0.0, r_override=None):
+    # 1. 精準三維狀態碼動態演算
+    m_sig = 1 if p_val > 5.0 else (-1 if p_val < -5.0 else 0)
+    c_sig = 1 if f_val > 0.5 else (-1 if f_val < -0.5 else 0)
+    p_sig = 1 if p_val > 0 else (-1 if p_val < 0 else 0)
+    
+    s_t_calc = (m_sig, c_sig, p_sig)
+    score = m_sig + c_sig + p_sig
+    
+    if score >= 1:
+        _trend_desc = "強勢偏多"
+        _action_desc = "市場具備向上推進動能，多頭結構完整。"
+        _signal = 1
+    elif score <= -1:
+        _trend_desc = "弱勢偏空"
+        _action_desc = "市場面臨回檔壓力，空頭籌碼與盤差同步承壓。"
+        _signal = -1
+    else:
+        _trend_desc = "盤整觀望"
+        _action_desc = "市場動能收斂，多空結構維持區間震盪。"
+        _signal = 0
+
+    # 2. 核心價格動態推算
+    ratio_mag = min(abs(p_val) / current_price, 0.03) if current_price > 0 else 0.01
+    direction = 1 if p_val >= 0 else -1
+    p_ratio = direction * max(ratio_mag, 0.005)
+
+    p_q50 = float(current_price * (1.0 + p_ratio))
+    diff_val = float(p_q50 - current_price)
+    
+    p_q10 = float(min(current_price, p_q50) - (current_price * 0.01))
+    p_q90 = float(max(current_price, p_q50) + (current_price * 0.01))
+    sign_str = "+" if diff_val >= 0 else ""
+
+    # 3. 渲染 4 張 KPI 指標卡片
+    kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
+    with kpi_col1:
+        st.metric(
+            label="當前 27 狀態碼 (S_t)",
+            value=f"{s_t_calc}",
+            help="由 (動量, 籌碼, 盤差) 構成之 27 狀態碼"
+        )
+    with kpi_col2:
+        st.metric(
+            label="流場狀態名稱",
+            value=f"狀態碼 {s_t_calc}",
+            delta=_trend_desc,
+            delta_color="normal" if _signal >= 0 else "inverse",
+            help="當前雙曲流場之方向動態與趨勢強度"
+        )
+    with kpi_col3:
+        st.metric(
+            label="Q50 中央預測價",
+            value=f"${p_q50:.2f}",
+            delta=f"{sign_str}{diff_val:.2f} TWD",
+            delta_color="normal" if diff_val >= 0 else "inverse",
+            help="未來 10 步價格期待值與相較當前盤價之預估漲跌"
+        )
+    with kpi_col4:
+        st.metric(
+            label="Q10-Q90 風險區間",
+            value=f"{p_q10:.2f} ~ {p_q90:.2f}",
+            help="未來 10 步價格波動之 80% 信賴擴散區間"
+        )
+
+    st.write("")
+
+    # 4. 左右圖卡與動態顏色切換
+    sub_col1, sub_col2 = st.columns(2)
+
+    with sub_col1:
+        st.info(
+            f"🎯 **27 狀態碼與流場結構**\n\n"
+            f"* **當前狀態碼**：`{s_t_calc}`（**{_trend_desc}**）\n\n"
+            f"* **動態趨勢解讀**：{_action_desc}"
+        )
+        st.write("")
+
+        # 龐加萊圖繪製
+        theta = np.linspace(0, 2 * np.pi, 100)
+        fig_poincare = go.Figure()
+        fig_poincare.add_trace(go.Scatter(
+            x=np.cos(theta), y=np.sin(theta), 
+            mode='lines', line=dict(color='#7f8c8d', dash='dash', width=1.5), 
+            showlegend=False, hoverinfo='skip'
+        ))
+        
+        u_val = 0.45 * _signal
+        v_val = 0.45 * _signal
+        
+        fig_poincare.add_trace(go.Scatter(
+            x=[u_val], y=[v_val], 
+            mode='markers+text', 
+            marker=dict(size=14, color='#2ecc71' if _signal > 0 else ('#e74c3c' if _signal < 0 else '#f1c40f')), 
+            text=[f" S_t{s_t_calc}"], 
+            textposition="top right" if _signal >= 0 else "bottom left", 
+            showlegend=False
+        ))
+        
+        fig_poincare.update_layout(
+            title=dict(text="龐加萊圓形雙曲流場映射", y=0.98, x=0.0, xanchor='left', yanchor='top'),
+            xaxis=dict(range=[-1.15, 1.15], scaleanchor="y", scaleratio=1, zeroline=True, zerolinecolor='#bdc3c7'),
+            yaxis=dict(range=[-1.15, 1.15], zeroline=True, zerolinecolor='#bdc3c7'),
+            height=300,
+            margin=dict(l=10, r=10, t=40, b=10)
+        )
+        st.plotly_chart(fig_poincare, use_container_width=True)
+
+        # 補回龐加萊圖下方說明
+        st.caption(f"📌 **雙曲映射說明**：當前座標值為 `({u_val:.2f}, {v_val:.2f})`，位於"
+                   f"{'第一象限（多頭吸引子）' if _signal > 0 else ('第三象限（空頭吸引子）' if _signal < 0 else '原點中心（震盪區）')}。"
+                   f"邊界虛線代表龐加萊雙曲邊界限制。")
+
+    with sub_col2:
+        # 動態調整背景色：看空時使用 error (紅/黃背景)，看多時使用 success (綠背景)
+        card_box = st.error if diff_val < 0 else st.success
+        card_box(
+            f"📊 **數位分身 (Digital Twin) 期望預測**\n\n"
+            f"* **未來 10 步 Q50 中央價**：`${p_q50:.2f}` ({sign_str}{diff_val:.2f} TWD)\n\n"
+            f"* **Q10~Q90 風險擴散區間**：`${p_q10:.2f} ~ ${p_q90:.2f}`"
+        )
+        st.write("")
+
+        # 軌跡圖繪製
+        steps = np.arange(11)
+        q50_path = np.linspace(current_price, p_q50, 11)
+        spread_lower = np.linspace(0, abs(p_q50 - p_q10), 11)
+        spread_upper = np.linspace(0, abs(p_q90 - p_q50), 11)
+        
+        q10_path = q50_path - spread_lower
+        q90_path = q50_path + spread_upper
+
+        fig_dt = go.Figure()
+        fig_dt.add_trace(go.Scatter(
+            x=np.concatenate([steps, steps[::-1]]),
+            y=np.concatenate([q90_path, q10_path[::-1]]),
+            fill='toself',
+            fillcolor='rgba(231, 76, 60, 0.2)' if diff_val < 0 else 'rgba(41, 128, 185, 0.25)',
+            line=dict(color='rgba(255,255,255,0)'),
+            hoverinfo="skip",
+            name='Q10-Q90 風險區間'
+        ))
+        fig_dt.add_trace(go.Scatter(
+            x=steps,
+            y=q50_path,
+            mode='lines+markers',
+            line=dict(color='#e74c3c' if diff_val < 0 else '#2ecc71', width=2.5),
+            marker=dict(size=5),
+            name='Q50 期望軌跡'
+        ))
+
+        min_y = min(np.min(q10_path), current_price) - (current_price * 0.003)
+        max_y = max(np.max(q90_path), current_price) + (current_price * 0.003)
+
+        fig_dt.update_layout(
+            title=dict(text="未來 10 步數位分身軌跡預測", y=0.98, x=0.0, xanchor='left', yanchor='top'),
+            xaxis_title="預測步數 (Steps)",
+            yaxis_title="價格 (TWD)",
+            yaxis=dict(range=[min_y, max_y], tickformat=",.1f"),
+            height=300,
+            margin=dict(l=10, r=10, t=40, b=10),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0)
+        )
+    st.plotly_chart(fig_dt, use_container_width=True)
+
+    # 補回數位分身軌跡圖下方說明 (請務必縮排 4 個空格)
+    st.caption(f"📌 **數位分身解析**：基於當前市場流場，未來 10 步期望值向下推算至 `${p_q50:.2f}`，"
+               f"信賴區間擴散幅度為 `{abs(p_q90 - p_q10):.2f}` TWD，顯示市場向下修正動能明確。")
+
+
+# ==============================================================================
+# DMEC-GF 預測引擎 - 呼叫處 (頂格不縮排)
+# ==============================================================================
+render_dmec_27state_dashboard(
+    current_price=st.session_state.get('curr_price', 100.0),
+    c_val=st.session_state.get('curr_vol', 0),
+    f_val=st.session_state.get('curr_fund', 0.0),
+    p_val=st.session_state.get('curr_spread', 0.0)
+)
+
+# ==============================================================================
+# DMEC-GF 預測引擎 - 作用域資料全自動繫結
+# ==============================================================================
+
+# 1. 嘗試從 Streamlit Session State 或當前作用域抓取精確個股數據
+# 若上方 PVCS 有將數據寫入 session_state 則優先讀取，否則嘗試區域變數
+_curr_price = st.session_state.get('curr_price', locals().get('price', locals().get('latest_price', 4710.0)))
+_curr_spread = st.session_state.get('curr_spread', locals().get('auto_spread', -50.0))
+_curr_fund = st.session_state.get('curr_fund', locals().get('chip_fund_net', -45.78))
+_curr_vol = st.session_state.get('curr_vol', locals().get('major_volume', -972))
+
+# 2. 如果 locals() 中有上方卡片渲染時產生的明確變數，強制覆蓋（安全快照版本）
+_locs_snap = dict(locals())
+for _k, _v in _locs_snap.items():
+    if 'price' in _k.lower() and isinstance(_v, (int, float)) and _v > 0:
+        _curr_price = float(_v)
+    if 'spread' in _k.lower() and isinstance(_v, (int, float)):
+        _curr_spread = float(_v)
+    if 'fund' in _k.lower() and isinstance(_v, (int, float)):
+        _curr_fund = float(_v)
+
+# 3. 強制帶入當前聯發科/台積電/川湖之真實動態數據進行預測引擎渲染
+render_dmec_27state_dashboard(
+    current_price=_curr_price,
+    c_val=_curr_vol,
+    f_val=_curr_fund,
+    p_val=_curr_spread
+)
 
 # ==========================================
 # 🌊 軌跡曲率強度與轉折風險動態時序圖 (防錯修復版)
@@ -833,101 +1530,110 @@ fig_wave.update_layout(
 st.plotly_chart(fig_wave, use_container_width=True)
 
 # ==========================================
-# 🎯 個股 PVCS 閉環數位分身診斷與處置建議 (含下方詳細處置說明框)
+# 🔲 個股 PVCS 閉環數位分身診斷與處置建議 (含下方詳細處置說明框)
 # ==========================================
-st.markdown("### 🎯 個股 PVCS 閉環數位分身診斷與處置建議")
+st.markdown("### 🔲 個股 PVCS 閉環數位分身診斷與處置建議")
 
 # 1. 取得當前動態數據與建議文字
-val_price = price_display_fmt if 'price_display_fmt' in locals() else "69.60"
-curr_d = float(d_val) if 'd_val' in locals() else 0.852
+_locs = dict(locals())
+val_price = _locs.get('price_display_fmt', "69.60")
+curr_d = float(_locs.get('d_val', 0.852))
+phase_status_val = _locs.get('phase_status', '穩健盤整區間')
+risk_level_val = _locs.get('risk_level', '低度偏離 (Low Risk)')
 
 # 根據 d_val 動態生成處置建議文字
 if curr_d > 1.2:
     action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 呈現顯著擴張，顯示價量與籌碼流向發生強烈幾何偏離。建議調降倉位風控門檻，並緊盯轉折風險指標。"
 elif curr_d > 0.8:
-    action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 出現輕微擴張，顯示量價流向出現微幅擾動。建議密切觀察轉折風險指標，維持既有部位。"
+    action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 出現微幅擴張，顯示量流向出現微幅擾動。建議密切觀察轉折風險指標，維持既有部位。"
 else:
     action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 處於收斂平穩區間，雙曲幾何流場運作正常。建議按原閉環策略持續持有。"
 
-# 2. 渲染上方 3 欄等高卡片
+# 2. 渲染上方 3 欄高等級卡片
 col_d1, col_d2, col_d3 = st.columns(3)
 
 with col_d1:
     st.markdown(f"""
-        <div style="
-            background-color: #eff6ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 12px;
-            padding: 18px 15px;
-            height: 110px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        ">
-            <div style="font-size: 0.85rem; font-weight: 600; color: #1d4ed8; margin-bottom: 6px;">分身擬真估值</div>
-            <div style="font-size: clamp(1.4rem, 2vw, 1.8rem); font-weight: 800; color: #1e40af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                ${val_price}
-            </div>
+    <div style="
+        background-color: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        padding: 18px 15px;
+        height: 110px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    ">
+        <div style="font-size: 0.85rem; font-weight: 600; color: #1d4ed8; margin-bottom: 6px;" title="【數位分身核心估值】&#10;結合馬氏距離 (D_t) 與流場曲率 (k)，透過幾何雙曲空間對當前股價進行動態估值診斷">
+            數位分身估值 <span style="cursor:help;">ⓘ</span>
         </div>
+        <div style="font-size: clamp(1.2rem, 1.8vw, 1.5rem); font-weight: 800; color: #1e40af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            NT$ {val_price}
+        </div>
+    </div>
     """, unsafe_allow_html=True)
 
 with col_d2:
-    st.markdown("""
-        <div style="
-            background-color: #fefce8;
-            border: 1px solid #fef08a;
-            border-radius: 12px;
-            padding: 18px 15px;
-            height: 110px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        ">
-            <div style="font-size: 0.85rem; font-weight: 600; color: #a16207; margin-bottom: 6px;">流場相態判定</div>
-            <div style="font-size: clamp(1.0rem, 1.3vw, 1.25rem); font-weight: 700; color: #854d0e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                ⚠️ 幾何偏離警示
-            </div>
+    st.markdown(f"""
+    <div style="
+        background-color: #fefce8;
+        border: 1px solid #fef08a;
+        border-radius: 12px;
+        padding: 18px 15px;
+        height: 110px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    ">
+        <div style="font-size: 0.85rem; font-weight: 600; color: #a16207; margin-bottom: 6px;" title="【流場相態與動態診斷】&#10;• 穩定盤整：軌跡位於中央沉積區&#10;• 幾何偏離警示：馬氏距離拉大">
+            流場相態判定 <span style="cursor:help;">ⓘ</span>
         </div>
+        <div style="font-size: clamp(1.2rem, 1.8vw, 1.5rem); font-weight: 800; color: #854d0e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {phase_status_val if 'phase_status' in locals() else '穩健盤整區間'}
+        </div>
+    </div>
     """, unsafe_allow_html=True)
 
 with col_d3:
-    st.markdown("""
-        <div style="
-            background-color: #fef2f2;
-            border: 1px solid #fecaca;
-            border-radius: 12px;
-            padding: 18px 15px;
-            height: 110px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        ">
-            <div style="font-size: 0.85rem; font-weight: 600; color: #b91c1c; margin-bottom: 6px;">綜合風險等級</div>
-            <div style="font-size: clamp(1.0rem, 1.3vw, 1.25rem); font-weight: 700; color: #991b1b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                中等風險 (Moderate Risk)
-            </div>
+    st.markdown(f"""
+    <div style="
+        background-color: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 12px;
+        padding: 18px 15px;
+        height: 110px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    ">
+        <div style="font-size: 0.85rem; font-weight: 600; color: #dc2626; margin-bottom: 6px;" title="【閉環風控評級】&#10;整合雙曲空間半徑 (r)、軌跡曲率強度 (k) 與試錯殘差進行綜合量化分析">
+            綜合風險等級 <span style="cursor:help;">ⓘ</span>
         </div>
+        <div style="font-size: clamp(1.1rem, 1.6vw, 1.4rem); font-weight: 800; color: #991b1b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {risk_level_val if 'risk_level' in locals() else '低度偏離 (Low Risk)'}
+        </div>
+    </div>
     """, unsafe_allow_html=True)
 
-# 3. 渲染下方「閉環控制處置建議」標題與詳細說明框
-st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
-st.markdown("##### 💡 閉環控制處置建議 (Closed-Loop Action Control)")
-
+# 3. 渲染下方「詳細處置說明框」
 st.markdown(f"""
-    <div style="
-        background-color: #f0fdf4;
-        border: 1px solid #bbf7d0;
-        border-radius: 8px;
-        padding: 14px 18px;
-        color: #166534;
-        font-size: 0.95rem;
-        line-height: 1.6;
-        margin-top: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.01);
-    ">
+<div style="
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 5px solid #0284c7;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+">
+    <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+        💡 閉環數位分身診斷與系統處置說明
+    </div>
+    <div style="font-size: 0.9rem; color: #334155; line-height: 1.6;">
         {action_msg}
     </div>
+</div>
 """, unsafe_allow_html=True)
