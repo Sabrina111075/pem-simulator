@@ -1347,36 +1347,67 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
         * *註：紅點距離圓心越近代表市場趨於平衡，越靠近邊界 ($r \\rightarrow 1$) 代表極端趨勢。*
         """)
 
-    # 右卡片：數位分身預測與風險區間 + 10步軌跡預測圖
+# 右卡片：數位分身預測與風險區間 + 10步軌跡預測圖
     with sub_col2:
         st.success(
             f"📊 **數位分身 (Digital Twin) 期望預測**\n\n"
             f"* **未來 10 步 Q50 中央價**：`${p_q50:.2f}` ({sign_str}{diff_val:.2f} TWD)\n\n"
             f"* **Q10~Q90 風險擴散區間**：`${p_q10:.2f} ~ ${p_q90:.2f}`"
         )
-
+        st.write("")
         st.write("")
 
-        st.write("")
-
-        # --- 補回 10 步預測線圖 ---
+        # 1. 產生 10 步動態擴散軌跡 (Q10/Q50/Q90)
         steps = np.arange(11)
         q50_path = np.linspace(current_price, p_q50, 11)
-        q10_path = np.linspace(current_price, p_q10, 11)
-        q90_path = np.linspace(current_price, p_q90, 11)
+        
+        # 讓風險區間隨步數逐漸展開 (喇叭狀擴散)
+        spread_lower = np.linspace(0, abs(p_q50 - p_q10), 11)
+        spread_upper = np.linspace(0, abs(p_q90 - p_q50), 11)
+        
+        q10_path = q50_path - spread_lower
+        q90_path = q50_path + spread_upper
 
         fig_dt = go.Figure()
-        fig_dt.add_trace(go.Scatter(x=np.concatenate([steps, steps[::-1]]), y=np.concatenate([q90_path, q10_path[::-1]]), fill='toself', fillcolor='rgba(46, 204, 113, 0.2)', line=dict(color='rgba(255,255,255,0)'), name='Q10-Q90 區間'))
-        fig_dt.add_trace(go.Scatter(x=steps, y=q50_path, mode='lines+markers', line=dict(color='#2ecc71', width=3), name='Q50 期望軌跡'))
+
+        # 2. 繪製 Q10-Q90 風險擴散藍色陰影區塊
+        fig_dt.add_trace(go.Scatter(
+            x=np.concatenate([steps, steps[::-1]]),
+            y=np.concatenate([q90_path, q10_path[::-1]]),
+            fill='toself',
+            fillcolor='rgba(52, 152, 219, 0.25)',  # 明顯的半透明科技藍
+            line=dict(color='rgba(255,255,255,0)'),
+            hoverinfo="skip",
+            name='Q10-Q90 風險區間'
+        ))
+
+        # 3. 繪製 Q50 中央期望軌跡線
+        fig_dt.add_trace(go.Scatter(
+            x=steps,
+            y=q50_path,
+            mode='lines+markers',
+            line=dict(color='#2ecc71', width=3),
+            marker=dict(size=6),
+            name='Q50 期望軌跡'
+        ))
 
         fig_dt.update_layout(
             title="未來 10 步數位分身軌跡預測",
-            xaxis_title="預測步數",
+            xaxis_title="預測步數 (Steps)",
             yaxis_title="價格 (TWD)",
             height=300,
-            margin=dict(l=10, r=10, t=45, b=10)
+            margin=dict(l=10, r=10, t=45, b=10),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
+
         st.plotly_chart(fig_dt, use_container_width=True)
+
+        # 4. 補充說明小註解
+        st.caption("""
+        📌 **軌跡預測與風險區間說明**：
+        * **綠色實線 (Q50)**：數位分身模擬之未來 10 步價格中央期望路徑。
+        * **藍色陰影 (Q10-Q90)**：未來 10 步價格波動之 80% 信賴擴散區間，隨步數增加而擴大。
+        """)
 
 # ✅ 修正後的安全呼叫方式：
 render_dmec_27state_dashboard(
