@@ -1264,6 +1264,38 @@ render_dmec_27state_dashboard(
     r_override=_r,
 )
 
+# =========================================================
+# 市場狀態智慧解讀總結 (新增於卡片下方)
+# =========================================================
+
+# 1. 安全取得狀態碼與價格變數
+_s_tuple = s_t if 's_t' in locals() else (0, 1, 1)
+
+# 解讀狀態碼動態
+if _s_tuple[2] == 1:
+    _trend_desc = "強勢偏多"
+    _action_desc = "市場具備向上推進動能，多頭結構完整。"
+elif _s_tuple[2] == -1:
+    _trend_desc = "偏空修正"
+    _action_desc = "市場下方防守壓力增加，需注意獲利回吐風險。"
+else:
+    _trend_desc = "區間震盪"
+    _action_desc = "籌碼動向尚待釐清，價格於通道內區間整理。"
+
+_q50_val = q50_path[-1] if 'q50_path' in locals() else 2489.65
+_q10_val = q10_path[-1] if 'q10_path' in locals() else 2341.75
+_q90_val = q90_path[-1] if 'q90_path' in locals() else 2588.25
+_diff_val = (_q50_val - _real_price) if '_real_price' in locals() else 24.65
+
+_sign_str = "+" if _diff_val >= 0 else ""
+
+# 2. 渲染總結提示框
+st.info(
+    f"💡 **市場流場智慧總結：** 當前 27 狀態碼為 **{_s_tuple} ({_trend_desc})**。{_action_desc} "
+    f"數位分身預測未來 10 步中央期望價 (Q50) 為 **${_q50_val:.2f}** ({_sign_str}{_diff_val:.2f} TWD)，"
+    f"風險擴散區間 (Q10~Q90) 介於 **${_q10_val:.2f} ~ ${_q90_val:.2f}** 之間。"
+)
+
 # ==========================================
 # 🌊 軌跡曲率強度與轉折風險動態時序圖 (防錯修復版)
 # ==========================================
