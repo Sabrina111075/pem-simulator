@@ -1140,6 +1140,7 @@ with st.popover("ℹ️ 雙曲狀態圓盤 (PVCS) 與 Risk 色柱說明"):
 
 # 原本圖表渲染
 st.plotly_chart(fig_disk, use_container_width=True)
+
 # =========================================================
 # 插入：數位分身 10 步價格模擬與風險區間
 # =========================================================
@@ -1303,37 +1304,48 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
 
     sub_col1, sub_col2 = st.columns(2)
 
-    # 左卡片：狀態碼與流場解讀 + 龐加萊圓形圖
+# 左卡片：狀態碼與流場解讀 + 龐加萊圓形圖
     with sub_col1:
         st.info(
             f"🎯 **27 狀態碼與流場結構**\n\n"
             f"* **當前狀態碼**：`{s_t_calc}` ({_trend_desc})\n\n"
             f"* **動態趨勢解讀**：{_action_desc}"
         )
-
+        st.write("")
         st.write("")
 
-        st.write("")
-
-        # --- 補回龐加萊圓形圖 ---
+        # 1. 先計算與建立龐加萊圖表物件
         import numpy as np
         import plotly.graph_objects as go
 
         theta = np.linspace(0, 2 * np.pi, 100)
         fig_poincare = go.Figure()
         fig_poincare.add_trace(go.Scatter(x=np.cos(theta), y=np.sin(theta), mode='lines', line=dict(color='gray', dash='dash'), showlegend=False))
-        # 依狀態計算圓盤內部點 (u, v)
+        
         u_val = 0.35 if _signal == 1 else (-0.35 if _signal == -1 else 0.0)
         v_val = 0.45 if _signal == 1 else (-0.45 if _signal == -1 else 0.0)
         fig_poincare.add_trace(go.Scatter(x=[u_val], y=[v_val], mode='markers+text', marker=dict(size=14, color='red'), text=[f"S_t {s_t_calc}"], textposition="top center", name="龐加萊點"))
+        
         fig_poincare.update_layout(
             title="龐加萊圓形雙曲流場映射",
             xaxis=dict(range=[-1.1, 1.1], scaleanchor="y", zeroline=True),
             yaxis=dict(range=[-1.1, 1.1], zeroline=True),
             height=300,
-            margin=dict(l=10, r=10, t=35, b=10)
+            margin=dict(l=10, r=10, t=45, b=10)
         )
+
+        # 2. 渲染圖表
         st.plotly_chart(fig_poincare, use_container_width=True)
+
+        # 3. 渲染圖表下方的小註解
+        st.caption("""
+        📌 **龐加萊圓盤象限速覽**：
+        * **第一象限 (右上)**：強勢多頭，動量與籌碼雙強。
+        * **第二象限 (左上)**：轉折警戒，高檔籌碼震盪。
+        * **第三象限 (左下)**：空頭修正，動量籌碼偏弱。
+        * **第四象限 (右下)**：低檔築底，動能復甦沉澱中。
+        * *註：紅點距離圓心越近代表市場趨於平衡，越靠近邊界 ($r \\rightarrow 1$) 代表極端趨勢。*
+        """)
 
     # 右卡片：數位分身預測與風險區間 + 10步軌跡預測圖
     with sub_col2:
