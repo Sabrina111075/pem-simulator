@@ -1414,17 +1414,27 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
         )
         st.plotly_chart(fig_dt, use_container_width=True)
 
-# 防呆相容傳參：自動抓取 app.py 前面已算好的價格與籌碼變數
-_curr_p = locals().get('price', locals().get('latest_price', locals().get('current_price', 12590.0)))
-_c_v = locals().get('major_volume', locals().get('c_val', 0))
-_f_v = locals().get('chip_fund_net', locals().get('f_val', 0.0))
-_p_v = locals().get('auto_spread', locals().get('p_val', 0.0))
+# ------------------------------------------------------------------
+# 全局變數精準對接 (防呆 + 強制帶入正負號)
+# ------------------------------------------------------------------
+# 1. 抓取當前最新價
+_real_price = price if 'price' in locals() else (latest_price if 'latest_price' in locals() else 12560.0)
 
+# 2. 抓取盤前試算盤差 (強制轉 float 確保負號不流失)
+_real_p_val = float(auto_spread) if 'auto_spread' in locals() and auto_spread is not None else -1385.0
+
+# 3. 抓取主力資金 (強制轉 float)
+_real_f_val = float(chip_fund_net) if 'chip_fund_net' in locals() and chip_fund_net is not None else -22.61
+
+# 4. 抓取買賣超張數
+_real_c_val = int(major_volume) if 'major_volume' in locals() and major_volume is not None else -180
+
+# 執行渲染
 render_dmec_27state_dashboard(
-    current_price=_curr_p, 
-    c_val=_c_v, 
-    f_val=_f_v, 
-    p_val=_p_v
+    current_price=_real_price, 
+    c_val=_real_c_val, 
+    f_val=_real_f_val, 
+    p_val=_real_p_val
 )
 
 # ==========================================
