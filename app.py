@@ -914,6 +914,13 @@ if capital_flow_yi < 0:
 else:
     flow_delta_str = flow_status
 
+# ------------------------------------------------------------------
+# 將當前標的數據寫入 Session State (連動下方 DMEC-GF 預測引擎)
+# ------------------------------------------------------------------
+st.session_state['curr_price'] = float(price_display_fmt)
+st.session_state['curr_spread'] = float(auto_spread) if 'auto_spread' in locals() else 0.0
+st.session_state['curr_fund'] = float(capital_flow_yi)
+st.session_state['curr_vol'] = int(c_val)
 with col1:
     st.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
 
@@ -1421,6 +1428,14 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0)
         )
         st.plotly_chart(fig_dt, use_container_width=True)
+
+# 直接讀取上方剛存入的 session_state 數據
+render_dmec_27state_dashboard(
+    current_price=st.session_state.get('curr_price', 100.0),
+    c_val=st.session_state.get('curr_vol', 0),
+    f_val=st.session_state.get('curr_fund', 0.0),
+    p_val=st.session_state.get('curr_spread', 0.0)
+)
 
         # 補回數位分身軌跡圖下方說明
         st.caption(f"📌 **數位分身解析**：基於當前市場流場，未來 10 步期待值向下推算至 `${p_q50:.2f}`，"
