@@ -1455,8 +1455,9 @@ _curr_spread = st.session_state.get('curr_spread', locals().get('auto_spread', -
 _curr_fund = st.session_state.get('curr_fund', locals().get('chip_fund_net', -45.78))
 _curr_vol = st.session_state.get('curr_vol', locals().get('major_volume', -972))
 
-# 2. 如果 locals() 中有上方卡片渲染時產生的明確變數，強制覆蓋 (優先權最高)
-for _k, _v in locals().items():
+# 2. 如果 locals() 中有上方卡片渲染時產生的明確變數，強制覆蓋（安全快照版本）
+_locs_snap = dict(locals())
+for _k, _v in _locs_snap.items():
     if 'price' in _k.lower() and isinstance(_v, (int, float)) and _v > 0:
         _curr_price = float(_v)
     if 'spread' in _k.lower() and isinstance(_v, (int, float)):
