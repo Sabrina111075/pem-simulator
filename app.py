@@ -1383,7 +1383,10 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
             height=300,
             margin=dict(l=10, r=10, t=40, b=10)
         )
-        st.plotly_chart(fig_poincare, use_container_width=True)
+    try:
+        st.plotly_chart(fig_poincare, use_container_width=True, key=f"func_poincare_{time.time()}")
+    except Exception:
+        pass
 
         # 補回龐加萊圖下方說明
         st.caption(f"📌 **雙曲映射說明**：當前座標值為 `({u_val:.2f}, {v_val:.2f})`，位於"
