@@ -1258,8 +1258,7 @@ _r = (
 # 3. 補回模組區塊標題與渲染
 st.subheader("💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
 def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val=0.0, r_override=None):
-    # 1. 精準三維狀態碼動態演算 (保留正負號)
-    # m: 動量 (依據盤差), c: 籌碼 (依據淨資金), p: 盤差方向
+    # 1. 精準三維狀態碼動態演算 (確保嚴格帶入正負號)
     m_sig = 1 if p_val > 5.0 else (-1 if p_val < -5.0 else 0)
     c_sig = 1 if f_val > 0.5 else (-1 if f_val < -0.5 else 0)
     p_sig = 1 if p_val > 0 else (-1 if p_val < 0 else 0)
@@ -1267,7 +1266,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
     s_t_calc = (m_sig, c_sig, p_sig)
     score = m_sig + c_sig + p_sig
     
-    # 全局方向導向
+    # 依據 score 決定全域方向
     if score >= 1:
         _trend_desc = "強勢偏多"
         _action_desc = "市場具備向上推進動能，多頭結構完整。"
@@ -1281,7 +1280,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
         _action_desc = "市場動能收斂，多空結構維持區間震盪。"
         _signal = 0
 
-    # 2. 核心價格動態推算 (方向完全連動 score/p_val)
+    # 2. 核心價格動態推算 (方向完全連動 p_val 正負號)
     ratio_mag = min(abs(p_val) / current_price, 0.03) if current_price > 0 else 0.01
     direction = 1 if p_val >= 0 else -1
     p_ratio = direction * max(ratio_mag, 0.005)
