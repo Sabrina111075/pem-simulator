@@ -1264,7 +1264,7 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
     else:
         s_t_calc = (0, 1, 1)
 
-    # 2. 核心指標運算 (確保變數必存在)
+    # 2. 核心指標運算 (務必維持縮排)
     p_q50 = float(current_price + (p_val * 1.2))
     p_q10 = float(p_q50 - (current_price * 0.06))
     p_q90 = float(p_q50 + (current_price * 0.04))
@@ -1300,7 +1300,7 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
         f"風險擴散區間 (Q10~Q90) 介於 **${p_q10:.2f} ~ ${_q90:.2f}** 之間。"
     )
 
-# 執行渲染：同時產出 4 張卡片與智慧總結
+# 執行渲染：同時產出 4 張卡片與智慧總結 (此行不縮排)
 render_dmec_27state_dashboard(
     current_price=_real_price,
     c_val=_shares,
