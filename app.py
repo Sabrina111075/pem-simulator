@@ -1258,20 +1258,28 @@ _r = (
 # 3. 補回模組區塊標題與渲染
 st.subheader("💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
 def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0.0, r_override=None):
-    # 1. 狀態碼計算與解讀
-    _signal = 1 if p_val > 0 else (-1 if p_val < 0 else 0)
-    s_t_calc = (0, _signal, _signal)
-    
-    _trend_desc = "強勢偏多" if _signal == 1 else ("弱勢偏空" if _signal == -1 else "盤整觀望")
-    _action_desc = "市場具備向上推進動能，多頭結構完整。" if _signal == 1 else ("市場面臨回檔壓力，空頭結構明確。" if _signal == -1 else "市場動能收斂，維持區間震盪。")
+# 1. 狀態碼計算與解讀 (依據預測激勵值 p_val 動態判定)
+    if p_val < 0:
+        _signal = -1
+        s_t_calc = (1, 0, 0)
+        _trend_desc = "弱勢偏空"
+        action_desc = "市場面臨回檔壓力，空頭結構明確。"
+    elif p_val > 0:
+        _signal = 1
+        s_t_calc = (0, 1, 1)
+        _trend_desc = "強勢偏多"
+        action_desc = "市場具備向上推進動能，多頭結構完整。"
+    else:
+        _signal = 0
+        s_t_calc = (0, 0, 1)
+        _trend_desc = "盤整觀望"
+        action_desc = "市場動能收斂，維持區間震盪。"
 
-    # 2. 核心指標運算 (依據真實高價基期，計算相對百分比波幅)
-    base_ratio = (p_val / current_price) if current_price > 0 else 0.0
-    p_ratio = max(min(base_ratio, 0.015), -0.015)
-
-    p_q50 = float(current_price * (1.0 + p_ratio))
-    p_q10 = float(p_q50 - (current_price * 0.01))
-    p_q90 = float(p_q50 + (current_price * 0.01))
+    # 2. 核心指標運算 (將 p_val 當作預測漲跌金額，直接加到現價上)
+    # 這樣預測目標價 (p_q50) 才會與上方的預測目標價完全連動！
+    p_q50 = float(current_price + p_val)
+    p_q10 = float(p_q50 - abs(p_val * 0.15) - (current_price * 0.005))
+    p_q90 = float(p_q50 + abs(p_val * 0.15) + (current_price * 0.005))
     diff_val = float(p_q50 - current_price)
     sign_str = "+" if diff_val >= 0 else ""
 
