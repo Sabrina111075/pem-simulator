@@ -1285,7 +1285,7 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
     st.info(
         f"💡 **市場流場智慧總結：** 當前 27 狀態碼為 **{s_t_calc} ({_trend_desc})**。{_action_desc} "
         f"數位分身預測未來 10 步中央期望價 (Q50) 為 **${p_q50:.2f}** ({sign_str}{diff_val:.2f} TWD)，"
-        f"風險擴散區間 (Q10~Q90) 介於 **${p_q50 - (current_price * 0.06):.2f} ~ ${_q50 + (current_price * 0.04):.2f}** 之間。"
+        f"風險擴散區間 (Q10~Q90) 介於 **${p_q50 - (current_price * 0.06):.2f} ~ ${p_q50 + (current_price * 0.04):.2f}** 之間。"
     )
 
 # 執行渲染
