@@ -1411,12 +1411,16 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         * **藍色陰影 (Q10-Q90)**：未來 10 步價格波動之 80% 信賴擴散區間，隨步數增加而擴大。
         """)
 
-# ✅ 修正後的安全呼叫方式：
+# 修正後的安全呼叫方式 (強制對齊第一張圖的預測激勵值)
+_p_incentive = incentive_score if 'incentive_score' in locals() or 'incentive_score' in globals() else (
+    p_val if 'p_val' in locals() or 'p_val' in globals() else -40.5
+)
+
 render_dmec_27state_dashboard(
     current_price=real_price if 'real_price' in locals() or 'real_price' in globals() else 100.0,
-    c_val=shares if 'shares' in locals() or 'shares' in globals() else (c_val if 'c_val' in locals() or 'c_val' in globals() else 0),
-    f_val=fund if 'fund' in locals() or 'fund' in globals() else (f_val if 'f_val' in locals() or 'f_val' in globals() else 0),
-    p_val=diff if 'diff' in locals() or 'diff' in globals() else (p_val if 'p_val' in locals() or 'p_val' in globals() else 0.0),
+    c_val=shares if 'shares' in locals() or 'shares' in globals() else 0,
+    f_val=fund if 'fund' in locals() or 'fund' in globals() else 0,
+    p_val=_p_incentive,
     r_override=r if 'r' in locals() or 'r' in globals() else None
 )
 
