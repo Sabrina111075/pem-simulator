@@ -1427,19 +1427,22 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
             margin=dict(l=10, r=10, t=40, b=10),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0)
         )
-        st.plotly_chart(fig_dt, use_container_width=True)
+    st.plotly_chart(fig_dt, use_container_width=True)
 
-# 直接讀取上方剛存入的 session_state 數據
+    # 補回數位分身軌跡圖下方說明 (請務必縮排 4 個空格)
+    st.caption(f"📌 **數位分身解析**：基於當前市場流場，未來 10 步期望值向下推算至 `${p_q50:.2f}`，"
+               f"信賴區間擴散幅度為 `{abs(p_q90 - p_q10):.2f}` TWD，顯示市場向下修正動能明確。")
+
+
+# ==============================================================================
+# DMEC-GF 預測引擎 - 呼叫處 (頂格不縮排)
+# ==============================================================================
 render_dmec_27state_dashboard(
     current_price=st.session_state.get('curr_price', 100.0),
     c_val=st.session_state.get('curr_vol', 0),
     f_val=st.session_state.get('curr_fund', 0.0),
     p_val=st.session_state.get('curr_spread', 0.0)
 )
-
-        # 補回數位分身軌跡圖下方說明
-        st.caption(f"📌 **數位分身解析**：基於當前市場流場，未來 10 步期待值向下推算至 `${p_q50:.2f}`，"
-                   f"信賴區間擴散幅度為 `{abs(p_q90 - p_q10):.2f}` TWD，顯示市場向下修正動能明確。")
 
 # ==============================================================================
 # DMEC-GF 預測引擎 - 作用域資料全自動繫結
