@@ -1355,13 +1355,13 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
         )
         st.plotly_chart(fig_dt, use_container_width=True)
 
-# 執行渲染
+# ✅ 修正後的安全呼叫方式：
 render_dmec_27state_dashboard(
-    current_price=real_price,
-    c_val=shares,
-    f_val=fund,
-    p_val=diff,
-    r_override=r
+    current_price=real_price if 'real_price' in locals() or 'real_price' in globals() else 100.0,
+    c_val=shares if 'shares' in locals() or 'shares' in globals() else (c_val if 'c_val' in locals() or 'c_val' in globals() else 0),
+    f_val=fund if 'fund' in locals() or 'fund' in globals() else (f_val if 'f_val' in locals() or 'f_val' in globals() else 0),
+    p_val=diff if 'diff' in locals() or 'diff' in globals() else (p_val if 'p_val' in locals() or 'p_val' in globals() else 0.0),
+    r_override=r if 'r' in locals() or 'r' in globals() else None
 )
 
 # ==========================================
