@@ -1359,9 +1359,10 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
             showlegend=False
         ))
         
+# 龐加萊圖表 layout 修正（移除無效的 constrained 參數）
         fig_poincare.update_layout(
             title=dict(text="龐加萊圓形雙曲流場映射", y=0.98, x=0.0, xanchor='left', yanchor='top'),
-            xaxis=dict(range=[-1.15, 1.15], scaleanchor="y", scaleratio=1, zeroline=True, zerolinecolor='#bdc3c7', constrained=True),
+            xaxis=dict(range=[-1.15, 1.15], scaleanchor="y", scaleratio=1, zeroline=True, zerolinecolor='#bdc3c7'),
             yaxis=dict(range=[-1.15, 1.15], zeroline=True, zerolinecolor='#bdc3c7'),
             height=300,
             margin=dict(l=10, r=10, t=40, b=10)
