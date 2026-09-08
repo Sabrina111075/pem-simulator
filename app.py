@@ -1260,12 +1260,13 @@ st.subheader("💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引�
 def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0.0, r_override=None):
     # 1. 狀態碼計算與解讀
     _signal = 1 if p_val > 0 else (-1 if p_val < 0 else 0)
+    # 動量, 籌碼, 盤差 -> 確保方向性一致
     s_t_calc = (0, _signal, _signal)
     
     _trend_desc = "強勢偏多" if _signal == 1 else ("弱勢偏空" if _signal == -1 else "盤整觀望")
     _action_desc = "市場具備向上推進動能，多頭結構完整。" if _signal == 1 else ("市場面臨回檔壓力，空頭結構明確。" if _signal == -1 else "市場動能收斂，維持區間震盪。")
 
-    # 2. 核心指標運算 (依據真實高價基期，計算相對百分比波幅)
+    # 2. 核心指標運算 (百分比波幅機制)
     base_ratio = (p_val / current_price) if current_price > 0 else 0.0
     p_ratio = max(min(base_ratio, 0.015), -0.015)
 
@@ -1275,7 +1276,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
     diff_val = float(p_q50 - current_price)
     sign_str = "+" if diff_val >= 0 else ""
 
-    # 3. 渲染 4 張 KPI 數據指標卡片 (完整補回 help 註解說明，並已移除重複標題)
+    # 3. 頂部 4 張 KPI 數據指標卡片
     kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
     with kpi_col1:
         st.metric(
@@ -1315,26 +1316,40 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
     with sub_col1:
         st.info(
             f"🎯 **27 狀態碼與流場結構**\n\n"
-            f"* **當前狀態碼**：`{s_t_calc}` ({_trend_desc})\n\n"
+            f"* **當前狀態碼**：`{s_t_calc}`（**{_trend_desc}**）\n\n"
             f"* **動態趨勢解讀**：{_action_desc}"
         )
         st.write("")
 
-        # 龐加萊圖表繪製
+        # 龐加萊圖表繪製 (精準幾何座標修正)
         theta = np.linspace(0, 2 * np.pi, 100)
         fig_poincare = go.Figure()
-        fig_poincare.add_trace(go.Scatter(x=np.cos(theta), y=np.sin(theta), mode='lines', line=dict(color='gray', dash='dash'), showlegend=False))
+        # 單位圓邊界
+        fig_poincare.add_trace(go.Scatter(
+            x=np.cos(theta), y=np.sin(theta), 
+            mode='lines', line=dict(color='#7f8c8d', dash='dash', width=1.5), 
+            showlegend=False, hoverinfo='skip'
+        ))
         
-        u_val = 0.35 if _signal == 1 else (-0.35 if _signal == -1 else 0.0)
+        # 精準對應象限: 多頭 (1st Quadrant: u>0, v>0), 空頭 (3rd Quadrant: u<0, v<0)
+        u_val = 0.45 if _signal == 1 else (-0.45 if _signal == -1 else 0.0)
         v_val = 0.45 if _signal == 1 else (-0.45 if _signal == -1 else 0.0)
-        fig_poincare.add_trace(go.Scatter(x=[u_val], y=[v_val], mode='markers+text', marker=dict(size=14, color='red'), text=[f"S_t {s_t_calc}"], textposition="top center", name="龐加萊點"))
+        
+        fig_poincare.add_trace(go.Scatter(
+            x=[u_val], y=[v_val], 
+            mode='markers+text', 
+            marker=dict(size=14, color='#e74c3c' if _signal >= 0 else '#27ae60'), 
+            text=[f" S_t{s_t_calc}"], 
+            textposition="top right", 
+            showlegend=False
+        ))
         
         fig_poincare.update_layout(
-            title="龐加萊圓形雙曲流場映射",
-            xaxis=dict(range=[-1.1, 1.1], scaleanchor="y", scaleratio=1, zeroline=True),
-            yaxis=dict(range=[-1.1, 1.1], zeroline=True),
+            title=dict(text="龐加萊圓形雙曲流場映射", y=0.98, x=0.0, xanchor='left', yanchor='top'),
+            xaxis=dict(range=[-1.15, 1.15], scaleanchor="y", scaleratio=1, zeroline=True, zerolinecolor='#bdc3c7'),
+            yaxis=dict(range=[-1.15, 1.15], zeroline=True, zerolinecolor='#bdc3c7'),
             height=300,
-            margin=dict(l=10, r=10, t=45, b=10)
+            margin=dict(l=10, r=10, t=40, b=10)
         )
         st.plotly_chart(fig_poincare, use_container_width=True)
 
@@ -1344,7 +1359,6 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         * **第二象限 (左上)**：轉折警戒，高檔籌碼震盪。
         * **第三象限 (左下)**：空頭修正，動量籌碼偏弱。
         * **第四象限 (右下)**：低檔築底，動能復甦沉澱中。
-        * *註：紅點距離圓心越近代表市場趨於平衡，越靠近邊界 ($r \\rightarrow 1$) 代表極端趨勢。*
         """)
 
     # 右卡片：數位分身預測與軌跡圖
@@ -1369,7 +1383,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
             x=np.concatenate([steps, steps[::-1]]),
             y=np.concatenate([q90_path, q10_path[::-1]]),
             fill='toself',
-            fillcolor='rgba(41, 128, 185, 0.35)',
+            fillcolor='rgba(41, 128, 185, 0.25)',
             line=dict(color='rgba(255,255,255,0)'),
             hoverinfo="skip",
             name='Q10-Q90 風險區間'
@@ -1383,16 +1397,16 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
             name='Q50 期望軌跡'
         ))
 
-        min_y = min(q10_path) - (current_price * 0.005)
-        max_y = max(q90_path) + (current_price * 0.005)
+        min_y = min(q10_path) - (current_price * 0.003)
+        max_y = max(q90_path) + (current_price * 0.003)
 
         fig_dt.update_layout(
             title=dict(text="未來 10 步數位分身軌跡預測", y=0.98, x=0.0, xanchor='left', yanchor='top'),
             xaxis_title="預測步數 (Steps)",
             yaxis_title="價格 (TWD)",
-            yaxis=dict(range=[min_y, max_y]),
+            yaxis=dict(range=[min_y, max_y], tickformat=",.1f"),
             height=300,
-            margin=dict(l=10, r=10, t=60, b=10),
+            margin=dict(l=10, r=10, t=40, b=10),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0)
         )
         st.plotly_chart(fig_dt, use_container_width=True)
