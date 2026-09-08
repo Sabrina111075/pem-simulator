@@ -1529,9 +1529,9 @@ fig_wave.update_layout(
 st.plotly_chart(fig_wave, use_container_width=True)
 
 # ==========================================
-# 🎯 個股 PVCS 閉環數位分身診斷與處置建議 (含下方詳細處置說明框)
+# 🔲 個股 PVCS 閉環數位分身診斷與處置建議 (含下方詳細處置說明框)
 # ==========================================
-st.markdown("### 🎯 個股 PVCS 閉環數位分身診斷與處置建議")
+st.markdown("### 🔲 個股 PVCS 閉環數位分身診斷與處置建議")
 
 # 1. 取得當前動態數據與建議文字
 val_price = price_display_fmt if 'price_display_fmt' in locals() else "69.60"
@@ -1541,11 +1541,11 @@ curr_d = float(d_val) if 'd_val' in locals() else 0.852
 if curr_d > 1.2:
     action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 呈現顯著擴張，顯示價量與籌碼流向發生強烈幾何偏離。建議調降倉位風控門檻，並緊盯轉折風險指標。"
 elif curr_d > 0.8:
-    action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 出現輕微擴張，顯示量價流向出現微幅擾動。建議密切觀察轉折風險指標，維持既有部位。"
+    action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 出現微幅擴張，顯示量流向出現微幅擾動。建議密切觀察轉折風險指標，維持既有部位。"
 else:
     action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 處於收斂平穩區間，雙曲幾何流場運作正常。建議按原閉環策略持續持有。"
 
-# 2. 渲染上方 3 欄等高卡片
+# 2. 渲染上方 3 欄高等級卡片
 col_d1, col_d2, col_d3 = st.columns(3)
 
 with col_d1:
@@ -1561,11 +1561,11 @@ with col_d1:
         justify-content: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     ">
-        <div style="font-size: 0.85rem; font-weight: 600; color: #1d4ed8; margin-bottom: 6px;" title="【數位分身核心估值】&#10;結合馬氏距離 (D_t) 與流場曲率 (k)，透過幾何雙曲空間對當前股價進行動態校正後的理論擬真價值。">
-            分身擬真估值 <span style="cursor:help;">ℹ️</span>
+        <div style="font-size: 0.85rem; font-weight: 600; color: #1d4ed8; margin-bottom: 6px;" title="【數位分身核心估值】&#10;結合馬氏距離 (D_t) 與流場曲率 (k)，透過幾何雙曲空間對當前股價進行動態估值診斷">
+            數位分身估值 <span style="cursor:help;">ⓘ</span>
         </div>
-        <div style="font-size: clamp(1.4rem, 2vw, 1.8rem); font-weight: 800; color: #1e40af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            ${val_price}
+        <div style="font-size: clamp(1.2rem, 1.8vw, 1.5rem); font-weight: 800; color: #1e40af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            NT$ {val_price}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1583,11 +1583,11 @@ with col_d2:
         justify-content: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     ">
-        <div style="font-size: 0.85rem; font-weight: 600; color: #a16207; margin-bottom: 6px;" title="【流場相態與動態診斷】&#10;• 穩定盤整：軌跡位於中央沉積區&#10;• 幾何偏離警示：馬氏距離拉大，價格與籌碼發生非線性背離&#10;• 強烈變盤/轉折：接近圓盤無窮遠邊界">
-            流場相態判定 <span style="cursor:help;">ℹ️</span>
+        <div style="font-size: 0.85rem; font-weight: 600; color: #a16207; margin-bottom: 6px;" title="【流場相態與動態診斷】&#10;• 穩定盤整：軌跡位於中央沉積區&#10;• 幾何偏離警示：馬氏距離拉大">
+            流場相態判定 <span style="cursor:help;">ⓘ</span>
         </div>
         <div style="font-size: clamp(1.2rem, 1.8vw, 1.5rem); font-weight: 800; color: #854d0e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            {phase_status}
+            {phase_status if 'phase_status' in locals() else '穩健盤整區間'}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1605,31 +1605,31 @@ with col_d3:
         justify-content: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     ">
-        <div style="font-size: 0.85rem; font-weight: 600; color: #dc2626; margin-bottom: 6px;" title="【閉環風控評級】&#10;整合雙曲空間半徑 (r)、軌跡曲率強度 (k) 與試撮殘差進行綜合量化分析：&#10;• 低風險：趨勢動態穩定&#10;• 中等風險：動能擴張中，留意幾何偏離&#10;• 高風險：面臨強烈轉折/變盤風險">
-            綜合風險等級 <span style="cursor:help;">ℹ️</span>
+        <div style="font-size: 0.85rem; font-weight: 600; color: #dc2626; margin-bottom: 6px;" title="【閉環風控評級】&#10;整合雙曲空間半徑 (r)、軌跡曲率強度 (k) 與試錯殘差進行綜合量化分析">
+            綜合風險等級 <span style="cursor:help;">ⓘ</span>
         </div>
         <div style="font-size: clamp(1.1rem, 1.6vw, 1.4rem); font-weight: 800; color: #991b1b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            中等風險 (Moderate Risk)
+            {risk_level if 'risk_level' in locals() else '低度偏離 (Low Risk)'}
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-# 3. 渲染下方「閉環控制處置建議」標題與詳細說明框
-st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
-st.markdown("##### 💡 閉環控制處置建議 (Closed-Loop Action Control)")
-
+# 3. 渲染下方「詳細處置說明框」
 st.markdown(f"""
-    <div style="
-        background-color: #f0fdf4;
-        border: 1px solid #bbf7d0;
-        border-radius: 8px;
-        padding: 14px 18px;
-        color: #166534;
-        font-size: 0.95rem;
-        line-height: 1.6;
-        margin-top: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.01);
-    ">
+<div style="
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 5px solid #0284c7;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+">
+    <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+        💡 閉環數位分身診斷與系統處置說明
+    </div>
+    <div style="font-size: 0.9rem; color: #334155; line-height: 1.6;">
         {action_msg}
     </div>
+</div>
 """, unsafe_allow_html=True)
