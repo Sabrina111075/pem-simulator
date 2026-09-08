@@ -1417,12 +1417,11 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
         )
         st.plotly_chart(fig_dt, use_container_width=True)
 
-# ⚠️ 請確保 current_price 傳入的是 12590.0，且 p_val 傳入的是 -1315.0 (帶負號)
 render_dmec_27state_dashboard(
-    current_price=realtime_price,  # 必須為當前最新價 (12590.0)
-    c_val=net_buy_shares,          # 主力買賣超張數 (-176)
-    f_val=chip_fund_net,           # 主力淨資金 (-22.16)
-    p_val=auto_spread              # 盤前試算盤差 (-1315.0)
+    current_price=latest_price,  # 替換為你 app.py 前面定義的價格變數
+    c_val=major_volume, 
+    f_val=chip_fund_net, 
+    p_val=auto_spread
 )
 
 # ==========================================
