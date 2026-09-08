@@ -1265,19 +1265,51 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
     _trend_desc = "強勢偏多" if _signal == 1 else ("弱勢偏空" if _signal == -1 else "盤整觀望")
     _action_desc = "市場具備向上推進動能，多頭結構完整。" if _signal == 1 else ("市場面臨回檔壓力，空頭結構明確。" if _signal == -1 else "市場動能收斂，維持區間震盪。")
 
-    # 2. 核心指標運算 (修正高價股與方向相反 BUG)
-    # 限制單次 10 步最大波幅比例在 ±3% 內
+    # 2. 核心指標運算 (依據真實高價基期，計算相對百分比波幅)
+    # 限制 10 步最大預測變動比例在 ±1.5% 的合理日內擴散區間
     base_ratio = (p_val / current_price) if current_price > 0 else 0.0
-    p_ratio = max(min(base_ratio, 0.03), -0.03)
+    p_ratio = max(min(base_ratio, 0.015), -0.015)
 
-    # 正確依據 p_val 的正負號進行價格推算
     p_q50 = float(current_price * (1.0 + p_ratio))
-    p_q10 = float(p_q50 - (current_price * 0.015))
-    p_q90 = float(p_q50 + (current_price * 0.015))
+    p_q10 = float(p_q50 - (current_price * 0.01))
+    p_q90 = float(p_q50 + (current_price * 0.01))
     diff_val = float(p_q50 - current_price)
     sign_str = "+" if diff_val >= 0 else ""
 
-    # 3. 版面劃分
+    # 3. 渲染頂部大標題與 4 張 KPI 數據指標卡片
+    st.markdown("### 💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
+    
+    kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
+    with kpi_col1:
+        st.metric(
+            label="當前 27 狀態碼 (S_t)",
+            value=f"{s_t_calc}",
+            help="由 (動量, 籌碼, 盤差) 構成之 27 狀態碼"
+        )
+    with kpi_col2:
+        st.metric(
+            label="流場狀態名稱",
+            value=f"狀態碼 {s_t_calc}",
+            delta=_trend_desc,
+            delta_color="normal" if _signal >= 0 else "inverse"
+        )
+    with kpi_col3:
+        st.metric(
+            label="Q50 中央預測價",
+            value=f"${p_q50:.2f}",
+            delta=f"{sign_str}{diff_val:.2f} TWD",
+            delta_color="normal" if diff_val >= 0 else "inverse"
+        )
+    with kpi_col4:
+        st.metric(
+            label="Q10-Q90 風險區間",
+            value=f"{p_q10:.2f} ~ {p_q90:.2f}",
+            help="未來 10 步 80% 信賴區間"
+        )
+
+    st.write("")
+
+    # 4. 版面劃分：左右雙圖卡片
     sub_col1, sub_col2 = st.columns(2)
 
     # 左卡片：狀態碼與龐加萊圓形圖
@@ -1287,7 +1319,6 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
             f"* **當前狀態碼**：`{s_t_calc}` ({_trend_desc})\n\n"
             f"* **動態趨勢解讀**：{_action_desc}"
         )
-        st.write("")
         st.write("")
 
         # 龐加萊圖表繪製
@@ -1325,12 +1356,11 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
             f"* **Q10~Q90 風險擴散區間**：`${p_q10:.2f} ~ ${p_q90:.2f}`"
         )
         st.write("")
-        st.write("")
 
         steps = np.arange(11)
         q50_path = np.linspace(current_price, p_q50, 11)
-        spread_lower = np.linspace(0, max(abs(p_q50 - p_q10), 3.0), 11)
-        spread_upper = np.linspace(0, max(abs(p_q90 - p_q50), 3.0), 11)
+        spread_lower = np.linspace(0, abs(p_q50 - p_q10), 11)
+        spread_upper = np.linspace(0, abs(p_q90 - p_q50), 11)
         
         q10_path = q50_path - spread_lower
         q90_path = q50_path + spread_upper
@@ -1354,8 +1384,8 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
             name='Q50 期望軌跡'
         ))
 
-        min_y = min(q10_path) - 5
-        max_y = max(q90_path) + 5
+        min_y = min(q10_path) - (current_price * 0.005)
+        max_y = max(q90_path) + (current_price * 0.005)
 
         fig_dt.update_layout(
             title=dict(text="未來 10 步數位分身軌跡預測", y=0.98, x=0.0, xanchor='left', yanchor='top'),
