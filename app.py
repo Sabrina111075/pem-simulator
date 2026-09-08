@@ -1357,25 +1357,25 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
         st.write("")
         st.write("")
 
-        # 1. 產生 10 步動態擴散軌跡 (Q10/Q50/Q90)
+        # 1. 產生 10 步動態擴散軌跡
         steps = np.arange(11)
         q50_path = np.linspace(current_price, p_q50, 11)
         
-        # 讓風險區間隨步數逐漸展開 (喇叭狀擴散)
-        spread_lower = np.linspace(0, abs(p_q50 - p_q10), 11)
-        spread_upper = np.linspace(0, abs(p_q90 - p_q50), 11)
+        # 動態計算真實擴散幅度
+        spread_lower = np.linspace(0, max(abs(p_q50 - p_q10), 3.0), 11)
+        spread_upper = np.linspace(0, max(abs(p_q90 - p_q50), 3.0), 11)
         
         q10_path = q50_path - spread_lower
         q90_path = q50_path + spread_upper
 
         fig_dt = go.Figure()
 
-        # 2. 繪製 Q10-Q90 風險擴散藍色陰影區塊
+        # 2. 繪製藍色風險擴散陰影（調高不透明度至 0.35）
         fig_dt.add_trace(go.Scatter(
             x=np.concatenate([steps, steps[::-1]]),
             y=np.concatenate([q90_path, q10_path[::-1]]),
             fill='toself',
-            fillcolor='rgba(52, 152, 219, 0.25)',  # 明顯的半透明科技藍
+            fillcolor='rgba(41, 128, 185, 0.35)',
             line=dict(color='rgba(255,255,255,0)'),
             hoverinfo="skip",
             name='Q10-Q90 風險區間'
@@ -1386,23 +1386,40 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
             x=steps,
             y=q50_path,
             mode='lines+markers',
-            line=dict(color='#2ecc71', width=3),
-            marker=dict(size=6),
+            line=dict(color='#2ecc71', width=2.5),
+            marker=dict(size=5),
             name='Q50 期望軌跡'
         ))
 
+        # 4. 聚焦 Y 軸範圍並拉開頂部間距 (避免標題與圖例擠在一起)
+        min_y = min(q10_path) - 5
+        max_y = max(q90_path) + 5
+
         fig_dt.update_layout(
-            title="未來 10 步數位分身軌跡預測",
+            title=dict(
+                text="未來 10 步數位分身軌跡預測",
+                y=0.98,
+                x=0.0,
+                xanchor='left',
+                yanchor='top'
+            ),
             xaxis_title="預測步數 (Steps)",
             yaxis_title="價格 (TWD)",
+            yaxis=dict(range=[min_y, max_y]),  # 自動聚焦 Y 軸，顯現藍色區間
             height=300,
-            margin=dict(l=10, r=10, t=45, b=10),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            margin=dict(l=10, r=10, t=60, b=10), # 頂部 margin 加大到 60
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1.0
+            )
         )
 
         st.plotly_chart(fig_dt, use_container_width=True)
 
-        # 4. 補充說明小註解
+        # 5. 補充說明小註解
         st.caption("""
         📌 **軌跡預測與風險區間說明**：
         * **綠色實線 (Q50)**：數位分身模擬之未來 10 步價格中央期望路徑。
