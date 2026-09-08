@@ -1299,7 +1299,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
             delta_color="normal" if _signal >= 0 else "inverse",
             help="當前雙曲流場之方向動態與趨勢強度"
         )
-with kpi_col3:
+    with kpi_col3:
         st.metric(
             label="Q50 中央預測價",
             value=f"${p_q50:.2f}",
