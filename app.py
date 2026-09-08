@@ -1426,27 +1426,28 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
         st.caption(f"📌 **數位分身解析**：基於當前市場流場，未來 10 步期待值向下推算至 `${p_q50:.2f}`，"
                    f"信賴區間擴散幅度為 `{abs(p_q90 - p_q10):.2f}` TWD，顯示市場向下修正動能明確。")
 
-# ------------------------------------------------------------------
-# 全局變數精準對接 (防呆 + 強制帶入正負號)
-# ------------------------------------------------------------------
-# 1. 抓取當前最新價
-_real_price = price if 'price' in locals() else (latest_price if 'latest_price' in locals() else 12560.0)
+# ==============================================================================
+# DMEC-GF 預測引擎 - 全局動態數據對接 (防止切換股票時數據未同步)
+# ==============================================================================
 
-# 2. 抓取盤前試算盤差 (強制轉 float 確保負號不流失)
-_real_p_val = float(auto_spread) if 'auto_spread' in locals() and auto_spread is not None else -1385.0
+# 1. 精準抓取當前個股最新價格 (依序嘗試各種可能變數，最後才用 2470.0)
+_curr_price = float(locals().get('price', locals().get('latest_price', locals().get('curr_p', 2470.0))))
 
-# 3. 抓取主力資金 (強制轉 float)
-_real_f_val = float(chip_fund_net) if 'chip_fund_net' in locals() and chip_fund_net is not None else -22.61
+# 2. 精準抓取盤前試算盤差 (優先抓取 auto_spread)
+_curr_spread = float(locals().get('auto_spread', locals().get('p_val', 10.0)))
 
-# 4. 抓取買賣超張數
-_real_c_val = int(major_volume) if 'major_volume' in locals() and major_volume is not None else -180
+# 3. 精準抓取主力資金淨額 (優先抓取 chip_fund_net)
+_curr_fund = float(locals().get('chip_fund_net', locals().get('f_val', 105.07)))
 
-# 執行渲染
+# 4. 精準抓取主力買賣張數 (優先抓取 major_volume)
+_curr_vol = int(locals().get('major_volume', locals().get('c_val', 4254)))
+
+# 5. 強制執行狀態碼引擎繪製 (確保每次選股重繪時皆帶入最新的 2330 / 2059 數據)
 render_dmec_27state_dashboard(
-    current_price=_real_price, 
-    c_val=_real_c_val, 
-    f_val=_real_f_val, 
-    p_val=_real_p_val
+    current_price=_curr_price,
+    c_val=_curr_vol,
+    f_val=_curr_fund,
+    p_val=_curr_spread
 )
 
 # ==========================================
