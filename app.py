@@ -1262,10 +1262,15 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
     raw_st = r_override if r_override is not None else (0, 1, 1)
     s_t_calc = raw_st if isinstance(raw_st, (tuple, list)) and len(raw_st) >= 3 else (0, 1, 1)
 
-    # 2. 核心指標運算
-    p_q50 = float(current_price + (p_val * 1.2))
-    p_q10 = float(p_q50 - (current_price * 0.06))
-    p_q90 = float(p_q50 + (current_price * 0.04))
+# 2. 核心指標運算 (修正高價股單位誇大 BUG)
+    # 將 p_val 轉化為合理的百分比波幅比例 (避免高價股計算爆表)
+    p_ratio = (p_val / current_price) if current_price > 0 else 0.01
+    p_ratio = max(min(p_ratio, 0.03), -0.03) # 限制單次 10 步最大預測波幅在 ±3% 內
+
+    # 計算合理的預測價與區間
+    p_q50 = float(current_price * (1.0 + p_ratio * 1.2))
+    p_q10 = float(p_q50 - (current_price * 0.015))
+    p_q90 = float(p_q50 + (current_price * 0.015))
     diff_val = float(p_q50 - current_price)
     sign_str = "+" if diff_val >= 0 else ""
 
