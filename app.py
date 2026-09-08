@@ -1258,25 +1258,45 @@ _r = (
 # 3. 補回模組區塊標題與渲染
 st.subheader("💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
 def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0.0, r_override=None):
-    # 1. 狀態碼計算與解讀
-    _signal = 1 if p_val > 0 else (-1 if p_val < 0 else 0)
-    # 動量, 籌碼, 盤差 -> 確保方向性一致
-    s_t_calc = (0, _signal, _signal)
+    # 1. 真正的三維 27 狀態碼動態演算
+    # 三維指標：[動量 m, 籌碼 c, 盤差 p] 各自歸類為 (1: 多, 0: 中立, -1: 空)
+    m_sig = 1 if p_val > 5.0 else (-1 if p_val < -5.0 else 0)
+    c_sig = 1 if f_val > 0.5 else (-1 if f_val < -0.5 else 0)
+    p_sig = 1 if p_val > 0 else (-1 if p_val < 0 else 0)
     
-    _trend_desc = "強勢偏多" if _signal == 1 else ("弱勢偏空" if _signal == -1 else "盤整觀望")
-    _action_desc = "市場具備向上推進動能，多頭結構完整。" if _signal == 1 else ("市場面臨回檔壓力，空頭結構明確。" if _signal == -1 else "市場動能收斂，維持區間震盪。")
+    s_t_calc = (m_sig, c_sig, p_sig)
+    
+    # 綜合動能得分 (-3 ~ +3)
+    score = m_sig + c_sig + p_sig
+    
+    if score >= 2:
+        _trend_desc = "強勢偏多"
+        _action_desc = "市場具備強勁向上推進動能，多頭結構完整。"
+        _signal = 1
+    elif score <= -2:
+        _trend_desc = "弱勢偏空"
+        _action_desc = "市場面臨強烈回檔壓力，空頭籌碼與盤差同步承壓。"
+        _signal = -1
+    else:
+        _trend_desc = "盤整觀望"
+        _action_desc = "市場多空動能收斂震盪，方向尚待確立。"
+        _signal = 0
 
-    # 2. 核心指標運算 (百分比波幅機制)
-    base_ratio = (p_val / current_price) if current_price > 0 else 0.0
-    p_ratio = max(min(base_ratio, 0.015), -0.015)
+    # 2. 核心價格動態推算 (根據真實方向動態加減)
+    # 依據盤差與籌碼計算合理波幅比例
+    direction = 1 if score > 0 else (-1 if score < 0 else 0)
+    abs_p_ratio = min(abs(p_val) / current_price, 0.02) if current_price > 0 else 0.01
+    
+    # 若 score 為負，強迫預測價往下跌落
+    p_ratio = direction * max(abs_p_ratio, 0.005)
 
     p_q50 = float(current_price * (1.0 + p_ratio))
-    p_q10 = float(p_q50 - (current_price * 0.01))
-    p_q90 = float(p_q50 + (current_price * 0.01))
+    p_q10 = float(min(current_price, p_q50) - (current_price * 0.01))
+    p_q90 = float(max(current_price, p_q50) + (current_price * 0.01))
     diff_val = float(p_q50 - current_price)
     sign_str = "+" if diff_val >= 0 else ""
 
-    # 3. 頂部 4 張 KPI 數據指標卡片
+    # 3. 渲染 4 張 KPI 數據指標卡片
     kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
     with kpi_col1:
         st.metric(
@@ -1321,26 +1341,25 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         )
         st.write("")
 
-        # 龐加萊圖表繪製 (精準幾何座標修正)
+        # 龐加萊圖表繪製 (精準雙曲座標 mapping)
         theta = np.linspace(0, 2 * np.pi, 100)
         fig_poincare = go.Figure()
-        # 單位圓邊界
         fig_poincare.add_trace(go.Scatter(
             x=np.cos(theta), y=np.sin(theta), 
             mode='lines', line=dict(color='#7f8c8d', dash='dash', width=1.5), 
             showlegend=False, hoverinfo='skip'
         ))
         
-        # 精準對應象限: 多頭 (1st Quadrant: u>0, v>0), 空頭 (3rd Quadrant: u<0, v<0)
-        u_val = 0.45 if _signal == 1 else (-0.45 if _signal == -1 else 0.0)
-        v_val = 0.45 if _signal == 1 else (-0.45 if _signal == -1 else 0.0)
+        # 根據 signal 精準定位象限 (多頭: 第一象限右上, 空頭: 第三象限左下)
+        u_val = 0.45 * _signal
+        v_val = 0.45 * _signal
         
         fig_poincare.add_trace(go.Scatter(
             x=[u_val], y=[v_val], 
             mode='markers+text', 
-            marker=dict(size=14, color='#e74c3c' if _signal >= 0 else '#27ae60'), 
+            marker=dict(size=14, color='#2ecc71' if _signal > 0 else ('#e74c3c' if _signal < 0 else '#f1c40f')), 
             text=[f" S_t{s_t_calc}"], 
-            textposition="top right", 
+            textposition="top right" if _signal >= 0 else "bottom left", 
             showlegend=False
         ))
         
@@ -1397,8 +1416,8 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
             name='Q50 期望軌跡'
         ))
 
-        min_y = min(q10_path) - (current_price * 0.003)
-        max_y = max(q90_path) + (current_price * 0.003)
+        min_y = min(np.min(q10_path), current_price) - (current_price * 0.003)
+        max_y = max(np.max(q90_path), current_price) + (current_price * 0.003)
 
         fig_dt.update_layout(
             title=dict(text="未來 10 步數位分身軌跡預測", y=0.98, x=0.0, xanchor='left', yanchor='top'),
@@ -1417,13 +1436,12 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         * **藍色陰影 (Q10-Q90)**：未來 10 步價格波動之 80% 信賴擴散區間，隨步數增加而擴大。
         """)
 
-# ✅ 修正後的安全呼叫方式：
+# 請確認傳入的參數名稱與變數一致
 render_dmec_27state_dashboard(
-    current_price=real_price if 'real_price' in locals() or 'real_price' in globals() else 100.0,
-    c_val=shares if 'shares' in locals() or 'shares' in globals() else (c_val if 'c_val' in locals() or 'c_val' in globals() else 0),
-    f_val=fund if 'fund' in locals() or 'fund' in globals() else (f_val if 'f_val' in locals() or 'f_val' in globals() else 0),
-    p_val=diff if 'diff' in locals() or 'diff' in globals() else (p_val if 'p_val' in locals() or 'p_val' in globals() else 0.0),
-    r_override=r if 'r' in locals() or 'r' in globals() else None
+    current_price=real_price, 
+    c_val=major_volume, 
+    f_val=chip_fund_net, 
+    p_val=auto_spread
 )
 
 # ==========================================
