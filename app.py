@@ -1257,59 +1257,30 @@ _r = (
 
 # 3. 補回模組區塊標題與渲染
 st.subheader("💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
-def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override=None):
-    # 1. 狀態碼解析與防錯
-    raw_st = r_override if r_override is not None else (0, 1, 1)
-    s_t_calc = raw_st if isinstance(raw_st, (tuple, list)) and len(raw_st) >= 3 else (0, 1, 1)
+def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0.0, r_override=None):
+    # 1. 狀態碼計算與解讀
+    _signal = 1 if p_val > 0 else (-1 if p_val < 0 else 0)
+    s_t_calc = (0, _signal, _signal)
+    
+    _trend_desc = "強勢偏多" if _signal == 1 else ("弱勢偏空" if _signal == -1 else "盤整觀望")
+    _action_desc = "市場具備向上推進動能，多頭結構完整。" if _signal == 1 else ("市場面臨回檔壓力，空頭結構明確。" if _signal == -1 else "市場動能收斂，維持區間震盪。")
 
-# 2. 核心指標運算 (修正高價股單位誇大 BUG)
-    # 將 p_val 轉化為合理的百分比波幅比例 (避免高價股計算爆表)
-    p_ratio = (p_val / current_price) if current_price > 0 else 0.01
-    p_ratio = max(min(p_ratio, 0.03), -0.03) # 限制單次 10 步最大預測波幅在 ±3% 內
+    # 2. 核心指標運算 (修正高價股與方向相反 BUG)
+    # 限制單次 10 步最大波幅比例在 ±3% 內
+    base_ratio = (p_val / current_price) if current_price > 0 else 0.0
+    p_ratio = max(min(base_ratio, 0.03), -0.03)
 
-    # 計算合理的預測價與區間
-    p_q50 = float(current_price * (1.0 + p_ratio * 1.2))
+    # 正確依據 p_val 的正負號進行價格推算
+    p_q50 = float(current_price * (1.0 + p_ratio))
     p_q10 = float(p_q50 - (current_price * 0.015))
     p_q90 = float(p_q50 + (current_price * 0.015))
     diff_val = float(p_q50 - current_price)
     sign_str = "+" if diff_val >= 0 else ""
 
-    # 3. 渲染上方 4 張指標卡片 (完整補回 help 說明註解)
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric(
-            "當前 27 狀態碼 (S_t)",
-            f"{s_t_calc}",
-            help="雙曲流場動態狀態碼，由 (幾何曲率, 籌碼動量, 轉折訊號) 組成"
-        )
-    with col2:
-        st.metric(
-            "流場狀態名稱",
-            f"狀態碼 {s_t_calc}",
-            help="根據 27 種流場幾何狀態所對應的當前籌碼與價格結構分類"
-        )
-    with col3:
-        st.metric(
-            "Q50 中央預測價",
-            f"${p_q50:.2f}",
-            delta=f"{sign_str}{diff_val:.2f} TWD",
-            help="數位分身 (Digital Twin) 模擬未來 10 步價格分佈之中央期望值 (50 百分位數)"
-        )
-    with col4:
-        st.metric(
-            "Q10-Q90 風險區間",
-            f"{p_q10:.2f} ~ {p_q90:.2f}",
-            help="未來 10 步價格擴散之 80% 信賴區間，反映極端波幅與下方防守水位"
-        )
-
-    # 4. 智慧總結：雙卡片排版 + 圖表渲染
-    _signal = s_t_calc[2] if len(s_t_calc) >= 3 else 0
-    _trend_desc = "強勢偏多" if _signal == 1 else ("偏空修正" if _signal == -1 else "區間整理")
-    _action_desc = "市場具備向上推進動能，多頭結構完整。" if _signal == 1 else ("市場下方防守壓力增加，需注意獲利回吐風險。" if _signal == -1 else "籌碼動態尚待釐清，價格於通道內區間整理。")
-
+    # 3. 版面劃分
     sub_col1, sub_col2 = st.columns(2)
 
-# 左卡片：狀態碼與流場解讀 + 龐加萊圓形圖
+    # 左卡片：狀態碼與龐加萊圓形圖
     with sub_col1:
         st.info(
             f"🎯 **27 狀態碼與流場結構**\n\n"
@@ -1319,10 +1290,7 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
         st.write("")
         st.write("")
 
-        # 1. 先計算與建立龐加萊圖表物件
-        import numpy as np
-        import plotly.graph_objects as go
-
+        # 龐加萊圖表繪製
         theta = np.linspace(0, 2 * np.pi, 100)
         fig_poincare = go.Figure()
         fig_poincare.add_trace(go.Scatter(x=np.cos(theta), y=np.sin(theta), mode='lines', line=dict(color='gray', dash='dash'), showlegend=False))
@@ -1333,16 +1301,13 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
         
         fig_poincare.update_layout(
             title="龐加萊圓形雙曲流場映射",
-            xaxis=dict(range=[-1.1, 1.1], scaleanchor="y", zeroline=True),
+            xaxis=dict(range=[-1.1, 1.1], scaleanchor="y", scaleratio=1, zeroline=True),
             yaxis=dict(range=[-1.1, 1.1], zeroline=True),
             height=300,
             margin=dict(l=10, r=10, t=45, b=10)
         )
-
-        # 2. 渲染圖表
         st.plotly_chart(fig_poincare, use_container_width=True)
 
-        # 3. 渲染圖表下方的小註解
         st.caption("""
         📌 **龐加萊圓盤象限速覽**：
         * **第一象限 (右上)**：強勢多頭，動量與籌碼雙強。
@@ -1352,7 +1317,7 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
         * *註：紅點距離圓心越近代表市場趨於平衡，越靠近邊界 ($r \\rightarrow 1$) 代表極端趨勢。*
         """)
 
-# 右卡片：數位分身預測與風險區間 + 10步軌跡預測圖
+    # 右卡片：數位分身預測與軌跡圖
     with sub_col2:
         st.success(
             f"📊 **數位分身 (Digital Twin) 期望預測**\n\n"
@@ -1362,11 +1327,8 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
         st.write("")
         st.write("")
 
-        # 1. 產生 10 步動態擴散軌跡
         steps = np.arange(11)
         q50_path = np.linspace(current_price, p_q50, 11)
-        
-        # 動態計算真實擴散幅度
         spread_lower = np.linspace(0, max(abs(p_q50 - p_q10), 3.0), 11)
         spread_upper = np.linspace(0, max(abs(p_q90 - p_q50), 3.0), 11)
         
@@ -1374,8 +1336,6 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
         q90_path = q50_path + spread_upper
 
         fig_dt = go.Figure()
-
-        # 2. 繪製藍色風險擴散陰影（調高不透明度至 0.35）
         fig_dt.add_trace(go.Scatter(
             x=np.concatenate([steps, steps[::-1]]),
             y=np.concatenate([q90_path, q10_path[::-1]]),
@@ -1385,49 +1345,32 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
             hoverinfo="skip",
             name='Q10-Q90 風險區間'
         ))
-
-        # 3. 繪製 Q50 中央期望軌跡線
         fig_dt.add_trace(go.Scatter(
             x=steps,
             y=q50_path,
             mode='lines+markers',
-            line=dict(color='#2ecc71', width=2.5),
+            line=dict(color='#2ecc71' if diff_val >= 0 else '#e74c3c', width=2.5),
             marker=dict(size=5),
             name='Q50 期望軌跡'
         ))
 
-        # 4. 聚焦 Y 軸範圍並拉開頂部間距 (避免標題與圖例擠在一起)
         min_y = min(q10_path) - 5
         max_y = max(q90_path) + 5
 
         fig_dt.update_layout(
-            title=dict(
-                text="未來 10 步數位分身軌跡預測",
-                y=0.98,
-                x=0.0,
-                xanchor='left',
-                yanchor='top'
-            ),
+            title=dict(text="未來 10 步數位分身軌跡預測", y=0.98, x=0.0, xanchor='left', yanchor='top'),
             xaxis_title="預測步數 (Steps)",
             yaxis_title="價格 (TWD)",
-            yaxis=dict(range=[min_y, max_y]),  # 自動聚焦 Y 軸，顯現藍色區間
+            yaxis=dict(range=[min_y, max_y]),
             height=300,
-            margin=dict(l=10, r=10, t=60, b=10), # 頂部 margin 加大到 60
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="right",
-                x=1.0
-            )
+            margin=dict(l=10, r=10, t=60, b=10),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0)
         )
-
         st.plotly_chart(fig_dt, use_container_width=True)
 
-        # 5. 補充說明小註解
         st.caption("""
         📌 **軌跡預測與風險區間說明**：
-        * **綠色實線 (Q50)**：數位分身模擬之未來 10 步價格中央期望路徑。
+        * **中央實線 (Q50)**：數位分身模擬之未來 10 步價格期望路徑（綠漲紅跌）。
         * **藍色陰影 (Q10-Q90)**：未來 10 步價格波動之 80% 信賴擴散區間，隨步數增加而擴大。
         """)
 
