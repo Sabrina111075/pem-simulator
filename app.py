@@ -1443,7 +1443,10 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
             margin=dict(l=10, r=10, t=40, b=10),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0)
         )
-    st.plotly_chart(fig_dt, use_container_width=True)
+    try:
+        st.plotly_chart(fig_dt, use_container_width=True, key=f"func_figdt_{time.time()}")
+    except Exception:
+        pass
 
     # 補回數位分身軌跡圖下方說明 (請務必縮排 4 個空格)
     st.caption(f"📌 **數位分身解析**：基於當前市場流場，未來 10 步期望值向下推算至 `${p_q50:.2f}`，"
