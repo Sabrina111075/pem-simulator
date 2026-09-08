@@ -1258,7 +1258,7 @@ _r = (
 # 3. 補回模組區塊標題與渲染
 st.subheader("💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
 def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val=0.0, r_override=None):
-    # 1. 精準三維狀態碼動態演算 (確保嚴格帶入正負號)
+    # 1. 精準三維狀態碼動態演算
     m_sig = 1 if p_val > 5.0 else (-1 if p_val < -5.0 else 0)
     c_sig = 1 if f_val > 0.5 else (-1 if f_val < -0.5 else 0)
     p_sig = 1 if p_val > 0 else (-1 if p_val < 0 else 0)
@@ -1266,7 +1266,6 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
     s_t_calc = (m_sig, c_sig, p_sig)
     score = m_sig + c_sig + p_sig
     
-    # 依據 score 決定全域方向
     if score >= 1:
         _trend_desc = "強勢偏多"
         _action_desc = "市場具備向上推進動能，多頭結構完整。"
@@ -1280,7 +1279,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
         _action_desc = "市場動能收斂，多空結構維持區間震盪。"
         _signal = 0
 
-    # 2. 核心價格動態推算 (方向完全連動 p_val 正負號)
+    # 2. 核心價格動態推算
     ratio_mag = min(abs(p_val) / current_price, 0.03) if current_price > 0 else 0.01
     direction = 1 if p_val >= 0 else -1
     p_ratio = direction * max(ratio_mag, 0.005)
@@ -1325,7 +1324,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
 
     st.write("")
 
-    # 4. 左右圖卡：龐加萊圖與軌跡圖
+    # 4. 左右圖卡與動態顏色切換
     sub_col1, sub_col2 = st.columns(2)
 
     with sub_col1:
@@ -1336,6 +1335,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
         )
         st.write("")
 
+        # 龐加萊圖繪製
         theta = np.linspace(0, 2 * np.pi, 100)
         fig_poincare = go.Figure()
         fig_poincare.add_trace(go.Scatter(
@@ -1365,14 +1365,22 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
         )
         st.plotly_chart(fig_poincare, use_container_width=True)
 
+        # 補回龐加萊圖下方說明
+        st.caption(f"📌 **雙曲映射說明**：當前座標值為 `({u_val:.2f}, {v_val:.2f})`，位於"
+                   f"{'第一象限（多頭吸引子）' if _signal > 0 else ('第三象限（空頭吸引子）' if _signal < 0 else '原點中心（震盪區）')}。"
+                   f"邊界虛線代表龐加萊雙曲邊界限制。")
+
     with sub_col2:
-        st.success(
+        # 動態調整背景色：看空時使用 error (紅/黃背景)，看多時使用 success (綠背景)
+        card_box = st.error if diff_val < 0 else st.success
+        card_box(
             f"📊 **數位分身 (Digital Twin) 期望預測**\n\n"
             f"* **未來 10 步 Q50 中央價**：`${p_q50:.2f}` ({sign_str}{diff_val:.2f} TWD)\n\n"
             f"* **Q10~Q90 風險擴散區間**：`${p_q10:.2f} ~ ${p_q90:.2f}`"
         )
         st.write("")
 
+        # 軌跡圖繪製
         steps = np.arange(11)
         q50_path = np.linspace(current_price, p_q50, 11)
         spread_lower = np.linspace(0, abs(p_q50 - p_q10), 11)
@@ -1386,7 +1394,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
             x=np.concatenate([steps, steps[::-1]]),
             y=np.concatenate([q90_path, q10_path[::-1]]),
             fill='toself',
-            fillcolor='rgba(41, 128, 185, 0.25)',
+            fillcolor='rgba(231, 76, 60, 0.2)' if diff_val < 0 else 'rgba(41, 128, 185, 0.25)',
             line=dict(color='rgba(255,255,255,0)'),
             hoverinfo="skip",
             name='Q10-Q90 風險區間'
@@ -1395,7 +1403,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
             x=steps,
             y=q50_path,
             mode='lines+markers',
-            line=dict(color='#2ecc71' if diff_val >= 0 else '#e74c3c', width=2.5),
+            line=dict(color='#e74c3c' if diff_val < 0 else '#2ecc71', width=2.5),
             marker=dict(size=5),
             name='Q50 期望軌跡'
         ))
@@ -1413,6 +1421,10 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0)
         )
         st.plotly_chart(fig_dt, use_container_width=True)
+
+        # 補回數位分身軌跡圖下方說明
+        st.caption(f"📌 **數位分身解析**：基於當前市場流場，未來 10 步期待值向下推算至 `${p_q50:.2f}`，"
+                   f"信賴區間擴散幅度為 `{abs(p_q90 - p_q10):.2f}` TWD，顯示市場向下修正動能明確。")
 
 # ------------------------------------------------------------------
 # 全局變數精準對接 (防呆 + 強制帶入正負號)
