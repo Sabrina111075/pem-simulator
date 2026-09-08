@@ -1257,16 +1257,18 @@ _r = (
 # 3. 補回模組區塊標題與渲染
 st.subheader("💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
 def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override=None):
-    # 1. 狀態碼解析
+    # 1. 狀態碼解析與防錯
     raw_st = r_override if r_override is not None else (0, 1, 1)
     s_t_calc = raw_st if isinstance(raw_st, (tuple, list)) and len(raw_st) >= 3 else (0, 1, 1)
 
     # 2. 核心指標運算
     p_q50 = float(current_price + (p_val * 1.2))
+    p_q10 = float(p_q50 - (current_price * 0.06))
+    p_q90 = float(p_q50 + (current_price * 0.04))
     diff_val = float(p_q50 - current_price)
     sign_str = "+" if diff_val >= 0 else ""
 
-    # 3. 渲染指標卡片
+    # 3. 渲染上方 4 張指標卡片
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("當前 27 狀態碼 (S_t)", f"{s_t_calc}", help="雙曲流場動態狀態碼")
@@ -1275,18 +1277,30 @@ def render_dmec_27state_dashboard(current_price, c_val, f_val, p_val, r_override
     with col3:
         st.metric("Q50 中央預測價", f"${p_q50:.2f}", delta=f"{sign_str}{diff_val:.2f} TWD")
     with col4:
-        st.metric("Q10-Q90 風險區間", f"{p_q50 - (current_price * 0.06):.2f} ~ {p_q50 + (current_price * 0.04):.2f}")
+        st.metric("Q10-Q90 風險區間", f"{p_q10:.2f} ~ {p_q90:.2f}")
 
-    # 4. 智慧總結 (直接在表達式中計算範圍，絕對不產生 NameError)
+    # 4. 智慧總結：拆分為雙卡片排版
     _signal = s_t_calc[2] if len(s_t_calc) > 2 else 0
     _trend_desc = "強勢偏多" if _signal == 1 else ("偏空修正" if _signal == -1 else "區間整理")
     _action_desc = "市場具備向上推進動能，多頭結構完整。" if _signal == 1 else ("市場下方防守壓力增加，需注意獲利回吐風險。" if _signal == -1 else "籌碼動態尚待釐清，價格於通道內區間整理。")
 
-    st.info(
-        f"💡 **市場流場智慧總結：** 當前 27 狀態碼為 **{s_t_calc} ({_trend_desc})**。{_action_desc} "
-        f"數位分身預測未來 10 步中央期望價 (Q50) 為 **${p_q50:.2f}** ({sign_str}{diff_val:.2f} TWD)，"
-        f"風險擴散區間 (Q10~Q90) 介於 **${p_q50 - (current_price * 0.06):.2f} ~ ${p_q50 + (current_price * 0.04):.2f}** 之間。"
-    )
+    sub_col1, sub_col2 = st.columns(2)
+    
+    # 左卡片：狀態碼與流場解讀
+    with sub_col1:
+        st.info(
+            f"🎯 **27 狀態碼與流場結構**\n\n"
+            f"• **當前狀態碼：** `{s_t_calc}` ({_trend_desc})\n\n"
+            f"• **動態趨勢解讀：** {_action_desc}"
+        )
+        
+    # 右卡片：數位分身預測與風險區間
+    with sub_col2:
+        st.success(
+            f"📊 **數位分身 (Digital Twin) 期望預測**\n\n"
+            f"• **未來 10 步 Q50 中央價：** **${p_q50:.2f}** ({sign_str}{diff_val:.2f} TWD)\n\n"
+            f"• **Q10~Q90 風險擴散區間：** **${p_q10:.2f} ~ ${p_q90:.2f}**"
+        )
 
 # 執行渲染
 render_dmec_27state_dashboard(
