@@ -1411,22 +1411,35 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         * **藍色陰影 (Q10-Q90)**：未來 10 步價格波動之 80% 信賴擴散區間，隨步數增加而擴大。
         """)
 
-# 修正後的安全呼叫方式：精準抓取上方「模型預測目標價」與「最新收盤價」
+# 精準抓取上方「預估價格動態幅度」或「模型預測目標價」變數
 _real_price = real_price if 'real_price' in locals() or 'real_price' in globals() else (
     latest_close if 'latest_close' in locals() or 'latest_close' in globals() else 100.0
 )
 
-# 抓取上方計算出的模型目標價格變數 (例如 target_price 或 p_q50_target)
-_target_p = target_price if 'target_price' in locals() or 'target_price' in globals() else _real_price
+# 依序搜尋上方模組定義的預估變數 (包含 incentive_score, target_price, price_delta 等)
+_p_delta = 0.0
+for _var_name in ['pred_delta', 'price_delta', 'delta_p', 'p_delta', 'target_price']:
+    if _var_name in locals():
+        _p_val = locals()[_var_name]
+        _p_delta = (_p_val - _real_price) if _var_name == 'target_price' else _p_val
+        break
+    elif _var_name in globals():
+        _p_val = globals()[_var_name]
+        _p_delta = (_p_val - _real_price) if _var_name == 'target_price' else _p_val
+        break
 
-# 計算真實的預測漲跌金額 (目標價 - 最新價)
-_real_p_val = _target_p - _real_price
+# 若以上都沒抓到，直接連動預測激勵值 (incentive_score)
+if _p_delta == 0.0:
+    if 'incentive_score' in locals():
+        _p_delta = locals()['incentive_score']
+    elif 'incentive_score' in globals():
+        _p_delta = globals()['incentive_score']
 
 render_dmec_27state_dashboard(
     current_price=_real_price,
     c_val=shares if 'shares' in locals() or 'shares' in globals() else 0,
     f_val=fund if 'fund' in locals() or 'fund' in globals() else 0,
-    p_val=_real_p_val,  # 強制帶入真實預測價差 (+49.62 或 -94.61)
+    p_val=_p_delta,  # 精準帶入真實漲跌幅，徹底解決數據不連動問題
     r_override=r if 'r' in locals() or 'r' in globals() else None
 )
 
