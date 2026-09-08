@@ -1534,8 +1534,11 @@ st.plotly_chart(fig_wave, use_container_width=True)
 st.markdown("### 🔲 個股 PVCS 閉環數位分身診斷與處置建議")
 
 # 1. 取得當前動態數據與建議文字
-val_price = price_display_fmt if 'price_display_fmt' in locals() else "69.60"
-curr_d = float(d_val) if 'd_val' in locals() else 0.852
+_locs = dict(locals())
+val_price = _locs.get('price_display_fmt', "69.60")
+curr_d = float(_locs.get('d_val', 0.852))
+phase_status_val = _locs.get('phase_status', '穩健盤整區間')
+risk_level_val = _locs.get('risk_level', '低度偏離 (Low Risk)')
 
 # 根據 d_val 動態生成處置建議文字
 if curr_d > 1.2:
@@ -1587,7 +1590,7 @@ with col_d2:
             流場相態判定 <span style="cursor:help;">ⓘ</span>
         </div>
         <div style="font-size: clamp(1.2rem, 1.8vw, 1.5rem); font-weight: 800; color: #854d0e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            {phase_status if 'phase_status' in locals() else '穩健盤整區間'}
+            {phase_status_val if 'phase_status' in locals() else '穩健盤整區間'}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1609,7 +1612,7 @@ with col_d3:
             綜合風險等級 <span style="cursor:help;">ⓘ</span>
         </div>
         <div style="font-size: clamp(1.1rem, 1.6vw, 1.4rem); font-weight: 800; color: #991b1b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            {risk_level if 'risk_level' in locals() else '低度偏離 (Low Risk)'}
+            {risk_level_val if 'risk_level' in locals() else '低度偏離 (Low Risk)'}
         </div>
     </div>
     """, unsafe_allow_html=True)
