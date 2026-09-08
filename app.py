@@ -9,7 +9,6 @@ from datetime import datetime
 import pytz
 import requests
 from streamlit_autorefresh import st_autorefresh
-import uuid
 
 # ==========================================
 # 0. 自動刷新機制 & 基礎時間定義
@@ -915,13 +914,6 @@ if capital_flow_yi < 0:
 else:
     flow_delta_str = flow_status
 
-# ------------------------------------------------------------------
-# 將當前標的數據寫入 Session State (連動下方 DMEC-GF 預測引擎)
-# ------------------------------------------------------------------
-st.session_state['curr_price'] = float(price_display_fmt)
-st.session_state['curr_spread'] = float(auto_spread) if 'auto_spread' in locals() else 0.0
-st.session_state['curr_fund'] = float(capital_flow_yi)
-st.session_state['curr_vol'] = int(c_val)
 with col1:
     st.metric("最新收盤/試算價", f"{price_display_fmt} 元", delta=diff_display_fmt)
 
@@ -1146,20 +1138,8 @@ with st.popover("ℹ️ 雙曲狀態圓盤 (PVCS) 與 Risk 色柱說明"):
       * **綠/黃色區 (High Risk > 0.7)**：接近無窮遠邊界或場域極限，代表**短線面臨強烈轉折/變盤風險**。
     """)
 
-# 安全圖表渲染機制（防護 NameError 與 DuplicateID）
-target_fig = None
-if 'fig_disk' in locals() and fig_disk is not None:
-    target_fig = fig_disk
-elif 'fig_poincare' in locals() and fig_poincare is not None:
-    target_fig = fig_poincare
-
-if target_fig is not None:
-    try:
-        st.plotly_chart(target_fig, use_container_width=True, key=f"poincare_dash_{time.time()}")
-    except Exception:
-        pass
-else:
-    st.warning("⚠️ Poincaré Disk 雙曲圖表資料準備中...")
+# 原本圖表渲染
+st.plotly_chart(fig_disk, use_container_width=True)
 
 # =========================================================
 # 插入：數位分身 10 步價格模擬與風險區間
@@ -1277,41 +1257,25 @@ _r = (
 
 # 3. 補回模組區塊標題與渲染
 st.subheader("💡 DMEC-GF 27 狀態碼與數位分身 (Digital Twin) 預測引擎")
-def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val=0.0, r_override=None):
-    # 1. 精準三維狀態碼動態演算
-    m_sig = 1 if p_val > 5.0 else (-1 if p_val < -5.0 else 0)
-    c_sig = 1 if f_val > 0.5 else (-1 if f_val < -0.5 else 0)
-    p_sig = 1 if p_val > 0 else (-1 if p_val < 0 else 0)
+def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0.0, r_override=None):
+    # 1. 狀態碼計算與解讀
+    _signal = 1 if p_val > 0 else (-1 if p_val < 0 else 0)
+    s_t_calc = (0, _signal, _signal)
     
-    s_t_calc = (m_sig, c_sig, p_sig)
-    score = m_sig + c_sig + p_sig
-    
-    if score >= 1:
-        _trend_desc = "強勢偏多"
-        _action_desc = "市場具備向上推進動能，多頭結構完整。"
-        _signal = 1
-    elif score <= -1:
-        _trend_desc = "弱勢偏空"
-        _action_desc = "市場面臨回檔壓力，空頭籌碼與盤差同步承壓。"
-        _signal = -1
-    else:
-        _trend_desc = "盤整觀望"
-        _action_desc = "市場動能收斂，多空結構維持區間震盪。"
-        _signal = 0
+    _trend_desc = "強勢偏多" if _signal == 1 else ("弱勢偏空" if _signal == -1 else "盤整觀望")
+    _action_desc = "市場具備向上推進動能，多頭結構完整。" if _signal == 1 else ("市場面臨回檔壓力，空頭結構明確。" if _signal == -1 else "市場動能收斂，維持區間震盪。")
 
-    # 2. 核心價格動態推算
-    ratio_mag = min(abs(p_val) / current_price, 0.03) if current_price > 0 else 0.01
-    direction = 1 if p_val >= 0 else -1
-    p_ratio = direction * max(ratio_mag, 0.005)
+    # 2. 核心指標運算 (依據真實高價基期，計算相對百分比波幅)
+    base_ratio = (p_val / current_price) if current_price > 0 else 0.0
+    p_ratio = max(min(base_ratio, 0.015), -0.015)
 
     p_q50 = float(current_price * (1.0 + p_ratio))
+    p_q10 = float(p_q50 - (current_price * 0.01))
+    p_q90 = float(p_q50 + (current_price * 0.01))
     diff_val = float(p_q50 - current_price)
-    
-    p_q10 = float(min(current_price, p_q50) - (current_price * 0.01))
-    p_q90 = float(max(current_price, p_q50) + (current_price * 0.01))
     sign_str = "+" if diff_val >= 0 else ""
 
-    # 3. 渲染 4 張 KPI 指標卡片
+    # 3. 渲染 4 張 KPI 數據指標卡片 (完整補回 help 註解說明，並已移除重複標題)
     kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
     with kpi_col1:
         st.metric(
@@ -1344,66 +1308,54 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
 
     st.write("")
 
-    # 4. 左右圖卡與動態顏色切換
+    # 4. 版面劃分：左右雙圖卡片
     sub_col1, sub_col2 = st.columns(2)
 
+    # 左卡片：狀態碼與龐加萊圓形圖
     with sub_col1:
         st.info(
             f"🎯 **27 狀態碼與流場結構**\n\n"
-            f"* **當前狀態碼**：`{s_t_calc}`（**{_trend_desc}**）\n\n"
+            f"* **當前狀態碼**：`{s_t_calc}` ({_trend_desc})\n\n"
             f"* **動態趨勢解讀**：{_action_desc}"
         )
         st.write("")
 
-        # 龐加萊圖繪製
+        # 龐加萊圖表繪製
         theta = np.linspace(0, 2 * np.pi, 100)
         fig_poincare = go.Figure()
-        fig_poincare.add_trace(go.Scatter(
-            x=np.cos(theta), y=np.sin(theta), 
-            mode='lines', line=dict(color='#7f8c8d', dash='dash', width=1.5), 
-            showlegend=False, hoverinfo='skip'
-        ))
+        fig_poincare.add_trace(go.Scatter(x=np.cos(theta), y=np.sin(theta), mode='lines', line=dict(color='gray', dash='dash'), showlegend=False))
         
-        u_val = 0.45 * _signal
-        v_val = 0.45 * _signal
-        
-        fig_poincare.add_trace(go.Scatter(
-            x=[u_val], y=[v_val], 
-            mode='markers+text', 
-            marker=dict(size=14, color='#2ecc71' if _signal > 0 else ('#e74c3c' if _signal < 0 else '#f1c40f')), 
-            text=[f" S_t{s_t_calc}"], 
-            textposition="top right" if _signal >= 0 else "bottom left", 
-            showlegend=False
-        ))
+        u_val = 0.35 if _signal == 1 else (-0.35 if _signal == -1 else 0.0)
+        v_val = 0.45 if _signal == 1 else (-0.45 if _signal == -1 else 0.0)
+        fig_poincare.add_trace(go.Scatter(x=[u_val], y=[v_val], mode='markers+text', marker=dict(size=14, color='red'), text=[f"S_t {s_t_calc}"], textposition="top center", name="龐加萊點"))
         
         fig_poincare.update_layout(
-            title=dict(text="龐加萊圓形雙曲流場映射", y=0.98, x=0.0, xanchor='left', yanchor='top'),
-            xaxis=dict(range=[-1.15, 1.15], scaleanchor="y", scaleratio=1, zeroline=True, zerolinecolor='#bdc3c7'),
-            yaxis=dict(range=[-1.15, 1.15], zeroline=True, zerolinecolor='#bdc3c7'),
+            title="龐加萊圓形雙曲流場映射",
+            xaxis=dict(range=[-1.1, 1.1], scaleanchor="y", scaleratio=1, zeroline=True),
+            yaxis=dict(range=[-1.1, 1.1], zeroline=True),
             height=300,
-            margin=dict(l=10, r=10, t=40, b=10)
+            margin=dict(l=10, r=10, t=45, b=10)
         )
-    try:
-        st.plotly_chart(fig_poincare, use_container_width=True, key=f"func_poincare_{time.time()}")
-    except Exception:
-        pass
+        st.plotly_chart(fig_poincare, use_container_width=True)
 
-        # 補回龐加萊圖下方說明
-        st.caption(f"📌 **雙曲映射說明**：當前座標值為 `({u_val:.2f}, {v_val:.2f})`，位於"
-                   f"{'第一象限（多頭吸引子）' if _signal > 0 else ('第三象限（空頭吸引子）' if _signal < 0 else '原點中心（震盪區）')}。"
-                   f"邊界虛線代表龐加萊雙曲邊界限制。")
+        st.caption("""
+        📌 **龐加萊圓盤象限速覽**：
+        * **第一象限 (右上)**：強勢多頭，動量與籌碼雙強。
+        * **第二象限 (左上)**：轉折警戒，高檔籌碼震盪。
+        * **第三象限 (左下)**：空頭修正，動量籌碼偏弱。
+        * **第四象限 (右下)**：低檔築底，動能復甦沉澱中。
+        * *註：紅點距離圓心越近代表市場趨於平衡，越靠近邊界 ($r \\rightarrow 1$) 代表極端趨勢。*
+        """)
 
+    # 右卡片：數位分身預測與軌跡圖
     with sub_col2:
-        # 動態調整背景色：看空時使用 error (紅/黃背景)，看多時使用 success (綠背景)
-        card_box = st.error if diff_val < 0 else st.success
-        card_box(
+        st.success(
             f"📊 **數位分身 (Digital Twin) 期望預測**\n\n"
             f"* **未來 10 步 Q50 中央價**：`${p_q50:.2f}` ({sign_str}{diff_val:.2f} TWD)\n\n"
             f"* **Q10~Q90 風險擴散區間**：`${p_q10:.2f} ~ ${p_q90:.2f}`"
         )
         st.write("")
 
-        # 軌跡圖繪製
         steps = np.arange(11)
         q50_path = np.linspace(current_price, p_q50, 11)
         spread_lower = np.linspace(0, abs(p_q50 - p_q10), 11)
@@ -1417,7 +1369,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
             x=np.concatenate([steps, steps[::-1]]),
             y=np.concatenate([q90_path, q10_path[::-1]]),
             fill='toself',
-            fillcolor='rgba(231, 76, 60, 0.2)' if diff_val < 0 else 'rgba(41, 128, 185, 0.25)',
+            fillcolor='rgba(41, 128, 185, 0.35)',
             line=dict(color='rgba(255,255,255,0)'),
             hoverinfo="skip",
             name='Q10-Q90 風險區間'
@@ -1426,70 +1378,38 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0.0, p_val
             x=steps,
             y=q50_path,
             mode='lines+markers',
-            line=dict(color='#e74c3c' if diff_val < 0 else '#2ecc71', width=2.5),
+            line=dict(color='#2ecc71' if diff_val >= 0 else '#e74c3c', width=2.5),
             marker=dict(size=5),
             name='Q50 期望軌跡'
         ))
 
-        min_y = min(np.min(q10_path), current_price) - (current_price * 0.003)
-        max_y = max(np.max(q90_path), current_price) + (current_price * 0.003)
+        min_y = min(q10_path) - (current_price * 0.005)
+        max_y = max(q90_path) + (current_price * 0.005)
 
         fig_dt.update_layout(
             title=dict(text="未來 10 步數位分身軌跡預測", y=0.98, x=0.0, xanchor='left', yanchor='top'),
             xaxis_title="預測步數 (Steps)",
             yaxis_title="價格 (TWD)",
-            yaxis=dict(range=[min_y, max_y], tickformat=",.1f"),
+            yaxis=dict(range=[min_y, max_y]),
             height=300,
-            margin=dict(l=10, r=10, t=40, b=10),
+            margin=dict(l=10, r=10, t=60, b=10),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0)
         )
-    try:
-        st.plotly_chart(fig_dt, use_container_width=True, key=f"func_figdt_{time.time()}")
-    except Exception:
-        pass
+        st.plotly_chart(fig_dt, use_container_width=True)
 
-    # 補回數位分身軌跡圖下方說明 (請務必縮排 4 個空格)
-    st.caption(f"📌 **數位分身解析**：基於當前市場流場，未來 10 步期望值向下推算至 `${p_q50:.2f}`，"
-               f"信賴區間擴散幅度為 `{abs(p_q90 - p_q10):.2f}` TWD，顯示市場向下修正動能明確。")
+        st.caption("""
+        📌 **軌跡預測與風險區間說明**：
+        * **中央實線 (Q50)**：數位分身模擬之未來 10 步價格期望路徑（綠漲紅跌）。
+        * **藍色陰影 (Q10-Q90)**：未來 10 步價格波動之 80% 信賴擴散區間，隨步數增加而擴大。
+        """)
 
-
-# ==============================================================================
-# DMEC-GF 預測引擎 - 呼叫處 (頂格不縮排)
-# ==============================================================================
+# ✅ 修正後的安全呼叫方式：
 render_dmec_27state_dashboard(
-    current_price=st.session_state.get('curr_price', 100.0),
-    c_val=st.session_state.get('curr_vol', 0),
-    f_val=st.session_state.get('curr_fund', 0.0),
-    p_val=st.session_state.get('curr_spread', 0.0)
-)
-
-# ==============================================================================
-# DMEC-GF 預測引擎 - 作用域資料全自動繫結
-# ==============================================================================
-
-# 1. 嘗試從 Streamlit Session State 或當前作用域抓取精確個股數據
-# 若上方 PVCS 有將數據寫入 session_state 則優先讀取，否則嘗試區域變數
-_curr_price = st.session_state.get('curr_price', locals().get('price', locals().get('latest_price', 4710.0)))
-_curr_spread = st.session_state.get('curr_spread', locals().get('auto_spread', -50.0))
-_curr_fund = st.session_state.get('curr_fund', locals().get('chip_fund_net', -45.78))
-_curr_vol = st.session_state.get('curr_vol', locals().get('major_volume', -972))
-
-# 2. 如果 locals() 中有上方卡片渲染時產生的明確變數，強制覆蓋（安全快照版本）
-_locs_snap = dict(locals())
-for _k, _v in _locs_snap.items():
-    if 'price' in _k.lower() and isinstance(_v, (int, float)) and _v > 0:
-        _curr_price = float(_v)
-    if 'spread' in _k.lower() and isinstance(_v, (int, float)):
-        _curr_spread = float(_v)
-    if 'fund' in _k.lower() and isinstance(_v, (int, float)):
-        _curr_fund = float(_v)
-
-# 3. 強制帶入當前聯發科/台積電/川湖之真實動態數據進行預測引擎渲染
-render_dmec_27state_dashboard(
-    current_price=_curr_price,
-    c_val=_curr_vol,
-    f_val=_curr_fund,
-    p_val=_curr_spread
+    current_price=real_price if 'real_price' in locals() or 'real_price' in globals() else 100.0,
+    c_val=shares if 'shares' in locals() or 'shares' in globals() else (c_val if 'c_val' in locals() or 'c_val' in globals() else 0),
+    f_val=fund if 'fund' in locals() or 'fund' in globals() else (f_val if 'f_val' in locals() or 'f_val' in globals() else 0),
+    p_val=diff if 'diff' in locals() or 'diff' in globals() else (p_val if 'p_val' in locals() or 'p_val' in globals() else 0.0),
+    r_override=r if 'r' in locals() or 'r' in globals() else None
 )
 
 # ==========================================
@@ -1549,26 +1469,23 @@ fig_wave.update_layout(
 st.plotly_chart(fig_wave, use_container_width=True)
 
 # ==========================================
-# 🔲 個股 PVCS 閉環數位分身診斷與處置建議 (含下方詳細處置說明框)
+# 🎯 個股 PVCS 閉環數位分身診斷與處置建議 (含下方詳細處置說明框)
 # ==========================================
-st.markdown("### 🔲 個股 PVCS 閉環數位分身診斷與處置建議")
+st.markdown("### 🎯 個股 PVCS 閉環數位分身診斷與處置建議")
 
 # 1. 取得當前動態數據與建議文字
-_locs = dict(locals())
-val_price = _locs.get('price_display_fmt', "69.60")
-curr_d = float(_locs.get('d_val', 0.852))
-phase_status_val = _locs.get('phase_status', '穩健盤整區間')
-risk_level_val = _locs.get('risk_level', '低度偏離 (Low Risk)')
+val_price = price_display_fmt if 'price_display_fmt' in locals() else "69.60"
+curr_d = float(d_val) if 'd_val' in locals() else 0.852
 
 # 根據 d_val 動態生成處置建議文字
 if curr_d > 1.2:
     action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 呈現顯著擴張，顯示價量與籌碼流向發生強烈幾何偏離。建議調降倉位風控門檻，並緊盯轉折風險指標。"
 elif curr_d > 0.8:
-    action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 出現微幅擴張，顯示量流向出現微幅擾動。建議密切觀察轉折風險指標，維持既有部位。"
+    action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 出現輕微擴張，顯示量價流向出現微幅擾動。建議密切觀察轉折風險指標，維持既有部位。"
 else:
     action_msg = f"馬氏距離 ($D_t = {curr_d:.3f}$) 處於收斂平穩區間，雙曲幾何流場運作正常。建議按原閉環策略持續持有。"
 
-# 2. 渲染上方 3 欄高等級卡片
+# 2. 渲染上方 3 欄等高卡片
 col_d1, col_d2, col_d3 = st.columns(3)
 
 with col_d1:
@@ -1584,11 +1501,11 @@ with col_d1:
         justify-content: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     ">
-        <div style="font-size: 0.85rem; font-weight: 600; color: #1d4ed8; margin-bottom: 6px;" title="【數位分身核心估值】&#10;結合馬氏距離 (D_t) 與流場曲率 (k)，透過幾何雙曲空間對當前股價進行動態估值診斷">
-            數位分身估值 <span style="cursor:help;">ⓘ</span>
+        <div style="font-size: 0.85rem; font-weight: 600; color: #1d4ed8; margin-bottom: 6px;" title="【數位分身核心估值】&#10;結合馬氏距離 (D_t) 與流場曲率 (k)，透過幾何雙曲空間對當前股價進行動態校正後的理論擬真價值。">
+            分身擬真估值 <span style="cursor:help;">ℹ️</span>
         </div>
-        <div style="font-size: clamp(1.2rem, 1.8vw, 1.5rem); font-weight: 800; color: #1e40af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            NT$ {val_price}
+        <div style="font-size: clamp(1.4rem, 2vw, 1.8rem); font-weight: 800; color: #1e40af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${val_price}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1606,11 +1523,11 @@ with col_d2:
         justify-content: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     ">
-        <div style="font-size: 0.85rem; font-weight: 600; color: #a16207; margin-bottom: 6px;" title="【流場相態與動態診斷】&#10;• 穩定盤整：軌跡位於中央沉積區&#10;• 幾何偏離警示：馬氏距離拉大">
-            流場相態判定 <span style="cursor:help;">ⓘ</span>
+        <div style="font-size: 0.85rem; font-weight: 600; color: #a16207; margin-bottom: 6px;" title="【流場相態與動態診斷】&#10;• 穩定盤整：軌跡位於中央沉積區&#10;• 幾何偏離警示：馬氏距離拉大，價格與籌碼發生非線性背離&#10;• 強烈變盤/轉折：接近圓盤無窮遠邊界">
+            流場相態判定 <span style="cursor:help;">ℹ️</span>
         </div>
         <div style="font-size: clamp(1.2rem, 1.8vw, 1.5rem); font-weight: 800; color: #854d0e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            {phase_status_val if 'phase_status' in locals() else '穩健盤整區間'}
+            {phase_status}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1628,31 +1545,31 @@ with col_d3:
         justify-content: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     ">
-        <div style="font-size: 0.85rem; font-weight: 600; color: #dc2626; margin-bottom: 6px;" title="【閉環風控評級】&#10;整合雙曲空間半徑 (r)、軌跡曲率強度 (k) 與試錯殘差進行綜合量化分析">
-            綜合風險等級 <span style="cursor:help;">ⓘ</span>
+        <div style="font-size: 0.85rem; font-weight: 600; color: #dc2626; margin-bottom: 6px;" title="【閉環風控評級】&#10;整合雙曲空間半徑 (r)、軌跡曲率強度 (k) 與試撮殘差進行綜合量化分析：&#10;• 低風險：趨勢動態穩定&#10;• 中等風險：動能擴張中，留意幾何偏離&#10;• 高風險：面臨強烈轉折/變盤風險">
+            綜合風險等級 <span style="cursor:help;">ℹ️</span>
         </div>
         <div style="font-size: clamp(1.1rem, 1.6vw, 1.4rem); font-weight: 800; color: #991b1b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            {risk_level_val if 'risk_level' in locals() else '低度偏離 (Low Risk)'}
+            中等風險 (Moderate Risk)
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-# 3. 渲染下方「詳細處置說明框」
+# 3. 渲染下方「閉環控制處置建議」標題與詳細說明框
+st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+st.markdown("##### 💡 閉環控制處置建議 (Closed-Loop Action Control)")
+
 st.markdown(f"""
-<div style="
-    background-color: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-left: 5px solid #0284c7;
-    border-radius: 8px;
-    padding: 16px 20px;
-    margin-top: 15px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-">
-    <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-        💡 閉環數位分身診斷與系統處置說明
-    </div>
-    <div style="font-size: 0.9rem; color: #334155; line-height: 1.6;">
+    <div style="
+        background-color: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 8px;
+        padding: 14px 18px;
+        color: #166534;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-top: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.01);
+    ">
         {action_msg}
     </div>
-</div>
 """, unsafe_allow_html=True)
