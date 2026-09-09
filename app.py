@@ -1439,7 +1439,7 @@ render_dmec_27state_dashboard(
     current_price=_real_price,
     c_val=shares if 'shares' in locals() or 'shares' in globals() else 0,
     f_val=fund if 'fund' in locals() or 'fund' in globals() else 0,
-    p_val=_p_delta,  # 精準帶入真實漲跌幅，徹底解決高價股數據偏離問題
+    p_val=_p_delta,  # 帶入計算出的預估增幅 (+135.97)
     r_override=r if 'r' in locals() or 'r' in globals() else None
 )
 
