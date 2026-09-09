@@ -1415,24 +1415,22 @@ _real_price = real_price if 'real_price' in locals() or 'real_price' in globals(
     latest_close if 'latest_close' in locals() or 'latest_close' in globals() else 100.0
 )
 
-# 依序搜尋上方模組定義的預估變數 (包含 incentive_score, target_price, price_delta 等)
+# 依序搜尋預估變數 (修正連動邏輯)
 _p_delta = 0.0
-for _var_name in ['pred_delta', 'price_delta', 'delta_p', 'p_delta', 'target_price']:
-    if _var_name in locals():
-        _p_val = locals()[_var_name]
-        _p_delta = (_p_val - _real_price) if _var_name == 'target_price' else _p_val
-        break
-    elif _var_name in globals():
-        _p_val = globals()[_var_name]
-        _p_delta = (_p_val - _real_price) if _var_name == 'target_price' else _p_val
-        break
 
-# 若以上都沒抓到，直接連動預測激勵值 (incentive_score)
-if _p_delta == 0.0:
-    if 'incentive_score' in locals():
-        _p_delta = locals()['incentive_score']
-    elif 'incentive_score' in globals():
-        _p_delta = globals()['incentive_score']
+# 1. 優先嘗試從 target_price 計算漲跌幅
+if "target_price" in locals() and locals()["target_price"] is not None:
+    _p_delta = float(locals()["target_price"]) - _real_price
+elif "target_price" in globals() and globals()["target_price"] is not None:
+    _p_delta = float(globals()["target_price"]) - _real_price
+
+# 2. 若沒有 target_price，再抓 incentive_score 或 pred_delta
+elif "pred_delta" in locals() and locals()["pred_delta"] is not None:
+    _p_delta = float(locals()["pred_delta"])
+elif "incentive_score" in locals() and locals()["incentive_score"] is not None:
+    _p_delta = float(locals()["incentive_score"])
+elif "incentive_score" in globals() and globals()["incentive_score"] is not None:
+    _p_delta = float(globals()["incentive_score"])
 
 render_dmec_27state_dashboard(
     current_price=_real_price,
