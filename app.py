@@ -1635,13 +1635,17 @@ render_dmec_27state_dashboard(
 # ==========================================
 # 🌊 軌跡曲率強度與轉折風險動態時序圖 (防錯修復版)
 # ==========================================
-# 1. 安全取得股票代碼與名稱字典 (防止 NameError)
-_stock_code = globals().get("selected_stock") or globals().get("target_symbol") or st.session_state.get("selected_stock", "1711 永光 [TW]")
-_map = globals().get("stock_name_map") or locals().get("stock_name_map") or {}
+# #1. 安全取得股票代碼與名稱 (優先連動側邊欄的 display_stock_name 或 stock_code)
+_stock_code = (
+    locals().get("display_stock_name") 
+    or locals().get("stock_code") 
+    or globals().get("display_stock_name") 
+    or globals().get("stock_code") 
+    or "2330 台積電"
+)
 
-# 2. 安全渲染標題
-_stock_name = _map.get(_stock_code, "") if isinstance(_map, dict) else ""
-st.markdown(f"### 📣 {_stock_code} {_stock_name} PVCS 軌跡曲率強度與轉折風險動態時序...")
+# #2. 安全渲染標題
+st.markdown(f"### 📣 {_stock_code} PVCS 軌跡曲率強度與轉折風險動態時序...")
 
 # 1. 確保時序繪圖用的 DataFrame 存在 (自動對接 df_res、df 或建立模擬序列)
 plot_df = None
