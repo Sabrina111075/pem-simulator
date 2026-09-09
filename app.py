@@ -577,17 +577,18 @@ if stock_mode == "熱門標的":
     category_list = list(SEMI_SUPPLY_CHAIN.keys())
     selected_cat = st.sidebar.selectbox("1. 選擇供應鏈區塊", category_list)
 
-    # 2. 第二級選單：僅自動過濾保留台股標的 (region == "TW")
+    # 2. 第二級選單：精準過濾掉海外標的 (US, JP, KR, DE, FR, BE, NL)，完整保留所有台股廠商
     raw_companies = SEMI_SUPPLY_CHAIN[selected_cat]
-    companies = [c for c in raw_companies if c.get("region") == "TW" and c.get("ticker")]
+    foreign_regions = ["US", "JP", "KR", "DE", "FR", "BE", "NL"]
+    companies = [c for c in raw_companies if c.get("region") not in foreign_regions]
 
-    # 若該分類無台股標的，預設給予台積電備援
+    # 若防護後該分類無資料，給予預設值
     if not companies:
-        companies = [{"name": "台積電", "ticker": "2330", "region": "TW"}]
+        companies = raw_companies
 
     def format_company_label(item):
-        ticker_part = f"{item['ticker']}" if item['ticker'] else ""
-        return f"{ticker_part} {item['name']} [{item['region']}]"
+        ticker_part = f"{item['ticker']} " if item.get('ticker') else ""
+        return f"{ticker_part}{item['name']} [{item.get('region', 'TW')}]"
 
     company_options = [format_company_label(c) for c in companies]
     selected_comp_label = st.sidebar.selectbox("2. 選擇廠商標的", company_options)
