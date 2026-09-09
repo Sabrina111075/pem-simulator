@@ -1304,13 +1304,13 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
             label="Q50 中央預測價",
             value=f"${p_q50:.2f}",
             delta=f"{sign_str}{diff_val:.2f} TWD",
-            help="未來 10 步價格期待值與相較當前盤價之預估漲跌"
+            help="未來 10 步(10分鐘)價格期待值與相較當前盤價之預估漲跌"
         )
     with kpi_col4:
         st.metric(
             label="Q10-Q90 風險區間",
             value=f"{p_q10:.2f} ~ {p_q90:.2f}",
-            help="未來 10 步(1步=1分鐘) 價格波動之 80% 信賴擴散區間"
+            help="未來 10 步 價格波動之 80% 信賴擴散區間"
         )
 
     st.write("")
@@ -1406,7 +1406,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
 
         st.caption("""
         📌 **軌跡預測與風險區間說明**：
-        * **中央實線 (Q50)**：數位分身模擬之未來 10 步價格期望路徑（綠漲紅跌）。
+        * **中央實線 (Q50)**：數位分身模擬之未來 10 步價格期望路徑，1步=1分鐘（綠漲紅跌）。
         * **藍色陰影 (Q10-Q90)**：未來 10 步價格波動之 80% 信賴擴散區間，隨步數增加而擴大。
         """)
 
