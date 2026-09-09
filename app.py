@@ -622,23 +622,30 @@ if stock_mode == "自訂股票代碼":
         local_name = stock_name_map.get(stock_code, "")
         display_stock_name = f"{stock_code} {local_name}".strip() if local_name else stock_code
 
-# ==========================================
-# 2. 渲染主畫面 UI (此時名稱已注入中文)
-# ==========================================
+# =========================================================
+# # 2. 渲染主畫面 UI (此時名稱已注入中文)
+# =========================================================
+
+# 美股 [US] 標的提示
+is_us_stock = False
+if 'target' in locals() and isinstance(target, dict):
+    is_us_stock = target.get("region") == "US"
+elif "display_stock_name" in locals():
+    is_us_stock = "[US]" in display_stock_name
+
+if is_us_stock:
+    st.warning("⚠️ 美股行情需使用 yfinance API 介接，當前為模擬情境。")
+
+# 接著接您原本的主畫面標題
 st.markdown(
     f"""
     <div style="margin-top: -45px; margin-bottom: 8px;">
         <h3 style="font-size: 24px; font-weight: 600; color: #1f2937; margin: 0;">
-            📊 市場實時行情與 P/V/C 數據 ( 標的：{display_stock_name} )
+            📊 市場實時行情與 P/V/C 數據（標的：{display_stock_name}）
         </h3>
     </div>
     """,
     unsafe_allow_html=True
-)
-
-st.markdown(
-    f"##### 💡 PVCS 幾何流場實時診斷卡片 <span style='font-size: 14px; color: #64748b; font-weight: normal; margin-left: 10px;'>( 當前標的： :green[{display_stock_name}] )</span>",
-    unsafe_allow_html=True,
 )
 
 # =========================================================
