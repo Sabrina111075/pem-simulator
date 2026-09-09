@@ -14,6 +14,16 @@ from streamlit_autorefresh import st_autorefresh
 # 半導體供應鏈 140 家廠商資料庫
 # =========================================================
 SEMI_SUPPLY_CHAIN = {
+    "權值龍頭/核心晶片": [
+        {"name": "台積電", "ticker": "2330", "region": "TW"},
+        {"name": "聯發科", "ticker": "2454", "region": "TW"},
+        {"name": "鴻海", "ticker": "2317", "region": "TW"},
+        {"name": "聯電", "ticker": "2303", "region": "TW"},
+        {"name": "廣達", "ticker": "2382", "region": "TW"},
+        {"name": "大立光", "ticker": "3008", "region": "TW"},
+        {"name": "日月光投控", "ticker": "3711", "region": "TW"},
+        {"name": "緯創", "ticker": "3231", "region": "TW"}
+    ],
     "矽晶圓/材料/CMP": [
         {"name": "環球晶", "ticker": "6488", "region": "TW"},
         {"name": "中美晶", "ticker": "5483", "region": "TW"},
@@ -567,12 +577,17 @@ if stock_mode == "熱門標的":
     category_list = list(SEMI_SUPPLY_CHAIN.keys())
     selected_cat = st.sidebar.selectbox("1. 選擇供應鏈區塊", category_list)
 
-    # 2. 第二級選單：根據選定區塊產生廠商選項
-    companies = SEMI_SUPPLY_CHAIN[selected_cat]
-    
+    # 2. 第二級選單：僅自動過濾保留台股標的 (region == "TW")
+    raw_companies = SEMI_SUPPLY_CHAIN[selected_cat]
+    companies = [c for c in raw_companies if c.get("region") == "TW" and c.get("ticker")]
+
+    # 若該分類無台股標的，預設給予台積電備援
+    if not companies:
+        companies = [{"name": "台積電", "ticker": "2330", "region": "TW"}]
+
     def format_company_label(item):
-        ticker_part = f"{item['ticker']} " if item['ticker'] else ""
-        return f"{ticker_part}{item['name']} [{item['region']}]"
+        ticker_part = f"{item['ticker']}" if item['ticker'] else ""
+        return f"{ticker_part} {item['name']} [{item['region']}]"
 
     company_options = [format_company_label(c) for c in companies]
     selected_comp_label = st.sidebar.selectbox("2. 選擇廠商標的", company_options)
