@@ -1310,7 +1310,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         st.metric(
             label="Q10-Q90 風險區間",
             value=f"{p_q10:.2f} ~ {p_q90:.2f}",
-            help="未來 10 步價格波動之 80% 信賴擴散區間"
+            help="未來 10 步(1步=1分鐘) 價格波動之 80% 信賴擴散區間"
         )
 
     st.write("")
@@ -1358,7 +1358,7 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
     with sub_col2:
         st.success(
             f"📊 **數位分身 (Digital Twin) 期望預測**\n\n"
-            f"* **未來 10 分鐘 Q50 中央價**：`${p_q50:.2f}` ({sign_str}{diff_val:.2f} TWD)\n\n"
+            f"* **未來10 步 Q50 中央價**：`${p_q50:.2f}` ({sign_str}{diff_val:.2f} TWD)\n\n"
             f"* **Q10~Q90 風險擴散區間**：`${p_q10:.2f} ~ ${p_q90:.2f}`"
         )
         st.write("")
