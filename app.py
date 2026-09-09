@@ -623,28 +623,32 @@ if stock_mode == "自訂股票代碼":
         display_stock_name = f"{stock_code} {local_name}".strip() if local_name else stock_code
 
 # =========================================================
-# # 2. 渲染主畫面 UI (精美版提示與乾淨標題)
+# # 2. 渲染主畫面 UI (海外非台股統一提示與乾淨標題)
 # =========================================================
 
-# 1. 檢查美股標的
-is_us_stock = False
+# 1. 判斷是否為海外標的 (region 不是 TW，或名稱標示非 [TW])
+is_foreign_stock = False
+region_code = "海外"
+
 if 'target' in locals() and isinstance(target, dict):
-    is_us_stock = target.get("region") == "US"
+    region_code = target.get("region", "TW")
+    is_foreign_stock = (region_code != "TW")
 elif "display_stock_name" in locals():
-    is_us_stock = "[US]" in display_stock_name
+    # 當名稱包含任何非 [TW] 的地區標籤時觸發
+    is_foreign_stock = not display_stock_name.endswith("[TW]") and "[" in display_stock_name
 
-# 2. 精美版美股提示框 (維持原廠優雅間距)
-if is_us_stock:
-    st.info("💡 **美股市場提示**：當前標的為海外美股，行情需經由 `yfinance` API 介接，目前數據為系統模擬推算。", icon="🇺🇸")
+# 2. 通用海外市場提示框
+if is_foreign_stock:
+    st.info(f"💡 **海外市場提示**：當前標的為海外股市（{region_code}），即時行情需經由全球 API 介接，目前數據為系統模擬推算。", icon="🌐")
 
-# 3. 淨化顯示名稱 (避免出現 ASML ASML 重複字樣)
+# 3. 淨化顯示名稱 (避免出現重複字樣，例如 VACN VACN)
 clean_display_name = display_stock_name
 if " " in display_stock_name:
     parts = display_stock_name.split()
     if len(parts) >= 2 and parts[0] == parts[1]:
         clean_display_name = " ".join(parts[1:])
 
-# 4. 渲染主畫面標題 (適當間距，絕不重疊)
+# 4. 渲染主畫面標題
 st.markdown(
     f"""
     <div style="margin-top: 10px; margin-bottom: 16px;">
