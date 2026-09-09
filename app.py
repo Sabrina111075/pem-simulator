@@ -1444,13 +1444,18 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         _trend_desc = "盤整觀望"
         _action_desc = "市場動能收斂，維持區間震盪。"
 
-    # 2. 核心指標運算 (將 p_val 當作預測漲跌金額，直接加到現價上)
-    # 這樣預測目標價 (p_q50) 才會與上方的預測目標價完全連動！
-    p_q50 = float(current_price + p_val)
-    p_q10 = float(p_q50 - abs(p_val * 0.15) - (current_price * 0.005))
-    p_q90 = float(p_q50 + abs(p_val * 0.15) + (current_price * 0.005))
-    diff_val = float(p_q50 - current_price)
-    sign_str = "+" if diff_val >= 0 else ""
+    # # 2. 核心指標運算 (p_val 為漲跌金額，目標價對齊現價)
+    q50_diff = float(p_val)
+    q50_target = float(current_price + q50_diff)
+
+    # 風險區間計算 (以增量擴散並對齊現價)
+    q10_diff = q50_diff - abs(q50_diff * 0.15) - (current_price * 0.005)
+    q90_diff = q50_diff + abs(q50_diff * 0.15) + (current_price * 0.005)
+
+    q10_target = float(current_price + q10_diff)
+    q90_target = float(current_price + q90_diff)
+
+    sign_str = "+" if q50_diff >= 0 else ""
 
     # 3. 渲染 4 張 KPI 數據指標卡片 (完整補回 help 註解說明，並已移除重複標題)
     kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
@@ -1471,14 +1476,14 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
     with kpi_col3:
         st.metric(
             label="Q50 中央預測價",
-            value=f"${p_q50:.2f}",
-            delta=f"{sign_str}{diff_val:.2f} TWD",
-            help="未來 10 步(10分鐘)價格期待值與相較當前盤價之預估漲跌"
+            value=f"${q50_target:.2f}",
+            delta=f"{sign_str}{q50_diff:.2f} TWD",
+            help="未來 10 步(10分鐘)價格期望值與相當較當前盤價之預估漲跌"
         )
     with kpi_col4:
         st.metric(
             label="Q10-Q90 風險區間",
-            value=f"{p_q10:.2f} ~ {p_q90:.2f}",
+            value=f"{q10_target:.2f} ~ {q90_target:.2f}",
             help="未來 10 步 價格波動之 80% 信賴擴散區間"
         )
 
