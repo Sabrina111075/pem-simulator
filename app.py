@@ -623,25 +623,33 @@ if stock_mode == "自訂股票代碼":
         display_stock_name = f"{stock_code} {local_name}".strip() if local_name else stock_code
 
 # =========================================================
-# # 2. 渲染主畫面 UI (此時名稱已注入中文)
+# # 2. 渲染主畫面 UI (精美版提示與乾淨標題)
 # =========================================================
 
-# 美股 [US] 標的提示
+# 1. 檢查美股標的
 is_us_stock = False
 if 'target' in locals() and isinstance(target, dict):
     is_us_stock = target.get("region") == "US"
 elif "display_stock_name" in locals():
     is_us_stock = "[US]" in display_stock_name
 
+# 2. 精美版美股提示框 (維持原廠優雅間距)
 if is_us_stock:
-    st.warning("⚠️ 美股行情需使用 yfinance API 介接，當前為模擬情境。")
+    st.info("💡 **美股市場提示**：當前標的為海外美股，行情需經由 `yfinance` API 介接，目前數據為系統模擬推算。", icon="🇺🇸")
 
-# 接著接您原本的主畫面標題
+# 3. 淨化顯示名稱 (避免出現 ASML ASML 重複字樣)
+clean_display_name = display_stock_name
+if " " in display_stock_name:
+    parts = display_stock_name.split()
+    if len(parts) >= 2 and parts[0] == parts[1]:
+        clean_display_name = " ".join(parts[1:])
+
+# 4. 渲染主畫面標題 (適當間距，絕不重疊)
 st.markdown(
     f"""
-    <div style="margin-top: -45px; margin-bottom: 8px;">
-        <h3 style="font-size: 24px; font-weight: 600; color: #1f2937; margin: 0;">
-            📊 市場實時行情與 P/V/C 數據（標的：{display_stock_name}）
+    <div style="margin-top: 10px; margin-bottom: 16px;">
+        <h3 style="font-size: 22px; font-weight: 600; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+            📊 市場實時行情與 P/V/C 數據 <span style="font-size: 16px; color: #64748b; font-weight: normal;">（標的：{clean_display_name}）</span>
         </h3>
     </div>
     """,
