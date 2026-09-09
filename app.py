@@ -1539,9 +1539,9 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         st.write("")
 
         steps = np.arange(11)
-        q50_path = np.linspace(current_price, p_q50, 11)
-        spread_lower = np.linspace(0, abs(p_q50 - p_q10), 11)
-        spread_upper = np.linspace(0, abs(p_q90 - p_q50), 11)
+        q50_path = np.linspace(current_price, q50_target, 11)
+        spread_lower = np.linspace(0, abs(q50_target - q10_target), 11)
+        spread_upper = np.linspace(0, abs(q90_target - q50_target), 11)
         
         q10_path = q50_path - spread_lower
         q90_path = q50_path + spread_upper
