@@ -1805,9 +1805,9 @@ with etf_col2:
     c2.metric("5日被動資金流向", f"{flow_val:+} 億", delta=flow_status)
     
     st.markdown(f"""
-    * 🥇 **{curr_df.iloc[0]['ETF']}**：持股佔比 `{round(penetration_val*0.4, 2)}%` (約 {round(s1/10000, 2)}萬張)
-    * 🥈 **{curr_df.iloc[1]['ETF']}**：持股佔比 `{round(penetration_val*0.3, 2)}%` (約 {round(s2/10000, 2)}萬張)
-    * 🥉 **{curr_df.iloc[2]['ETF']}**：持股佔比 `{round(penetration_val*0.2, 2)}%` (約 {round(s3/10000, 2)}萬張)
+    * **[Top 1] {curr_df.iloc[0]['ETF']}**：持股佔比 `{round(penetration_val*0.4, 2)}%` (約 {round(s1/10000, 2)}萬張)
+    * **[Top 2] {curr_df.iloc[1]['ETF']}**：持股佔比 `{round(penetration_val*0.3, 2)}%` (約 {round(s2/10000, 2)}萬張)
+    * **[Top 3] {curr_df.iloc[2]['ETF']}**：持股佔比 `{round(penetration_val*0.2, 2)}%` (約 {round(s3/10000, 2)}萬張)
     """)
 
 st.markdown("---")
