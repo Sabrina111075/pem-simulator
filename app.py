@@ -24,6 +24,51 @@ SEMI_SUPPLY_CHAIN = {
         {"name": "日月光投控", "ticker": "3711", "region": "TW"},
         {"name": "緯創", "ticker": "3231", "region": "TW"}
     ],
+
+    # ─── 【新增】CPO 矽光子核心鏈 (PoC AA/A 級) ───
+    "CPO/矽光子 (PoC AA/A級核心鏈)": [
+        {"name": "台積電", "ticker": "2330", "region": "TW", "poc": "A", "role": "PIC/EIC Platform", "pain": "異質整合、熱、良率", "dt_data": "PIC interface, thermal, yield"},
+        {"name": "日月光投控", "ticker": "3711", "region": "TW", "poc": "A", "role": "Packaging/Test", "pain": "封裝漂移、良率、測試", "dt_data": "bonding, cure, warpage, yield"},
+        {"name": "上詮", "ticker": "3363", "region": "TW", "poc": "A", "role": "Fiber-to-Chip", "pain": "FAU/PIC對準、耦合損耗", "dt_data": "Pitch, MFD, X/Y/Z/θ, CE/IL"},
+        {"name": "波若威", "ticker": "3163", "region": "TW", "poc": "B", "role": "Passive Optics", "pain": "光損耗、通道均勻性", "dt_data": "IL, channel uniformity, thermal"},
+        {"name": "大立光", "ticker": "3008", "region": "TW", "poc": "A", "role": "Micro-optics", "pain": "光耦合、被動對準", "dt_data": "mode matching, tolerance window"},
+        {"name": "旺矽", "ticker": "6223", "region": "TW", "poc": "AA", "role": "Test/Equipment", "pain": "晶圓級光學測試", "dt_data": "IL, CE, spectrum, wafer map, KGD"},
+        {"name": "穎崴", "ticker": "6515", "region": "TW", "poc": "A", "role": "Test Interface", "pain": "高速測試", "dt_data": "contact, high-speed test, interface"},
+        {"name": "中華精測", "ticker": "6510", "region": "TW", "poc": "A", "role": "Test Interface", "pain": "光電同測介面", "dt_data": "probe position, SI, contact"},
+        {"name": "鴻勁", "ticker": "7769", "region": "TW", "poc": "A", "role": "Automation/Test", "pain": "吞吐量、自動化", "dt_data": "cycle time, position, UPH"},
+        {"name": "萬潤", "ticker": "6187", "region": "TW", "poc": "A", "role": "Equipment", "pain": "主動/被動對準、吞吐量", "dt_data": "X/Y/Z/θ, repeatability, UPH"},
+        {"name": "致茂", "ticker": "2360", "region": "TW", "poc": "A", "role": "Test/Equipment", "pain": "最終CPO測試", "dt_data": "IL/RL/CE/BER/power/T"},
+        {"name": "辛耘", "ticker": "3583", "region": "TW", "poc": "A", "role": "Process/Equipment", "pain": "製程控制、資料接口", "dt_data": "recipe process state, throughput"},
+        {"name": "均豪", "ticker": "5443", "region": "TW", "poc": "A", "role": "Automation/Inspection", "pain": "檢測、自動化", "dt_data": "vision, position, process state"},
+        {"name": "達裕科技", "ticker": "", "region": "TW", "poc": "A", "role": "Automation/Equipment", "pain": "薄晶圓處理、自動化", "dt_data": "position handling, cycle time"},
+        {"name": "閎康", "ticker": "3587", "region": "TW", "poc": "A", "role": "Failure/MA", "pain": "失效根因", "dt_data": "failure mode, location, root cause"},
+        {"name": "汎銓", "ticker": "6830", "region": "TW", "poc": "A", "role": "Failure/MA", "pain": "材料/缺陷分析", "dt_data": "defect, material, failure data"},
+        {"name": "宜特", "ticker": "3289", "region": "TW", "poc": "A", "role": "Reliability/FA", "pain": "封裝可靠度", "dt_data": "MTTF, aging, failure probability"},
+        {"name": "鴻海", "ticker": "2317", "region": "TW", "poc": "A", "role": "System Integration", "pain": "系統整合、維修性", "dt_data": "system yield, thermal, rack"},
+        {"name": "智邦", "ticker": "2345", "region": "TW", "poc": "A", "role": "System/Switch", "pain": "交換器CPO落地", "dt_data": "system design, ASIC/CPO"},
+        {"name": "聯發科", "ticker": "2454", "region": "TW", "poc": "A", "role": "ASIC/System", "pain": "高速I/O、系統整合", "dt_data": "electrical-optical interface"},
+        {"name": "訊芯-KY", "ticker": "6451", "region": "TW", "poc": "A", "role": "Packaging/OE", "pain": "光電整合、良率", "dt_data": "alignment, attach, OE yield"}
+    ],
+
+    # ─── 【新增】CPO 矽光子延伸鏈 (PoC B/C 級) ───
+    "CPO/矽光子 (PoC B/C級延伸鏈)": [
+        {"name": "聯亞", "ticker": "3081", "region": "TW", "poc": "B", "role": "InP光通訊磊晶", "pain": "雷射材料、熱可靠度", "dt_data": "wavelength, power, wafer uniformity"},
+        {"name": "全新", "ticker": "2455", "region": "TW", "poc": "B", "role": "III-V/InP/GaAs磊晶", "pain": "雷射/PD材料一致性", "dt_data": "epi uniformity, reliability"},
+        {"name": "英特磊", "ticker": "4971", "region": "TW", "poc": "B", "role": "InP材料/磊晶", "pain": "材料一致性", "dt_data": "epi, wafer, reliability"},
+        {"name": "穩懋", "ticker": "3105", "region": "TW", "poc": "B", "role": "Device/Foundry", "pain": "光元件製程、良率", "dt_data": "process capability, wafer yield"},
+        {"name": "環宇-KY", "ticker": "4991", "region": "TW", "poc": "B", "role": "Device", "pain": "高速光偵測", "dt_data": "responsivity, bandwidth, dark current"},
+        {"name": "華星光", "ticker": "4979", "region": "TW", "poc": "B", "role": "Optical Module", "pain": "高速模組、熱", "dt_data": "power, BER, thermal, yield"},
+        {"name": "光聖", "ticker": "6442", "region": "TW", "poc": "B", "role": "Fiber/Connector", "pain": "連接器標準化", "dt_data": "IL, geometry, repeatability"},
+        {"name": "眾達-KY", "ticker": "4977", "region": "TW", "poc": "B", "role": "Laser/Module", "pain": "ELS可靠度", "dt_data": "laser power, fiber, thermal"},
+        {"name": "前鼎", "ticker": "4908", "region": "TW", "poc": "B", "role": "Optoelectronics", "pain": "雷射/PD可靠度", "dt_data": "wavelength, power, IL"},
+        {"name": "環球晶", "ticker": "6488", "region": "TW", "poc": "B", "role": "Material Wafer", "pain": "材料、晶圓一致性", "dt_data": "wafer material fingerprint"},
+        {"name": "聯電", "ticker": "2303", "region": "TW", "poc": "B", "role": "Foundry", "pain": "製程整合", "dt_data": "wafer/process data"},
+        {"name": "明泰", "ticker": "3380", "region": "TW", "poc": "B", "role": "System/Switch", "pain": "高速網通整合", "dt_data": "switch integration, thermal"},
+        {"name": "創意", "ticker": "3443", "region": "TW", "poc": "B", "role": "ASIC/Codesign", "pain": "ASIC-PIC協同", "dt_data": "SI/PI/thermal/optical codesign"},
+        {"name": "世芯-KY", "ticker": "3661", "region": "TW", "poc": "B", "role": "ASIC/Co-design", "pain": "ASIC-PIC協同", "dt_data": "optical I/O chiplet integration"},
+        {"name": "廣達", "ticker": "2382", "region": "TW", "poc": "B", "role": "System", "pain": "系統級整合", "dt_data": "rack/network integration"},
+        {"name": "友達", "ticker": "2409", "region": "TW", "poc": "C", "role": "Optoelectronics", "pain": "光電量產", "dt_data": "optical/manufacturing data"}
+    ],
     "矽晶圓/材料/CMP": [
         {"name": "環球晶", "ticker": "6488", "region": "TW"},
         {"name": "中美晶", "ticker": "5483", "region": "TW"},
@@ -596,6 +641,25 @@ if stock_mode == "熱門標的":
     # 解析出對應的股票代號與顯示名稱
     selected_idx = company_options.index(selected_comp_label)
     target = companies[selected_idx]
+
+# =========================================================
+    # 🔬【新增無傷安插】CPO 物理瓶頸與 Digital Twin 參數動態卡
+    # =========================================================
+    if target and isinstance(target, dict) and "poc" in target:
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("### 🔬 CPO 物理瓶頸與數位分身")
+        
+        # PoC 優先級視覺化標籤
+        poc_val = target.get("poc", "B")
+        color_map = {"AA": "red", "A": "orange", "B": "green", "C": "gray"}
+        badge_color = color_map.get(poc_val, "gray")
+        
+        st.sidebar.caption(f"**PoC 優先級：** :{badge_color}[{poc_val} 級] | **角色：** {target.get('role', 'N/A')}")
+        
+        with st.sidebar.expander("📍 關鍵物理痛點與驗證數據", expanded=True):
+            st.markdown(f"**主要痛點：**\n{target.get('pain', '無')}")
+            st.caption("Digital Twin 關鍵資料：")
+            st.code(target.get('dt_data', 'N/A'), language="text")
     
     # 若有股票代號則使用，無代號 (如外商非上市) 預設為 2330 進行模擬
     stock_code = target["ticker"] if target["ticker"] else "2330"
