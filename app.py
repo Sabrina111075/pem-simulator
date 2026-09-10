@@ -1749,21 +1749,81 @@ _stock_code = (
 )
 
 # ==================================================================
-# ➕ 將 ETF 模組移到這裡 (時序圖表的正上方)
+# 📌 ETF 籌碼穿透與被動資金動向模組 (完全動態連動版)
 # ==================================================================
 st.markdown("---")
-st.markdown(f"##### 📌 {stock_code} 主要持股 ETF 公司與被動資金動向")
+# 1. 修正標題變數：改用 display_stock_name 展示「代號 + 公司名稱」
+st.markdown(f"##### 📌 {display_stock_name} 主要持股 ETF 公司與被動資金動向")
 
+# 2. 建立動態股票 ETF 籌碼資料庫 (依據不同股票代號給予不同數據)
+etf_data_repo = {
+    "2317": {
+        "df": pd.DataFrame({
+            "ETF": ["0050 元大台灣50", "0056 元大高股息", "00878 國泰永續", "00919 群益精選", "其他"],
+            "張數": [125000, 88000, 76000, 62000, 450000]
+        }),
+        "penetration": "14.20 %", "p_delta": "+0.65%",
+        "flow": "+35.8 億", "f_delta": "強勁買超",
+        "top3": [
+            ("0050 元大台灣50", "8.15%", "12.50萬張"),
+            ("0056 元大高股息", "5.80%", "8.80萬張"),
+            ("00878 國泰永續高股息", "4.90%", "7.60萬張")
+        ]
+    },
+    "3711": {
+        "df": pd.DataFrame({
+            "ETF": ["0050 元大台灣50", "00878 國泰永續", "00919 群益精選", "00929 復華台灣", "其他"],
+            "張數": [28000, 24000, 19500, 15000, 110000]
+        }),
+        "penetration": "9.85 %", "p_delta": "-0.12%",
+        "flow": "-4.2 億", "f_delta": "微幅調節",
+        "top3": [
+            ("0050 元大台灣50", "3.42%", "2.80萬張"),
+            ("00878 國泰永續高股息", "2.95%", "2.40萬張"),
+            ("00919 群益精選高息", "2.38%", "1.95萬張")
+        ]
+    },
+    "3008": {
+        "df": pd.DataFrame({
+            "ETF": ["0050 元大台灣50", "0056 元大高股息", "00900 富邦特選", "00929 復華台灣", "其他"],
+            "張數": [4200, 3100, 2500, 1800, 15000]
+        }),
+        "penetration": "11.10 %", "p_delta": "+0.25%",
+        "flow": "+8.1 億", "f_delta": "小幅加碼",
+        "top3": [
+            ("0050 元大台灣50", "4.10%", "0.42萬張"),
+            ("0056 元大高股息", "3.05%", "0.31萬張"),
+            ("00900 富邦特選高股息", "2.45%", "0.25萬張")
+        ]
+    }
+}
+
+# 預設數據 (若選到的股票不在上述特別定義名單中時使用)
+default_etf_info = {
+    "df": pd.DataFrame({
+        "ETF": ["0050 元大台灣50", "0056 元大高股息", "00878 國泰永續", "00919 群益精選", "其他"],
+        "張數": [38500, 32100, 29400, 26800, 180000]
+    }),
+    "penetration": "12.85 %", "p_delta": "+0.42%",
+    "flow": "+18.5 億", "f_delta": "強勁買超",
+    "top3": [
+        ("0050 元大台灣50", "5.25%", "3.85萬張"),
+        ("0056 元大高股息", "4.12%", "3.21萬張"),
+        ("00878 國泰永續高股息", "3.85%", "2.94萬張")
+    ]
+}
+
+# 提取當前股票代號的專屬資料
+current_code = str(stock_code).strip()
+curr_data = etf_data_repo.get(current_code, default_etf_info)
+
+# 3. UI 渲染：圖表與卡片動態帶入
 etf_col1, etf_col2 = st.columns([1, 1.2])
 
 with etf_col1:
     import plotly.express as px
-    etf_summary_df = pd.DataFrame({
-        "ETF": ["0050 元大台灣50", "0056 元大高股息", "00878 國泰永續", "00919 群益精選", "其他"],
-        "張數": [38500, 32100, 29400, 26800, 180000]
-    })
     fig_etf_mini = px.pie(
-        etf_summary_df, values="張數", names="ETF", hole=0.5,
+        curr_data["df"], values="張數", names="ETF", hole=0.5,
         color_discrete_sequence=px.colors.qualitative.Pastel
     )
     fig_etf_mini.update_traces(textposition='inside', textinfo='percent+label')
@@ -1772,14 +1832,12 @@ with etf_col1:
 
 with etf_col2:
     c1, c2 = st.columns(2)
-    c1.metric("ETF 總滲透率", "12.85 %", delta="+0.42%")
-    c2.metric("5日被動資金流向", "+18.5 億", delta="強勁買超")
+    c1.metric("ETF 總滲透率", curr_data["penetration"], delta=curr_data["p_delta"])
+    c2.metric("5日被動資金流向", curr_data["flow"], delta=curr_data["f_delta"])
     
-    st.markdown("""
-    * **0050 元大台灣50**：持股 `5.25%` (約 3.85萬張)
-    * **0056 元大高股息**：持股 `4.12%` (約 3.21萬張)
-    * **00878 國泰永續高股息**：持股 `3.85%` (約 2.94萬張)
-    """)
+    # 動態產生 Top 3 列表
+    top3_md = "\n".join([f"* **{name}**：持股 `{rate}` (約 {shares})" for name, rate, shares in curr_data["top3"]])
+    st.markdown(top3_md)
 
 st.markdown("---")
 
