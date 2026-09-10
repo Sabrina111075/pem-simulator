@@ -231,19 +231,6 @@ SEMI_SUPPLY_CHAIN = {
     ],
 }
 
-# ---------------------------------------------------------
-# 📊 主要半導體/高股息 ETF 籌碼穿透對照資料庫
-# ---------------------------------------------------------
-ETF_HOLDINGS_DB = {
-    "2330": [{"etf_code": "0050", "etf_name": "元大台灣50", "weight": 56.2}, {"etf_code": "006208", "etf_name": "富邦台50", "weight": 56.1}, {"etf_code": "00913", "etf_name": "兆豐台灣晶圓製造", "weight": 30.5}],
-    "2317": [{"etf_code": "0050", "etf_name": "元大台灣50", "weight": 5.1}, {"etf_code": "0056", "etf_name": "元大高股息", "weight": 4.2}],
-    "2454": [{"etf_code": "0050", "etf_name": "元大台灣50", "weight": 4.8}, {"etf_code": "00929", "etf_name": "復華台灣科技優息", "weight": 9.5}],
-    "3711": [{"etf_code": "00913", "etf_name": "兆豐台灣晶圓製造", "weight": 8.2}, {"etf_code": "00891", "etf_name": "中信關鍵半導體", "weight": 7.5}],
-    "3081": [{"etf_code": "00929", "etf_name": "復華台灣科技優息", "weight": 3.1}, {"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 2.8}],
-    "6510": [{"etf_code": "00891", "etf_name": "中信關鍵半導體", "weight": 4.2}, {"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 3.5}],
-    "6223": [{"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 2.1}]
-}
-
 # =========================================================
 # 📊 【優化版】ETF 籌碼穿透追蹤與被動資金動態渲染模組
 # =========================================================
@@ -1809,57 +1796,56 @@ render_dmec_27state_dashboard(
     r_override=r if 'r' in locals() or 'r' in globals() else None
 )
 
-# =========================================================
-# 📊 【新增】ETF 籌碼穿透追蹤與被動資金動態渲染模組
-# =========================================================
-st.markdown("---")
+# ---------------------------------------------------------
+# 📊 【新版】ETF 籌碼穿透追蹤與被動資金估算 UI 模組
+# ---------------------------------------------------------
 st.subheader("📊 ETF 籌碼穿透追蹤與被動資金估算")
 
-# 1. 確保抓取當前精確股票代號與盤價（連動防護）
-_active_ticker = str(target.get("ticker", "2330")) if 'target' in locals() and isinstance(target, dict) else "2330"
-_active_price = current_price if 'current_price' in locals() and current_price > 0 else 100.0
-
-etf_list = ETF_HOLDINGS_DB.get(_active_ticker, [])
+_etf_db = globals().get("ETF_HOLDINGS_DB", {})
+etf_list = _etf_db.get(_active_ticker, [])
 
 if etf_list:
-    st.caption(f"當前標的 (`{_active_ticker}`) 受以下主要 ETF 持股組合覆蓋，被動資金流向連動中：")
-    
-    col_etf1, col_etf2 = st.columns([2, 1])
-    
-    with col_etf1:
-        # 繪製權重占比條形圖
+    top_etf = max(etf_list, key=lambda x: x["weight"])
+    etf_summary = " | ".join([f"**{item['etf_name']} ({item['etf_code']})**: {item['weight']}%" for item in etf_list])
+    st.markdown(f"💡 **標的覆蓋解析 ({_active_ticker})**：主要受以下 **{len(etf_list)}** 檔 ETF 重倉持有：")
+    st.caption(f"{etf_summary}")
+
+    col_chart, col_metrics = st.columns([1.5, 1])
+
+    with col_chart:
         import plotly.express as px
         import pandas as pd
         
         df_etf = pd.DataFrame(etf_list)
         fig_etf = px.bar(
-            df_etf, 
-            x="weight", 
-            y="etf_name", 
-            orientation='h',
+            df_etf,
+            x="weight",
+            y="etf_name",
+            orientation="h",
             text="weight",
+            title=f"📊 {_active_ticker} 主要 ETF 持股權重穿透 (%)",
             labels={"weight": "持股權重 (%)", "etf_name": "ETF 名稱"},
-            title=f"{_active_ticker} 主要 ETF 持股權重穿透 (%)"
+            color="weight",
+            color_continuous_scale="Blues"
         )
-        fig_etf.update_traces(texttemplate='%{text:.1f}%', textposition='outside', marker_color='#1E88E5')
-        fig_etf.update_layout(height=220, margin=dict(l=10, r=20, t=35, b=10))
+        fig_etf.update_traces(texttemplate='%{text}%', textposition='outside')
+        fig_etf.update_layout(
+            showlegend=False,
+            height=280,
+            margin=dict(l=10, r=40, t=40, b=10),
+            xaxis=dict(range=[0, max(df_etf["weight"]) * 1.25])
+        )
         st.plotly_chart(fig_etf, use_container_width=True)
-        
-    with col_etf2:
-        # 被動資金推算卡片
-        top_etf = etf_list[0]
-        st.metric(
-            label=f"最大持股 ETF ({top_etf['etf_code']})", 
-            value=f"{top_etf['weight']}%",
-            delta=f"盤價連動: ${_active_price:.2f}"
-        )
-        
-        # 估算被動買盤推估
-        est_passive_flow = (_active_price * top_etf['weight'] * 1000) / 100000  # 萬 TWD 簡化動態推算
-        st.info(f"💡 **被動資金衝擊估算：**\n單日申贖每達 1,000 張，預估產生 **{est_passive_flow:.2f} 萬** 對應買賣盤推升力道。")
 
+    with col_metrics:
+        st.metric(
+            label=f"🏆 最大持股 ETF：{top_etf['etf_name']} ({top_etf['etf_code']})",
+            value=f"{top_etf['weight']}% 權重",
+            delta=f"個股當前盤價連動: ${synthetic_price:.2f} TWD"
+        )
+        st.info(f"⚡ **被動資金衝擊估算**：當該 ETF 單日申贖每達 **1,000 張** 時，預估產生 **{top_etf['weight'] * 1.0:.2f} 萬元** 對應買賣盤推升力道。")
 else:
-    st.warning(f"⚠️ 當前標的 (`{_active_ticker}`) 暫無納入核心 ETF 穿透追蹤資料庫，採用標準雙曲流形數據推演。")
+    st.info(f"ℹ️ 當前標的 ({_active_ticker}) 暫無追蹤之重點 ETF 籌碼穿透資料。")
 
 # ==========================================
 # 🌊 軌跡曲率強度與轉折風險動態時序圖 (防錯修復版)
