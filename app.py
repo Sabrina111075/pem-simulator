@@ -70,18 +70,18 @@ SEMI_SUPPLY_CHAIN = {
         {"name": "友達", "ticker": "2409", "region": "TW", "poc": "C", "role": "Optoelectronics", "pain": "光電量產", "dt_data": "optical/manufacturing data"}
     ],
 
-    # ---------------------------------------------------------
-    # 📊 【修正版】主要半導體/高股息 ETF 籌碼穿透對照資料庫
-    # ---------------------------------------------------------
-    ETF_HOLDINGS_DB = {
-        "2330": [{"etf_code": "0050", "etf_name": "元大台灣50", "weight": 56.2}, {"etf_code": "006208", "etf_name": "富邦台50", "weight": 56.1}, {"etf_code": "00913", "etf_name": "兆豐台灣晶圓製造", "weight": 30.5}],
-        "2317": [{"etf_code": "0050", "etf_name": "元大台灣50", "weight": 5.1}, {"etf_code": "0056", "etf_name": "元大高股息", "weight": 4.2}],
-        "2454": [{"etf_code": "0050", "etf_name": "元大台灣50", "weight": 4.8}, {"etf_code": "00929", "etf_name": "復華台灣科技優息", "weight": 9.5}],
-        "3711": [{"etf_code": "00913", "etf_name": "兆豐台灣晶圓製造", "weight": 8.2}, {"etf_code": "00891", "etf_name": "中信關鍵半導體", "weight": 7.5}],
-        "3081": [{"etf_code": "00929", "etf_name": "復華台灣科技優息", "weight": 3.1}, {"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 2.8}],
-        "6510": [{"etf_code": "00891", "etf_name": "中信關鍵半導體", "weight": 4.2}, {"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 3.5}],
-        "6223": [{"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 2.1}]
-    ],
+# ---------------------------------------------------------
+# 📊 【修正版】主要半導體/高股息 ETF 籌碼穿透對照資料庫
+# ---------------------------------------------------------
+ETF_HOLDINGS_DB = {
+    "2330": [{"etf_code": "0050", "etf_name": "元大台灣50", "weight": 56.2}, {"etf_code": "006208", "etf_name": "富邦台50", "weight": 56.1}, {"etf_code": "00913", "etf_name": "兆豐台灣晶圓製造", "weight": 30.5}],
+    "2317": [{"etf_code": "0050", "etf_name": "元大台灣50", "weight": 5.1}, {"etf_code": "0056", "etf_name": "元大高股息", "weight": 4.2}],
+    "2454": [{"etf_code": "0050", "etf_name": "元大台灣50", "weight": 4.8}, {"etf_code": "00929", "etf_name": "復華台灣科技優息", "weight": 9.5}],
+    "3711": [{"etf_code": "00913", "etf_name": "兆豐台灣晶圓製造", "weight": 8.2}, {"etf_code": "00891", "etf_name": "中信關鍵半導體", "weight": 7.5}],
+    "3081": [{"etf_code": "00929", "etf_name": "復華台灣科技優息", "weight": 3.1}, {"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 2.8}],
+    "6510": [{"etf_code": "00891", "etf_name": "中信關鍵半導體", "weight": 4.2}, {"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 3.5}],
+    "6223": [{"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 2.1}]
+}
     "矽晶圓/材料/CMP": [
         {"name": "環球晶", "ticker": "6488", "region": "TW"},
         {"name": "中美晶", "ticker": "5483", "region": "TW"},
