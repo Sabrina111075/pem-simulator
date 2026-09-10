@@ -80,7 +80,7 @@ ETF_HOLDINGS_DB = {
     "3081": [{"etf_code": "00929", "etf_name": "復華台灣科技優息", "weight": 3.1}, {"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 2.8}],
     "6510": [{"etf_code": "00891", "etf_name": "中信關鍵半導體", "weight": 4.2}, {"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 3.5}],
     "6223": [{"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 2.1}]
-}
+    ],
     "矽晶圓/材料/CMP": [
         {"name": "環球晶", "ticker": "6488", "region": "TW"},
         {"name": "中美晶", "ticker": "5483", "region": "TW"},
