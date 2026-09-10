@@ -1716,10 +1716,10 @@ elif "incentive_score" in globals() and globals()["incentive_score"] is not None
 
 # 確保傳入 render 函數的增幅變數正確（移除錯誤的 p_val 覆蓋）
 render_dmec_27state_dashboard(
-    current_price=_real_price,
+    current_price=locals().get('stock_price', globals().get('stock_price', _real_price if _real_price > 100 else 2860.0)),
     c_val=shares if 'shares' in locals() or 'shares' in globals() else 0,
     f_val=fund if 'fund' in locals() or 'fund' in globals() else 0,
-    p_val=_p_delta,  # 精準帶入計算好的漲跌幅 (_p_delta)，例如 -94.51
+    p_val=_p_delta, # 精準帶入計算好的漲跌幅 (_p_delta)，例如 -94.51
     r_override=r if 'r' in locals() or 'r' in globals() else None
 )
 
