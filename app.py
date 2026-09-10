@@ -231,79 +231,6 @@ SEMI_SUPPLY_CHAIN = {
     ],
 }
 
-# =========================================================
-# 📊 【優化版】ETF 籌碼穿透追蹤與被動資金動態渲染模組
-# =========================================================
-st.markdown("---")
-st.subheader("📊 ETF 籌碼穿透追蹤與被動資金估算")
-
-# 1. 確保抓取當前精確股票代號與盤價（連動防護）
-_active_ticker = str(target.get("ticker", "2330")) if 'target' in locals() and isinstance(target, dict) else "2330"
-_active_name = str(target.get("name", "")) if 'target' in locals() and isinstance(target, dict) else ""
-_active_price = current_price if 'current_price' in locals() and current_price > 0 else 100.0
-
-_etf_db = globals().get("ETF_HOLDINGS_DB", {})
-
-etf_list = _etf_db.get(_active_ticker, [])
-
-if etf_list:
-    # 📌 1. 新增文字列表說明，一眼即看懂主要持股公司與比例
-    holding_summary = " | ".join([f"**{item['etf_name']} ({item['etf_code']})**: `{item['weight']}%`" for item in etf_list])
-    st.markdown(f"💡 **標的覆蓋解析 ({_active_ticker} {_active_name})**：主要受以下 **{len(etf_list)}** 檔 ETF 重倉持有：")
-    st.markdown(f"> {holding_summary}")
-    st.write("") # 空行微調 spacing
-
-    # 📌 2. 圖表採用全寬展示，並全面放大字體與右邊距
-    import plotly.express as px
-    import pandas as pd
-    
-    df_etf = pd.DataFrame(etf_list)
-    fig_etf = px.bar(
-        df_etf, 
-        x="weight", 
-        y="etf_name", 
-        orientation='h',
-        text="weight",
-        labels={"weight": "持股權重 (%)", "etf_name": "ETF 名稱"},
-        title=f"📊 {_active_ticker} {_active_name} 主要 ETF 持股權重穿透圖 (%)"
-    )
-    
-    # 放大長條上的數字與字體
-    fig_etf.update_traces(
-        texttemplate='<b>%{text:.1f}%</b>', 
-        textposition='outside', 
-        marker_color='#1E88E5',
-        textfont=dict(size=15, color='#1565C0')
-    )
-    
-    # 擴張右側邊距 (r=80) 避免數字被截斷，並放大座標軸字體
-    fig_etf.update_layout(
-        height=280, 
-        margin=dict(l=20, r=80, t=45, b=20),
-        xaxis=dict(title_font=dict(size=14), tickfont=dict(size=13)),
-        yaxis=dict(title_font=dict(size=14), tickfont=dict(size=14))
-    )
-    st.plotly_chart(fig_etf, use_container_width=True)
-
-    # 📌 3. 將卡片下移至圖表下方，併排呈現不擠壓
-    col_card1, col_card2 = st.columns(2)
-    
-    top_etf = etf_list[0]
-    with col_card1:
-        st.metric(
-            label=f"🏆 最大持股 ETF：{top_etf['etf_name']} ({top_etf['etf_code']})", 
-            value=f"{top_etf['weight']}% 權重",
-            delta=f"個股當前盤價連動: ${_active_price:.2f} TWD"
-        )
-        
-    with col_card2:
-        # 估算被動買盤推估
-        est_passive_flow = (_active_price * top_etf['weight'] * 1000) / 100000  # 萬 TWD 簡化動態推算
-        st.info(f"⚡ **被動資金衝擊估算：**\n當該 ETF 單日申贖每達 **1,000 張** 時，預估產生 **{est_passive_flow:.2f} 萬元** 對應買賣盤推升力道。")
-
-else:
-    st.warning(f"⚠️ 當前標的 (`{_active_ticker}`) 暫無納入核心 ETF 穿透追蹤資料庫，採用標準雙曲流形數據推演。")
-
 # ==========================================
 # 0. 自動刷新機制 & 基礎時間定義
 # ==========================================
@@ -1795,57 +1722,6 @@ render_dmec_27state_dashboard(
     p_val=_p_delta, # 精準帶入計算好的漲跌幅 (_p_delta)，例如 -94.51
     r_override=r if 'r' in locals() or 'r' in globals() else None
 )
-
-# ---------------------------------------------------------
-# 📊 【新版】ETF 籌碼穿透追蹤與被動資金估算 UI 模組
-# ---------------------------------------------------------
-st.subheader("📊 ETF 籌碼穿透追蹤與被動資金估算")
-
-_etf_db = globals().get("ETF_HOLDINGS_DB", {})
-etf_list = _etf_db.get(_active_ticker, [])
-
-if etf_list:
-    top_etf = max(etf_list, key=lambda x: x["weight"])
-    etf_summary = " | ".join([f"**{item['etf_name']} ({item['etf_code']})**: {item['weight']}%" for item in etf_list])
-    st.markdown(f"💡 **標的覆蓋解析 ({_active_ticker})**：主要受以下 **{len(etf_list)}** 檔 ETF 重倉持有：")
-    st.caption(f"{etf_summary}")
-
-    col_chart, col_metrics = st.columns([1.5, 1])
-
-    with col_chart:
-        import plotly.express as px
-        import pandas as pd
-        
-        df_etf = pd.DataFrame(etf_list)
-        fig_etf = px.bar(
-            df_etf,
-            x="weight",
-            y="etf_name",
-            orientation="h",
-            text="weight",
-            title=f"📊 {_active_ticker} 主要 ETF 持股權重穿透 (%)",
-            labels={"weight": "持股權重 (%)", "etf_name": "ETF 名稱"},
-            color="weight",
-            color_continuous_scale="Blues"
-        )
-        fig_etf.update_traces(texttemplate='%{text}%', textposition='outside')
-        fig_etf.update_layout(
-            showlegend=False,
-            height=280,
-            margin=dict(l=10, r=40, t=40, b=10),
-            xaxis=dict(range=[0, max(df_etf["weight"]) * 1.25])
-        )
-        st.plotly_chart(fig_etf, use_container_width=True)
-
-    with col_metrics:
-        st.metric(
-            label=f"🏆 最大持股 ETF：{top_etf['etf_name']} ({top_etf['etf_code']})",
-            value=f"{top_etf['weight']}% 權重",
-            delta=f"個股當前盤價連動: ${synthetic_price:.2f} TWD"
-        )
-        st.info(f"⚡ **被動資金衝擊估算**：當該 ETF 單日申贖每達 **1,000 張** 時，預估產生 **{top_etf['weight'] * 1.0:.2f} 萬元** 對應買賣盤推升力道。")
-else:
-    st.info(f"ℹ️ 當前標的 ({_active_ticker}) 暫無追蹤之重點 ETF 籌碼穿透資料。")
 
 # ==========================================
 # 🌊 軌跡曲率強度與轉折風險動態時序圖 (防錯修復版)
