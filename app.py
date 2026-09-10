@@ -1749,49 +1749,65 @@ _stock_code = (
 )
 
 # ==================================================================
-# 📌 ETF 籌碼穿透與被動資金動向模組 (完全動態雜湊演算版)
+# 📌 ETF 籌碼穿透與被動資金動向模組 (完全連動 + 動態 ETF 組合版)
 # ==================================================================
 st.markdown("---")
 st.markdown(f"##### 📌 {display_stock_name} 主要持股 ETF 公司與被動資金動向")
 
-# 1. 乾淨提取純數字股票代號 (例如從 "2454 [TW]" 提取出 "2454")
 import re
-clean_code = re.sub(r'\D', '', str(stock_code)) or "2454"
-code_seed = int(clean_code)  # 作為動態隨機數種子
+import numpy as np
+import pandas as pd
+import plotly.express as px
 
-# 2. 依據股票代號動態計算專屬數據
-np.random.seed(code_seed)
+# 1. 提取純數字代號，作為亂數種子 (Seed)
+clean_code = re.sub(r'\D', '', str(stock_code)) or "2317"
+seed_val = int(clean_code)
+np.random.seed(seed_val)
 
-# 動態生成滲透率與資金
-penetration_val = round(8.0 + (code_seed % 70) / 10.0, 2)
-p_delta_val = round((code_seed % 15 - 7) / 10.0, 2)
-flow_val = round((code_seed % 50 - 20) * 1.5, 1)
+# 2. 建立 ETF 池，並根據股票代號隨機抽出該個股的核心持股 ETF
+all_etf_pool = [
+    "0050 元大台灣50", "0056 元大高股息", "00878 國泰永續高股息", 
+    "00919 群益精選高息", "00929 復華台灣科技優息", "00940 元大台灣價值高息",
+    "00900 富邦特選高股息", "00935 中信關鍵半導體", "006208 富邦台50"
+]
 
-# 動態生成前 4 大 ETF 持股張數
-base_shares = (code_seed % 8 + 1) * 5000
-s1 = int(base_shares * 1.2)
-s2 = int(base_shares * 0.9)
-s3 = int(base_shares * 0.7)
-s4 = int(base_shares * 0.5)
-s_other = int(base_shares * 4.0)
+# 依 Seed 挑選 4 檔專屬 ETF
+selected_etfs = list(np.random.choice(all_etf_pool, size=4, replace=False))
+
+# 3. 動態計算持股張數與比例
+base_shares = (seed_val % 9 + 2) * 3000
+shares = [
+    int(base_shares * np.random.uniform(1.2, 1.8)),
+    int(base_shares * np.random.uniform(0.8, 1.2)),
+    int(base_shares * np.random.uniform(0.5, 0.9)),
+    int(base_shares * np.random.uniform(0.3, 0.6))
+]
+other_shares = int(sum(shares) * np.random.uniform(1.1, 1.5))
+
+etf_names = selected_etfs + ["其他 ETF"]
+share_counts = shares + [other_shares]
 
 curr_df = pd.DataFrame({
-    "ETF": ["0050 元大台灣50", "0056 元大高股息", "00878 國泰永續", "00919 群益精選", "其他"],
-    "張數": [s1, s2, s3, s4, s_other]
+    "ETF": etf_names,
+    "張數": share_counts
 })
 
-# 3. UI 渲染：圖表與卡片動態帶入
+# 4. 計算動態指標
+penetration_val = round(6.0 + (seed_val % 100) / 8.0, 1)
+p_delta_val = round((seed_val % 13 - 6) / 10.0, 1)
+flow_val = round((seed_val % 60 - 25) * 1.2, 1)
+
+# 5. UI 渲染：圓餅圖 (使用帶入的新 DataFrame)
 etf_col1, etf_col2 = st.columns([1, 1.2])
 
 with etf_col1:
-    import plotly.express as px
     fig_etf_mini = px.pie(
         curr_df, values="張數", names="ETF", hole=0.5,
         color_discrete_sequence=px.colors.qualitative.Pastel
     )
     fig_etf_mini.update_traces(textposition='inside', textinfo='percent+label')
-    fig_etf_mini.update_layout(height=200, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
-    st.plotly_chart(fig_etf_mini, use_container_width=True)
+    fig_etf_mini.update_layout(height=210, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
+    st.plotly_chart(fig_etf_mini, use_container_width=True, key=f"etf_pie_{clean_code}")
 
 with etf_col2:
     c1, c2 = st.columns(2)
@@ -1800,11 +1816,12 @@ with etf_col2:
     flow_status = "強勁買超" if flow_val > 0 else "調節賣超"
     c2.metric("5日被動資金流向", f"{flow_val:+} 億", delta=flow_status)
     
-    # 動態產生清單
+    # 動態渲染 Top 3 ETF 清單與數據
+    total_s = sum(share_counts)
     st.markdown(f"""
-    * **0050 元大台灣50**：持股 `{round(penetration_val*0.4, 2)}%` (約 {round(s1/10000, 2)}萬張)
-    * **0056 元大高股息**：持股 `{round(penetration_val*0.3, 2)}%` (約 {round(s2/10000, 2)}萬張)
-    * **00878 國泰永續高股息**：持股 `{round(penetration_val*0.2, 2)}%` (約 {round(s3/10000, 2)}萬張)
+    * **{selected_etfs[0]}**：持股 `{round(shares[0]/total_s*penetration_val, 2)}%` (約 {round(shares[0]/10000, 2)}萬張)
+    * **{selected_etfs[1]}**：持股 `{round(shares[1]/total_s*penetration_val, 2)}%` (約 {round(shares[2]/10000, 2)}萬張)
+    * **{selected_etfs[2]}**：持股 `{round(shares[2]/total_s*penetration_val, 2)}%` (約 {round(shares[2]/10000, 2)}萬張)
     """)
 
 st.markdown("---")
