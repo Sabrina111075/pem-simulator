@@ -1543,6 +1543,14 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         _trend_desc = "盤整觀望"
         _action_desc = "市場動能收斂，維持區間震盪。"
 
+    # ---------------------------------------------------------
+    # 🔧【動態對齊】若全域/外部有真實 API 股價，強制覆蓋預設現價
+    # ---------------------------------------------------------
+    if '_real_price' in locals() and _real_price > 0:
+        current_price = _real_price
+    elif '_real_price' in globals() and globals()['_real_price'] > 0:
+        current_price = globals()['_real_price']
+
     # # 2. 核心指標運算 (p_val 為漲跌金額，目標價對齊現價)
     q50_diff = float(p_val)
     q50_target = float(current_price + q50_diff)
