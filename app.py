@@ -1422,41 +1422,6 @@ with st.popover("ℹ️ 雙曲狀態圓盤 (PVCS) 與 Risk 色柱說明"):
 # 原本圖表渲染
 st.plotly_chart(fig_disk, use_container_width=True)
 
-# ------------------------------------------------------------------
-# ➕ 這裡就是我們要安插的「ETF 籌碼穿透」輕量卡片區塊
-# ------------------------------------------------------------------
-st.markdown("---")
-st.markdown("##### 📌 主要持股 ETF 公司與被動資金動向")
-
-etf_col1, etf_col2 = st.columns([1, 1.2])
-
-with etf_col1:
-    import plotly.express as px
-    etf_summary_df = pd.DataFrame({
-        "ETF": ["0050 元大台灣50", "0056 元大高股息", "00878 國泰永續", "00919 群益精選", "其他"],
-        "張數": [38500, 32100, 29400, 26800, 180000]
-    })
-    fig_etf_mini = px.pie(
-        etf_summary_df, values="張數", names="ETF", hole=0.5,
-        color_discrete_sequence=px.colors.qualitative.Pastel
-    )
-    fig_etf_mini.update_traces(textposition='inside', textinfo='percent+label')
-    fig_etf_mini.update_layout(height=200, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
-    st.plotly_chart(fig_etf_mini, use_container_width=True)
-
-with etf_col2:
-    c1, c2 = st.columns(2)
-    c1.metric("ETF 總滲透率", "12.85 %", delta="+0.42%")
-    c2.metric("5日被動資金流向", "+18.5 億", delta="強勁買超")
-    
-    st.markdown("""
-    * **0050 元大台灣50**：持股 `5.25%` (約 3.85萬張)
-    * **0056 元大高股息**：持股 `4.12%` (約 3.21萬張)
-    * **00878 國泰永續高股息**：持股 `3.85%` (約 2.94萬張)
-    """)
-
-st.markdown("---")
-
 # =========================================================
 # 插入：數位分身 10 步價格模擬與風險區間
 # =========================================================
@@ -1782,6 +1747,41 @@ _stock_code = (
     or globals().get("stock_code") 
     or "2330 台積電"
 )
+
+# ==================================================================
+# ➕ 將 ETF 模組移到這裡 (時序圖表的正上方)
+# ==================================================================
+st.markdown("---")
+st.markdown("##### 📌 主要持股 ETF 公司與被動資金動向")
+
+etf_col1, etf_col2 = st.columns([1, 1.2])
+
+with etf_col1:
+    import plotly.express as px
+    etf_summary_df = pd.DataFrame({
+        "ETF": ["0050 元大台灣50", "0056 元大高股息", "00878 國泰永續", "00919 群益精選", "其他"],
+        "張數": [38500, 32100, 29400, 26800, 180000]
+    })
+    fig_etf_mini = px.pie(
+        etf_summary_df, values="張數", names="ETF", hole=0.5,
+        color_discrete_sequence=px.colors.qualitative.Pastel
+    )
+    fig_etf_mini.update_traces(textposition='inside', textinfo='percent+label')
+    fig_etf_mini.update_layout(height=200, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
+    st.plotly_chart(fig_etf_mini, use_container_width=True)
+
+with etf_col2:
+    c1, c2 = st.columns(2)
+    c1.metric("ETF 總滲透率", "12.85 %", delta="+0.42%")
+    c2.metric("5日被動資金流向", "+18.5 億", delta="強勁買超")
+    
+    st.markdown("""
+    * **0050 元大台灣50**：持股 `5.25%` (約 3.85萬張)
+    * **0056 元大高股息**：持股 `4.12%` (約 3.21萬張)
+    * **00878 國泰永續高股息**：持股 `3.85%` (約 2.94萬張)
+    """)
+
+st.markdown("---")
 
 # #2. 安全渲染標題
 st.markdown(f"### 📣 {_stock_code} PVCS 軌跡曲率強度與轉折風險動態時序...")
