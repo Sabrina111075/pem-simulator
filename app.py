@@ -231,6 +231,19 @@ SEMI_SUPPLY_CHAIN = {
     ],
 }
 
+# ---------------------------------------------------------
+# 📊 主要半導體/高股息 ETF 籌碼穿透對照資料庫
+# ---------------------------------------------------------
+ETF_HOLDINGS_DB = {
+    "2330": [{"etf_code": "0050", "etf_name": "元大台灣50", "weight": 56.2}, {"etf_code": "006208", "etf_name": "富邦台50", "weight": 56.1}, {"etf_code": "00913", "etf_name": "兆豐台灣晶圓製造", "weight": 30.5}],
+    "2317": [{"etf_code": "0050", "etf_name": "元大台灣50", "weight": 5.1}, {"etf_code": "0056", "etf_name": "元大高股息", "weight": 4.2}],
+    "2454": [{"etf_code": "0050", "etf_name": "元大台灣50", "weight": 4.8}, {"etf_code": "00929", "etf_name": "復華台灣科技優息", "weight": 9.5}],
+    "3711": [{"etf_code": "00913", "etf_name": "兆豐台灣晶圓製造", "weight": 8.2}, {"etf_code": "00891", "etf_name": "中信關鍵半導體", "weight": 7.5}],
+    "3081": [{"etf_code": "00929", "etf_name": "復華台灣科技優息", "weight": 3.1}, {"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 2.8}],
+    "6510": [{"etf_code": "00891", "etf_name": "中信關鍵半導體", "weight": 4.2}, {"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 3.5}],
+    "6223": [{"etf_code": "00935", "etf_name": "野村臺灣創新科技50", "weight": 2.1}]
+}
+
 # =========================================================
 # 📊 【優化版】ETF 籌碼穿透追蹤與被動資金動態渲染模組
 # =========================================================
@@ -242,7 +255,9 @@ _active_ticker = str(target.get("ticker", "2330")) if 'target' in locals() and i
 _active_name = str(target.get("name", "")) if 'target' in locals() and isinstance(target, dict) else ""
 _active_price = current_price if 'current_price' in locals() and current_price > 0 else 100.0
 
-etf_list = ETF_HOLDINGS_DB.get(_active_ticker, [])
+_etf_db = globals().get("ETF_HOLDINGS_DB", {})
+
+etf_list = _etf_db.get(_active_ticker, [])
 
 if etf_list:
     # 📌 1. 新增文字列表說明，一眼即看懂主要持股公司與比例
