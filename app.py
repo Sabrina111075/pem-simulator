@@ -1749,36 +1749,42 @@ _stock_code = (
 )
 
 # ==================================================================
-# 📌 ETF 籌碼穿透與被動資金動向模組 (完全動態雜湊與 Top 3 語意優化版)
+# 📌 ETF 籌碼穿透與被動資金動向模組 (真實 ETF 成分股模擬連動版)
 # ==================================================================
 st.markdown("---")
 st.markdown(f"##### 📌 {display_stock_name} 前三大持股 ETF 與被動資金動向")
 
-# 1. 乾淨提取純數字股票代號
 import re
 clean_code = re.sub(r'\D', '', str(stock_code)) or "2454"
-code_seed = int(clean_code)  # 作為動態隨機數種子
+code_seed = int(clean_code)
 
-# 2. 依據股票代號動態計算專屬數據
+# 依股票 Seed 動態切換合理的 ETF 組合池
+etf_pools = [
+    ["0050 元大台灣50", "0056 元大高股息", "00878 國泰永續", "00919 群益精選", "其他 ETF"],
+    ["0056 元大高股息", "00878 國泰永續", "00929 復華台灣", "00919 群益精選", "其他 ETF"],
+    ["006208 富邦台50", "00935 中信關鍵半導體", "00878 國泰永續", "00900 富邦特選", "其他 ETF"],
+    ["0051 元大中型100", "0056 元大高股息", "00919 群益精選", "00878 國泰永續", "00929 復華台灣"]
+]
+
+# 依據股票代號選擇對應的 ETF 名單組合
+selected_etfs = etf_pools[code_seed % len(etf_pools)]
+
+# 動態計算張數與金額
 np.random.seed(code_seed)
-
 penetration_val = round(8.0 + (code_seed % 70) / 10.0, 2)
 p_delta_val = round((code_seed % 15 - 7) / 10.0, 2)
 flow_val = round((code_seed % 50 - 20) * 1.5, 1)
 
 base_shares = (code_seed % 8 + 1) * 5000
-s1 = int(base_shares * 1.2)
-s2 = int(base_shares * 0.9)
-s3 = int(base_shares * 0.7)
-s4 = int(base_shares * 0.5)
-s_other = int(base_shares * 4.0)
+s1, s2, s3, s4 = int(base_shares * 1.2), int(base_shares * 0.9), int(base_shares * 0.7), int(base_shares * 0.5)
+s_other = int(base_shares * 3.5)
 
 curr_df = pd.DataFrame({
-    "ETF": ["0050 元大台灣50", "0056 元大高股息", "00878 國泰永續", "00919 群益精選", "其他"],
+    "ETF": selected_etfs,
     "張數": [s1, s2, s3, s4, s_other]
 })
 
-# 3. UI 渲染：圖表與卡片動態帶入
+# UI 渲染
 etf_col1, etf_col2 = st.columns([1, 1.2])
 
 with etf_col1:
@@ -1798,7 +1804,6 @@ with etf_col2:
     flow_status = "強勁買超" if flow_val > 0 else "調節賣超"
     c2.metric("5日被動資金流向", f"{flow_val:+} 億", delta=flow_status)
     
-    # 加上 🥇 🥈 🥉 標籤，讓語意更明確
     st.markdown(f"""
     * 🥇 **{curr_df.iloc[0]['ETF']}**：持股佔比 `{round(penetration_val*0.4, 2)}%` (約 {round(s1/10000, 2)}萬張)
     * 🥈 **{curr_df.iloc[1]['ETF']}**：持股佔比 `{round(penetration_val*0.3, 2)}%` (約 {round(s2/10000, 2)}萬張)
