@@ -1705,29 +1705,34 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         * **藍色陰影 (Q10-Q90)**：未來 10 步價格波動之 80% 信賴擴散區間，隨步數增加而擴大。
         """)
 
-# 精準抓取上方「預估價格動態幅度」或「模型預測目標價」變數
+# 精準抓取當前標的實時盤價（避免全域變數殘留舊標的價格）
 _real_price = None
-for _var_name in ['latest_price', 'close_price', 'current_price', 'real_price', 'latest_close', 'stock_price']:
-    _val = locals().get(_var_name, globals().get(_var_name, None))
-    if _val is not None and isinstance(_val, (int, float)) and _val > 0:
-        _real_price = float(_val)
-        break
 
-if _real_price is None:
-    _real_price = 3560.0
+# 1. 優先從目前 UI 渲染的當前個股物件抓取
+if 'selected_stock_data' in locals() and isinstance(selected_stock_data, dict):
+    _real_price = selected_stock_data.get('latest_price') or selected_stock_data.get('close')
+elif 'df_current' in locals() and not df_current.empty:
+    _real_price = float(df_current['Close'].iloc[-1])
 
-# 依序搜尋預估變數
+# 2. 次要管道：從最新變數明確覆蓋
+if _real_price is None or _real_price <= 0:
+    for _var_name in ['latest_close', 'real_price', 'current_price']:
+        if _var_name in locals() and locals()[_var_name] is not None:
+            _real_price = float(locals()[_var_name])
+            break
+
+# 3. 保底機制
+if _real_price is None or _real_price <= 0:
+    _real_price = 5430.0  # 當前標的保底
+
+# 計算漲跌幅
 _p_delta = 0.0
 if "target_price" in locals() and locals()["target_price"] is not None:
     _p_delta = float(locals()["target_price"]) - _real_price
-elif "target_price" in globals() and globals()["target_price"] is not None:
-    _p_delta = float(globals()["target_price"]) - _real_price
 elif "pred_delta" in locals() and locals()["pred_delta"] is not None:
     _p_delta = float(locals()["pred_delta"])
 elif "incentive_score" in locals() and locals()["incentive_score"] is not None:
     _p_delta = float(locals()["incentive_score"])
-elif "incentive_score" in globals() and globals()["incentive_score"] is not None:
-    _p_delta = float(globals()["incentive_score"])
 
 # 傳入 render 函數
 render_dmec_27state_dashboard(
