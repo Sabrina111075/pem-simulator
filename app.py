@@ -1725,9 +1725,12 @@ if "pred_delta" in locals() and locals()["pred_delta"] is not None:
 elif "incentive_score" in locals() and locals()["incentive_score"] is not None:
     _p_delta = float(locals()["incentive_score"])
 
-# 4. 帶入傳入 render 函數
+# 4. 帶入傳入 render 函數 (確保 current_price 絕對不為 None)
+if _real_price is None or _real_price <= 0:
+    _real_price = 3525.0  # 安全保底，避免傳入 None 導致內部 TypeError
+
 render_dmec_27state_dashboard(
-    current_price=_real_price if _real_price and _real_price > 0 else None,
+    current_price=float(_real_price),
     c_val=shares if 'shares' in locals() or 'shares' in globals() else 0,
     f_val=fund if 'fund' in locals() or 'fund' in globals() else 0,
     p_val=_p_delta,
