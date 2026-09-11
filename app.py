@@ -669,11 +669,6 @@ if stock_mode == "熱門標的":
         
         st.sidebar.caption(f"**PoC 優先級：** :{badge_color}[{poc_val} 級] | **角色：** {target.get('role', 'N/A')}")
         
-        with st.sidebar.expander("📍 關鍵物理痛點與驗證數據", expanded=True):
-            st.markdown(f"**主要痛點：**\n{target.get('pain', '無')}")
-            st.caption("Digital Twin 關鍵資料：")
-            st.code(target.get('dt_data', 'N/A'), language="text")
-    
     # 若有股票代號則使用，無代號 (如外商非上市) 預設為 2330 進行模擬
     stock_code = target["ticker"] if target["ticker"] else "2330"
     display_stock_name = f"{stock_code} {target['name']}" if target["ticker"] else target['name']
