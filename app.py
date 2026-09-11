@@ -1705,38 +1705,29 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         * **藍色陰影 (Q10-Q90)**：未來 10 步價格波動之 80% 信賴擴散區間，隨步數增加而擴大。
         """)
 
-# 1. 優先從 UI 當前渲染的個股資料或系統變數抓取最新盤價
+# 1. 抓取當前標的真實盤價
 _real_price = None
 
-if 'selected_stock_data' in locals() and isinstance(selected_stock_data, dict):
-    _real_price = selected_stock_data.get('latest_price') or selected_stock_data.get('close')
-elif 'df_current' in locals() and not df_current.empty:
-    _real_price = float(df_current['Close'].iloc[-1])
+for _vname in ['latest_price', 'price', 'close_price', 'current_price', 'real_price', 'latest_close']:
+    if _vname in locals() and locals()[_vname] is not None and isinstance(locals()[_vname], (int, float)) and locals()[_vname] > 0:
+        _real_price = float(locals()[_vname])
+        break
 
-# 2. 依次搜尋局部變數（只抓最新的 current_price 或 latest_close）
+# 2. 若變數未命中，從 target_price 與 pred_delta 強制反推基準價 (解決精測 0 元與跨標的殘留問題)
 if _real_price is None or _real_price <= 0:
-    for _var_name in ['latest_close', 'current_price', 'stock_price', 'real_price']:
-        if _var_name in locals() and locals()[_var_name] is not None:
-            _real_price = float(locals()[_var_name])
-            break
-
-# 3. 若仍抓不到，從預測目標價反推（避免寫死 5430 導致跨標的污染）
-if _real_price is None or _real_price <= 0:
-    if 'target_price' in locals() and 'pred_delta' in locals():
+    if 'target_price' in locals() and 'pred_delta' in locals() and locals()['target_price'] is not None and locals()['pred_delta'] is not None:
         _real_price = float(locals()['target_price']) - float(locals()['pred_delta'])
 
-# 4. 計算價格動態偏離幅度
+# 3. 抓取動態幅度 (Delta)
 _p_delta = 0.0
 if "pred_delta" in locals() and locals()["pred_delta"] is not None:
     _p_delta = float(locals()["pred_delta"])
 elif "incentive_score" in locals() and locals()["incentive_score"] is not None:
     _p_delta = float(locals()["incentive_score"])
-elif "target_price" in locals() and locals()["target_price"] is not None and _real_price is not None:
-    _p_delta = float(locals()["target_price"]) - _real_price
 
-# 5. 帶入傳入 render 函數
+# 4. 帶入傳入 render 函數
 render_dmec_27state_dashboard(
-    current_price=_real_price,
+    current_price=_real_price if _real_price and _real_price > 0 else None,
     c_val=shares if 'shares' in locals() or 'shares' in globals() else 0,
     f_val=fund if 'fund' in locals() or 'fund' in globals() else 0,
     p_val=_p_delta,
