@@ -1705,54 +1705,42 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         * **藍色陰影 (Q10-Q90)**：未來 10 步價格波動之 80% 信賴擴散區間，隨步數增加而擴大。
         """)
 
-# 精準抓取當前標的實時盤價（避免全域變數殘留舊標的價格）
+# 1. 優先從 UI 當前渲染的個股資料或系統變數抓取最新盤價
 _real_price = None
 
-# 1. 優先從目前 UI 渲染的當前個股物件抓取
 if 'selected_stock_data' in locals() and isinstance(selected_stock_data, dict):
     _real_price = selected_stock_data.get('latest_price') or selected_stock_data.get('close')
 elif 'df_current' in locals() and not df_current.empty:
     _real_price = float(df_current['Close'].iloc[-1])
 
-# 2. 次要管道：從最新變數明確覆蓋
+# 2. 依次搜尋局部變數（只抓最新的 current_price 或 latest_close）
 if _real_price is None or _real_price <= 0:
-    for _var_name in ['latest_close', 'real_price', 'current_price']:
+    for _var_name in ['latest_close', 'current_price', 'stock_price', 'real_price']:
         if _var_name in locals() and locals()[_var_name] is not None:
             _real_price = float(locals()[_var_name])
             break
 
-# 3. 保底機制
+# 3. 若仍抓不到，從預測目標價反推（避免寫死 5430 導致跨標的污染）
 if _real_price is None or _real_price <= 0:
-    _real_price = 5430.0  # 當前標的保底
+    if 'target_price' in locals() and 'pred_delta' in locals():
+        _real_price = float(locals()['target_price']) - float(locals()['pred_delta'])
 
-# 計算漲跌幅
+# 4. 計算價格動態偏離幅度
 _p_delta = 0.0
-if "target_price" in locals() and locals()["target_price"] is not None:
-    _p_delta = float(locals()["target_price"]) - _real_price
-elif "pred_delta" in locals() and locals()["pred_delta"] is not None:
+if "pred_delta" in locals() and locals()["pred_delta"] is not None:
     _p_delta = float(locals()["pred_delta"])
 elif "incentive_score" in locals() and locals()["incentive_score"] is not None:
     _p_delta = float(locals()["incentive_score"])
+elif "target_price" in locals() and locals()["target_price"] is not None and _real_price is not None:
+    _p_delta = float(locals()["target_price"]) - _real_price
 
-# 傳入 render 函數
+# 5. 帶入傳入 render 函數
 render_dmec_27state_dashboard(
     current_price=_real_price,
     c_val=shares if 'shares' in locals() or 'shares' in globals() else 0,
     f_val=fund if 'fund' in locals() or 'fund' in globals() else 0,
     p_val=_p_delta,
     r_override=r if 'r' in locals() or 'r' in globals() else None
-)
-
-# ==========================================
-# 🌊 軌跡曲率強度與轉折風險動態時序圖 (防錯修復版)
-# ==========================================
-# #1. 安全取得股票代碼與名稱 (優先連動側邊欄的 display_stock_name 或 stock_code)
-_stock_code = (
-    locals().get("display_stock_name") 
-    or locals().get("stock_code") 
-    or globals().get("display_stock_name") 
-    or globals().get("stock_code") 
-    or "2330 台積電"
 )
 
 # ==================================================================
