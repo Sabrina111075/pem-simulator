@@ -1727,12 +1727,12 @@ elif "incentive_score" in locals() and locals()["incentive_score"] is not None:
 elif "incentive_score" in globals() and globals()["incentive_score"] is not None:
     _p_delta = float(globals()["incentive_score"])
 
-# 確保傳入 render 函數的增幅變數正確（移除錯誤的 p_val 覆蓋）
+# ⭕ 修改後的正確程式碼
 render_dmec_27state_dashboard(
-    current_price=locals().get('stock_price', globals().get('stock_price', _real_price if _real_price > 100 else 2860.0)),
+    current_price=_real_price,  # 直接使用上方已精準抓到的 _real_price
     c_val=shares if 'shares' in locals() or 'shares' in globals() else 0,
     f_val=fund if 'fund' in locals() or 'fund' in globals() else 0,
-    p_val=_p_delta, # 精準帶入計算好的漲跌幅 (_p_delta)，例如 -94.51
+    p_val=_p_delta,  # 精準帶入計算好的漲跌幅
     r_override=r if 'r' in locals() or 'r' in globals() else None
 )
 
