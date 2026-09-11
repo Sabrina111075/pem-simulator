@@ -1705,32 +1705,25 @@ def render_dmec_27state_dashboard(current_price=100.0, c_val=0, f_val=0, p_val=0
         * **藍色陰影 (Q10-Q90)**：未來 10 步價格波動之 80% 信賴擴散區間，隨步數增加而擴大。
         """)
 
-# 1. 抓取當前標的真實盤價
-_real_price = None
+# 1. 優先從 UI 字典抓取當前標的真實價格 (徹底解決切換股票殘留問題)
+_ui_price = None
+if 'selected_stock_data' in locals() and isinstance(selected_stock_data, dict):
+    _ui_price = selected_stock_data.get('latest_price') or selected_stock_data.get('close') or selected_stock_data.get('price')
 
-for _vname in ['latest_price', 'price', 'close_price', 'current_price', 'real_price', 'latest_close']:
-    if _vname in locals() and locals()[_vname] is not None and isinstance(locals()[_vname], (int, float)) and locals()[_vname] > 0:
-        _real_price = float(locals()[_vname])
-        break
+# 2. 若字典未命中，使用 target_price 與 pred_delta 強制反推真實盤價
+if _ui_price is None and 'target_price' in locals() and 'pred_delta' in locals() and locals()['target_price'] is not None and locals()['pred_delta'] is not None:
+    _ui_price = float(target_price) - float(pred_delta)
 
-# 2. 若變數未命中，從 target_price 與 pred_delta 強制反推基準價 (解決精測 0 元與跨標的殘留問題)
-if _real_price is None or _real_price <= 0:
-    if 'target_price' in locals() and 'pred_delta' in locals() and locals()['target_price'] is not None and locals()['pred_delta'] is not None:
-        _real_price = float(locals()['target_price']) - float(locals()['pred_delta'])
-
-# 3. 抓取動態幅度 (Delta)
+# 3. 抓取變動 Delta
 _p_delta = 0.0
-if "pred_delta" in locals() and locals()["pred_delta"] is not None:
-    _p_delta = float(locals()["pred_delta"])
-elif "incentive_score" in locals() and locals()["incentive_score"] is not None:
-    _p_delta = float(locals()["incentive_score"])
+if 'pred_delta' in locals() and pred_delta is not None:
+    _p_delta = float(pred_delta)
+elif 'incentive_score' in locals() and incentive_score is not None:
+    _p_delta = float(incentive_score)
 
-# 4. 帶入傳入 render 函數 (確保 current_price 絕對不為 None)
-if _real_price is None or _real_price <= 0:
-    _real_price = 3525.0  # 安全保底，避免傳入 None 導致內部 TypeError
-
+# 4. 帶入傳入 render 函數
 render_dmec_27state_dashboard(
-    current_price=float(_real_price),
+    current_price=float(_ui_price) if _ui_price is not None and float(_ui_price) > 0 else None,
     c_val=shares if 'shares' in locals() or 'shares' in globals() else 0,
     f_val=fund if 'fund' in locals() or 'fund' in globals() else 0,
     p_val=_p_delta,
