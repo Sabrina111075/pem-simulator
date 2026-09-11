@@ -1795,7 +1795,8 @@ with etf_col2:
 st.markdown("---")
 
 # #2. 安全渲染標題
-st.markdown(f"### 📣 {_stock_code} PVCS 軌跡曲率強度與轉折風險動態時序...")
+_stock_title = display_stock_name if 'display_stock_name' in locals() else (_stock_code if '_stock_code' in locals() else "")
+st.markdown(f"### 📢 {_stock_title} PVCS 軌跡曲率強度與轉折風險動態時序...")
 
 # 1. 確保時序繪圖用的 DataFrame 存在 (自動對接 df_res、df 或建立模擬序列)
 plot_df = None
