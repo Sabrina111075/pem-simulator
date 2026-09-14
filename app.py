@@ -280,7 +280,7 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
         target_list = etf_stocks
 
 # 逐筆計算真實與隨機動態價差（符合台股跳動單位與 10% 漲跌幅限制）
-for item in target_list:
+    for item in target_list:
     ticker = str(item.get("ticker", "2330"))
     name = str(item.get("name", ticker))
     category = str(item.get("category", "產業夥伴"))
