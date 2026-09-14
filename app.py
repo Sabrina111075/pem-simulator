@@ -1759,7 +1759,10 @@ st.plotly_chart(fig_disk, use_container_width=True)
 st.markdown("### 📋 供應鏈與 ETF 即時行情監控")
 
 # 1. 根據側邊欄選擇的 selected_tab 取得計算後的數據
-current_tab = st.session_state.get("sb_supply_chain_tab", "雙棲核心 (11)")
+current_tab = st.session_state.get("sb_supply_chain_tab", "雙樓核心 (11)")
+selected_ticker = st.session_state.get("selected_stock_code", "2330")
+current_diff = st.session_state.get("current_diff", 0.0)
+
 display_data = get_display_dataframe(current_tab, selected_ticker, current_diff)
 
 # 2. 渲染欄位表格（加入 column_config 鎖定欄位寬度，徹底防吃字與滾動條）
