@@ -79,55 +79,54 @@ def get_dynamic_stock_price(ticker):
         "diff_percent": f"{prefix}{diff_percent:.2f}%"
     }
 
+# ============================================================================
+# 【全動態資料庫與過濾 logic】
+# ============================================================================
+
 def get_display_dataframe(selected_tab="雙棲核心 (11)"):
     data_list = []
     
-    # 1. 抓取側邊欄與即時 API 資料 (包含 current_diff: -25.00)
-    api_cache = st.session_state.get("twse_realtime_cache", {})
-    selected_ticker = st.session_state.get("selected_stock_code", "2330")
-    
-    # 從 session_state 或盤前試算模組安全取得真正的價差數值 (-25.0)
     current_diff = st.session_state.get("current_diff", -25.0)
-    
-    # 基準價格資料庫 (修正台積電等廠商之基準收盤價)
-    base_prices = {
-        "2330": 2410.0,  # 台積電 (對接下方 2385.00/价差 -25)
-        "3711": 160.0,   # 日月光投控
-        "3443": 1250.0,  # 創意
-        "3583": 420.0,   # 辛耘
-        "6223": 780.0,   # 旺矽
-        "6515": 1120.0,  # 穎崴
-        "6789": 290.0,   # 采鈺
-        "3131": 1680.0,  # 弘塑
-        "2360": 310.0,   # 致茂
-        "2467": 215.0,   # 志聖
-        "5443": 135.0    # 均豪
-    }
+    selected_ticker = st.session_state.get("selected_stock_code", "2330")
+    api_cache = st.session_state.get("twse_realtime_cache", {})
 
-    for item in STOCK_DATABASE:
-        # 2. 標的類別過濾
-        if selected_tab == "雙棲核心 (11)" and not (item["is_tsmc"] and item["is_cpo"]):
+    # 1. 雙棲核心與 ETF 基礎清單
+    base_stocks = [
+        {"ticker": "2330", "name": "台積電", "category": "Foundry / CPO平台", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 2410.0},
+        {"ticker": "3711", "name": "日月光投控", "category": "先進封裝 / OSAT", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 160.0},
+        {"ticker": "3443", "name": "創意", "category": "IC設計 / CPO整合", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 1250.0},
+        {"ticker": "3583", "name": "辛耘", "category": "濕製程設備", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 420.0},
+        {"ticker": "6223", "name": "旺矽", "category": "探針卡 / 高速測試", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 780.0},
+        {"ticker": "6515", "name": "穎崴", "category": "高頻測試座", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 1120.0},
+        {"ticker": "6789", "name": "采鈺", "category": "晶圓級微光學", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 290.0},
+        {"ticker": "3131", "name": "弘塑", "category": "先進封裝濕製程", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 1680.0},
+        {"ticker": "2360", "name": "致茂", "category": "光電特性測試設備", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 310.0},
+        {"ticker": "2467", "name": "志聖", "category": "壓合/烘烤乾燥設備", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 215.0},
+        {"ticker": "5443", "name": "均豪", "category": "自動化檢測與搬運", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 135.0},
+        # 科技 ETF (修正完整全稱，防止吃字)
+        {"ticker": "00892", "name": "富邦台灣半導體ETF", "category": "半導體 / 科技主題", "is_tsmc": False, "is_cpo": False, "is_etf": True, "base_price": 20.0},
+        {"ticker": "00891", "name": "中信關鍵半導體ETF", "category": "半導體 / ESG科技", "is_tsmc": False, "is_cpo": False, "is_etf": True, "base_price": 17.5},
+        {"ticker": "00935", "name": "野村臺灣新科技50 ETF", "category": "創新科技 50", "is_tsmc": False, "is_cpo": False, "is_etf": True, "base_price": 21.0},
+        {"ticker": "00992A", "name": "主動群益科技創新ETF", "category": "台灣AI / 科技創新", "is_tsmc": False, "is_cpo": False, "is_etf": True, "base_price": 15.0}
+    ]
+
+    # 2. 彈性選單字串過濾 (解決連動失效問題)
+    for item in base_stocks:
+        if "雙棲" in selected_tab and not (item["is_tsmc"] and item["is_cpo"]):
             continue
-        elif selected_tab == "TSMC 供應鏈 (140)" and not item["is_tsmc"]:
+        elif "TSMC" in selected_tab and not item["is_tsmc"]:
             continue
-        elif selected_tab == "CPO 聯盟 (31)" and not item["is_cpo"]:
+        elif "CPO" in selected_tab and not item["is_cpo"]:
             continue
-        elif selected_tab == "科技 ETF (4)" and not item["is_etf"]:
+        elif "ETF" in selected_tab and not item["is_etf"]:
             continue
 
         ticker = item["ticker"]
+        prev_close = item["base_price"]
         
-        # 3. 動態計算收盤價與今日開盤/盤中價
-        if ticker in api_cache:
-            prev_close = api_cache[ticker].get("prev_close", base_prices.get(ticker, 200.0))
-            open_price = api_cache[ticker].get("open_price", prev_close + current_diff)
-        else:
-            prev_close = base_prices.get(ticker, 200.0)
-            # 當前選取的標的連動左側價差 (例如 -25.00)
-            diff_offset = current_diff if ticker == selected_ticker else -5.0
-            open_price = prev_close + diff_offset
-
-        # 4. 價差與百分比計算
+        # 連動價差計算
+        diff_offset = current_diff if ticker == selected_ticker else -5.0
+        open_price = prev_close + diff_offset
         diff = open_price - prev_close
         diff_percent = (diff / prev_close * 100) if prev_close else 0.0
         prefix = "+" if diff > 0 else ""
@@ -861,15 +860,20 @@ st.markdown("### 📋 供應鏈與 ETF 即時行情監控")
 
 # 1. 根據側邊欄選擇的 selected_tab 取得計算後的數據
 current_tab = st.session_state.get("sb_supply_chain_tab", "雙棲核心 (11)")
-
 display_data = get_display_dataframe(current_tab)
 
-# 2. 渲染欄位表格
+# 2. 渲染欄位表格（加入 column_config 鎖定欄位寬度，徹底防吃字）
 st.dataframe(
     display_data, 
     use_container_width=True,
-    hide_index=True
+    hide_index=True,
+    column_config={
+        "股票代號": st.column_config.TextColumn("股票代號", width="small"),
+        "公司名稱": st.column_config.TextColumn("公司名稱", width="medium"),
+        "次領域/角色": st.column_config.TextColumn("次領域/角色", width="medium"),
+    }
 )
+
 st.markdown("---")
 
 # 4. 渲染主畫面標題
