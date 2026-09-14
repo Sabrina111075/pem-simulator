@@ -1022,15 +1022,19 @@ st.markdown("### 📋 供應鏈與 ETF 即時行情監控")
 current_tab = st.session_state.get("sb_supply_chain_tab", "雙棲核心 (11)")
 display_data = get_display_dataframe(current_tab)
 
-# 2. 渲染欄位表格（加入 column_config 鎖定欄位寬度，徹底防吃字）
+# 2. 渲染欄位表格（加入 column_config 鎖定欄位寬度，徹底防吃字與滾動條）
 st.dataframe(
-    display_data, 
+    display_data,
     use_container_width=True,
     hide_index=True,
     column_config={
         "股票代號": st.column_config.TextColumn("股票代號", width="small"),
-        "公司名稱": st.column_config.TextColumn("公司名稱", width="medium"),
+        "公司名稱": st.column_config.TextColumn("公司名稱", width="small"),
         "次領域/角色": st.column_config.TextColumn("次領域/角色", width="medium"),
+        "前一個交易日收盤價": st.column_config.TextColumn("前日收盤", width="small"),
+        "今日開盤價": st.column_config.TextColumn("今日開盤", width="small"),
+        "價差": st.column_config.TextColumn("價差", width="small"),
+        "價差 %": st.column_config.TextColumn("價差%", width="small"),
     }
 )
 
