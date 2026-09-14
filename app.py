@@ -280,55 +280,60 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
         target_list = etf_stocks
 
 # 逐筆計算真實與隨機動態價差（符合台股跳動單位與 10% 漲跌幅限制）
-    for item in target_list:
-        ticker = str(item.get("ticker", "2330"))
-        name = str(item.get("name", ticker))
-        category = str(item.get("category", "產業夥伴"))
-        prev_close = float(item.get("base_price", 200.0))
+for item in target_list:
+    ticker = str(item.get("ticker", "2330"))
+    name = str(item.get("name", ticker))
+    category = str(item.get("category", "產業夥伴"))
+    prev_close = float(item.get("base_price", 200.0))
 
-        if ticker == selected_ticker:
-            diff = current_diff
-        else:
-            # 1. 使用股票代號作為隨機種子，產生 -3.5% ~ +3.5% 之間合理的開盤波幅
-            seed_val = sum(ord(c) for c in ticker)
-            random.seed(seed_val)
-            pct_change = random.uniform(-0.035, 0.035)
-            raw_diff = prev_close * pct_change
+    # 取得當前主標的之實時大盤/個股漲跌幅比例 (若無則預設為 0.0)
+    # 這樣明天 09:00 開盤時，全供應鏈與 ETF 就會隨著 TWSE 實時 API 連動起伏！
+    base_pct = (current_diff / 2410.0) if 'current_diff' in locals() and current_diff is not None else 0.0
 
-            # 2. 根據台股股價級距計算跳動單位 (Tick Size)
-            if prev_close < 10:
-                tick = 0.01
-            elif prev_close < 50:
-                tick = 0.05
-            elif prev_close < 100:
-                tick = 0.1
-            elif prev_close < 500:
-                tick = 0.5
-            elif prev_close < 1000:
-                tick = 1.0
-            else:
-                tick = 5.0
-
-            # 3. 將價差對齊至合法 Tick，並限制最大漲跌幅在 ±10% 內
-            diff = round(raw_diff / tick) * tick
-            max_limit = round((prev_close * 0.098) / tick) * tick
-            diff = max(-max_limit, min(max_limit, diff))
-
-        open_price = prev_close + diff
-        diff_percent = (diff / prev_close * 100) if prev_close else 0.0
-        prefix = "+" if diff > 0 else ""
-
-        data_list.append({
-            "股票代號": ticker,
-            "公司名稱": name,
-            "次領域/角色": category,
-            "前一個交易日收盤價": f"{prev_close:.2f}",
-            "今日開盤價": f"{open_price:.2f}",
-            "價差": f"{prefix}{diff:.2f}",
-            "價差 %": f"{prefix}{diff_percent:.2f}%"
-        })
+    if ticker == selected_ticker:
+        diff = current_diff if 'current_diff' in locals() and current_diff is not None else 0.0
+    else:
+        # 1. 以實時盤口漲跌幅為基準，疊加個股特有微幅波動 (-1.5% ~ +1.5%)
+        seed_val = sum(ord(c) for c in ticker)
+        random.seed(seed_val)
+        individual_noise = random.uniform(-0.015, 0.015)
         
-    return data_list
+        raw_diff = prev_close * (base_pct + individual_noise)
+
+        # 2. 根據台股股價級距計算跳動單位 (Tick Size)
+        if prev_close < 10:
+            tick = 0.01
+        elif prev_close < 50:
+            tick = 0.05
+        elif prev_close < 100:
+            tick = 0.1
+        elif prev_close < 500:
+            tick = 0.5
+        elif prev_close < 1000:
+            tick = 1.0
+        else:
+            tick = 5.0
+
+        # 3. 將價差對齊至合法 Tick，並限制最大漲跌幅在 ±10% 內
+        diff = round(raw_diff / tick) * tick
+        max_limit = round((prev_close * 0.098) / tick) * tick
+        diff = max(-max_limit, min(max_limit, diff))
+
+    open_price = prev_close + diff
+    diff_percent = (diff / prev_close * 100) if prev_close else 0.0
+    prefix = "+" if diff > 0 else ""
+
+    data_list.append({
+        "股票代號": ticker,
+        "公司名稱": name,
+        "次領域/角色": category,
+        "前一個交易日收盤價": f"{prev_close:.2f}",
+        "今日開盤價": f"{open_price:.2f}",
+        "價差": f"{prefix}{diff:.2f}",
+        "價差%": f"{prefix}{diff_percent:.2f}%"
+    })
+        
+return data_list
 
 # =========================================================
 # 半導體供應鏈 140 家廠商資料庫
