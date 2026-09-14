@@ -261,10 +261,10 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
 
     # 3. 科技 ETF (4)
     etf_stocks = [
-        {"ticker": "00892", "name": "富邦台灣半導體ETF", "category": "半導體 / 科技主題", "base_price": 20.0},
-        {"ticker": "00891", "name": "中信關鍵半導體ETF", "category": "半導體 / ESG科技", "base_price": 17.5},
-        {"ticker": "00935", "name": "野村臺灣新科技50 ETF", "category": "創新科技 50", "base_price": 21.0},
-        {"ticker": "00992A", "name": "主動群益科技創新ETF", "category": "台灣AI / 科技創新", "base_price": 15.0}
+        {"ticker": "00892", "name": "富邦台灣半導體", "category": "半導體 / 科技主題", "base_price": 20.0},
+        {"ticker": "00891", "name": "中信關鍵半導體", "category": "半導體 / ESG科技", "base_price": 17.5},
+        {"ticker": "00935", "name": "野村臺灣新科技50", "category": "創新科技 50", "base_price": 21.0},
+        {"ticker": "00992A", "name": "主動群益科技創新", "category": "台灣AI / 科技創新", "base_price": 15.0}
     ]
 
     # 根據選單設定目標清單
