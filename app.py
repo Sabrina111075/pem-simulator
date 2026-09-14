@@ -195,7 +195,7 @@ CPO_31_ALLIANCE = [
 ]
 
     # 1. 雙棲核心 (11)
-    core_stocks = [
+core_stocks = [
         {"ticker": "2330", "name": "台積電", "category": "Foundry / CPO平台", "base_price": 2410.0},
         {"ticker": "3711", "name": "日月光投控", "category": "先進封裝 / OSAT", "base_price": 160.0},
         {"ticker": "3443", "name": "創意", "category": "IC設計 / CPO整合", "base_price": 1250.0},
@@ -209,8 +209,8 @@ CPO_31_ALLIANCE = [
         {"ticker": "5443", "name": "均豪", "category": "自動化檢測與搬運", "base_price": 135.0}
     ]
 
-    # 2. CPO 聯盟 (31)
-    cpo_stocks = [
+# 2. CPO 聯盟 (31)
+cpo_stocks = [
         # 矽光子平台與晶圓代工/封測/ASIC
         {"ticker": "2330", "name": "台積電", "category": "CPO 矽光子晶圓代工平台", "base_price": 2410.0},
         {"ticker": "3711", "name": "日月光投控", "category": "CPO 先進封裝 / VIPox", "base_price": 160.0},
@@ -254,7 +254,7 @@ CPO_31_ALLIANCE = [
     ]
 
     # 3. 科技 ETF (4)
-    etf_stocks = [
+etf_stocks = [
         {"ticker": "00892", "name": "富邦台灣半導體", "category": "半導體 / 科技主題", "base_price": 20.0},
         {"ticker": "00891", "name": "中信關鍵半導體", "category": "半導體 / ESG科技", "base_price": 17.5},
         {"ticker": "00935", "name": "野村臺灣新科技50", "category": "創新科技 50", "base_price": 21.0},
