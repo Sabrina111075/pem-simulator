@@ -262,9 +262,11 @@ etf_stocks = [
     ]
 
 def get_display_dataframe(selected_tab, selected_ticker=None, current_diff=None):
-    # 防呆機制：若傳入 None 則從 session_state 自動補抓最新即時狀態
+    # 防呆與清理：確保 selected_ticker 只保留數字代號 (例如將 "2330 台積電 [TW]" 轉為 "2330")
     if selected_ticker is None:
         selected_ticker = st.session_state.get("selected_stock_code", "2330")
+    clean_ticker = str(selected_ticker).split()[0] if selected_ticker else "2330"
+
     if current_diff is None:
         current_diff = st.session_state.get("current_diff", -30.0)
 
@@ -291,7 +293,8 @@ def get_display_dataframe(selected_tab, selected_ticker=None, current_diff=None)
         category = str(item.get("category", "產業夥伴"))
         prev_close = float(item.get("base_price", 200.0))
 
-        if ticker == selected_ticker:
+        # 這裡改用 clean_ticker 比對純數字代號
+        if ticker == clean_ticker:
             diff = float(current_diff) if current_diff is not None else 0.0
         else:
             seed_val = sum(ord(c) for c in ticker)
