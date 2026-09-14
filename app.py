@@ -51,7 +51,7 @@ def calculate_market_metrics(item):
         "diff_percent": f"{prefix}{diff_percent:.2f}%"
     }
 
-def get_display_dataframe(selected_tab):
+def get_display_dataframe(selected_tab="雙棲核心 (11)"):
     data_list = []
     for item in STOCK_DATABASE:
         if selected_tab == "雙棲核心 (11)" and not (item["is_tsmc"] and item["is_cpo"]):
@@ -803,7 +803,9 @@ st.markdown(
 st.markdown("### 📋 供應鏈與 ETF 即時行情監控")
 
 # 1. 根據側邊欄選擇的 selected_tab 取得計算後的數據
-display_data = get_display_dataframe(selected_tab)
+current_tab = st.session_state.get("sb_supply_chain_tab", "雙棲核心 (11)")
+
+display_data = get_display_dataframe(current_tab)
 
 # 2. 渲染欄位表格
 st.dataframe(
