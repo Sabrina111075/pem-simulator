@@ -10,6 +10,71 @@ import pytz
 import requests
 from streamlit_autorefresh import st_autorefresh
 
+# ============================================================================
+# 【獨立資料處理與計算核心區塊】
+# 說明：集中管理供應鏈清單、預設價格資料與開盤/前收價差計算公式
+# ============================================================================
+
+STOCK_DATABASE = [
+    {"ticker": "2330", "name": "台積電", "category": "Foundry / CPO平台", "is_tsmc": True, "is_cpo": True, "is_etf": False, "prev_close": 980.0, "open": 995.0},
+    {"ticker": "3711", "name": "日月光投控", "category": "先進封裝 / OSAT", "is_tsmc": True, "is_cpo": True, "is_etf": False, "prev_close": 155.0, "open": 153.5},
+    {"ticker": "3443", "name": "創意", "category": "IC設計 / CPO整合", "is_tsmc": True, "is_cpo": True, "is_etf": False, "prev_close": 1250.0, "open": 1250.0},
+    {"ticker": "3583", "name": "辛耘", "category": "濕製程設備", "is_tsmc": True, "is_cpo": True, "is_etf": False, "prev_close": 420.0, "open": 435.0},
+    {"ticker": "6223", "name": "旺矽", "category": "探針卡 / 高速測試", "is_tsmc": True, "is_cpo": True, "is_etf": False, "prev_close": 780.0, "open": 792.0},
+    {"ticker": "6515", "name": "穎崴", "category": "高頻測試座", "is_tsmc": True, "is_cpo": True, "is_etf": False, "prev_close": 1120.0, "open": 1100.0},
+    {"ticker": "6789", "name": "采鈺", "category": "晶圓級微光學", "is_tsmc": True, "is_cpo": True, "is_etf": False, "prev_close": 290.0, "open": 295.5},
+    {"ticker": "3131", "name": "弘塑", "category": "先進封裝濕製程", "is_tsmc": True, "is_cpo": True, "is_etf": False, "prev_close": 1680.0, "open": 1710.0},
+    {"ticker": "2360", "name": "致茂", "category": "光電特性測試設備", "is_tsmc": True, "is_cpo": True, "is_etf": False, "prev_close": 310.0, "open": 308.0},
+    {"ticker": "2467", "name": "志聖", "category": "壓合/烘烤乾燥設備", "is_tsmc": True, "is_cpo": True, "is_etf": False, "prev_close": 215.0, "open": 222.0},
+    {"ticker": "5443", "name": "均豪", "category": "自動化檢測與搬運", "is_tsmc": True, "is_cpo": True, "is_etf": False, "prev_close": 135.0, "open": 135.0},
+    {"ticker": "00892", "name": "富邦台灣半導體", "category": "半導體 / 科技主題", "is_tsmc": False, "is_cpo": False, "is_etf": True, "prev_close": 19.8, "open": 20.1},
+    {"ticker": "00891", "name": "中信關鍵半導體", "category": "半導體 / ESG科技", "is_tsmc": False, "is_cpo": False, "is_etf": True, "prev_close": 17.5, "open": 17.65},
+    {"ticker": "00935", "name": "野村臺灣新科技50", "category": "創新科技 50", "is_tsmc": False, "is_cpo": False, "is_etf": True, "prev_close": 21.2, "open": 21.0},
+    {"ticker": "00992A", "name": "主動群益科技創新", "category": "台灣AI / 科技創新", "is_tsmc": False, "is_cpo": False, "is_etf": True, "prev_close": 15.0, "open": 15.2}
+]
+
+def calculate_market_metrics(item):
+    prev_close = item.get("prev_close")
+    open_price = item.get("open")
+    
+    if prev_close is None or open_price is None or prev_close == 0:
+        return {"prev_close": "--", "open": "--", "diff": "--", "diff_percent": "--%"}
+        
+    diff = open_price - prev_close
+    diff_percent = (diff / prev_close) * 100
+    prefix = "+" if diff > 0 else ""
+    
+    return {
+        "prev_close": f"{prev_close:.2f}",
+        "open": f"{open_price:.2f}",
+        "diff": f"{prefix}{diff:.2f}",
+        "diff_percent": f"{prefix}{diff_percent:.2f}%"
+    }
+
+def get_display_dataframe(selected_tab):
+    data_list = []
+    for item in STOCK_DATABASE:
+        if selected_tab == "雙棲核心 (11)" and not (item["is_tsmc"] and item["is_cpo"]):
+            continue
+        elif selected_tab == "TSMC 供應鏈 (140)" and not item["is_tsmc"]:
+            continue
+        elif selected_tab == "CPO 聯盟 (31)" and not item["is_cpo"]:
+            continue
+        elif selected_tab == "科技 ETF (4)" and not item["is_etf"]:
+            continue
+            
+        metrics = calculate_market_metrics(item)
+        data_list.append({
+            "股票代號": item["ticker"],
+            "公司名稱": item["name"],
+            "次領域/角色": item["category"],
+            "前一個交易日收盤價": metrics["prev_close"],
+            "今日開盤價": metrics["open"],
+            "價差": metrics["diff"],
+            "價差 %": metrics["diff_percent"]
+        })
+    return data_list
+
 # =========================================================
 # 半導體供應鏈 140 家廠商資料庫
 # =========================================================
