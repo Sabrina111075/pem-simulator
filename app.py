@@ -1040,33 +1040,6 @@ if " " in display_stock_name:
     if len(parts) >= 2 and parts[0] == parts[1]:
         clean_display_name = " ".join(parts[1:])
 
-# ============================================================================
-# ➕ 新增：右側主畫面 - 供應鏈與 ETF 表格渲染
-# ============================================================================
-st.markdown("### 📋 供應鏈與 ETF 即時行情監控")
-
-# 1. 根據側邊欄選擇的 selected_tab 取得計算後的數據
-current_tab = st.session_state.get("sb_supply_chain_tab", "雙棲核心 (11)")
-display_data = get_display_dataframe(current_tab)
-
-# 2. 渲染欄位表格（加入 column_config 鎖定欄位寬度，徹底防吃字與滾動條）
-st.dataframe(
-    display_data,
-    use_container_width=True,
-    hide_index=True,
-    column_config={
-        "股票代號": st.column_config.TextColumn("股票代號", width="small"),
-        "公司名稱": st.column_config.TextColumn("公司名稱", width="small"),
-        "次領域/角色": st.column_config.TextColumn("次領域/角色", width="medium"),
-        "前一個交易日收盤價": st.column_config.TextColumn("前日收盤", width="small"),
-        "今日開盤價": st.column_config.TextColumn("今日開盤", width="small"),
-        "價差": st.column_config.TextColumn("價差", width="small"),
-        "價差 %": st.column_config.TextColumn("價差%", width="small"),
-    }
-)
-
-st.markdown("---")
-
 # 4. 渲染主畫面標題
 st.markdown(
     f"""
@@ -1778,6 +1751,33 @@ with st.popover("ℹ️ 雙曲狀態圓盤 (PVCS) 與 Risk 色柱說明"):
 
 # 原本圖表渲染
 st.plotly_chart(fig_disk, use_container_width=True)
+
+# ============================================================================
+# ➕ 新增：右側主畫面 - 供應鏈與 ETF 表格渲染
+# ============================================================================
+st.markdown("### 📋 供應鏈與 ETF 即時行情監控")
+
+# 1. 根據側邊欄選擇的 selected_tab 取得計算後的數據
+current_tab = st.session_state.get("sb_supply_chain_tab", "雙棲核心 (11)")
+display_data = get_display_dataframe(current_tab)
+
+# 2. 渲染欄位表格（加入 column_config 鎖定欄位寬度，徹底防吃字與滾動條）
+st.dataframe(
+    display_data,
+    use_container_width=True,
+    hide_index=True,
+    column_config={
+        "股票代號": st.column_config.TextColumn("股票代號", width="small"),
+        "公司名稱": st.column_config.TextColumn("公司名稱", width="small"),
+        "次領域/角色": st.column_config.TextColumn("次領域/角色", width="medium"),
+        "前一個交易日收盤價": st.column_config.TextColumn("前日收盤", width="small"),
+        "今日開盤價": st.column_config.TextColumn("今日開盤", width="small"),
+        "價差": st.column_config.TextColumn("價差", width="small"),
+        "價差 %": st.column_config.TextColumn("價差%", width="small"),
+    }
+)
+
+st.markdown("---")
 
 # =========================================================
 # 插入：數位分身 10 步價格模擬與風險區間
