@@ -274,7 +274,7 @@ def get_display_dataframe(selected_tab, selected_ticker=None, current_diff=None)
     if "雙樓" in selected_tab or "11" in selected_tab:
         target_list = core_stocks
     elif "TSMC" in selected_tab or "140" in selected_tab:
-        target_list = tsmc_stocks
+        target_list = TSMC_140_SUPPLY_CHAIN
     elif "CPO" in selected_tab or "31" in selected_tab:
         target_list = cpo_stocks
     elif "ETF" in selected_tab or "4" in selected_tab:
