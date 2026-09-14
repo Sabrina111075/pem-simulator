@@ -1,5 +1,6 @@
 ﻿from dmec_27state_component import render_dmec_27state_dashboard
 import streamlit as st
+import random
 import streamlit.components.v1 as components
 import numpy as np
 import pandas as pd
