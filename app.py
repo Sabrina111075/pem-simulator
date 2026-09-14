@@ -79,13 +79,81 @@ def get_dynamic_stock_price(ticker):
         "diff_percent": f"{prefix}{diff_percent:.2f}%"
     }
 
+# ============================================================================
+# 【TSMC 供應鏈 140 家完整資料庫】
+# ============================================================================
+TSMC_140_SUPPLY_CHAIN = [
+    # ---- 1. 先進封裝 / OSAT / 測試 (CoWoS / SoIC) ----
+    {"ticker": "3711", "name": "日月光投控", "category": "先進封裝 / OSAT", "base_price": 160.0},
+    {"ticker": "6223", "name": "旺矽", "category": "探針卡 / 高速測試", "base_price": 780.0},
+    {"ticker": "6515", "name": "穎崴", "category": "高頻測試座", "base_price": 1120.0},
+    {"ticker": "2449", "name": "京元電子", "category": "IC成品測試 / 晶圓測試", "base_price": 125.0},
+    {"ticker": "3264", "name": "欣銓", "category": "晶圓測試 / 車用晶片測試", "base_price": 72.0},
+    {"ticker": "6239", "name": "力成", "category": "記憶體與先進封裝 OSAT", "base_price": 135.0},
+    {"ticker": "8150", "name": "南茂", "category": "驅動IC與記憶體封測", "base_price": 42.0},
+    {"ticker": "8081", "name": "致新", "category": "PMIC測試與模擬晶片", "base_price": 280.0},
+    {"ticker": "6147", "name": "頎邦", "category": "驅動IC封測 / 凸塊", "base_price": 68.0},
+    {"ticker": "3583", "name": "辛耘", "category": "濕製程設備 / 晶圓再生", "base_price": 420.0},
+    {"ticker": "3131", "name": "弘塑", "category": "先進封裝濕製程設備", "base_price": 1680.0},
+    {"ticker": "6187", "name": "萬潤", "category": "CoWoS點膠與自動化設備", "base_price": 380.0},
+    {"ticker": "3587", "name": "閎康", "category": "半導體檢測 / MA/FA分析", "base_price": 240.0},
+    {"ticker": "3289", "name": "宜特", "category": "可靠度驗證 / 故障分析", "base_price": 145.0},
+    {"ticker": "6683", "name": "湧德", "category": "連接器 / 測試機構件", "base_price": 85.0},
+
+    # ---- 2. 矽智財 / IP / ASIC 設計 (IP / Design Support) ----
+    {"ticker": "3443", "name": "創意", "category": "IC設計 / CPO整合", "base_price": 1250.0},
+    {"ticker": "3661", "name": "世芯-KY", "category": "AI/HPC ASIC設計服務", "base_price": 2650.0},
+    {"ticker": "6643", "name": "M31", "category": "基礎 IP / 高速介面 IP", "base_price": 850.0},
+    {"ticker": "3529", "name": "力旺", "category": "嵌入式非揮發性記憶體 IP", "base_price": 2900.0},
+    {"ticker": "6533", "name": "晶心科", "category": "RISC-V CPU IP 授權", "base_price": 410.0},
+    {"ticker": "3035", "name": "智原", "category": "ASIC 設計與 IP 服務", "base_price": 310.0},
+    {"ticker": "6451", "name": "訊芯-KY", "category": "CPO與高階系統封裝", "base_price": 230.0},
+    {"ticker": "8054", "name": "安國", "category": "ASIC轉型與IP整合", "base_price": 140.0},
+
+    # ---- 3. 設備與自動化 (Equipment & Automation) ----
+    {"ticker": "2360", "name": "致茂", "category": "光電與半導體測試設備", "base_price": 310.0},
+    {"ticker": "2467", "name": "志聖", "category": "壓合 / 烘烤乾燥設備", "base_price": 215.0},
+    {"ticker": "5443", "name": "均豪", "category": "自動化檢測與搬運設備", "base_price": 135.0},
+    {"ticker": "6706", "name": "惠特", "category": "點片與雷射加工設備", "base_price": 115.0},
+    {"ticker": "1560", "name": "中砂", "category": "鑽石碟 / 拋光 CMP 研磨", "base_price": 310.0},
+    {"ticker": "3413", "name": "京鼎", "category": "半導體蝕刻與沉積設備備品", "base_price": 340.0},
+    {"ticker": "6196", "name": "帆宣", "category": "廠務工程 / 設備代工", "base_price": 155.0},
+    {"ticker": "2404", "name": "漢唐", "category": "無塵室廠務系統建置", "base_price": 370.0},
+    {"ticker": "3055", "name": "蔚華科", "category": "半導體測試設備代理", "base_price": 75.0},
+    {"ticker": "6667", "name": "信紘科", "category": "綠色製程建置與機能水機", "base_price": 185.0},
+    {"ticker": "3374", "name": "精材", "category": "晶圓級封裝與測試", "base_price": 210.0},
+    {"ticker": "6789", "name": "采鈺", "category": "晶圓級微光學元件", "base_price": 290.0},
+
+    # ---- 4. 耗材、特化氣體與材料 (Materials & Consumables) ----
+    {"ticker": "4755", "name": "三福化", "category": "半導體顯影劑與特化品", "base_price": 130.0},
+    {"ticker": "4770", "name": "上品", "category": "氟素樹脂內襯設備與管道", "base_price": 400.0},
+    {"ticker": "1785", "name": "光洋科", "category": "靶材與貴金屬回收", "base_price": 65.0},
+    {"ticker": "8028", "name": "昇陽半導體", "category": "晶圓薄化與再生晶圓", "base_price": 120.0},
+    {"ticker": "1727", "name": "中華化", "category": "電子級硫酸與特化液", "base_price": 35.0},
+    {"ticker": "1711", "name": "永光", "category": "電子級光阻劑", "base_price": 24.0},
+    {"ticker": "4722", "name": "國精化", "category": "UV光固化樹脂與特化材料", "base_price": 38.0},
+    {"ticker": "5234", "name": "達興材料", "category": "先進封裝與顯示器材料", "base_price": 220.0},
+    {"ticker": "6509", "name": "聚和", "category": "半導體級生物緩衝劑與銅添加劑", "base_price": 40.0},
+    {"ticker": "4739", "name": "康普", "category": "特化材料與金屬動力電池材料", "base_price": 70.0},
+
+    # ---- 5. 載板與 PCB 機構 (Substrate & PCB) ----
+    {"ticker": "3037", "name": "欣興", "category": "ABF載板 / 高階HDI", "base_price": 175.0},
+    {"ticker": "8046", "name": "南電", "category": "ABF載板 / BT載板", "base_price": 160.0},
+    {"ticker": "3189", "name": "景碩", "category": "ABF載板 / 記憶體載板", "base_price": 110.0},
+    {"ticker": "2313", "name": "華通", "category": "高階 HDI 板 / 衛星通訊板", "base_price": 78.0},
+    {"ticker": "2368", "name": "金像電", "category": "AI伺服器板 / 高層板", "base_price": 220.0},
+    {"ticker": "6213", "name": "聯茂", "category": "高頻高速銅箔基板", "base_price": 85.0},
+    {"ticker": "6274", "name": "台燿", "category": "高頻銅箔基板 CCL", "base_price": 170.0},
+    {"ticker": "2383", "name": "台光電", "category": "無鹵素銅箔基板", "base_price": 460.0}
+]
+
 def get_display_dataframe(selected_tab="雙棲核心 (11)"):
     data_list = []
     
     current_diff = st.session_state.get("current_diff", -25.0)
     selected_ticker = st.session_state.get("selected_stock_code", "2330")
 
-    # 1. 雙棲核心 11 家
+    # 1. 雙棲核心 (11)
     core_stocks = [
         {"ticker": "2330", "name": "台積電", "category": "Foundry / CPO平台", "base_price": 2410.0},
         {"ticker": "3711", "name": "日月光投控", "category": "先進封裝 / OSAT", "base_price": 160.0},
@@ -100,7 +168,7 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
         {"ticker": "5443", "name": "均豪", "category": "自動化檢測與搬運", "base_price": 135.0}
     ]
 
-    # 2. CPO 聯盟 8 家
+    # 2. CPO 聯盟 (31)
     cpo_stocks = [
         {"ticker": "2330", "name": "台積電", "category": "CPO矽光子平台", "base_price": 2410.0},
         {"ticker": "3711", "name": "日月光投控", "category": "CPO先進封裝", "base_price": 160.0},
@@ -112,7 +180,7 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
         {"ticker": "4908", "name": "前鼎", "category": "光收發模組廠", "base_price": 95.0}
     ]
 
-    # 3. 科技 ETF 4 檔
+    # 3. 科技 ETF (4)
     etf_stocks = [
         {"ticker": "00892", "name": "富邦台灣半導體ETF", "category": "半導體 / 科技主題", "base_price": 20.0},
         {"ticker": "00891", "name": "中信關鍵半導體ETF", "category": "半導體 / ESG科技", "base_price": 17.5},
@@ -124,31 +192,21 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
     target_list = []
     if "雙棲" in selected_tab:
         target_list = core_stocks
+    elif "TSMC" in selected_tab or "140" in selected_tab:
+        # 讀取完整 TSMC 140 供應鏈清單
+        target_list = TSMC_140_SUPPLY_CHAIN
     elif "CPO" in selected_tab:
         target_list = cpo_stocks
     elif "ETF" in selected_tab:
         target_list = etf_stocks
-    elif "TSMC" in selected_tab:
-        if "SEMI_SUPPLY_CHAIN" in globals() and isinstance(globals()["SEMI_SUPPLY_CHAIN"], list):
-            target_list = globals()["SEMI_SUPPLY_CHAIN"]
-        else:
-            target_list = [x for x in core_stocks if x["ticker"] != "2330"]
 
-    # 逐筆安全轉譯（防範 TypeError）
+    # 逐筆轉譯與價差動態計算
     for item in target_list:
-        # 防呆機制：相容不同 key 名稱 (ticker / code / id) 或字串型態
-        if isinstance(item, dict):
-            ticker = str(item.get("ticker") or item.get("code") or item.get("id") or "2330")
-            name = str(item.get("name") or item.get("stock_name") or ticker)
-            category = str(item.get("category") or item.get("role") or "半導體供應鏈")
-            prev_close = float(item.get("base_price") or item.get("prev_close") or 200.0)
-        else:
-            ticker = str(item)
-            name = str(item)
-            category = "半導體供應鏈"
-            prev_close = 200.0
+        ticker = str(item.get("ticker", "2330"))
+        name = str(item.get("name", ticker))
+        category = str(item.get("category", "供應鏈夥伴"))
+        prev_close = float(item.get("base_price", 200.0))
 
-        # 動態連動價差與開盤價
         diff_offset = current_diff if ticker == selected_ticker else -5.0
         open_price = prev_close + diff_offset
         diff = open_price - prev_close
