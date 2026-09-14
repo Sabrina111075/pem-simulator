@@ -785,18 +785,6 @@ if " " in display_stock_name:
     if len(parts) >= 2 and parts[0] == parts[1]:
         clean_display_name = " ".join(parts[1:])
 
-# 4. 渲染主畫面標題
-st.markdown(
-    f"""
-    <div style="margin-top: 10px; margin-bottom: 16px;">
-        <h3 style="font-size: 22px; font-weight: 600; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
-            📊 市場實時行情與 P/V/C 數據 <span style="font-size: 16px; color: #64748b; font-weight: normal;">（標的：{clean_display_name}）</span>
-        </h3>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
 # ============================================================================
 # ➕ 新增：右側主畫面 - 供應鏈與 ETF 表格渲染
 # ============================================================================
@@ -814,6 +802,18 @@ st.dataframe(
     hide_index=True
 )
 st.markdown("---")
+
+# 4. 渲染主畫面標題
+st.markdown(
+    f"""
+    <div style="margin-top: 10px; margin-bottom: 16px;">
+        <h3 style="font-size: 22px; font-weight: 600; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+            📊 市場實時行情與 P/V/C 數據 <span style="font-size: 16px; color: #64748b; font-weight: normal;">（標的：{clean_display_name}）</span>
+        </h3>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # =========================================================
 # B. 側邊欄：盤前試算自動連動（定義函數，延遲渲染）
