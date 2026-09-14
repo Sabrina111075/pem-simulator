@@ -90,41 +90,62 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
     selected_ticker = st.session_state.get("selected_stock_code", "2330")
     api_cache = st.session_state.get("twse_realtime_cache", {})
 
-    # 1. 雙棲核心與 ETF 基礎清單
-    base_stocks = [
-        {"ticker": "2330", "name": "台積電", "category": "Foundry / CPO平台", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 2410.0},
-        {"ticker": "3711", "name": "日月光投控", "category": "先進封裝 / OSAT", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 160.0},
-        {"ticker": "3443", "name": "創意", "category": "IC設計 / CPO整合", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 1250.0},
-        {"ticker": "3583", "name": "辛耘", "category": "濕製程設備", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 420.0},
-        {"ticker": "6223", "name": "旺矽", "category": "探針卡 / 高速測試", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 780.0},
-        {"ticker": "6515", "name": "穎崴", "category": "高頻測試座", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 1120.0},
-        {"ticker": "6789", "name": "采鈺", "category": "晶圓級微光學", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 290.0},
-        {"ticker": "3131", "name": "弘塑", "category": "先進封裝濕製程", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 1680.0},
-        {"ticker": "2360", "name": "致茂", "category": "光電特性測試設備", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 310.0},
-        {"ticker": "2467", "name": "志聖", "category": "壓合/烘烤乾燥設備", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 215.0},
-        {"ticker": "5443", "name": "均豪", "category": "自動化檢測與搬運", "is_tsmc": True, "is_cpo": True, "is_etf": False, "base_price": 135.0},
-        # 科技 ETF (修正完整全稱，防止吃字)
-        {"ticker": "00892", "name": "富邦台灣半導體ETF", "category": "半導體 / 科技主題", "is_tsmc": False, "is_cpo": False, "is_etf": True, "base_price": 20.0},
-        {"ticker": "00891", "name": "中信關鍵半導體ETF", "category": "半導體 / ESG科技", "is_tsmc": False, "is_cpo": False, "is_etf": True, "base_price": 17.5},
-        {"ticker": "00935", "name": "野村臺灣新科技50 ETF", "category": "創新科技 50", "is_tsmc": False, "is_cpo": False, "is_etf": True, "base_price": 21.0},
-        {"ticker": "00992A", "name": "主動群益科技創新ETF", "category": "台灣AI / 科技創新", "is_tsmc": False, "is_cpo": False, "is_etf": True, "base_price": 15.0}
+    # 1. 雙棲核心 11 家
+    core_stocks = [
+        {"ticker": "2330", "name": "台積電", "category": "Foundry / CPO平台", "base_price": 2410.0},
+        {"ticker": "3711", "name": "日月光投控", "category": "先進封裝 / OSAT", "base_price": 160.0},
+        {"ticker": "3443", "name": "創意", "category": "IC設計 / CPO整合", "base_price": 1250.0},
+        {"ticker": "3583", "name": "辛耘", "category": "濕製程設備", "base_price": 420.0},
+        {"ticker": "6223", "name": "旺矽", "category": "探針卡 / 高速測試", "base_price": 780.0},
+        {"ticker": "6515", "name": "穎崴", "category": "高頻測試座", "base_price": 1120.0},
+        {"ticker": "6789", "name": "采鈺", "category": "晶圓級微光學", "base_price": 290.0},
+        {"ticker": "3131", "name": "弘塑", "category": "先進封裝濕製程", "base_price": 1680.0},
+        {"ticker": "2360", "name": "致茂", "category": "光電特性測試設備", "base_price": 310.0},
+        {"ticker": "2467", "name": "志聖", "category": "壓合/烘烤乾燥設備", "base_price": 215.0},
+        {"ticker": "5443", "name": "均豪", "category": "自動化檢測與搬運", "base_price": 135.0}
     ]
 
-    # 2. 彈性選單字串過濾 (解決連動失效問題)
-    for item in base_stocks:
-        if "雙棲" in selected_tab and not (item["is_tsmc"] and item["is_cpo"]):
-            continue
-        elif "TSMC" in selected_tab and not item["is_tsmc"]:
-            continue
-        elif "CPO" in selected_tab and not item["is_cpo"]:
-            continue
-        elif "ETF" in selected_tab and not item["is_etf"]:
-            continue
+    # 2. CPO 聯盟 (示範延伸廠商)
+    cpo_stocks = [
+        {"ticker": "2330", "name": "台積電", "category": "CPO矽光子平台", "base_price": 2410.0},
+        {"ticker": "3711", "name": "日月光投控", "category": "CPO先進封裝", "base_price": 160.0},
+        {"ticker": "3443", "name": "創意", "category": "CPO ASIC設計", "base_price": 1250.0},
+        {"ticker": "4977", "name": "眾達-KY", "category": "光收發模組", "base_price": 110.0},
+        {"ticker": "3363", "name": "上詮", "category": "光纖陣列通道", "base_price": 210.0},
+        {"ticker": "6451", "name": "訊芯-KY", "category": "CPO模組封裝", "base_price": 230.0},
+        {"ticker": "3234", "name": "光環", "category": "光電半導體元件", "base_price": 45.0},
+        {"ticker": "4908", "name": "前鼎", "category": "光收發模組廠", "base_price": 95.0}
+    ]
 
+    # 3. 科技 ETF 4 檔
+    etf_stocks = [
+        {"ticker": "00892", "name": "富邦台灣半導體ETF", "category": "半導體 / 科技主題", "base_price": 20.0},
+        {"ticker": "00891", "name": "中信關鍵半導體ETF", "category": "半導體 / ESG科技", "base_price": 17.5},
+        {"ticker": "00935", "name": "野村臺灣新科技50 ETF", "category": "創新科技 50", "base_price": 21.0},
+        {"ticker": "00992A", "name": "主動群益科技創新ETF", "category": "台灣AI / 科技創新", "base_price": 15.0}
+    ]
+
+    # 根據選單切換對應的資料來源
+    target_list = []
+    if "雙棲" in selected_tab:
+        target_list = core_stocks
+    elif "CPO" in selected_tab:
+        target_list = cpo_stocks
+    elif "ETF" in selected_tab:
+        target_list = etf_stocks
+    elif "TSMC" in selected_tab:
+        # 若系統全域有 SEMI_SUPPLY_CHAIN，優先讀取，否則載入供應鏈陣列
+        if "SEMI_SUPPLY_CHAIN" in globals():
+            target_list = globals()["SEMI_SUPPLY_CHAIN"]
+        else:
+            # 沒讀到全域資料庫時的備用呈現 (扣除台積電本體)
+            target_list = [x for x in core_stocks if x["ticker"] != "2330"]
+
+    # 動態計算價格與價差
+    for item in target_list:
         ticker = item["ticker"]
-        prev_close = item["base_price"]
+        prev_close = item.get("base_price", item.get("prev_close", 200.0))
         
-        # 連動價差計算
         diff_offset = current_diff if ticker == selected_ticker else -5.0
         open_price = prev_close + diff_offset
         diff = open_price - prev_close
@@ -134,7 +155,7 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
         data_list.append({
             "股票代號": ticker,
             "公司名稱": item["name"],
-            "次領域/角色": item["category"],
+            "次領域/角色": item.get("category", "供應鏈夥伴"),
             "前一個交易日收盤價": f"{prev_close:.2f}",
             "今日開盤價": f"{open_price:.2f}",
             "價差": f"{prefix}{diff:.2f}",
