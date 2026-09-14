@@ -147,6 +147,52 @@ TSMC_140_SUPPLY_CHAIN = [
     {"ticker": "2383", "name": "台光電", "category": "無鹵素銅箔基板", "base_price": 460.0}
 ]
 
+# ============================================================================
+# 【CPO 矽光子聯盟 31 家完整資料庫】
+# ============================================================================
+CPO_31_ALLIANCE = [
+    # 矽光子平台與晶圓代工/封測/ASIC
+    {"ticker": "2330", "name": "台積電", "category": "CPO 矽光子晶圓代工平台", "base_price": 2410.0},
+    {"ticker": "3711", "name": "日月光投控", "category": "CPO 先進封裝 / VIPox", "base_price": 160.0},
+    {"ticker": "3443", "name": "創意", "category": "CPO ASIC 設計與 IP 整合", "base_price": 1250.0},
+    {"ticker": "3661", "name": "世芯-KY", "category": "HPC / CPO 關鍵架構設計", "base_price": 2650.0},
+    {"ticker": "6451", "name": "訊芯-KY", "category": "CPO 模組與光學封裝", "base_price": 230.0},
+    {"ticker": "3374", "name": "精材", "category": "晶圓級微光學與測試", "base_price": 210.0},
+    
+    # 光收發模組 / 光纖陣列 / 關鍵連接元件
+    {"ticker": "4977", "name": "眾達-KY", "category": "CPO 外部雷射源 / 光收發模組", "base_price": 110.0},
+    {"ticker": "3363", "name": "上詮", "category": "FAU 光纖陣列通道連接器", "base_price": 210.0},
+    {"ticker": "3234", "name": "光環", "category": "光電半導體 LD/PD 晶粒", "base_price": 45.0},
+    {"ticker": "4908", "name": "前鼎", "category": "高速光收發模組製造", "base_price": 95.0},
+    {"ticker": "3081", "name": "聯亞", "category": "CPO 磊晶片 / 磷化銦 InP 晶粒", "base_price": 320.0},
+    {"ticker": "3450", "name": "聯鈞", "category": "雷射二極體封測 / CPO 封裝", "base_price": 220.0},
+    {"ticker": "3163", "name": "波若威", "category": "WDM 光加減複用器 / 密波技術", "base_price": 105.0},
+    {"ticker": "4979", "name": "華星光", "category": "CPO 光學晶片代工與封裝", "base_price": 145.0},
+    {"ticker": "6234", "name": "高陞", "category": "高頻元件與光通訊模組", "base_price": 65.0},
+
+    # 檢測設備 / 測試座 / 光學驗證設備
+    {"ticker": "2360", "name": "致茂", "category": "CPO 光電特性與量測設備", "base_price": 310.0},
+    {"ticker": "6223", "name": "旺矽", "category": "CPO 晶圓級光電測試探針卡", "base_price": 780.0},
+    {"ticker": "6515", "name": "穎崴", "category": "高頻高寬帶測試座", "base_price": 1120.0},
+    {"ticker": "6706", "name": "惠特", "category": "CPO 雷射點測與量測系統", "base_price": 115.0},
+    {"ticker": "3587", "name": "閎康", "category": "矽光子材料分析 MA 與 FA", "base_price": 240.0},
+    {"ticker": "3289", "name": "宜特", "category": "CPO 訊號完整性驗證", "base_price": 145.0},
+
+    # 晶圓級光學與材料 / 模組耗材
+    {"ticker": "6789", "name": "采鈺", "category": "晶圓級微鏡與微光學 (DOE)", "base_price": 290.0},
+    {"ticker": "5234", "name": "達興材料", "category": "CPO 光學封裝膠材", "base_price": 220.0},
+    {"ticker": "3583", "name": "辛耘", "category": "光學晶圓濕製程設備", "base_price": 420.0},
+    {"ticker": "3131", "name": "弘塑", "category": "矽光子蝕刻與洗淨設備", "base_price": 1680.0},
+    
+    # 系統整合 / 交換器 / 網通機構件
+    {"ticker": "2345", "name": "智邦", "category": "800G/1.6T CPO 網路交換器", "base_price": 580.0},
+    {"ticker": "3704", "name": "合勤控", "category": "光纖網路系統整合", "base_price": 42.0},
+    {"ticker": "2317", "name": "鴻海", "category": "CPO 高速交換器製造與組裝", "base_price": 180.0},
+    {"ticker": "2382", "name": "廣達", "category": "CPO AI 伺服器機櫃整合", "base_price": 270.0},
+    {"ticker": "3231", "name": "緯創", "category": "CPO HPC 計算模組系統", "base_price": 115.0},
+    {"ticker": "6669", "name": "緯穎", "category": "超大規模資料中心 CPO 伺服器", "base_price": 2100.0}
+]
+
 def get_display_dataframe(selected_tab="雙棲核心 (11)"):
     data_list = []
     
