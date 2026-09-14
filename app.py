@@ -264,17 +264,15 @@ etf_stocks = [
 def get_display_dataframe(selected_tab, selected_ticker, current_diff):
     data_list = []
     
-    # 根據選取的 Tab 設定對應的清單
+    # ✅ 請改成正確的資料庫變數名稱 core_stocks：
     if "雙樓" in selected_tab or "11" in selected_tab:
-        target_list = twin_tower_stocks
-    elif "TSMC" in selected_tab or "140" in selected_tab:
-        target_list = tsmc_stocks
+        target_list = core_stocks
     elif "CPO" in selected_tab or "31" in selected_tab:
         target_list = cpo_stocks
-    elif "ETF" in selected_tab:
+    elif "ETF" in selected_tab or "4" in selected_tab:
         target_list = etf_stocks
     else:
-        target_list = twin_tower_stocks
+        target_list = core_stocks
 
     # 逐筆計算真實與隨機動態價差（符合台股跳動單位與 10% 漲跌幅限制）
     for item in target_list:
