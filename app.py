@@ -81,7 +81,14 @@ def get_dynamic_stock_price(ticker):
 
 def get_display_dataframe(selected_tab="雙棲核心 (11)"):
     data_list = []
+    
+    # 嘗試抓取 API 快取資料與當前選取的股票代碼
+    api_cache = st.session_state.get("twse_realtime_cache", {})
+    selected_ticker = st.session_state.get("selected_stock_code", "2330")
+    live_diff = st.session_state.get("live_diff_val", 0.0)
+
     for item in STOCK_DATABASE:
+        # 1. 選項頁籤分類過濾
         if selected_tab == "雙棲核心 (11)" and not (item["is_tsmc"] and item["is_cpo"]):
             continue
         elif selected_tab == "TSMC 供應鏈 (140)" and not item["is_tsmc"]:
@@ -90,17 +97,33 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
             continue
         elif selected_tab == "科技 ETF (4)" and not item["is_etf"]:
             continue
-            
-        metrics = get_dynamic_stock_price(item["ticker"])
+
+        # 2. 數據對接：優先從 API 快取取得即時價格，若無則依據基準價連動
+        ticker = item["ticker"]
+        if ticker in api_cache:
+            prev_close = api_cache[ticker].get("prev_close", 0.0)
+            open_price = api_cache[ticker].get("open_price", 0.0)
+        else:
+            # 依個股設定預設基準價，若是目前選取的標的則帶入 live_diff
+            base_prices = {"2330": 980.0, "3711": 155.0, "3443": 1250.0, "3583": 420.0, "6223": 780.0}
+            prev_close = base_prices.get(ticker, 200.0)
+            diff_offset = live_diff if ticker == selected_ticker else 0.0
+            open_price = prev_close + diff_offset
+
+        diff = open_price - prev_close
+        diff_percent = (diff / prev_close * 100) if prev_close else 0.0
+        prefix = "+" if diff > 0 else ""
+
         data_list.append({
-            "股票代號": item["ticker"],
+            "股票代號": ticker,
             "公司名稱": item["name"],
             "次領域/角色": item["category"],
-            "前一個交易日收盤價": metrics["prev_close"],
-            "今日開盤價": metrics["open"],
-            "價差": metrics["diff"],
-            "價差 %": metrics["diff_percent"]
+            "前一個交易日收盤價": f"{prev_close:.2f}",
+            "今日開盤價": f"{open_price:.2f}",
+            "價差": f"{prefix}{diff:.2f}",
+            "價差 %": f"{prefix}{diff_percent:.2f}%"
         })
+        
     return data_list
 
 # =========================================================
@@ -929,14 +952,10 @@ intent_val = intent_map[major_buyer_intent]
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📊 供應鏈與 ETF 監控選單")
 
+# 左側邊欄選單
 selected_tab = st.sidebar.radio(
     "選擇監控視圖：",
-    [
-        "雙棲核心 (11)", 
-        "TSMC 供應鏈 (140)", 
-        "CPO 聯盟 (31)", 
-        "科技 ETF (4)"
-    ],
+    ["雙棲核心 (11)", "TSMC 供應鏈 (140)", "CPO 聯盟 (31)", "科技 ETF (4)"],
     key="sb_supply_chain_tab"
 )
 st.sidebar.markdown("---")
