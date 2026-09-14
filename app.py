@@ -278,16 +278,42 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
     elif "ETF" in selected_tab:
         target_list = etf_stocks
 
-    # 逐筆轉譯與價差動態計算
+# 逐筆計算真實與隨機動態價差（符合台股跳動單位與 10% 漲跌幅限制）
     for item in target_list:
         ticker = str(item.get("ticker", "2330"))
         name = str(item.get("name", ticker))
-        category = str(item.get("category", "供應鏈夥伴"))
+        category = str(item.get("category", "產業夥伴"))
         prev_close = float(item.get("base_price", 200.0))
 
-        diff_offset = current_diff if ticker == selected_ticker else -5.0
-        open_price = prev_close + diff_offset
-        diff = open_price - prev_close
+        if ticker == selected_ticker:
+            diff = current_diff
+        else:
+            # 1. 使用股票代號作為隨機種子，產生 -3.5% ~ +3.5% 之間合理的開盤波幅
+            seed_val = sum(ord(c) for c in ticker)
+            random.seed(seed_val)
+            pct_change = random.uniform(-0.035, 0.035)
+            raw_diff = prev_close * pct_change
+
+            # 2. 根據台股股價級距計算跳動單位 (Tick Size)
+            if prev_close < 10:
+                tick = 0.01
+            elif prev_close < 50:
+                tick = 0.05
+            elif prev_close < 100:
+                tick = 0.1
+            elif prev_close < 500:
+                tick = 0.5
+            elif prev_close < 1000:
+                tick = 1.0
+            else:
+                tick = 5.0
+
+            # 3. 將價差對齊至合法 Tick，並限制最大漲跌幅在 ±10% 內
+            diff = round(raw_diff / tick) * tick
+            max_limit = round((prev_close * 0.098) / tick) * tick
+            diff = max(-max_limit, min(max_limit, diff))
+
+        open_price = prev_close + diff
         diff_percent = (diff / prev_close * 100) if prev_close else 0.0
         prefix = "+" if diff > 0 else ""
 
