@@ -333,7 +333,7 @@ for item in target_list:
         "價差%": f"{prefix}{diff_percent:.2f}%"
     })
         
-return data_list
+    return data_list
 
 # =========================================================
 # 半導體供應鏈 140 家廠商資料庫
