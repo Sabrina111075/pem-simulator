@@ -261,12 +261,20 @@ etf_stocks = [
         {"ticker": "00992A", "name": "主動群益科技創新", "category": "台灣AI / 科技創新", "base_price": 15.0}
     ]
 
-def get_display_dataframe(selected_tab, selected_ticker, current_diff):
+def get_display_dataframe(selected_tab, selected_ticker=None, current_diff=None):
+    # 防呆機制：若傳入 None 則從 session_state 自動補抓最新即時狀態
+    if selected_ticker is None:
+        selected_ticker = st.session_state.get("selected_stock_code", "2330")
+    if current_diff is None:
+        current_diff = st.session_state.get("current_diff", -30.0)
+
     data_list = []
     
-    # ✅ 請改成正確的資料庫變數名稱 core_stocks：
+    # 1. 精準對應 4 大分頁選單
     if "雙樓" in selected_tab or "11" in selected_tab:
         target_list = core_stocks
+    elif "TSMC" in selected_tab or "140" in selected_tab:
+        target_list = tsmc_stocks
     elif "CPO" in selected_tab or "31" in selected_tab:
         target_list = cpo_stocks
     elif "ETF" in selected_tab or "4" in selected_tab:
@@ -274,27 +282,24 @@ def get_display_dataframe(selected_tab, selected_ticker, current_diff):
     else:
         target_list = core_stocks
 
-    # 逐筆計算真實與隨機動態價差（符合台股跳動單位與 10% 漲跌幅限制）
+    # 2. 計算實時與隨機脈動價差
+    base_pct = (current_diff / 2410.0) if current_diff is not None else 0.0
+
     for item in target_list:
         ticker = str(item.get("ticker", "2330"))
         name = str(item.get("name", ticker))
         category = str(item.get("category", "產業夥伴"))
         prev_close = float(item.get("base_price", 200.0))
 
-        # 取得當前主標的之實時大盤/個股漲跌幅比例 (若無則預設為 0.0)
-        base_pct = (current_diff / 2410.0) if 'current_diff' in locals() and current_diff is not None else 0.0
-
         if ticker == selected_ticker:
-            diff = current_diff if 'current_diff' in locals() and current_diff is not None else 0.0
+            diff = float(current_diff) if current_diff is not None else 0.0
         else:
-            # 1. 以實時盤口漲跌幅為基準，疊加個股特有微幅波動 (-1.5% ~ +1.5%)
             seed_val = sum(ord(c) for c in ticker)
             random.seed(seed_val)
             individual_noise = random.uniform(-0.015, 0.015)
             
             raw_diff = prev_close * (base_pct + individual_noise)
 
-            # 2. 根據台股股價級距計算跳動單位 (Tick Size)
             if prev_close < 10:
                 tick = 0.01
             elif prev_close < 50:
@@ -308,7 +313,6 @@ def get_display_dataframe(selected_tab, selected_ticker, current_diff):
             else:
                 tick = 5.0
 
-            # 3. 將價差對齊至合法 Tick，並限制最大漲跌幅在 ±10% 內
             diff = round(raw_diff / tick) * tick
             max_limit = round((prev_close * 0.098) / tick) * tick
             diff = max(-max_limit, min(max_limit, diff))
