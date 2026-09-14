@@ -79,16 +79,11 @@ def get_dynamic_stock_price(ticker):
         "diff_percent": f"{prefix}{diff_percent:.2f}%"
     }
 
-# ============================================================================
-# 【全動態資料庫與過濾 logic】
-# ============================================================================
-
 def get_display_dataframe(selected_tab="雙棲核心 (11)"):
     data_list = []
     
     current_diff = st.session_state.get("current_diff", -25.0)
     selected_ticker = st.session_state.get("selected_stock_code", "2330")
-    api_cache = st.session_state.get("twse_realtime_cache", {})
 
     # 1. 雙棲核心 11 家
     core_stocks = [
@@ -105,7 +100,7 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
         {"ticker": "5443", "name": "均豪", "category": "自動化檢測與搬運", "base_price": 135.0}
     ]
 
-    # 2. CPO 聯盟 (示範延伸廠商)
+    # 2. CPO 聯盟 8 家
     cpo_stocks = [
         {"ticker": "2330", "name": "台積電", "category": "CPO矽光子平台", "base_price": 2410.0},
         {"ticker": "3711", "name": "日月光投控", "category": "CPO先進封裝", "base_price": 160.0},
@@ -125,7 +120,7 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
         {"ticker": "00992A", "name": "主動群益科技創新ETF", "category": "台灣AI / 科技創新", "base_price": 15.0}
     ]
 
-    # 根據選單切換對應的資料來源
+    # 根據選單設定目標清單
     target_list = []
     if "雙棲" in selected_tab:
         target_list = core_stocks
@@ -134,18 +129,26 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
     elif "ETF" in selected_tab:
         target_list = etf_stocks
     elif "TSMC" in selected_tab:
-        # 若系統全域有 SEMI_SUPPLY_CHAIN，優先讀取，否則載入供應鏈陣列
-        if "SEMI_SUPPLY_CHAIN" in globals():
+        if "SEMI_SUPPLY_CHAIN" in globals() and isinstance(globals()["SEMI_SUPPLY_CHAIN"], list):
             target_list = globals()["SEMI_SUPPLY_CHAIN"]
         else:
-            # 沒讀到全域資料庫時的備用呈現 (扣除台積電本體)
             target_list = [x for x in core_stocks if x["ticker"] != "2330"]
 
-    # 動態計算價格與價差
+    # 逐筆安全轉譯（防範 TypeError）
     for item in target_list:
-        ticker = item["ticker"]
-        prev_close = item.get("base_price", item.get("prev_close", 200.0))
-        
+        # 防呆機制：相容不同 key 名稱 (ticker / code / id) 或字串型態
+        if isinstance(item, dict):
+            ticker = str(item.get("ticker") or item.get("code") or item.get("id") or "2330")
+            name = str(item.get("name") or item.get("stock_name") or ticker)
+            category = str(item.get("category") or item.get("role") or "半導體供應鏈")
+            prev_close = float(item.get("base_price") or item.get("prev_close") or 200.0)
+        else:
+            ticker = str(item)
+            name = str(item)
+            category = "半導體供應鏈"
+            prev_close = 200.0
+
+        # 動態連動價差與開盤價
         diff_offset = current_diff if ticker == selected_ticker else -5.0
         open_price = prev_close + diff_offset
         diff = open_price - prev_close
@@ -154,8 +157,8 @@ def get_display_dataframe(selected_tab="雙棲核心 (11)"):
 
         data_list.append({
             "股票代號": ticker,
-            "公司名稱": item["name"],
-            "次領域/角色": item.get("category", "供應鏈夥伴"),
+            "公司名稱": name,
+            "次領域/角色": category,
             "前一個交易日收盤價": f"{prev_close:.2f}",
             "今日開盤價": f"{open_price:.2f}",
             "價差": f"{prefix}{diff:.2f}",
