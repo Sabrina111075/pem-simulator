@@ -1076,8 +1076,19 @@ elif "display_stock_name" in locals():
 if is_foreign_stock:
     st.info(f"💡 **海外市場提示**：當前標的為海外股市（{region_code}），即時行情需經由全球 API 介接，目前數據為系統模擬推算。", icon="🌐")
 
-# 3. 淨化顯示名稱 (避免出現重複字樣，例如 VACN VACN)
-clean_display_name = display_
+# #3. 淨化顯示名稱 (含防護機制：確保 display_stock_name 絕不為 None)
+if "stock_code" not in locals():
+    stock_code = "2330"
+
+if "display_stock_name" not in locals() or not display_stock_name:
+    if "target" in locals() and isinstance(target, dict):
+        t_code = target.get("ticker", "2330")
+        t_name = target.get("name", "台積電")
+        display_stock_name = f"{t_code} {t_name}"
+    else:
+        display_stock_name = f"{stock_code} 台積電"
+
+clean_display_name = display_stock_name
 
 if " " in display_stock_name:
     parts = display_stock_name.split()
