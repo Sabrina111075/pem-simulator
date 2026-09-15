@@ -276,7 +276,7 @@ def get_display_dataframe(
     else:
         target_list = core_stocks
 
-    # 2. 收集當前頁面所有股票代號並組裝 TWSE 查詢 API URL
+    # 2. 收集股票代號
     tickers = [
         str(item.get("ticker", "")).strip()
         for item in target_list
@@ -285,14 +285,19 @@ def get_display_dataframe(
     if not tickers:
         return []
 
-    # 組合 tse_2330.tw|tse_3711.tw 格式
-    ex_ch_param = "|".join([f"tse_{t}.tw" for t in tickers])
+    # 3. 雙通道查詢：上市(tse_) 與 上櫃(otc_) 同時查詢，確保 6223 旺矽 等上櫃股能抓到！
+    ex_ch_list = []
+    for t in tickers:
+        ex_ch_list.append(f"tse_{t}.tw")
+        ex_ch_list.append(f"otc_{t}.tw")
+
+    ex_ch_param = "|".join(ex_ch_list)
     url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={ex_ch_param}"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36"
     }
 
-    # 3. 呼叫 TWSE API 取得實時數據
+    # 4. 呼叫 TWSE/OTC 聯合 API
     api_map = {}
     try:
         resp = requests.get(url, headers=headers, timeout=5)
@@ -300,19 +305,29 @@ def get_display_dataframe(
             res_json = resp.json()
             for msg in res_json.get("msgArray", []):
                 code = msg.get("c")
-                # y: 前日收盤價, o: 今日開盤價
-                y_str = msg.get("y", "-")
-                o_str = msg.get("o", "-")
+                y_str = msg.get("y", "-")  # 前日收盤
+                o_str = msg.get("o", "-")  # 今日開盤
+                z_str = msg.get("z", "-")  # 最新成交
 
-                y_val = float(y_str) if y_str != "-" else 0.0
-                # 若盤前或剛開盤尚未有開盤價(o為"-")，暫用昨收 y 代替
-                o_val = float(o_str) if o_str != "-" else y_val
+                try:
+                    y_val = float(y_str) if y_str != "-" else 0.0
+                except ValueError:
+                    y_val = 0.0
 
-                api_map[code] = {"prev_close": y_val, "open_price": o_val}
+                try:
+                    o_val = float(o_str) if o_str != "-" else y_val
+                except ValueError:
+                    o_val = y_val
+
+                # 確保不被無效的 0 蓋掉（優先保留非 0 的真實行情）
+                if code not in api_map or (
+                    api_map[code]["prev_close"] == 0 and y_val > 0
+                ):
+                    api_map[code] = {"prev_close": y_val, "open_price": o_val}
     except Exception as e:
-        print(f"TWSE API Fetch Error: {e}")
+        print(f"TWSE/OTC API Fetch Error: {e}")
 
-    # 4. 組裝表格資料
+    # 5. 組裝表格資料
     data_list = []
     for item in target_list:
         ticker = str(item.get("ticker", ""))
@@ -320,13 +335,14 @@ def get_display_dataframe(
         category = str(item.get("category", ""))
         base_price = float(item.get("base_price", 0.0))
 
-        # 優先使用 API 實時數據；若 API 未回傳則退回 base_price
+        # 優先使用 API 實時數據
         real_info = api_map.get(ticker, {})
         prev_close = real_info.get("prev_close", 0.0)
+        open_price = real_info.get("open_price", 0.0)
+
+        # 備援機制：若 API 抓不到，退回原始 base_price
         if prev_close == 0.0:
             prev_close = base_price
-
-        open_price = real_info.get("open_price", 0.0)
         if open_price == 0.0:
             open_price = prev_close
 
