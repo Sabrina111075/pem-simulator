@@ -1022,6 +1022,13 @@ else:
 # =========================================================
 # 1. 呼叫 API 並強制更新 display_stock_name (必須放在 UI 渲染前！)
 # =========================================================
+# 預設初始化，防止 NameError 崩潰
+display_stock_name = (
+    stock_code
+    if "stock_code" in locals()
+    else st.session_state.get("selected_stock_code", "2330")
+)
+
 real_data = fetch_twse_official_data(stock_code)
 
 if stock_mode == "自訂股票代碼":
@@ -1033,7 +1040,7 @@ if stock_mode == "自訂股票代碼":
     if api_name:
         display_stock_name = f"{stock_code} {api_name}"
     else:
-        # 若 API 未回傳，使用本地字典防護，避免 NameError 崩潰
+        # 若 API 未回傳，使用本地字典防護
         stock_name_map = {
             "2330": "台積電",
             "2317": "鴻海",
