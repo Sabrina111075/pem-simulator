@@ -1025,77 +1025,57 @@ if stock_mode == "熱門標的":
         
         st.sidebar.caption(f"**PoC 優先級：** :{badge_color}[{poc_val} 級] | **角色：** {target.get('role', 'N/A')}")
         
-    # 若有股票代號則使用，無代號 (如外商非上市) 預設為 2330 進行模擬
-    stock_code = target["ticker"] if target["ticker"] else "2330"
-    display_stock_name = f"{stock_code} {target['name']}" if target["ticker"] else target['name']
-
+# === 股票代碼與公司名稱解析邏輯 (一次性處理，避免二次覆蓋) ===
+if stock_mode == "熱門標的":
+    selected_idx = company_options.index(selected_comp_label)
+    target = companies[selected_idx]
+    stock_code = (
+        str(target.get("ticker", "2330")).strip()
+        if isinstance(target, dict)
+        else "2330"
+    )
+    stock_name = target.get("name", "") if isinstance(target, dict) else ""
 else:
     user_input_code = st.sidebar.text_input(
         "請輸入台股代碼 (例如: 2330, 2317)", value="2330"
     ).strip().upper()
     stock_code = user_input_code if user_input_code else "2330"
+    stock_name = ""
 
-    # === 智慧補齊公司名稱 ===
-    # 1. 先查 TWSE API 回傳的公司名稱
-    real_data = fetch_twse_official_data(stock_code)
-    api_name = real_data.get("n", "").strip() if real_data else ""
+# 呼叫 API 抓取即時資料
+real_data = fetch_twse_official_data(stock_code)
 
-    # 2. 備援名稱字典
+# 補齊公司名稱 (優先取 TWSE API，若無則查廣域備援字典)
+if not stock_name:
+    if real_data and isinstance(real_data, dict) and real_data.get("n"):
+        stock_name = real_data.get("n", "").strip()
+
     fallback_map = {
+        "2330": "台積電",
+        "2317": "鴻海",
+        "2454": "聯發科",
+        "3711": "日月光投控",
         "3363": "上詮",
         "3289": "宜特",
         "6223": "旺矽",
         "6213": "聯茂",
         "6451": "訊芯-KY",
-        "2330": "台積電",
-        "2317": "鴻海",
+        "3443": "創意",
+        "3661": "世芯-KY",
+        "3374": "精材",
+        "4977": "眾達-KY",
+        "3234": "光環",
+        "4908": "前鼎",
+        "3583": "辛耘",
     }
-    matched_name = api_name or fallback_map.get(stock_code, "")
+    if not stock_name:
+        stock_name = fallback_map.get(stock_code, "")
 
-    # 3. 組合出完整的顯示名稱 (例如："3363 上詮")
-    display_stock_name = (
-        f"{stock_code} {matched_name}".strip()
-        if matched_name
-        else stock_code
-    )
-
-# =========================================================
-# 1. 呼叫 API 並強制更新 display_stock_name (必須放在 UI 渲染前！)
-# =========================================================
-# 預設初始化，防止 NameError 崩潰
-display_stock_name = (
-    stock_code
-    if "stock_code" in locals()
-    else st.session_state.get("selected_stock_code", "2330")
-)
-
-real_data = fetch_twse_official_data(stock_code)
-
-if stock_mode == "自訂股票代碼":
-    # 優先嘗試從 TWSE API 取得官方中文名稱
-    api_name = (
-        real_data.get("n", "").strip() if isinstance(real_data, dict) else ""
-    )
-
-    if api_name:
-        display_stock_name = f"{stock_code} {api_name}"
-    else:
-        # 若 API 未回傳，使用本地字典防護
-        stock_name_map = {
-            "2330": "台積電",
-            "2317": "鴻海",
-            "2454": "聯發科",
-            "6223": "旺矽",
-            "3711": "日月光投控",
-            "3443": "創意",
-            "3583": "辛耘",
-        }
-        local_name = stock_name_map.get(stock_code, "")
-        display_stock_name = (
-            f"{stock_code} {local_name}".strip()
-            if local_name
-            else stock_code
-        )
+# 產生唯一最終顯示名稱
+if stock_name and stock_name not in stock_code:
+    display_stock_name = f"{stock_code} {stock_name}"
+else:
+    display_stock_name = stock_code
 
 # =========================================================
 # # 2. 渲染主畫面 UI (海外非台股統一提示與乾淨標題)
