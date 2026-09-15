@@ -1019,21 +1019,36 @@ else:
     stock_code = user_input_code if user_input_code else "2330"
     display_stock_name = stock_code
 
-# ==========================================
+# =========================================================
 # 1. 呼叫 API 並強制更新 display_stock_name (必須放在 UI 渲染前！)
-# ==========================================
+# =========================================================
 real_data = fetch_twse_official_data(stock_code)
 
 if stock_mode == "自訂股票代碼":
     # 優先嘗試從 TWSE API 取得官方中文名稱
-    api_name = real_data.get("n", "").strip() if isinstance(real_data, dict) else ""
-    
+    api_name = (
+        real_data.get("n", "").strip() if isinstance(real_data, dict) else ""
+    )
+
     if api_name:
         display_stock_name = f"{stock_code} {api_name}"
     else:
-        # 若 API 未回傳，退回檢查本地字典
+        # 若 API 未回傳，使用本地字典防護，避免 NameError 崩潰
+        stock_name_map = {
+            "2330": "台積電",
+            "2317": "鴻海",
+            "2454": "聯發科",
+            "6223": "旺矽",
+            "3711": "日月光投控",
+            "3443": "創意",
+            "3583": "辛耘",
+        }
         local_name = stock_name_map.get(stock_code, "")
-        display_stock_name = f"{stock_code} {local_name}".strip() if local_name else stock_code
+        display_stock_name = (
+            f"{stock_code} {local_name}".strip()
+            if local_name
+            else stock_code
+        )
 
 # =========================================================
 # # 2. 渲染主畫面 UI (海外非台股統一提示與乾淨標題)
@@ -1055,7 +1070,8 @@ if is_foreign_stock:
     st.info(f"💡 **海外市場提示**：當前標的為海外股市（{region_code}），即時行情需經由全球 API 介接，目前數據為系統模擬推算。", icon="🌐")
 
 # 3. 淨化顯示名稱 (避免出現重複字樣，例如 VACN VACN)
-clean_display_name = display_stock_name
+clean_display_name = display_
+
 if " " in display_stock_name:
     parts = display_stock_name.split()
     if len(parts) >= 2 and parts[0] == parts[1]:
