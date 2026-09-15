@@ -261,19 +261,11 @@ etf_stocks = [
         {"ticker": "00992A", "name": "主動群益科技創新", "category": "台灣AI / 科技創新", "base_price": 15.0}
     ]
 
-def get_display_dataframe(selected_tab, selected_ticker=None, current_diff=None):
-    # 防呆與清理：確保 selected_ticker 只保留數字代號 (例如將 "2330 台積電 [TW]" 轉為 "2330")
-    if selected_ticker is None:
-        selected_ticker = st.session_state.get("selected_stock_code", "2330")
-    clean_ticker = str(selected_ticker).split()[0] if selected_ticker else "2330"
-
-    if current_diff is None:
-        current_diff = st.session_state.get("current_diff", -30.0)
-
-    data_list = []
-    
+def get_display_dataframe(
+    selected_tab, selected_ticker=None, current_diff=None
+):
     # 1. 精準對應 4 大分頁選單
-    if "雙樓" in selected_tab or "11" in selected_tab:
+    if "雙核心" in selected_tab or "11" in selected_tab:
         target_list = core_stocks
     elif "TSMC" in selected_tab or "140" in selected_tab:
         target_list = TSMC_140_SUPPLY_CHAIN
@@ -284,55 +276,78 @@ def get_display_dataframe(selected_tab, selected_ticker=None, current_diff=None)
     else:
         target_list = core_stocks
 
-    # 2. 計算實時與隨機脈動價差
-    base_pct = (current_diff / 2410.0) if current_diff is not None else 0.0
+    # 2. 收集當前頁面所有股票代號並組裝 TWSE 查詢 API URL
+    tickers = [
+        str(item.get("ticker", "")).strip()
+        for item in target_list
+        if item.get("ticker")
+    ]
+    if not tickers:
+        return []
 
+    # 組合 tse_2330.tw|tse_3711.tw 格式
+    ex_ch_param = "|".join([f"tse_{t}.tw" for t in tickers])
+    url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={ex_ch_param}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36"
+    }
+
+    # 3. 呼叫 TWSE API 取得實時數據
+    api_map = {}
+    try:
+        resp = requests.get(url, headers=headers, timeout=5)
+        if resp.status_code == 200:
+            res_json = resp.json()
+            for msg in res_json.get("msgArray", []):
+                code = msg.get("c")
+                # y: 前日收盤價, o: 今日開盤價
+                y_str = msg.get("y", "-")
+                o_str = msg.get("o", "-")
+
+                y_val = float(y_str) if y_str != "-" else 0.0
+                # 若盤前或剛開盤尚未有開盤價(o為"-")，暫用昨收 y 代替
+                o_val = float(o_str) if o_str != "-" else y_val
+
+                api_map[code] = {"prev_close": y_val, "open_price": o_val}
+    except Exception as e:
+        print(f"TWSE API Fetch Error: {e}")
+
+    # 4. 組裝表格資料
+    data_list = []
     for item in target_list:
-        ticker = str(item.get("ticker", "2330"))
+        ticker = str(item.get("ticker", ""))
         name = str(item.get("name", ticker))
-        category = str(item.get("category", "產業夥伴"))
-        prev_close = float(item.get("base_price", 200.0))
+        category = str(item.get("category", ""))
+        base_price = float(item.get("base_price", 0.0))
 
-        # 這裡改用 clean_ticker 比對純數字代號
-        if ticker == clean_ticker:
-            diff = float(current_diff) if current_diff is not None else 0.0
-        else:
-            seed_val = sum(ord(c) for c in ticker)
-            random.seed(seed_val)
-            individual_noise = random.uniform(-0.015, 0.015)
-            
-            raw_diff = prev_close * (base_pct + individual_noise)
+        # 優先使用 API 實時數據；若 API 未回傳則退回 base_price
+        real_info = api_map.get(ticker, {})
+        prev_close = real_info.get("prev_close", 0.0)
+        if prev_close == 0.0:
+            prev_close = base_price
 
-            if prev_close < 10:
-                tick = 0.01
-            elif prev_close < 50:
-                tick = 0.05
-            elif prev_close < 100:
-                tick = 0.1
-            elif prev_close < 500:
-                tick = 0.5
-            elif prev_close < 1000:
-                tick = 1.0
-            else:
-                tick = 5.0
+        open_price = real_info.get("open_price", 0.0)
+        if open_price == 0.0:
+            open_price = prev_close
 
-            diff = round(raw_diff / tick) * tick
-            max_limit = round((prev_close * 0.098) / tick) * tick
-            diff = max(-max_limit, min(max_limit, diff))
-
-        open_price = prev_close + diff
-        diff_percent = (diff / prev_close * 100) if prev_close else 0.0
+        # 計算價差與價差%
+        diff = round(open_price - prev_close, 2)
+        diff_percent = (
+            round((diff / prev_close) * 100, 2) if prev_close > 0 else 0.0
+        )
         prefix = "+" if diff > 0 else ""
 
-        data_list.append({
-            "股票代號": ticker,
-            "公司名稱": name,
-            "次領域/角色": category,
-            "前一個交易日收盤價": f"{prev_close:.2f}",
-            "今日開盤價": f"{open_price:.2f}",
-            "價差": f"{prefix}{diff:.2f}",
-            "價差%": f"{prefix}{diff_percent:.2f}%"
-        })
+        data_list.append(
+            {
+                "股票代號": ticker,
+                "公司名稱": name,
+                "次領域/角色": category,
+                "前日收盤": f"{prev_close:.2f}",
+                "今日開盤": f"{open_price:.2f}",
+                "價差": f"{prefix}{diff:.2f}",
+                "價差%": f"{prefix}{diff_percent:.2f}%",
+            }
+        )
 
     return data_list
 
