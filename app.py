@@ -276,7 +276,6 @@ def get_display_dataframe(
     else:
         target_list = core_stocks
 
-    # 2. 收集股票代號
     tickers = [
         str(item.get("ticker", "")).strip()
         for item in target_list
@@ -285,7 +284,7 @@ def get_display_dataframe(
     if not tickers:
         return []
 
-    # 3. 雙通道查詢：上市(tse_) 與 上櫃(otc_) 同時查詢，確保 6223 旺矽 等上櫃股能抓到！
+    # 2. 雙通道查詢：同時包含上市 (tse_) 與 上櫃 (otc_)
     ex_ch_list = []
     for t in tickers:
         ex_ch_list.append(f"tse_{t}.tw")
@@ -297,7 +296,6 @@ def get_display_dataframe(
         "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36"
     }
 
-    # 4. 呼叫 TWSE/OTC 聯合 API
     api_map = {}
     try:
         resp = requests.get(url, headers=headers, timeout=5)
@@ -306,20 +304,21 @@ def get_display_dataframe(
             for msg in res_json.get("msgArray", []):
                 code = msg.get("c")
                 y_str = msg.get("y", "-")  # 前日收盤
-                o_str = msg.get("o", "-")  # 今日開盤
-                z_str = msg.get("z", "-")  # 最新成交
+                o_str = msg.get("o", "-")  # 今日開盤 (第一筆開盤價)
 
+                # 解析前日收盤 (y)
                 try:
                     y_val = float(y_str) if y_str != "-" else 0.0
                 except ValueError:
                     y_val = 0.0
 
+                # 解析今日開盤 (o)
                 try:
-                    o_val = float(o_str) if o_str != "-" else y_val
+                    o_val = float(o_str) if o_str != "-" else 0.0
                 except ValueError:
-                    o_val = y_val
+                    o_val = 0.0
 
-                # 確保不被無效的 0 蓋掉（優先保留非 0 的真實行情）
+                # 確保正確寫入 (優先保留有價格的資料)
                 if code not in api_map or (
                     api_map[code]["prev_close"] == 0 and y_val > 0
                 ):
@@ -327,7 +326,7 @@ def get_display_dataframe(
     except Exception as e:
         print(f"TWSE/OTC API Fetch Error: {e}")
 
-    # 5. 組裝表格資料
+    # 3. 組裝表格資料 (純對比：今日開盤 vs 前日收盤)
     data_list = []
     for item in target_list:
         ticker = str(item.get("ticker", ""))
@@ -335,22 +334,22 @@ def get_display_dataframe(
         category = str(item.get("category", ""))
         base_price = float(item.get("base_price", 0.0))
 
-        # 優先使用 API 實時數據
         real_info = api_map.get(ticker, {})
         prev_close = real_info.get("prev_close", 0.0)
         open_price = real_info.get("open_price", 0.0)
 
-        # 備援機制：若 API 抓不到，退回原始 base_price
+        # 備援機制：未開盤或無資料時補值
         if prev_close == 0.0:
             prev_close = base_price
         if open_price == 0.0:
-            open_price = prev_close
+            open_price = prev_close  # 尚未撮合開盤時，開盤價暫以前日收盤顯示 (價差為 0)
 
-        # 計算價差與價差%
+        # 計算開盤價差與開盤價差%
         diff = round(open_price - prev_close, 2)
         diff_percent = (
             round((diff / prev_close) * 100, 2) if prev_close > 0 else 0.0
         )
+
         prefix = "+" if diff > 0 else ""
 
         data_list.append(
