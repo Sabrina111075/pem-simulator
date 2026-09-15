@@ -1030,9 +1030,34 @@ if stock_mode == "熱門標的":
     display_stock_name = f"{stock_code} {target['name']}" if target["ticker"] else target['name']
 
 else:
-    user_input_code = st.sidebar.text_input("請輸入台股代碼 (例如: 2330, 2317)", value="2330").strip().upper()
+    user_input_code = st.sidebar.text_input(
+        "請輸入台股代碼 (例如: 2330, 2317)", value="2330"
+    ).strip().upper()
     stock_code = user_input_code if user_input_code else "2330"
-    display_stock_name = stock_code
+
+    # === 智慧補齊公司名稱 ===
+    # 1. 先查 TWSE API 回傳的公司名稱
+    real_data = fetch_twse_official_data(stock_code)
+    api_name = real_data.get("n", "").strip() if real_data else ""
+
+    # 2. 備援名稱字典
+    fallback_map = {
+        "3363": "上詮",
+        "3289": "宜特",
+        "6223": "旺矽",
+        "6213": "聯茂",
+        "6451": "訊芯-KY",
+        "2330": "台積電",
+        "2317": "鴻海",
+    }
+    matched_name = api_name or fallback_map.get(stock_code, "")
+
+    # 3. 組合出完整的顯示名稱 (例如："3363 上詮")
+    display_stock_name = (
+        f"{stock_code} {matched_name}".strip()
+        if matched_name
+        else stock_code
+    )
 
 # =========================================================
 # 1. 呼叫 API 並強制更新 display_stock_name (必須放在 UI 渲染前！)
