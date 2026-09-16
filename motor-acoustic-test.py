@@ -3,12 +3,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 import librosa
 import librosa.display
+import pandas as pd
+import io
+import wave
+import time
 
-# 設定網頁標題與寬頁面
 st.set_page_config(page_title="馬達健康度診斷測試平台", layout="wide")
 
-st.title("⚙️ 馬達健康度與聲學診斷測試平台")
+st.title("⚙️ 馬達健康度與聲學診斷測試平台 (Pro)")
 st.caption("邊緣運算前置驗證平台 | 支援 ESP32-S3 + Raspberry Pi 5 模擬測試")
+
+# ---------------------------------------------------------
+# 初始化歷史數據紀錄 (Session State)
+# ---------------------------------------------------------
+if 'history' not in st.session_state:
+    st.session_state.history = pd.DataFrame(columns=['timestamp', 'health_index', 'mse_loss'])
 
 # ---------------------------------------------------------
 # 側邊欄控制項
@@ -16,7 +25,7 @@ st.caption("邊緣運算前置驗證平台 | 支援 ESP32-S3 + Raspberry Pi 5 �
 st.sidebar.header("🎛️ 測試控制台")
 data_source = st.sidebar.selectbox(
     "選擇測試聲學來源",
-    ["模擬正常運轉音頻", "模擬軸承磨損異音", "上傳 WAV 馬達音檔"]
+    ["模擬正常運轉音頻", "模擬軸承磨損異音 (高頻異音)", "模擬軸偏心異音 (低頻振動)", "上傳 WAV 馬達音檔"]
 )
 
 threshold = st.sidebar.slider(
@@ -24,95 +33,134 @@ threshold = st.sidebar.slider(
     min_value=0.01,
     max_value=0.20,
     value=0.05,
-    step=0.01,
-    help="當重構誤差高於此數值時，系統將判定為異常"
+    step=0.01
 )
 
+st.sidebar.markdown("---")
+if st.sidebar.button("🧹 清除歷史記錄"):
+    st.session_state.history = pd.DataFrame(columns=['timestamp', 'health_index', 'mse_loss'])
+    st.rerun()
+
 # ---------------------------------------------------------
-# 馬達音頻模擬器 (正弦波諧波 + 高頻雜訊)
+# 馬達音頻模擬器
 # ---------------------------------------------------------
-def generate_simulated_audio(anomaly=False):
+def generate_simulated_audio(type_str="normal"):
     sr = 16000
-    duration = 1.0  # 1秒採樣
+    duration = 1.0
     t = np.linspace(0, duration, int(sr * duration))
-    
-    # 正常馬達聲：50Hz 基頻 + 100Hz 諧波 + 低背景雜訊
     base_sound = 0.5 * np.sin(2 * np.pi * 50 * t) + 0.3 * np.sin(2 * np.pi * 100 * t)
     noise = np.random.normal(0, 0.05, len(t))
     
-    if anomaly:
-        # 異常馬達聲：加入 3500Hz 高頻摩擦與衝擊脈衝
-        friction_noise = 0.4 * np.sin(2 * np.pi * 3500 * t) * (np.sin(2 * np.pi * 10 * t) > 0.5)
-        return base_sound + noise + friction_noise, sr
+    if type_str == "high_freq":
+        # 軸承磨損：高頻尖銳聲
+        friction = 0.4 * np.sin(2 * np.pi * 3500 * t) * (np.sin(2 * np.pi * 10 * t) > 0.5)
+        return base_sound + noise + friction, sr
+    elif type_str == "low_freq":
+        # 偏心衝擊：低頻重擊聲
+        impulse = 0.6 * np.sin(2 * np.pi * 20 * t) * (np.sin(2 * np.pi * 4 * t) > 0.7)
+        return base_sound + noise + impulse, sr
     return base_sound + noise, sr
 
 # ---------------------------------------------------------
-# 資料擷取與語譜圖轉換
+# 資料擷取
 # ---------------------------------------------------------
 if data_source == "模擬正常運轉音頻":
-    y, sr = generate_simulated_audio(anomaly=False)
-elif data_source == "模擬軸承磨損異音":
-    y, sr = generate_simulated_audio(anomaly=True)
+    y, sr = generate_simulated_audio("normal")
+elif data_source == "模擬軸承磨損異音 (高頻異音)":
+    y, sr = generate_simulated_audio("high_freq")
+elif data_source == "模擬軸偏心異音 (低頻振動)":
+    y, sr = generate_simulated_audio("low_freq")
 else:
-    uploaded_file = st.sidebar.file_uploader("請上傳 WAV 格式馬達聲音檔", type=["wav"])
+    uploaded_file = st.sidebar.file_uploader("上傳 WAV 檔案", type=["wav"])
     if uploaded_file is not None:
         y, sr = librosa.load(uploaded_file, sr=16000)
     else:
-        st.info("💡 未上傳檔案，預設載入『模擬正常運轉音頻』")
-        y, sr = generate_simulated_audio(anomaly=False)
+        st.info("💡 請上傳檔案，目前預設載入『模擬正常運轉音頻』")
+        y, sr = generate_simulated_audio("normal")
 
-# 計算 Mel 語譜圖 (Mel-Spectrogram)
+# ---------------------------------------------------------
+# 特徵提取與模擬推論
+# ---------------------------------------------------------
 S = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=1024, hop_length=512, n_mels=64)
 S_dB = librosa.power_to_db(S, ref=np.max)
 
-# 模擬 Autoencoder 計算高頻重構誤差 (MSE Loss)
-high_freq_energy = np.mean(S_dB[40:, :])  # 取 3kHz 以上高頻區段
-simulated_mse_loss = float(np.clip((high_freq_energy + 40) / 200, 0.005, 0.30))
+# 特徵區域分析
+high_freq_energy = np.mean(S_dB[40:, :])
+low_freq_energy = np.mean(S_dB[:15, :])
 
-# 計算健康度指標 (Health Index, 0~100%)
+simulated_mse_loss = float(np.clip((high_freq_energy + 40) / 200 + (low_freq_energy + 10) / 300, 0.005, 0.35))
+
 if simulated_mse_loss <= threshold:
     health_index = int(100 - (simulated_mse_loss / threshold) * 15)
 else:
     health_index = max(0, int(85 - ((simulated_mse_loss - threshold) / threshold) * 60))
 
+# 更新歷史紀錄
+new_data = pd.DataFrame([{
+    'timestamp': time.strftime("%H:%M:%S"),
+    'health_index': health_index,
+    'mse_loss': simulated_mse_loss
+}])
+st.session_state.history = pd.concat([st.session_state.history, new_data], ignore_index=True)
+
 # ---------------------------------------------------------
-# 畫面呈現區域
+# 畫面呈現：儀表板
 # ---------------------------------------------------------
-# 1. 頂部狀態數據列
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns([2, 2, 2, 3])
+
 with col1:
     st.metric(
-        label="馬達健康指標 (Health Index)",
+        label="馬達健康指標 (HI)",
         value=f"{health_index} %",
-        delta="狀態良好" if health_index >= 85 else ("需要關注" if health_index >= 60 else "高風險警報"),
+        delta="良好" if health_index >= 85 else ("警告" if health_index >= 60 else "危險"),
         delta_color="normal" if health_index >= 85 else "inverse"
     )
 
 with col2:
     st.metric(
-        label="異常重構誤差 (MSE Loss)",
+        label="重構誤差 (MSE)",
         value=f"{simulated_mse_loss:.4f}",
-        delta=f"門檻值: {threshold:.2f}",
+        delta=f"門檻: {threshold:.2f}",
         delta_color="inverse" if simulated_mse_loss > threshold else "normal"
     )
 
 with col3:
-    st.subheader("即時狀態判定")
+    st.subheader("診斷狀態")
     if health_index >= 85:
-        st.success("🟢 正常運轉 (Normal)")
+        st.success("🟢 正常 (Normal)")
     elif health_index >= 60:
-        st.warning("🟡 預防維護告警 (Warning)")
+        st.warning("🟡 告警 (Warning)")
     else:
-        st.error("🔴 嚴重異音/故障 (Critical)")
+        st.error("🔴 故障 (Critical)")
+
+with col4:
+    st.subheader("🔊 採樣音頻試聽")
+    # 將 PCM 轉為 WAV 供播放器使用
+    y_norm = np.int16(y / np.max(np.abs(y)) * 32767)
+    virtual_file = io.BytesIO()
+    with wave.open(virtual_file, 'wb') as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sr)
+        wf.writeframes(y_norm.tobytes())
+    st.audio(virtual_file.getvalue(), format="audio/wav")
 
 st.markdown("---")
 
-# 2. 聲學語譜圖視覺化
-st.subheader("📊 馬達聲學語譜圖 (Mel-Spectrogram)")
-st.caption("橫軸為時間、縱軸為頻率 (Hz)。黃綠色亮區代表該頻段能量強烈，高頻頻域突變通常代表摩擦或敲擊異音。")
+# ---------------------------------------------------------
+# 畫面呈現：語譜圖與歷史趨勢
+# ---------------------------------------------------------
+tab1, tab2 = st.tabs(["📊 聲學頻譜視覺化", "📈 健康度歷史趨勢圖"])
 
-fig, ax = plt.subplots(figsize=(10, 3.8))
-img = librosa.display.specshow(S_dB, x_axis='time', y_axis='mel', sr=sr, ax=ax, cmap='viridis')
-fig.colorbar(img, ax=ax, format='%+2.0f dB')
-ax.set_title("Mel-Spectrogram Analysis", fontsize=12)
-st.pyplot(fig)
+with tab1:
+    fig, ax = plt.subplots(figsize=(10, 3.5))
+    img = librosa.display.specshow(S_dB, x_axis='time', y_axis='mel', sr=sr, ax=ax, cmap='viridis')
+    fig.colorbar(img, ax=ax, format='%+2.0f dB')
+    ax.set_title("Mel-Spectrogram Analysis", fontsize=11)
+    st.pyplot(fig)
+
+with tab2:
+    if len(st.session_state.history) > 0:
+        st.subheader("連續採樣健康度追蹤")
+        chart_data = st.session_state.history.set_index('timestamp')
+        st.line_chart(chart_data[['health_index']])
