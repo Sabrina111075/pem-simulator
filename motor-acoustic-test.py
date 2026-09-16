@@ -1,12 +1,16 @@
 ﻿import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
 import librosa
 import librosa.display
 import pandas as pd
 import io
 import wave
 import time
+
+# 重設 Matplotlib 全局設定，徹底清除中文字體殘留
+plt.rcdefaults()
 
 st.set_page_config(page_title="馬達健康度診斷測試平台", layout="wide")
 
@@ -28,7 +32,6 @@ data_source = st.sidebar.selectbox(
     ["模擬正常運轉音頻", "模擬軸承磨損異音 (高頻金屬摩擦)", "模擬軸偏心異音 (顯著低頻振動與撞擊)", "上傳 WAV 馬達音檔"]
 )
 
-# 故障嚴重程度控制
 severity = st.sidebar.slider(
     "模擬故障嚴重程度 (Severity)",
     min_value=0.1,
@@ -59,18 +62,15 @@ def generate_simulated_audio(type_str="normal", sev=1.0):
     duration = 2.0
     t = np.linspace(0, duration, int(sr * duration))
     
-    # 正常馬達聲：基頻 60Hz 微弱平穩運轉聲
     base_sound = 0.3 * np.sin(2 * np.pi * 60 * t) + 0.15 * np.sin(2 * np.pi * 120 * t)
     noise = np.random.normal(0, 0.01, len(t))
     
     if type_str == "high_freq":
-        # 軸承磨損：高頻 4000Hz 刺耳金屬摩擦聲
         friction = (0.8 * sev) * np.sin(2 * np.pi * 4000 * t) * (np.sin(2 * np.pi * 10 * t) > 0.1)
         high_noise = np.random.normal(0, 0.2 * sev, len(t)) * (np.sin(2 * np.pi * 20 * t) > 0.4)
         return base_sound + noise + friction + high_noise, sr
         
     elif type_str == "low_freq":
-        # 軸偏心：低頻敲擊衝擊波 (1秒3次強烈敲擊)
         strike_env = np.maximum(0, np.sin(2 * np.pi * 3 * t)) ** 8
         impact_sound = (3.5 * sev) * strike_env * np.sin(2 * np.pi * 180 * t)
         sub_thump = (2.5 * sev) * strike_env * np.random.normal(0, 0.4, len(t))
@@ -96,7 +96,7 @@ else:
         y, sr = generate_simulated_audio("normal", severity)
 
 # ---------------------------------------------------------
-# 特徵提取與異常推論演算法
+# 特徵提取與異常推論
 # ---------------------------------------------------------
 S = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=1024, hop_length=256, n_mels=128)
 S_dB = librosa.power_to_db(S, ref=np.max)
@@ -166,14 +166,14 @@ with col4:
 st.markdown("---")
 
 # ---------------------------------------------------------
-# 畫面呈現：繁體中文直觀語譜圖
+# 畫面呈現：強制英文標準字型語譜圖 + 中文說明卡片
 # ---------------------------------------------------------
 tab1, tab2 = st.tabs(["📊 直觀聲學語譜圖 (Frequency vs Time)", "📈 健康度歷史趨勢圖"])
 
 with tab1:
-    # 全局字體設定，優先支援中文字體 (微軟正黑體 / PingFang)
-    plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'PingFang TC', 'SimHei', 'DejaVu Sans']
-    plt.rcParams['axes.unicode_minus'] = False
+    # 指定使用系統必定內建的英文字型
+    font_prop = FontProperties(family='DejaVu Sans', size=11, weight='bold')
+    title_font = FontProperties(family='DejaVu Sans', size=13, weight='bold')
     
     fig, ax = plt.subplots(figsize=(12, 4.8))
     
@@ -189,26 +189,33 @@ with tab1:
         vmax=0
     )
     
-    # 色階條與中文標註說明
     cbar = fig.colorbar(img, ax=ax, format='%+2.0f dB')
-    cbar.ax.set_ylabel('聲音能量強度 (0dB代表最強能量 / -50dB代表近乎靜音)', fontsize=10, fontweight='bold', rotation=270, labelpad=20)
-
-    ax.set_title("馬達聲學時頻語譜圖 (高對比色階)", fontsize=13, fontweight='bold')
-    ax.set_xlabel("時間 (秒)", fontsize=11, fontweight='bold')
-    ax.set_ylabel("頻率 (Hz)", fontsize=11, fontweight='bold')
     
-    # 中文圈選標註
+    # 強制指定標題與軸線字型
+    ax.set_title("Motor Acoustic Spectrogram (High Contrast)", fontproperties=title_font)
+    ax.set_xlabel("Time (Seconds)", fontproperties=font_prop)
+    ax.set_ylabel("Frequency (Hz)", fontproperties=font_prop)
+    
     if "低頻振動" in data_source or (data_source == "模擬軸偏心異音 (顯著低頻振動與撞擊)"):
         rect = plt.Rectangle((0.02, 100), 1.95, 1800, linewidth=2, edgecolor='cyan', facecolor='none', linestyle='--')
         ax.add_patch(rect)
-        ax.text(0.05, 2100, "⚠️ 偵測到【低頻撞擊/軸偏心異常區】", color='cyan', fontsize=11, fontweight='bold')
+        ax.text(0.05, 2100, "[WARNING] Low-Freq Eccentric Anomaly Detected", color='cyan', fontproperties=font_prop)
         
     elif "高頻金屬" in data_source or (data_source == "模擬軸承磨損異音 (高頻金屬摩擦)"):
         rect = plt.Rectangle((0.02, 3500), 1.95, 2500, linewidth=2, edgecolor='yellow', facecolor='none', linestyle='--')
         ax.add_patch(rect)
-        ax.text(0.05, 6200, "⚠️ 偵測到【高頻金屬摩擦/軸承磨損區】", color='yellow', fontsize=11, fontweight='bold')
+        ax.text(0.05, 6200, "[WARNING] High-Freq Friction Anomaly Detected", color='yellow', fontproperties=font_prop)
 
     st.pyplot(fig)
+    
+    # 使用 Streamlit 原生卡片呈現中文對照說明，解決缺字問題
+    st.info("""
+    💡 **圖表閱讀說明**：
+    * **縱軸 Frequency (Hz)**：聲音頻率（低音 ~ 高音）。`100 ~ 2000 Hz` 代表低頻振動/撞擊區，`3500 Hz 以上` 代表高頻金屬刮削區。
+    * **右側能量條 (dB)**：代表聲音強弱。
+      * 🟨 **黃亮色 / 0 dB**：代表出現強烈的異音衝擊（能量極高）。
+      * ⬛ **純黑色 / -50 dB**：代表完全靜音或背景微弱環境音。
+    """)
 
 with tab2:
     if len(st.session_state.history) > 0:
