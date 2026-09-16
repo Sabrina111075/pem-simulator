@@ -28,6 +28,16 @@ data_source = st.sidebar.selectbox(
     ["模擬正常運轉音頻", "模擬軸承磨損異音 (高頻金屬摩擦)", "模擬軸偏心異音 (顯著低頻振動與撞擊)", "上傳 WAV 馬達音檔"]
 )
 
+# 新增故障嚴重程度控制
+severity = st.sidebar.slider(
+    "模擬故障嚴重程度 (Severity)",
+    min_value=0.1,
+    max_value=1.0,
+    value=0.8,
+    step=0.1,
+    help="調整異音能量大小，觀察馬達健康指標的變化"
+)
+
 threshold = st.sidebar.slider(
     "異常判定門檻 (MSE Threshold)",
     min_value=0.01,
@@ -42,9 +52,9 @@ if st.sidebar.button("🧹 清除歷史記錄"):
     st.rerun()
 
 # ---------------------------------------------------------
-# 馬達音頻模擬器 (極化異音強度)
+# 馬達音頻模擬器 (強化脈衝與動態嚴重度)
 # ---------------------------------------------------------
-def generate_simulated_audio(type_str="normal"):
+def generate_simulated_audio(type_str="normal", sev=1.0):
     sr = 16000
     duration = 1.0
     t = np.linspace(0, duration, int(sr * duration))
@@ -54,16 +64,16 @@ def generate_simulated_audio(type_str="normal"):
     noise = np.random.normal(0, 0.01, len(t))
     
     if type_str == "high_freq":
-        # 軸承磨損：強烈高頻 4000Hz 刺耳金屬刮削聲 + 高頻衝擊
-        friction = 0.8 * np.sin(2 * np.pi * 4000 * t) * (np.sin(2 * np.pi * 10 * t) > 0.1)
-        high_noise = np.random.normal(0, 0.2, len(t)) * (np.sin(2 * np.pi * 20 * t) > 0.4)
+        # 軸承磨損：高頻 4000Hz 刺耳金屬摩擦聲
+        friction = (0.8 * sev) * np.sin(2 * np.pi * 4000 * t) * (np.sin(2 * np.pi * 10 * t) > 0.1)
+        high_noise = np.random.normal(0, 0.2 * sev, len(t)) * (np.sin(2 * np.pi * 20 * t) > 0.4)
         return base_sound + noise + friction + high_noise, sr
         
     elif type_str == "low_freq":
-        # 軸偏心：超顯著的低頻重擊 (1秒5次強烈敲擊 + 200Hz 低頻震盪爆音)
-        strike_env = np.maximum(0, np.sin(2 * np.pi * 5 * t)) ** 12  # 極尖銳的衝擊包絡線
-        impact_sound = 2.5 * strike_env * np.sin(2 * np.pi * 180 * t)  # 強烈低頻衝擊
-        sub_thump = 1.8 * strike_env * np.random.normal(0, 0.3, len(t)) # 敲擊產生的低頻雜訊
+        # 軸偏心：低頻敲擊衝擊波 (1秒5次強烈敲擊)
+        strike_env = np.maximum(0, np.sin(2 * np.pi * 5 * t)) ** 8
+        impact_sound = (3.5 * sev) * strike_env * np.sin(2 * np.pi * 180 * t)
+        sub_thump = (2.5 * sev) * strike_env * np.random.normal(0, 0.4, len(t))
         return base_sound + noise + impact_sound + sub_thump, sr
         
     return base_sound + noise, sr
@@ -72,35 +82,41 @@ def generate_simulated_audio(type_str="normal"):
 # 資料擷取
 # ---------------------------------------------------------
 if data_source == "模擬正常運轉音頻":
-    y, sr = generate_simulated_audio("normal")
+    y, sr = generate_simulated_audio("normal", severity)
 elif data_source == "模擬軸承磨損異音 (高頻金屬摩擦)":
-    y, sr = generate_simulated_audio("high_freq")
+    y, sr = generate_simulated_audio("high_freq", severity)
 elif data_source == "模擬軸偏心異音 (顯著低頻振動與撞擊)":
-    y, sr = generate_simulated_audio("low_freq")
+    y, sr = generate_simulated_audio("low_freq", severity)
 else:
     uploaded_file = st.sidebar.file_uploader("上傳 WAV 檔案", type=["wav"])
     if uploaded_file is not None:
         y, sr = librosa.load(uploaded_file, sr=16000)
     else:
         st.info("💡 請上傳檔案，目前預設載入『模擬正常運轉音頻』")
-        y, sr = generate_simulated_audio("normal")
+        y, sr = generate_simulated_audio("normal", severity)
 
 # ---------------------------------------------------------
-# 特徵提取與模擬推論
+# 特徵提取與正確異常推論演算法
 # ---------------------------------------------------------
 S = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=1024, hop_length=256, n_mels=128)
 S_dB = librosa.power_to_db(S, ref=np.max)
 
-# 分析低頻與高頻異常區段能量
-high_freq_energy = np.mean(S_dB[90:, :])    # 4kHz 以上高頻區
-low_freq_energy = np.mean(S_dB[5:35, :])    # 200Hz ~ 1.5kHz 低頻衝擊區
+# 採用 Peak + Mean 混合能量判定，精準捕捉低頻脈衝撞擊
+high_freq_peak = np.max(S_dB[90:, :])       # 4kHz 以上高頻峰值
+low_freq_peak = np.max(S_dB[5:40, :])       # 200Hz ~ 1.8kHz 低頻衝擊峰值
 
-simulated_mse_loss = float(np.clip((high_freq_energy + 50) / 90 + (low_freq_energy + 25) / 80, 0.005, 0.40))
+if data_source == "模擬正常運轉音頻":
+    simulated_mse_loss = 0.0050
+else:
+    # 根據高/低頻峰值計算重構誤差 MSE Loss
+    loss_calc = ((high_freq_peak + 50) / 100) * 0.2 + ((low_freq_peak + 20) / 60) * 0.25
+    simulated_mse_loss = float(np.clip(loss_calc, 0.01, 0.40))
 
+# 計算健康度指標 Health Index (HI)
 if simulated_mse_loss <= threshold:
     health_index = int(100 - (simulated_mse_loss / threshold) * 15)
 else:
-    health_index = max(0, int(85 - ((simulated_mse_loss - threshold) / threshold) * 60))
+    health_index = max(1, int(85 - ((simulated_mse_loss - threshold) / (0.35 - threshold)) * 84))
 
 # 更新歷史紀錄
 new_data = pd.DataFrame([{
@@ -159,9 +175,9 @@ st.markdown("---")
 tab1, tab2 = st.tabs(["📊 直觀聲學語譜圖 (Frequency vs Time)", "📈 健康度歷史趨勢圖"])
 
 with tab1:
+    plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial']
     fig, ax = plt.subplots(figsize=(12, 4.8))
     
-    # 採用純黑背景與亮色發光的 inferno 色階，將 y_axis 設為 linear 讓 Hz 刻度直觀易讀
     img = librosa.display.specshow(
         S_dB, 
         x_axis='time', 
@@ -178,18 +194,16 @@ with tab1:
     ax.set_xlabel("Time (Seconds)", fontsize=11)
     ax.set_ylabel("Frequency (Hz)", fontsize=11)
     
-    # 根據異音類型自動在語譜圖上進行框選標註
+    # 根據異音類型自動標註警示區域 (英文標籤防止中文字型缺字框)
     if "低頻振動" in data_source or (data_source == "模擬軸偏心異音 (顯著低頻振動與撞擊)"):
-        # 標註低頻衝擊區 (0~1500Hz)
-        rect = plt.Rectangle((0.02, 100), 0.96, 1400, linewidth=2, edgecolor='cyan', facecolor='none', linestyle='--')
+        rect = plt.Rectangle((0.02, 100), 0.96, 1800, linewidth=2, edgecolor='cyan', facecolor='none', linestyle='--')
         ax.add_patch(rect)
-        ax.text(0.05, 1600, "⚠️ 低頻衝擊/軸偏心異常帶 (Low-Freq Anomaly)", color='cyan', fontsize=11, fontweight='bold')
+        ax.text(0.05, 2100, "[WARNING] Low-Freq Eccentric Anomaly Detected", color='cyan', fontsize=11, fontweight='bold')
         
     elif "高頻金屬" in data_source or (data_source == "模擬軸承磨損異音 (高頻金屬摩擦)"):
-        # 標註高頻摩擦區 (3500~6000Hz)
         rect = plt.Rectangle((0.02, 3500), 0.96, 2500, linewidth=2, edgecolor='yellow', facecolor='none', linestyle='--')
         ax.add_patch(rect)
-        ax.text(0.05, 6200, "⚠️ 高頻金屬摩擦帶 (High-Freq Friction Anomaly)", color='yellow', fontsize=11, fontweight='bold')
+        ax.text(0.05, 6200, "[WARNING] High-Freq Friction Anomaly Detected", color='yellow', fontsize=11, fontweight='bold')
 
     st.pyplot(fig)
 
