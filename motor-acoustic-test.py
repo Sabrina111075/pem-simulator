@@ -42,28 +42,29 @@ if st.sidebar.button("🧹 清除歷史記錄"):
     st.rerun()
 
 # ---------------------------------------------------------
-# 馬達音頻模擬器 (強化版異音特徵)
+# 馬達音頻模擬器 (極化異音強度)
 # ---------------------------------------------------------
 def generate_simulated_audio(type_str="normal"):
     sr = 16000
     duration = 1.0
     t = np.linspace(0, duration, int(sr * duration))
     
-    # 正常馬達聲：基頻 50Hz + 諧波 100Hz + 極低 background noise
-    base_sound = 0.4 * np.sin(2 * np.pi * 50 * t) + 0.2 * np.sin(2 * np.pi * 100 * t)
-    noise = np.random.normal(0, 0.02, len(t))
+    # 正常馬達聲：基頻 60Hz 微弱平穩運轉聲
+    base_sound = 0.3 * np.sin(2 * np.pi * 60 * t) + 0.15 * np.sin(2 * np.pi * 120 * t)
+    noise = np.random.normal(0, 0.01, len(t))
     
     if type_str == "high_freq":
-        # 軸承磨損：強烈高頻 3800Hz 刺耳摩擦聲與隨機噪聲脈衝
-        friction = 0.6 * np.sin(2 * np.pi * 3800 * t) * (np.sin(2 * np.pi * 8 * t) > 0.3)
-        high_noise = np.random.normal(0, 0.15, len(t)) * (np.sin(2 * np.pi * 15 * t) > 0.5)
+        # 軸承磨損：強烈高頻 4000Hz 刺耳金屬刮削聲 + 高頻衝擊
+        friction = 0.8 * np.sin(2 * np.pi * 4000 * t) * (np.sin(2 * np.pi * 10 * t) > 0.1)
+        high_noise = np.random.normal(0, 0.2, len(t)) * (np.sin(2 * np.pi * 20 * t) > 0.4)
         return base_sound + noise + friction + high_noise, sr
         
     elif type_str == "low_freq":
-        # 軸偏心：顯著的低頻敲擊衝擊波 (15Hz 週期脈衝 + 150Hz 偏心諧波衝擊)
-        impulse_env = np.maximum(0, np.sin(2 * np.pi * 15 * t)) ** 4  # 尖銳衝擊包絡線
-        eccentric_impact = 1.2 * impulse_env * np.sin(2 * np.pi * 150 * t)
-        return base_sound + noise + eccentric_impact, sr
+        # 軸偏心：超顯著的低頻重擊 (1秒5次強烈敲擊 + 200Hz 低頻震盪爆音)
+        strike_env = np.maximum(0, np.sin(2 * np.pi * 5 * t)) ** 12  # 極尖銳的衝擊包絡線
+        impact_sound = 2.5 * strike_env * np.sin(2 * np.pi * 180 * t)  # 強烈低頻衝擊
+        sub_thump = 1.8 * strike_env * np.random.normal(0, 0.3, len(t)) # 敲擊產生的低頻雜訊
+        return base_sound + noise + impact_sound + sub_thump, sr
         
     return base_sound + noise, sr
 
@@ -91,10 +92,10 @@ S = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=1024, hop_length=256, n_mel
 S_dB = librosa.power_to_db(S, ref=np.max)
 
 # 分析低頻與高頻異常區段能量
-high_freq_energy = np.mean(S_dB[80:, :])  # 3kHz 以上
-low_freq_energy = np.mean(S_dB[10:40, :])  # 200Hz ~ 1kHz 敲擊帶
+high_freq_energy = np.mean(S_dB[90:, :])    # 4kHz 以上高頻區
+low_freq_energy = np.mean(S_dB[5:35, :])    # 200Hz ~ 1.5kHz 低頻衝擊區
 
-simulated_mse_loss = float(np.clip((high_freq_energy + 45) / 120 + (low_freq_energy + 20) / 100, 0.005, 0.35))
+simulated_mse_loss = float(np.clip((high_freq_energy + 50) / 90 + (low_freq_energy + 25) / 80, 0.005, 0.40))
 
 if simulated_mse_loss <= threshold:
     health_index = int(100 - (simulated_mse_loss / threshold) * 15)
@@ -124,7 +125,7 @@ with col1:
 
 with col2:
     st.metric(
-        label="異常重構誤差 (MSE)",
+        label="重構誤差 (MSE)",
         value=f"{simulated_mse_loss:.4f}",
         delta=f"門檻: {threshold:.2f}",
         delta_color="inverse" if simulated_mse_loss > threshold else "normal"
@@ -153,28 +154,43 @@ with col4:
 st.markdown("---")
 
 # ---------------------------------------------------------
-# 畫面呈現：高清晰語譜圖與歷史趨勢
+# 畫面呈現：直觀高清晰語譜圖與歷史趨勢
 # ---------------------------------------------------------
-tab1, tab2 = st.tabs(["📊 高對比聲學語譜圖 (Mel-Spectrogram)", "📈 健康度歷史趨勢圖"])
+tab1, tab2 = st.tabs(["📊 直觀聲學語譜圖 (Frequency vs Time)", "📈 健康度歷史趨勢圖"])
 
 with tab1:
-    fig, ax = plt.subplots(figsize=(12, 4.5))
-    # 使用 magma 色階，並設定 vmin=-60dB 放大色階動態範圍
+    fig, ax = plt.subplots(figsize=(12, 4.8))
+    
+    # 採用純黑背景與亮色發光的 inferno 色階，將 y_axis 設為 linear 讓 Hz 刻度直觀易讀
     img = librosa.display.specshow(
         S_dB, 
         x_axis='time', 
-        y_axis='mel', 
+        y_axis='linear', 
         sr=sr, 
         fmax=8000,
         ax=ax, 
-        cmap='magma',
-        vmin=-60,
+        cmap='inferno',
+        vmin=-55,
         vmax=0
     )
     fig.colorbar(img, ax=ax, format='%+2.0f dB')
-    ax.set_title("Enhanced Mel-Spectrogram (Magma Palette)", fontsize=13, fontweight='bold')
-    ax.set_xlabel("Time (s)", fontsize=11)
+    ax.set_title("Motor Acoustic Spectrogram (High Contrast)", fontsize=13, fontweight='bold')
+    ax.set_xlabel("Time (Seconds)", fontsize=11)
     ax.set_ylabel("Frequency (Hz)", fontsize=11)
+    
+    # 根據異音類型自動在語譜圖上進行框選標註
+    if "低頻振動" in data_source or (data_source == "模擬軸偏心異音 (顯著低頻振動與撞擊)"):
+        # 標註低頻衝擊區 (0~1500Hz)
+        rect = plt.Rectangle((0.02, 100), 0.96, 1400, linewidth=2, edgecolor='cyan', facecolor='none', linestyle='--')
+        ax.add_patch(rect)
+        ax.text(0.05, 1600, "⚠️ 低頻衝擊/軸偏心異常帶 (Low-Freq Anomaly)", color='cyan', fontsize=11, fontweight='bold')
+        
+    elif "高頻金屬" in data_source or (data_source == "模擬軸承磨損異音 (高頻金屬摩擦)"):
+        # 標註高頻摩擦區 (3500~6000Hz)
+        rect = plt.Rectangle((0.02, 3500), 0.96, 2500, linewidth=2, edgecolor='yellow', facecolor='none', linestyle='--')
+        ax.add_patch(rect)
+        ax.text(0.05, 6200, "⚠️ 高頻金屬摩擦帶 (High-Freq Friction Anomaly)", color='yellow', fontsize=11, fontweight='bold')
+
     st.pyplot(fig)
 
 with tab2:
