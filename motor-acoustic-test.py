@@ -12,9 +12,9 @@ import time
 # 重設 Matplotlib 全局設定，徹底清除中文字體殘留
 plt.rcdefaults()
 
-st.set_page_config(page_title="馬達健康度診斷測試平台", layout="wide")
+st.set_page_config(page_title="馬達與工業設備聲學診斷測試平台", layout="wide")
 
-st.title("⚙️ 馬達健康度與聲學診斷測試平台 (Pro Version)")
+st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (DCASE Pro)")
 st.caption("邊緣運算前置驗證平台 | 支援 ESP32-S3 + Raspberry Pi 5 模擬測試")
 
 # ---------------------------------------------------------
@@ -24,13 +24,45 @@ if 'history' not in st.session_state:
     st.session_state.history = pd.DataFrame(columns=['timestamp', 'health_index', 'mse_loss'])
 
 # ---------------------------------------------------------
-# 側邊欄控制項
+# 兩層式兩段落側邊欄控制項 (DCASE 架構)
 # ---------------------------------------------------------
-st.sidebar.header("🎛️ 測試控制台")
-data_source = st.sidebar.selectbox(
-    "選擇測試聲學來源",
-    ["模擬正常運轉音頻", "模擬軸承磨損異音 (高頻金屬摩擦)", "模擬軸偏心異音 (顯著低頻振動與撞擊)", "上傳 WAV 馬達音檔"]
+st.sidebar.header("🎛️ 設備與測試控制台")
+
+# 第一層：選擇設備類別
+equipment_type = st.sidebar.selectbox(
+    "1. 選擇設備類別 (Category)",
+    ["🌊 工業幫浦 (Pump)", "🌀 工業風扇 (Fan) [階段二]", "🔬 測試模擬與自訂上傳"]
 )
+
+# 第二層：根據設備動態切換狀態選單
+if "工業幫浦" in equipment_type:
+    sound_condition = st.sidebar.selectbox(
+        "2. 選擇幫浦運轉狀態 (Pump Condition)",
+        [
+            "🟢 幫浦 - 正常運轉 (Normal)",
+            "🔴 幫浦 - 洩漏/空蝕異常 (Leaking / Cavitation)",
+            "🟡 幫浦 - 葉輪不平衡 (Impeller Unbalance)"
+        ]
+    )
+elif "工業風扇" in equipment_type:
+    sound_condition = st.sidebar.selectbox(
+        "2. 選擇風扇運轉狀態 (Fan Condition)",
+        [
+            "🟢 風扇 - 正常運轉 (Normal)",
+            "🔴 風扇 - 葉片損壞/積垢 (Blade Damage)",
+            "🟡 風扇 - 軸承過熱摩擦 (Bearing Friction)"
+        ]
+    )
+else:
+    sound_condition = st.sidebar.selectbox(
+        "2. 選擇模擬音源類型",
+        [
+            "模擬正常運轉音頻", 
+            "模擬軸承磨損異音 (高頻金屬摩擦)", 
+            "模擬軸偏心異音 (顯著低頻振動與撞擊)", 
+            "上傳 WAV 音檔"
+        ]
+    )
 
 severity = st.sidebar.slider(
     "模擬故障嚴重程度 (Severity)",
@@ -38,7 +70,7 @@ severity = st.sidebar.slider(
     max_value=1.0,
     value=0.8,
     step=0.1,
-    help="調整異音能量大小，觀察馬達健康指標的變化"
+    help="調整異音能量大小，觀察健康指標變化"
 )
 
 threshold = st.sidebar.slider(
@@ -55,56 +87,78 @@ if st.sidebar.button("🧹 清除歷史記錄"):
     st.rerun()
 
 # ---------------------------------------------------------
-# 馬達音頻模擬器
+# 設備聲學模擬引擎 (含 Pump / Fan 聲音模型)
 # ---------------------------------------------------------
-def generate_simulated_audio(type_str="normal", sev=1.0):
+def generate_equipment_audio(category, condition, sev=1.0):
     sr = 16000
     duration = 2.0
     t = np.linspace(0, duration, int(sr * duration))
     
-    base_sound = 0.3 * np.sin(2 * np.pi * 60 * t) + 0.15 * np.sin(2 * np.pi * 120 * t)
-    noise = np.random.normal(0, 0.01, len(t))
+    # 低頻基音 + 背景水流/風聲雜訊
+    base_hum = 0.2 * np.sin(2 * np.pi * 50 * t) + 0.1 * np.sin(2 * np.pi * 100 * t)
+    white_noise = np.random.normal(0, 0.02, len(t))
     
-    if type_str == "high_freq":
+    if "工業幫浦" in category:
+        if "正常" in condition:
+            # 流體平穩流動聲
+            water_flow = np.random.normal(0, 0.03, len(t))
+            return base_hum + water_flow, sr
+        elif "洩漏/空蝕" in condition:
+            # 空蝕氣泡破裂高頻爆音 (2000Hz~5000Hz 隨機衝擊)
+            cavitation_bursts = (0.6 * sev) * np.random.normal(0, 0.2, len(t)) * (np.random.rand(len(t)) > 0.92)
+            return base_hum + white_noise + cavitation_bursts, sr
+        elif "葉輪不平衡" in condition:
+            # 低頻週期性振動水錘聲 (10Hz 包絡)
+            impeller_pulse = (0.8 * sev) * np.sin(2 * np.pi * 10 * t) * np.sin(2 * np.pi * 120 * t)
+            return base_hum + white_noise + impeller_pulse, sr
+
+    elif "工業風扇" in category:
+        fan_blade_sound = 0.3 * np.sin(2 * np.pi * 150 * t) # 風切聲
+        if "正常" in condition:
+            return fan_blade_sound + white_noise, sr
+        elif "葉片損壞" in condition:
+            # 風切不對稱低頻風吼聲
+            blade_thump = (0.7 * sev) * np.sin(2 * np.pi * 5 * t) * np.sin(2 * np.pi * 300 * t)
+            return fan_blade_sound + white_noise + blade_thump, sr
+        elif "軸承過熱" in condition:
+            # 高頻連續刮削聲
+            squeal = (0.6 * sev) * np.sin(2 * np.pi * 3500 * t)
+            return fan_blade_sound + white_noise + squeal, sr
+
+    # 預設模擬音頻（舊版邏輯）
+    if "高頻金屬" in condition:
         friction = (0.8 * sev) * np.sin(2 * np.pi * 4000 * t) * (np.sin(2 * np.pi * 10 * t) > 0.1)
-        high_noise = np.random.normal(0, 0.2 * sev, len(t)) * (np.sin(2 * np.pi * 20 * t) > 0.4)
-        return base_sound + noise + friction + high_noise, sr
-        
-    elif type_str == "low_freq":
+        return base_hum + white_noise + friction, sr
+    elif "軸偏心" in condition:
         strike_env = np.maximum(0, np.sin(2 * np.pi * 3 * t)) ** 8
-        impact_sound = (3.5 * sev) * strike_env * np.sin(2 * np.pi * 180 * t)
-        sub_thump = (2.5 * sev) * strike_env * np.random.normal(0, 0.4, len(t))
-        return base_sound + noise + impact_sound + sub_thump, sr
-        
-    return base_sound + noise, sr
+        impact = (3.5 * sev) * strike_env * np.sin(2 * np.pi * 180 * t)
+        return base_hum + white_noise + impact, sr
+
+    return base_hum + white_noise, sr
 
 # ---------------------------------------------------------
-# 資料擷取
+# 音訊載入與處理
 # ---------------------------------------------------------
-if data_source == "模擬正常運轉音頻":
-    y, sr = generate_simulated_audio("normal", severity)
-elif data_source == "模擬軸承磨損異音 (高頻金屬摩擦)":
-    y, sr = generate_simulated_audio("high_freq", severity)
-elif data_source == "模擬軸偏心異音 (顯著低頻振動與撞擊)":
-    y, sr = generate_simulated_audio("low_freq", severity)
-else:
-    uploaded_file = st.sidebar.file_uploader("上傳 WAV 檔案", type=["wav"])
+if "上傳 WAV" in sound_condition:
+    uploaded_file = st.sidebar.file_uploader("上傳 WAV 音檔", type=["wav"])
     if uploaded_file is not None:
         y, sr = librosa.load(uploaded_file, sr=16000)
     else:
-        st.info("💡 請上傳檔案，目前預設載入『模擬正常運轉音頻』")
-        y, sr = generate_simulated_audio("normal", severity)
+        st.info("💡 請上傳檔案，目前預設載入『幫浦正常運轉』")
+        y, sr = generate_equipment_audio("🌊 工業幫浦 (Pump)", "正常", severity)
+else:
+    y, sr = generate_equipment_audio(equipment_type, sound_condition, severity)
 
 # ---------------------------------------------------------
-# 特徵提取與異常推論
+# 特徵提取與診斷計算
 # ---------------------------------------------------------
 S = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=1024, hop_length=256, n_mels=128)
 S_dB = librosa.power_to_db(S, ref=np.max)
 
-high_freq_peak = np.max(S_dB[90:, :])
+high_freq_peak = np.max(S_dB[80:, :])
 low_freq_peak = np.max(S_dB[5:40, :])
 
-if data_source == "模擬正常運轉音頻":
+if "正常" in sound_condition or "正常" in equipment_type:
     simulated_mse_loss = 0.0050
 else:
     loss_calc = ((high_freq_peak + 50) / 100) * 0.2 + ((low_freq_peak + 20) / 60) * 0.25
@@ -123,13 +177,13 @@ new_data = pd.DataFrame([{
 st.session_state.history = pd.concat([st.session_state.history, new_data], ignore_index=True)
 
 # ---------------------------------------------------------
-# 畫面呈現：儀表板
+# 儀表板畫面呈現
 # ---------------------------------------------------------
 col1, col2, col3, col4 = st.columns([2, 2, 2, 3])
 
 with col1:
     st.metric(
-        label="馬達健康指標 (HI)",
+        label="設備健康指標 (HI)",
         value=f"{health_index} %",
         delta="狀態良好" if health_index >= 85 else ("需要關注" if health_index >= 60 else "高風險警報"),
         delta_color="normal" if health_index >= 85 else "inverse"
@@ -166,12 +220,11 @@ with col4:
 st.markdown("---")
 
 # ---------------------------------------------------------
-# 畫面呈現：強制英文標準字型語譜圖 + 中文說明卡片
+# 語譜圖呈現與說明卡片
 # ---------------------------------------------------------
 tab1, tab2 = st.tabs(["📊 直觀聲學語譜圖 (Frequency vs Time)", "📈 健康度歷史趨勢圖"])
 
 with tab1:
-    # 指定使用系統必定內建的英文字型
     font_prop = FontProperties(family='DejaVu Sans', size=11, weight='bold')
     title_font = FontProperties(family='DejaVu Sans', size=13, weight='bold')
     
@@ -189,32 +242,30 @@ with tab1:
         vmax=0
     )
     
-    cbar = fig.colorbar(img, ax=ax, format='%+2.0f dB')
+    fig.colorbar(img, ax=ax, format='%+2.0f dB')
     
-    # 強制指定標題與軸線字型
-    ax.set_title("Motor Acoustic Spectrogram (High Contrast)", fontproperties=title_font)
+    ax.set_title(f"Acoustic Spectrogram - {equipment_type}", fontproperties=title_font)
     ax.set_xlabel("Time (Seconds)", fontproperties=font_prop)
     ax.set_ylabel("Frequency (Hz)", fontproperties=font_prop)
     
-    if "低頻振動" in data_source or (data_source == "模擬軸偏心異音 (顯著低頻振動與撞擊)"):
+    # 動態警告標籤標註
+    if "空蝕" in sound_condition or "高頻" in sound_condition or "軸承" in sound_condition:
+        rect = plt.Rectangle((0.02, 3000), 1.95, 3000, linewidth=2, edgecolor='yellow', facecolor='none', linestyle='--')
+        ax.add_patch(rect)
+        ax.text(0.05, 6200, "[WARNING] High-Freq Anomaly Detected", color='yellow', fontproperties=font_prop)
+    elif "不平衡" in sound_condition or "低頻" in sound_condition or "葉片" in sound_condition:
         rect = plt.Rectangle((0.02, 100), 1.95, 1800, linewidth=2, edgecolor='cyan', facecolor='none', linestyle='--')
         ax.add_patch(rect)
-        ax.text(0.05, 2100, "[WARNING] Low-Freq Eccentric Anomaly Detected", color='cyan', fontproperties=font_prop)
-        
-    elif "高頻金屬" in data_source or (data_source == "模擬軸承磨損異音 (高頻金屬摩擦)"):
-        rect = plt.Rectangle((0.02, 3500), 1.95, 2500, linewidth=2, edgecolor='yellow', facecolor='none', linestyle='--')
-        ax.add_patch(rect)
-        ax.text(0.05, 6200, "[WARNING] High-Freq Friction Anomaly Detected", color='yellow', fontproperties=font_prop)
+        ax.text(0.05, 2100, "[WARNING] Low-Freq Anomaly Detected", color='cyan', fontproperties=font_prop)
 
     st.pyplot(fig)
     
-    # 使用 Streamlit 原生卡片呈現中文對照說明，解決缺字問題
     st.info("""
     💡 **圖表閱讀說明**：
-    * **縱軸 Frequency (Hz)**：聲音頻率（低音 ~ 高音）。`100 ~ 2000 Hz` 代表低頻振動/撞擊區，`3500 Hz 以上` 代表高頻金屬刮削區。
+    * **縱軸 Frequency (Hz)**：聲音頻率。幫浦空蝕/刮削異音通常出現在 `3000 Hz 以上`；葉輪不平衡/水錘振動則出現在 `2000 Hz 以下`。
     * **右側能量條 (dB)**：代表聲音強弱。
       * 🟨 **黃亮色 / 0 dB**：代表出現強烈的異音衝擊（能量極高）。
-      * ⬛ **純黑色 / -50 dB**：代表完全靜音或背景微弱環境音。
+      * ⬛ **純黑色 / -50 dB**：代表完全靜音或背景環境音。
     """)
 
 with tab2:
