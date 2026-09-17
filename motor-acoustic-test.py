@@ -7,6 +7,7 @@ import librosa.display
 import pandas as pd
 import io
 import wave
+import re
 from datetime import datetime, timezone, timedelta
 
 # 重設 Matplotlib 全局設定
@@ -24,7 +25,7 @@ if 'history' not in st.session_state:
     st.session_state.history = pd.DataFrame(columns=['timestamp', 'health_index', 'mse_loss'])
 
 # ---------------------------------------------------------
-# 兩層式控制項 (確實置入馬達選項)
+# 兩層式控制項
 # ---------------------------------------------------------
 st.sidebar.header("🎛️ 設備與測試控制台")
 
@@ -40,7 +41,7 @@ equipment_type = st.sidebar.selectbox(
     ]
 )
 
-# 狀態選單動態切換 (精確字串匹配)
+# 狀態選單動態切換
 if "Motor" in equipment_type or "馬達" in equipment_type:
     sound_condition = st.sidebar.selectbox(
         "2. 選擇馬達運轉狀態 (Motor Condition)",
@@ -186,7 +187,7 @@ def generate_equipment_audio(category, condition, sev=1.0):
     return base_hum + np.random.normal(0, 0.005, len(t)), sr
 
 # ---------------------------------------------------------
-# 音訊診斷與指標計算 (徹底拉開正常與異常的差距)
+# 音訊診斷與指標計算
 # ---------------------------------------------------------
 if "上傳 WAV" in sound_condition:
     uploaded_file = st.sidebar.file_uploader("上傳 WAV 音檔", type=["wav"])
@@ -206,7 +207,6 @@ low_freq_peak = np.max(S_dB[5:45, :])
 
 is_normal_state = ("🟢" in sound_condition) or ("Normal" in sound_condition) or ("模擬正常" in sound_condition)
 
-# 顯著拉開差距邏輯：
 if is_normal_state:
     simulated_mse_loss = 0.0015
     health_index = 98
@@ -304,11 +304,16 @@ with tab1:
     font_prop = FontProperties(family='DejaVu Sans', size=11, weight='bold')
     title_font = FontProperties(family='DejaVu Sans', size=13, weight='bold')
     
-    fig, ax = plt.subplots(figsize=(12, 4.8))
-    img = librosa.display.specshow(S_dB, x_axis='time', y_axis='linear', sr=sr, fmax=8000, ax=ax, cmap='inferno', vmin=-55, vmax=0)
-    fig.colorbar(img, ax=ax, format='%+2.0f dB')
+    # 提取純英文字串做為 Matplotlib 標題，徹底避免中文字體豆腐塊 (□□□□)
+    clean_title = re.sub(r'[^\x00-\x7F]+', '', equipment_type).strip()
     
-    ax.set_title(f"Acoustic Spectrogram - {equipment_type}", fontproperties=title_font)
+    fig, ax = plt.subplots(figsize=(12, 4.8))
+    # 使用 viridis 柔和色彩映射
+    img = librosa.display.specshow(S_dB, x_axis='time', y_axis='linear', sr=sr, fmax=8000, ax=ax, cmap='viridis', vmin=-55, vmax=0)
+    cbar = fig.colorbar(img, ax=ax, format='%+2.0f dB')
+    cbar.ax.set_ylabel("Energy Level (dB)", fontproperties=font_prop)
+    
+    ax.set_title(f"Acoustic Spectrogram - {clean_title}", fontproperties=title_font)
     ax.set_xlabel("Time (Seconds)", fontproperties=font_prop)
     ax.set_ylabel("Frequency (Hz)", fontproperties=font_prop)
     
@@ -318,6 +323,14 @@ with tab1:
         ax.text(0.05, 7000, "[ANOMALY DETECTED] Maintenance Recommended", color='yellow', fontproperties=font_prop)
 
     st.pyplot(fig)
+    
+    # 圖表下方操作者提示說明卡片
+    st.info("""
+    💡 **聲學語譜圖 (Spectrogram) 操作指南與軸線說明：**
+    * **橫軸 X 軸 (Time)**：聲音的時間軸（秒）。
+    * **縱軸 Y 軸 (Frequency)**：音頻頻率（Hz）。低頻區（如 < 500 Hz）反映轉速與偏心震動；高頻區（如 > 3000 Hz）反映金屬摩擦、軸承磨損與高壓氣流洩漏。
+    * **顏色強度 (Energy Level)**：採用 **Viridis 柔和視覺色階**。**深藍/紫黑** 代表無聲音背景；**亮黃/綠色亮線** 代表強烈異常聲音頻率點。
+    """)
 
 with tab2:
     if len(st.session_state.history) > 0:
