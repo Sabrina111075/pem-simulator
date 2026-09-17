@@ -7,9 +7,7 @@ import librosa.display
 import pandas as pd
 import io
 import wave
-from datetime import datetime
-import timezonefinder
-import pytz
+from datetime import datetime, timezone, timedelta
 
 # 重設 Matplotlib 全局設定，徹底清除中文字體殘留
 plt.rcdefaults()
@@ -169,9 +167,9 @@ if simulated_mse_loss <= threshold:
 else:
     health_index = max(1, int(85 - ((simulated_mse_loss - threshold) / (0.45 - threshold)) * 84))
 
-# 取得台灣時間 (Asia/Taipei UTC+8)
-taiwan_tz = pytz.timezone('Asia/Taipei')
-taiwan_time = datetime.now(taiwan_tz).strftime("%H:%M:%S")
+# 使用 Python 內建模組精確轉換為台灣時間 (UTC+8)
+tz_taiwan = timezone(timedelta(hours=8))
+taiwan_time = datetime.now(tz_taiwan).strftime("%H:%M:%S")
 
 new_data = pd.DataFrame([{
     'timestamp': taiwan_time,
@@ -181,7 +179,7 @@ new_data = pd.DataFrame([{
 st.session_state.history = pd.concat([st.session_state.history, new_data], ignore_index=True)
 
 # ---------------------------------------------------------
-# 儀表板畫面呈現 (更新符合國人用語之診斷狀態)
+# 儀表板畫面呈現
 # ---------------------------------------------------------
 col1, col2, col3, col4 = st.columns([2, 2, 2, 3])
 
@@ -273,6 +271,6 @@ with tab1:
 
 with tab2:
     if len(st.session_state.history) > 0:
-        st.subheader("連續採樣健康度追蹤 (台灣時間 Asia/Taipei)")
+        st.subheader("連續採樣健康度追蹤 (台灣時間 Asia/Taipei UTC+8)")
         chart_data = st.session_state.history.set_index('timestamp')
         st.line_chart(chart_data[['health_index']])
