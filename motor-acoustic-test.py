@@ -267,31 +267,82 @@ with col4:
     st.audio(virtual_file.getvalue(), format="audio/wav")
 
 # ---------------------------------------------------------
-# 智慧維修建議卡片
+# 全時設備維運與故障排除建議卡片 (優化版 SOP)
 # ---------------------------------------------------------
-if health_index < 85:
-    st.markdown("---")
+st.markdown("---")
+
+if health_index >= 85:
+    st.success("### 🛠️ 設備日常巡檢維運指引 (Routine Maintenance Guide)")
+    st.markdown("""
+    * **運轉狀態評估**：當前聲學特徵穩定，訊號重構誤差 (MSE) 處於安全基準線以下。
+    * **日常巡檢建議**：
+      1. **外觀與溫度**：定期量測馬達/設備外殼溫升，確認風路與散熱片無積塵遮蔽。
+      2. **振動與緊固**：檢查基座螺絲與地腳螺栓是否緊固，無異常共振情況。
+      3. **定期保養**：維持既定保養週期，建議每 2000 小時進行一次聲學基準線比對。
+    """)
+else:
     if health_index < 60:
         st.error("### 🚨 系統緊急排除與維修建議 (Critical Maintenance Actions)")
     else:
         st.warning("### ⚠️ 設備預防性維護建議 (Warning & Preventive Actions)")
     
     if "軸承" in sound_condition or "Bearing" in sound_condition:
-        st.write("🛠️ **建議動作**：高頻特徵音顯著，代表軸承缺油或滾珠損壞。請立即**補充黃油潤滑劑**；若補油後仍有異音，請停機**更換馬達軸承**。")
+        st.markdown("""
+        * **診斷分析**：高頻區段（>3500 Hz）聲波能量異常，屬於典型的**軸承滾珠磨損或缺油摩擦特徵**。
+        * **標準處置流程（SOP）**：
+          1. **步驟 1（處置）**：使用高壓注油槍**補充 ISO VG 輕質潤滑黃油**，並觀察高頻異音是否平緩。
+          2. **步驟 2（停機檢修）**：若補油後 MSE 誤差未下降，請排定停機，使用拉拔器拆卸並**更換前後軸承組**。
+        * **現場安全提示**：檢修前請確保執行 LOTO ( lockout/tagout ) 上鎖掛牌程序。
+        """)
     elif "偏心" in sound_condition or "Unbalance" in sound_condition:
-        st.write("🛠️ **建議動作**：低頻衝擊能量高。請檢查**馬達與聯軸器是否偏心**、底座螺絲是否鬆動，並**重新進行動平衡校正**。")
+        st.markdown("""
+        * **診斷分析**：低頻區段（<200 Hz）顯著週期性脈衝，反映**轉子動不平衡或聯軸器中心偏移**。
+        * **標準處置流程（SOP）**：
+          1. **步驟 1（檢測）**：使用雷射對心儀重新對齊馬達與負載端軸心（公差控制於 0.05 mm 內）。
+          2. **步驟 2（校正）**：檢查底座防震墊片與對點螺絲，必要時進行現場**動平衡加重校正**。
+        """)
     elif "葉片" in sound_condition or "Blade" in sound_condition:
-        st.write("🛠️ **建議動作**：風扇葉片不平衡。請停機**清理葉片表面積垢**，若結構龜裂請**更換風扇葉片組**。")
+        st.markdown("""
+        * **診斷分析**：風切頻率伴隨中頻撞擊聲，主因為**風扇葉片積垢或結構龜裂**。
+        * **標準處置流程（SOP）**：
+          1. **步驟 1（清創）**：停機並使用高壓空氣槍**清理葉片表面附著油污與粉塵**。
+          2. **步驟 2（更換）**：檢查葉片根部是否有應力裂痕，如有損壞請**整體更換風扇葉輪組**。
+        """)
     elif "空蝕" in sound_condition or "洩漏" in sound_condition or "Cavitation" in sound_condition:
-        st.write("🛠️ **建議動作**：管路出現空蝕與洩漏。請**檢查進水閥門開度**，並**清理進水口過濾網與阻塞頭**。")
+        st.markdown("""
+        * **診斷分析**：高頻爆裂雜訊（Bubble Bursts），為**管路氣蝕或流體高壓洩漏**特徵。
+        * **標準處置流程（SOP）**：
+          1. **步驟 1（流體檢查）**：檢查進水端閥門開度與入口壓力，避免泵浦產生氣蝕現象。
+          2. **步驟 2（密封處置）**：使用超音波漏氣偵測器尋找洩漏點，並**更換老化 O 型密封環與法蘭墊片**。
+        """)
     elif "卡阻" in sound_condition or "Obstruction" in sound_condition:
-        st.write("🛠️ **建議動作**：滑軌衝擊音異常。請立即**清理滑軌溝槽異物**，並檢查線性滑塊鋼珠是否破損。")
+        st.markdown("""
+        * **診斷分析**：滑軌運轉出現非週期性脈衝衝擊音，為**軌道異物卡阻或鋼珠破損**。
+        * **標準處置流程（SOP）**：
+          1. **步驟 1（清潔）**：停止滑台運轉，清理滑軌溝槽內的切削屑與金屬異物。
+          2. **步驟 2（滑塊檢修）**：檢查線性滑塊刮油片與內部鋼珠鏈，補充鋰基潤滑脂。
+        """)
     elif "崩角" in sound_condition or "Gear Damage" in sound_condition:
-        st.write("🛠️ **建議動作**：齒輪咬合衝擊音異常。請開啟齒輪箱檢查**齒面是否崩角**，必要時**更換受損齒輪對**。")
+        st.markdown("""
+        * **診斷分析**：齒輪咬合頻率倍頻強度劇增，顯示**齒面有崩角、點蝕或嚴重剝落**。
+        * **標準處置流程（SOP）**：
+          1. **步驟 1（油品檢查）**：抽取齒輪油樣品，檢查是否有金屬磨屑，並**清除磁性排油螺栓金屬粉末**。
+          2. **步驟 2（開箱更換）**：開啟齒輪箱上蓋檢視齒面，建議更換受損齒輪對並重新調整咬合間隙。
+        """)
     elif "潤滑" in sound_condition or "Lubrication" in sound_condition:
-        st.write("🛠️ **建議動作**：齒輪乾摩擦音。請檢查**齒輪箱油位**，並**補充高黏度齒輪潤滑油**。")
+        st.markdown("""
+        * **診斷分析**：寬頻乾摩擦聲響，顯示**齒輪/軸承介面潤滑油膜破裂**。
+        * **標準處置流程（SOP）**：
+          1. **步驟 1（補油）**：檢查齒輪箱油位計，補充極壓（EP）工業齒輪油至標準油位。
+          2. **步驟 2（油質監測）**：檢測油溫是否過高，並檢查潤滑油幫浦循環壓力是否正常。
+        """)
     else:
-        st.write("🛠️ **建議動作**：聲學訊號超出門檻。建議維修人員使用震動分析儀進行現場複測，並檢查設備固定螺絲。")
+        st.markdown("""
+        * **診斷分析**：聲學特徵偏離基準線，重構誤差超越安全門檻。
+        * **標準處置流程（SOP）**：
+          1. **步驟 1**：進行現場複測，確認麥克風感測器安裝位置與固緊狀態。
+          2. **步驟 2**：使用手持式震動分析儀輔查量測，確認設備機械結構無鬆動。
+        """)
 
 st.markdown("---")
 
@@ -304,11 +355,9 @@ with tab1:
     font_prop = FontProperties(family='DejaVu Sans', size=11, weight='bold')
     title_font = FontProperties(family='DejaVu Sans', size=13, weight='bold')
     
-    # 提取純英文字串做為 Matplotlib 標題，徹底避免中文字體豆腐塊 (□□□□)
     clean_title = re.sub(r'[^\x00-\x7F]+', '', equipment_type).strip()
     
     fig, ax = plt.subplots(figsize=(12, 4.8))
-    # 使用 viridis 柔和色彩映射
     img = librosa.display.specshow(S_dB, x_axis='time', y_axis='linear', sr=sr, fmax=8000, ax=ax, cmap='viridis', vmin=-55, vmax=0)
     cbar = fig.colorbar(img, ax=ax, format='%+2.0f dB')
     cbar.ax.set_ylabel("Energy Level (dB)", fontproperties=font_prop)
@@ -324,7 +373,6 @@ with tab1:
 
     st.pyplot(fig)
     
-    # 圖表下方操作者提示說明卡片
     st.info("""
     💡 **聲學語譜圖 (Spectrogram) 操作指南與軸線說明：**
     * **橫軸 X 軸 (Time)**：聲音的時間軸（秒）。
