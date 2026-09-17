@@ -15,7 +15,7 @@ plt.rcdefaults()
 
 st.set_page_config(page_title="馬達與工業設備聲學診斷測試平台", layout="wide")
 
-st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (DCASE Pro)")
+st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)")
 st.caption("邊緣運算前置驗證平台 | 支援 ESP32-S3 + Raspberry Pi 5 模擬測試")
 
 # ---------------------------------------------------------
