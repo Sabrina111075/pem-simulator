@@ -167,7 +167,7 @@ if simulated_mse_loss <= threshold:
 else:
     health_index = max(1, int(85 - ((simulated_mse_loss - threshold) / (0.45 - threshold)) * 84))
 
-# 使用 Python 內建模組精確轉換為台灣時間 (UTC+8)
+# 精確獲取台灣時間 (UTC+8)
 tz_taiwan = timezone(timedelta(hours=8))
 taiwan_time = datetime.now(tz_taiwan).strftime("%H:%M:%S")
 
@@ -271,6 +271,8 @@ with tab1:
 
 with tab2:
     if len(st.session_state.history) > 0:
-        st.subheader("連續採樣健康度追蹤 (台灣時間 Asia/Taipei UTC+8)")
-        chart_data = st.session_state.history.set_index('timestamp')
+        st.subheader("連續採樣健康度追蹤 (台灣時間 UTC+8)")
+        # 僅保留最近 30 筆採樣紀錄，避免時間軸無限拉長擠壓
+        recent_history = st.session_state.history.tail(30)
+        chart_data = recent_history.set_index('timestamp')
         st.line_chart(chart_data[['health_index']])
