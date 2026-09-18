@@ -36,54 +36,81 @@ category = st.sidebar.selectbox(
 if category == "工業風扇 (Fan)":
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
-        ["正常 (Normal)", "葉片破損/異物 (Blade Fault)"]
+        [
+            "正常 (Normal)", 
+            "輕微不平衡/積塵 (Warning)", 
+            "葉片嚴重破損/異物 (Blade Fault)"
+        ]
     )
-    audio_file = "samples/fan/normal_01.wav" if "正常" in status_option else "samples/fan/anomaly_blade_01.wav"
+    if "正常" in status_option:
+        audio_file = "samples/fan/normal_01.wav"
+    else:
+        audio_file = "samples/fan/anomaly_blade_01.wav"
 
 else:  # 工業馬達
     status_option = st.sidebar.selectbox(
-        "2. 选择測試狀態/故障型態",
-        ["正常 (Normal)", "軸承磨損 (Bearing Fault)", "轉子偏心/不平衡 (Unbalance)"]
+        "2. 選擇測試狀態/故障型態",
+        [
+            "正常 (Normal)", 
+            "輕微轉子偏心 (Warning)", 
+            "嚴重軸承磨損 (Bearing Fault)"
+        ]
     )
-    audio_file = "samples/motor/normal_01.wav" if "正常" in status_option else "samples/motor/anomaly_bearing_01.wav"
+    if "正常" in status_option:
+        audio_file = "samples/motor/normal_01.wav"
+    else:
+        audio_file = "samples/motor/anomaly_bearing_01.wav"
 
 st.sidebar.markdown("---")
 st.sidebar.caption("🔬 **驗證標準**：IEEE 1451.4 & DCASE MIMII Benchmark")
 
-# 4. 指標與音訊播放區
-is_normal = "正常" in status_option
-
-if is_normal:
+# 4. 判斷三級告警狀態 (綠 Normal / 黃 Warning / 紅 Fault)
+if "正常" in status_option:
+    alert_level = "GREEN"  # 正常
     hi_score = 98 if "風扇" in category else 99
     mse_score = 0.0015 if "風扇" in category else 0.0008
     status_text = "正常 (Normal)"
     history_mse = [0.0012, 0.0014, 0.0011, 0.0015, 0.0013, 0.0016, mse_score]
+
+elif "Warning" in status_option:
+    alert_level = "YELLOW" # 預警/警告
+    hi_score = 59
+    mse_score = 0.0582
+    status_text = "警告/預警 (Warning)"
+    history_mse = [0.0015, 0.0021, 0.0085, 0.0241, 0.0380, 0.0490, mse_score]
+
 else:
-    hi_score = 58 if "風扇" in category else 52
+    alert_level = "RED"    # 嚴重故障
+    hi_score = 42 if "風扇" in category else 35
     mse_score = 0.0842 if "風扇" in category else 0.0915
-    status_text = "異常 (Anomaly)"
+    status_text = "嚴重故障 (Fault/Danger)"
     history_mse = [0.0015, 0.0021, 0.0085, 0.0241, 0.0512, 0.0720, mse_score]
 
+# 5. 指標與音訊播放區 (頂部 4 欄併排)
 col1, col2, col3, col4 = st.columns([1, 1, 1, 1.3])
 
 with col1:
     st.caption("設備健康指標 (HI)")
     st.markdown(f"<h1 style='margin:0; padding:0; font-size: 2.2rem;'>{hi_score} %</h1>", unsafe_allow_html=True)
-    if is_normal:
+    
+    if alert_level == "GREEN":
         st.markdown("<span style='color:#15803d; background-color:#dcfce7; padding:2px 8px; border-radius:4px; font-weight:bold; font-size:0.85rem;'>↑ 良好</span>", unsafe_allow_html=True)
-    else:
-        # 強制使用標準黃色 (Warning Yellow) 標籤
+    elif alert_level == "YELLOW":
         st.markdown("<span style='color:#b45309; background-color:#fef3c7; border: 1px solid #fde68a; padding:2px 8px; border-radius:4px; font-weight:bold; font-size:0.85rem;'>⚠️ 警告</span>", unsafe_allow_html=True)
+    else:
+        st.markdown("<span style='color:#b91c1c; background-color:#fee2e2; border: 1px solid #fca5a5; padding:2px 8px; border-radius:4px; font-weight:bold; font-size:0.85rem;'>❌ 故障</span>", unsafe_allow_html=True)
 
 with col2:
     st.metric(label="重構誤差 (MSE)", value=f"{mse_score}", delta="門檻: 0.05", delta_color="off")
 
 with col3:
     st.subheader("診斷狀態")
-    if is_normal:
+    if alert_level == "GREEN":
         st.success(f"✔️ {status_text}")
+    elif alert_level == "YELLOW":
+        st.warning(f"⚠️ {status_text}")
     else:
-        st.error(f"⚠️ {status_text}")
+        st.error(f"🚨 {status_text}")
 
 with col4:
     st.subheader("🔊 音頻試聽")
@@ -94,57 +121,67 @@ with col4:
 
 st.markdown("---")
 
-# 5. 設備日常巡檢維運指引 (區分不同故障類型)
+# 6. 設備日常巡檢維運指引 (同步採用相對應顏色與層級)
 st.subheader("📋 設備日常巡檢維運指引 (Routine Maintenance Guide)")
 
 if "風扇" in category:
-    if is_normal:
+    if alert_level == "GREEN":
         st.info(
-            "✅ **運轉狀態：優良**\n\n"
+            "✅ **運轉狀態：優良 (Normal)**\n\n"
             "- **特徵**：氣流聲均勻，未偵測到高頻摩擦與週期衝擊音。\n"
             "- **日常維護建議**：每 30 天進行進出風口濾網粉塵清潔，檢查固定螺絲是否鬆動。"
         )
-    else:
-        st.error(
-            "⚠️ **異常診斷：風扇葉片破損 / 異物卡入 (Blade Fault)**\n\n"
-            "**1. 聲學診斷結果**：在 2.8kHz 頻段出現連續高頻噪聲，且伴隨週期性衝擊波形 (Transient Impact)。\n\n"
+    elif alert_level == "YELLOW":
+        st.warning(
+            "⚠️ **預警診斷：風扇輕微不平衡 / 扇葉積塵 (Warning)**\n\n"
+            "**1. 聲學診斷結果**：在低頻段出現微幅諧波能量抬升，MSE 誤差輕微超出門檻 (0.0582)，健康指標 HI 降至 59%。\n\n"
             "**2. 即時處置 SOP**：\n"
-            "- **步驟一**：安排離峰停機檢查，切斷風扇主電源並掛上警示牌。\n"
-            "- **步驟二**：目視檢查風扇葉片是否出現破裂、欠角，或內部有異物卡阻。\n"
-            "- **步驟三**：使用扭力板手抽檢風扇軸心與葉輪組合之固定螺帽。\n\n"
-            "**3. 預防維護建議**：若葉片有嚴重磨損請聯絡原廠更換，避免運轉不平衡導致馬達軸承受損。"
+            "- **步驟一**：安排下班時間或定期維護日進行風扇外觀檢查。\n"
+            "- **步驟二**：清理扇葉表面附著之灰塵油脂，確認是否因積塵造成質量分佈不均。\n"
+            "- **步驟三**：檢查外殼防護網是否產生共振異音。\n\n"
+            "**3. 預防維護建議**：持續觀察下期 MSE 數據變化，暫無需急迫停機。"
         )
-else:  # 馬達部分：將軸承磨損與轉子偏心獨立區分
-    if is_normal:
+    else: # RED
+        st.error(
+            "🚨 **嚴重告警：風扇葉片嚴重破損 / 異物卡入 (Blade Fault)**\n\n"
+            "**1. 聲學診斷結果**：在 2.8kHz 頻段出現強烈高頻噪聲與週期衝擊波，MSE 誤差高度異常 (0.0842)，健康指標 HI 降至 42%。\n\n"
+            "**2. 即時處置 SOP**：\n"
+            "- **步驟一**：請即刻安排停機檢查，切斷風扇主電源並掛上警示標籤。\n"
+            "- **步驟二**：目視檢查風扇葉片是否出現缺角、裂痕，或內部有異物卡阻。\n"
+            "- **步驟三**：使用扭力板手緊固風扇軸心與葉輪組合之螺帽。\n\n"
+            "**3. 預防維護建議**：更換受損扇葉，避免長期運轉造成馬達軸心彎曲。"
+        )
+else:  # 馬達
+    if alert_level == "GREEN":
         st.info(
-            "✅ **運轉狀態：優良**\n\n"
+            "✅ **運轉狀態：優良 (Normal)**\n\n"
             "- **特徵**：基本運轉頻率 (60Hz / 120Hz) 穩定，無諧波異音。\n"
             "- **日常維護建議**：按季度補充高溫潤滑油脂，並確認外殼散熱風道暢通。"
         )
-    elif "軸承磨損" in status_option:
-        st.error(
-            "⚠️ **異常診斷：馬達軸承磨損 (Bearing Fault)**\n\n"
-            "**1. 聲學診斷結果**：在 3.6kHz ~ 4.2kHz 高頻段湧現顯著金屬磨損聲學能量，MSE 誤差超出安全門檻 (0.05)。\n\n"
-            "**2. 即時處置 SOP**：\n"
-            "- **步驟一**：發布等級 2 告警，建議於 24 小時內規劃預防性停機保養。\n"
-            "- **步驟二**：配合加速度計測量三軸高頻振動值 (BPFO/BPFI)，確認滾珠或滾道損傷程度。\n"
-            "- **步驟三**：利用注油槍補給耐高溫潤滑油脂；若高頻異音未減弱，應儘速更換軸承。\n\n"
-            "**3. 預防維護建議**：檢查軸承安裝對中度與預緊力，避免因過緊或潤滑不足導致二次損壞。"
-        )
-    else:  # 轉子偏心/不平衡 (Unbalance)
+    elif alert_level == "YELLOW":
         st.warning(
-            "⚠️ **異常診斷：馬達轉子偏心 / 動不平衡 (Unbalance / Eccentricity)**\n\n"
-            "**1. 聲學診斷結果**：在 60Hz 轉速基頻與 120Hz 二倍頻處發現強烈低頻嗡鳴聲 (Low-frequency Hum)，諧波能量異常升高。\n\n"
+            "⚠️ **預警診斷：馬達轉子輕微偏心 / 動不平衡 (Warning)**\n\n"
+            "**1. 聲學診斷結果**：60Hz 轉速基頻能量略微升高，MSE 誤差進入警戒範圍 (0.0582)，健康指標 HI 降至 59%。\n\n"
             "**2. 即時處置 SOP**：\n"
-            "- **步驟一**：檢查馬達底座螺絲 (Foot Bolts) 是否鬆動或墊片平整度不足 (Soft Foot)。\n"
-            "- **步驟二**：使用雷射對中儀 (Laser Alignment) 重新校正馬達與負載軸心的同心度。\n"
-            "- **步驟三**：進行動平衡校正 (Dynamic Balancing)，檢測轉子質心是否偏移。\n\n"
-            "**3. 預防維護建議**：定期檢查聯軸器 (Coupling) 橡膠墊磨損狀況，防止機械振動加劇磨損。"
+            "- **步驟一**：檢查馬達底座螺絲 (Foot Bolts) 是否有些許鬆動。\n"
+            "- **步驟二**：使用雷射對中儀檢查馬達與負載軸心對中狀態。\n"
+            "- **步驟三**：紀錄當前振動與聲學數值，納入每週追蹤清單。\n\n"
+            "**3. 預防維護建議**：規劃於下次例行停機時重新進行動平衡校正 (Dynamic Balancing)。"
+        )
+    else: # RED
+        st.error(
+            "🚨 **嚴重告警：馬達軸承嚴重磨損 (Bearing Fault / Danger)**\n\n"
+            "**1. 聲學診斷結果**：3.6kHz ~ 4.2kHz 高頻段湧現強烈金屬磨損聲，MSE 重構誤差嚴重超標 (0.0915)，健康指標 HI 掉至 35%。\n\n"
+            "**2. 即時處置 SOP**：\n"
+            "- **步驟一**：發布 Level 1 緊迫告警，建議 12 小時內進行預防性停機。\n"
+            "- **步驟二**：配合加速度計檢測滾道 (BPFO/BPFI) 損傷狀況。\n"
+            "- **步驟三**：補充油脂若無效，應立即備料並安排更換新軸承。\n\n"
+            "**3. 預防維護建議**：更換軸承後需重新校正軸心對中度與預緊力，避免二次損壞。"
         )
 
 st.markdown("---")
 
-# 6. 專業圖表分頁 (Tabs)
+# 7. 專業圖表分頁 (Tabs)
 tab1, tab2, tab3 = st.tabs([
     "📊 邊緣聲學梅爾頻譜 (Mel-Spectrogram)",
     "📈 歷史趨勢與統計分析 (Trend & Stats)",
@@ -185,9 +222,9 @@ with tab2:
     st.markdown("#### 歷史巡檢詳細紀錄表 (Inspection Records)")
     df_history = pd.DataFrame({
         "巡檢時間": ["2026-09-12 08:00", "2026-09-13 08:00", "2026-09-14 08:00", "2026-09-15 08:00", "2026-09-16 08:00", "2026-09-17 08:00", "2026-09-18 08:00"],
-        "設備狀態": ["正常", "正常", "正常", "正常" if is_normal else "預警", "正常" if is_normal else "異常", "正常" if is_normal else "異常", status_text],
+        "設備狀態": ["正常", "正常", "正常", "正常" if alert_level=="GREEN" else "預警", "正常" if alert_level=="GREEN" else status_text, "正常" if alert_level=="GREEN" else status_text, status_text],
         "MSE 重構誤差": history_mse,
-        "健康度 (HI)": [99, 98, 99, 97 if is_normal else 82, 98 if is_normal else 68, 98 if is_normal else 61, f"{hi_score}%"]
+        "健康度 (HI)": [99, 98, 99, 97 if alert_level=="GREEN" else 82, 98 if alert_level=="GREEN" else 68, 98 if alert_level=="GREEN" else 61, f"{hi_score}%"]
     })
     st.dataframe(df_history, use_container_width=True)
 
