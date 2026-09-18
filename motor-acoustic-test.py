@@ -13,20 +13,28 @@ st.set_page_config(
     layout="wide"
 )
 
-# 注入自訂 CSS，將包含「警告」字樣的 metric delta 標籤設定為黃色 (Warning Yellow)
+# 2. 強力 CSS：精準捕捉包含「警告」的 delta 標籤並強制改為黃色/橙色
 st.markdown("""
     <style>
+    /* 選擇所有包含警告特徵的 stMetricDelta 區域 */
+    div[data-testid="stMetricDelta"]:has([data-testid="stMetricDeltaIcon-down"]),
     div[data-testid="stMetricDelta"]:has(span:contains("警告")) {
-        color: #d97706 !important; /* 醒目深黃/琥珀色 */
-        background-color: #fef3c7 !important; /* 淺黃背景襯托 */
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-weight: bold;
+        color: #b45309 !important; /* 琥珀黃/橙褐色文字 */
+        background-color: #fef3c7 !important; /* 柔和黃色背景 */
+        padding: 2px 10px;
+        border-radius: 6px;
+        border: 1px solid #fde68a;
+    }
+    div[data-testid="stMetricDelta"]:has([data-testid="stMetricDeltaIcon-down"]) svg,
+    div[data-testid="stMetricDelta"]:has(span:contains("警告")) span {
+        color: #b45309 !important;
+        fill: #b45309 !important;
+        font-weight: bold !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 2. 標題與簡介
+# 3. 標題與簡介
 st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)")
 st.caption("邊緣運算前置驗證平台 | 支援 ESP32-S3 + Raspberry Pi 5 模擬測試")
 
@@ -38,7 +46,7 @@ st.info(
 
 st.markdown("---")
 
-# 3. 側邊欄控制台
+# 4. 側邊欄控制台
 st.sidebar.header("⚙️ 設備與測試控制台")
 
 category = st.sidebar.selectbox(
@@ -63,7 +71,7 @@ else:  # 工業馬達
 st.sidebar.markdown("---")
 st.sidebar.caption("🔬 **驗證標準**：IEEE 1451.4 & DCASE MIMII Benchmark")
 
-# 4. 指標與音訊播放區 (頂部 4 欄併排)
+# 5. 指標與音訊播放區
 is_normal = "正常" in status_option
 
 if is_normal:
@@ -80,12 +88,12 @@ else:
 col1, col2, col3, col4 = st.columns([1, 1, 1, 1.3])
 
 with col1:
-    # delta 設為 "-警告"，觸發 CSS 樣式顯示黃色標籤
+    # 非正常時使用 "inverse" 觸發 delta icon，再由 CSS 覆蓋為黃色標籤
     st.metric(
         label="設備健康指標 (HI)", 
         value=f"{hi_score} %", 
-        delta="良好" if is_normal else "-警告", 
-        delta_color="normal" if is_normal else "off"
+        delta="良好" if is_normal else "警告", 
+        delta_color="normal" if is_normal else "inverse"
     )
 
 with col2:
@@ -107,7 +115,7 @@ with col4:
 
 st.markdown("---")
 
-# 5. 獨立放置：設備日常巡檢維運指引 (置於圖表上方)
+# 6. 設備日常巡檢維運指引 (置於圖表上方)
 st.subheader("📋 設備日常巡檢維運指引 (Routine Maintenance Guide)")
 
 if "風扇" in category:
@@ -147,14 +155,14 @@ else:  # 馬達
 
 st.markdown("---")
 
-# 6. 精簡為 3 個專業圖表分頁 (Tabs / Sheets)
+# 7. 專業圖表分頁 (Tabs)
 tab1, tab2, tab3 = st.tabs([
     "📊 邊緣聲學梅爾頻譜 (Mel-Spectrogram)",
     "📈 歷史趨勢與統計分析 (Trend & Stats)",
     "⚡ 時域訊號與 FFT 頻譜 (Waveform & FFT)"
 ])
 
-# Tab 1: 梅爾頻譜圖 (純英文軸標籤)
+# Tab 1: 梅爾頻譜圖
 with tab1:
     st.markdown("#### 邊緣 AI 聲學特徵分析 (Edge AI Acoustic Feature)")
     st.caption("💡 **圖表指引**：橫軸 (X-axis) 表示時間 [秒]，縱軸 (Y-axis) 表示梅爾對數頻率 [Hz]，顏色深淺表示能量強度 (dB)。")
@@ -194,7 +202,7 @@ with tab2:
     })
     st.dataframe(df_history, use_container_width=True)
 
-# Tab 3: 時域波形與 FFT 頻譜 (無豆腐字)
+# Tab 3: 時域波形與 FFT 頻譜
 with tab3:
     st.markdown("#### 時域波形 (Waveform) 與 快速傅立葉變換 (FFT Spectrum)")
     
