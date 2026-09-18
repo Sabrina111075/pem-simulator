@@ -13,6 +13,19 @@ st.set_page_config(
     layout="wide"
 )
 
+# 注入自訂 CSS，將包含「警告」字樣的 metric delta 標籤設定為黃色 (Warning Yellow)
+st.markdown("""
+    <style>
+    div[data-testid="stMetricDelta"]:has(span:contains("警告")) {
+        color: #d97706 !important; /* 醒目深黃/琥珀色 */
+        background-color: #fef3c7 !important; /* 淺黃背景襯托 */
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # 2. 標題與簡介
 st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)")
 st.caption("邊緣運算前置驗證平台 | 支援 ESP32-S3 + Raspberry Pi 5 模擬測試")
@@ -67,7 +80,13 @@ else:
 col1, col2, col3, col4 = st.columns([1, 1, 1, 1.3])
 
 with col1:
-    st.metric(label="設備健康指標 (HI)", value=f"{hi_score} %", delta="狀態良好" if is_normal else "-警告", delta_color="normal" if is_normal else "inverse")
+    # delta 設為 "-警告"，觸發 CSS 樣式顯示黃色標籤
+    st.metric(
+        label="設備健康指標 (HI)", 
+        value=f"{hi_score} %", 
+        delta="良好" if is_normal else "-警告", 
+        delta_color="normal" if is_normal else "off"
+    )
 
 with col2:
     st.metric(label="重構誤差 (MSE)", value=f"{mse_score}", delta="門檻: 0.05", delta_color="off")
@@ -135,7 +154,7 @@ tab1, tab2, tab3 = st.tabs([
     "⚡ 時域訊號與 FFT 頻譜 (Waveform & FFT)"
 ])
 
-# Tab 1: 梅爾頻譜圖 (防止豆腐字，使用純英文字體)
+# Tab 1: 梅爾頻譜圖 (純英文軸標籤)
 with tab1:
     st.markdown("#### 邊緣 AI 聲學特徵分析 (Edge AI Acoustic Feature)")
     st.caption("💡 **圖表指引**：橫軸 (X-axis) 表示時間 [秒]，縱軸 (Y-axis) 表示梅爾對數頻率 [Hz]，顏色深淺表示能量強度 (dB)。")
@@ -148,7 +167,6 @@ with tab1:
         fig, ax = plt.subplots(figsize=(10, 4))
         img = librosa.display.specshow(S_dB, x_axis='time', y_axis='mel', sr=sr, fmax=8000, ax=ax, cmap='magma')
         
-        # 純英文軸標籤，徹底杜絕豆腐字亂碼
         ax.set_xlabel("Time (s)", fontsize=10)
         ax.set_ylabel("Frequency (Hz)", fontsize=10)
         cbar = fig.colorbar(img, ax=ax, format='%+2.0f dB')
@@ -176,11 +194,10 @@ with tab2:
     })
     st.dataframe(df_history, use_container_width=True)
 
-# Tab 3: 時域波形與 FFT 頻譜 (解決豆腐字 + 補強 X/Y 軸說明)
+# Tab 3: 時域波形與 FFT 頻譜 (無豆腐字)
 with tab3:
     st.markdown("#### 時域波形 (Waveform) 與 快速傅立葉變換 (FFT Spectrum)")
     
-    # 增加 X/Y 軸雙語對照指引
     st.markdown(
         "- **上方時域圖 (Time Domain)**：`X 軸: 時間 Time (s)` | `Y 軸: 振幅 Amplitude`\n"
         "- **下方頻域圖 (FFT Spectrum)**：`X 軸: 頻率 Frequency (Hz)` | `Y 軸: 聲訊強度 Magnitude`"
@@ -191,7 +208,7 @@ with tab3:
         
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 5))
         
-        # 上圖：時域波形 (純英文避免豆腐字)
+        # 上圖：時域波形
         time_axis = np.linspace(0, len(y) / sr, len(y))
         ax1.plot(time_axis, y, color='#1f77b4', alpha=0.8)
         ax1.set_title("Time-Domain Signal (Waveform)", fontsize=10)
@@ -199,7 +216,7 @@ with tab3:
         ax1.set_ylabel("Amplitude", fontsize=9)
         ax1.grid(True, linestyle='--', alpha=0.5)
         
-        # 下圖：FFT 頻譜 (純英文避免豆腐字)
+        # 下圖：FFT 頻譜
         n = len(y)
         fft_vals = np.abs(np.fft.rfft(y))
         freq_axis = np.fft.rfftfreq(n, 1/sr)
