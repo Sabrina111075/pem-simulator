@@ -40,51 +40,80 @@ category = st.sidebar.selectbox(
     ]
 )
 
-# 根據設備類別設定故障型態選項與預設音訊
 if category == "工業風扇 (Fan)":
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
         ["正常 (Normal)", "輕微不平衡/積塵 (Warning)", "葉片嚴重破損/異物 (Blade Fault)"]
     )
-    audio_file = "samples/fan/normal_01.wav" if "正常" in status_option else "samples/fan/anomaly_blade_01.wav"
+    if "正常" in status_option:
+        audio_file = "samples/fan/normal_01.wav"
+    elif "Warning" in status_option:
+        audio_file = "samples/fan/warning_01.wav" if os.path.exists("samples/fan/warning_01.wav") else "samples/fan/anomaly_blade_01.wav"
+    else:
+        audio_file = "samples/fan/anomaly_blade_01.wav"
 
 elif category == "工業馬達 (Motor)":
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
         ["正常 (Normal)", "輕微轉子偏心 (Warning)", "嚴重軸承磨損 (Bearing Fault)"]
     )
-    audio_file = "samples/motor/normal_01.wav" if "正常" in status_option else "samples/motor/anomaly_bearing_01.wav"
+    if "正常" in status_option:
+        audio_file = "samples/motor/normal_01.wav"
+    elif "Warning" in status_option:
+        audio_file = "samples/motor/warning_01.wav" if os.path.exists("samples/motor/warning_01.wav") else "samples/motor/anomaly_bearing_01.wav"
+    else:
+        audio_file = "samples/motor/anomaly_bearing_01.wav"
 
 elif category == "工業水泵 (Pump)":
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
         ["正常 (Normal)", "流體輕微微氣蝕 (Warning)", "軸封嚴重磨損/空轉 (Pump Cavitation)"]
     )
-    audio_file = "samples/pump/normal_01.wav" if "正常" in status_option else "samples/pump/anomaly_cavitation_01.wav"
+    if "正常" in status_option:
+        audio_file = "samples/pump/normal_01.wav"
+    elif "Warning" in status_option:
+        audio_file = "samples/pump/warning_01.wav"
+    else:
+        audio_file = "samples/pump/anomaly_cavitation_01.wav"
 
 elif category == "電磁閥門 (Valve)":
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
         ["正常 (Normal)", "閥體輕微結垢/滯遲 (Warning)", "氣體/液體嚴重洩漏 (Valve Leakage)"]
     )
-    audio_file = "samples/valve/normal_01.wav" if "正常" in status_option else "samples/valve/anomaly_leak_01.wav"
+    if "正常" in status_option:
+        audio_file = "samples/valve/normal_01.wav"
+    elif "Warning" in status_option:
+        audio_file = "samples/valve/warning_01.wav"
+    else:
+        audio_file = "samples/valve/anomaly_leak_01.wav"
 
 elif category == "線性滑軌 (Slide Rail)":
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
         ["正常 (Normal)", "潤滑油脂不足 (Warning)", "軌道金屬剝落/刮傷 (Rail Scratch)"]
     )
-    audio_file = "samples/slider/normal_01.wav" if "正常" in status_option else "samples/slider/anomaly_scratch_01.wav"
+    if "正常" in status_option:
+        audio_file = "samples/slider/normal_01.wav"
+    elif "Warning" in status_option:
+        audio_file = "samples/slider/warning_01.wav"
+    else:
+        audio_file = "samples/slider/anomaly_scratch_01.wav"
 
 else:  # 工業齒輪箱 (Gearbox)
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
         ["正常 (Normal)", "齒面輕微點蝕 (Warning)", "輪齒嚴重點蝕/缺角 (Gear Damage)"]
     )
-    audio_file = "samples/gearbox/normal_01.wav" if "正常" in status_option else "samples/gearbox/anomaly_gear_01.wav"
+    if "正常" in status_option:
+        audio_file = "samples/gearbox/normal_01.wav"
+    elif "Warning" in status_option:
+        audio_file = "samples/gearbox/warning_01.wav"
+    else:
+        audio_file = "samples/gearbox/anomaly_gear_01.wav"
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🔬 **驗證標準**：IEEE 1451.4 & DCASE MIMII Benchmark")
+st.sidebar.caption("🛡️ **驗證標準** : IEEE 1451.4 & DCASE MIMII Benchmark")
 
 # 4. 判斷三級告警狀態 (綠 Normal / 黃 Warning / 紅 Fault)
 if "正常" in status_option:
