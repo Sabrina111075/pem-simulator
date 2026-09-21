@@ -276,27 +276,42 @@ with tab1:
     # 若非正常狀態，在頻譜圖上繪製黃色/紅色高頻異常框選
     if "Warning" in status_en:
         ax.axhspan(1500, 4000, color='yellow', alpha=0.25, linestyle='--', linewidth=1.5)
-        ax.text(0.1, 2200, "⚠️ Warning Anomaly Region", color='yellow', fontsize=9, fontweight='bold')
+        ax.text(0.1, 2200, " Warning Anomaly Region", color='yellow', fontsize=9, fontweight='bold')
     elif "Fault" in status_en:
         ax.axhspan(2000, 7500, color='red', alpha=0.25, linestyle='--', linewidth=1.5)
-        ax.text(0.1, 3500, "🚨 Severe Impact / Friction Region", color='red', fontsize=9, fontweight='bold')
+        ax.text(0.1, 3500, " Severe Impact / Friction Region", color='red', fontsize=9, fontweight='bold')
 
     ax.set_title(f"Edge AI Feature: Mel-Spectrogram ({category_en} - {status_en})", fontsize=12, pad=10)
 
     plt.tight_layout()
     st.pyplot(fig)
 
-    # ---------------- 實時 DSP 聲學特徵指標卡片 ----------------
-    st.markdown("##### 🔍 實時聲學特徵指標 (Real-time Acoustic DSP Metrics)")
+# ---------------- DCASE / MIMII 基準聲學特徵指標卡片 ----------------
+    st.markdown("#####  DCASE / MIMII 基準聲學特徵 (Benchmark Acoustic Metrics)")
     
     rms_val = float(np.sqrt(np.mean(y**2)))
     cent_val = float(np.mean(librosa.feature.spectral_centroid(y=y, sr=sr)))
     zcr_val = float(np.mean(librosa.feature.zero_crossing_rate(y=y)))
 
     m_col1, m_col2, m_col3 = st.columns(3)
-    m_col1.metric("均方根能量 (RMS Energy)", f"{rms_val:.4f}", delta="正常" if rms_val < 0.08 else "偏高", delta_color="inverse")
-    m_col2.metric("頻譜中心 (Spectral Centroid)", f"{int(cent_val)} Hz", delta="平穩" if cent_val < 1500 else "高頻偏多", delta_color="inverse")
-    m_col3.metric("過零率 (Zero Crossing Rate)", f"{zcr_val:.4f}", delta="滑順" if zcr_val < 0.08 else "爆音/摩擦", delta_color="inverse")
+    m_col1.metric(
+        "時域均方根能量 (RMS Energy)", 
+        f"{rms_val:.4f}", 
+        delta="DCASE 標準範圍" if rms_val < 0.08 else "能量顯著異常", 
+        delta_color="inverse"
+    )
+    m_col2.metric(
+        "頻譜中心 (Spectral Centroid)", 
+        f"{int(cent_val)} Hz", 
+        delta="MIMII 基頻區間" if cent_val < 1500 else "高頻異音轉移", 
+        delta_color="inverse"
+    )
+    m_col3.metric(
+        "過零率 (Zero Crossing Rate)", 
+        f"{zcr_val:.4f}", 
+        delta="平滑運轉特徵" if zcr_val < 0.08 else "衝擊/摩擦特徵", 
+        delta_color="inverse"
+    )
 
 # Tab 2: 歷史趨勢與數據表
 with tab2:
