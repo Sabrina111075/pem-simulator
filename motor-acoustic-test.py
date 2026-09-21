@@ -254,7 +254,8 @@ with tab1:
     ax.set_ylabel("Frequency (Hz)", fontsize=10)
     cbar = fig.colorbar(img, ax=ax, format='%+2.0f dB')
     cbar.set_label("Power (dB)", fontsize=9)
-    ax.set_title(f"Edge AI Feature: Mel-Spectrogram ({category})", fontsize=11)
+    category_en = category.split("(")[-1].replace(")", "").strip() # 自動提取英文名稱
+    ax.set_title(f"Edge AI Feature: Mel-Spectrogram ({category_en} - {status_option.split(' ')[0]})", fontsize=12, pad=10)
     plt.tight_layout()
     st.pyplot(fig)
 
