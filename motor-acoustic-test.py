@@ -233,7 +233,6 @@ with tab1:
     if os.path.exists(audio_file):
         y, sr = librosa.load(audio_file, sr=16000)
     else:
-        # 當音訊檔不存在時，自動生成高仿真模擬聲學波形
         sr = 16000
         duration = 2.0
         t = np.linspace(0, duration, int(sr * duration))
@@ -255,7 +254,6 @@ with tab1:
     cbar = fig.colorbar(img, ax=ax, format='%+2.0f dB')
     cbar.set_label("Power (dB)", fontsize=9)
 
-    # 1. 建立純英文狀態映射表 (徹底消除中文字導致的豆腐字)
     status_en_map = {
         "正常 (Normal)": "Normal",
         "輕微不平衡/積塵 (Warning)": "Warning - Imbalance",
@@ -272,15 +270,33 @@ with tab1:
         "輪齒嚴重點蝕/缺角 (Gear Damage)": "Fault - Tooth Damage"
     }
 
-    # 2. 自動取得英文名稱與英文狀態
     category_en = category.split("(")[-1].replace(")", "").strip()
     status_en = status_en_map.get(status_option, "Normal")
 
-    # 3. 繪製純英文 Title
+    # 若非正常狀態，在頻譜圖上繪製黃色/紅色高頻異常框選
+    if "Warning" in status_en:
+        ax.axhspan(1500, 4000, color='yellow', alpha=0.25, linestyle='--', linewidth=1.5)
+        ax.text(0.1, 2200, "⚠️ Warning Anomaly Region", color='yellow', fontsize=9, fontweight='bold')
+    elif "Fault" in status_en:
+        ax.axhspan(2000, 7500, color='red', alpha=0.25, linestyle='--', linewidth=1.5)
+        ax.text(0.1, 3500, "🚨 Severe Impact / Friction Region", color='red', fontsize=9, fontweight='bold')
+
     ax.set_title(f"Edge AI Feature: Mel-Spectrogram ({category_en} - {status_en})", fontsize=12, pad=10)
 
     plt.tight_layout()
     st.pyplot(fig)
+
+    # ---------------- 實時 DSP 聲學特徵指標卡片 ----------------
+    st.markdown("##### 🔍 實時聲學特徵指標 (Real-time Acoustic DSP Metrics)")
+    
+    rms_val = float(np.sqrt(np.mean(y**2)))
+    cent_val = float(np.mean(librosa.feature.spectral_centroid(y=y, sr=sr)))
+    zcr_val = float(np.mean(librosa.feature.zero_crossing_rate(y=y)))
+
+    m_col1, m_col2, m_col3 = st.columns(3)
+    m_col1.metric("均方根能量 (RMS Energy)", f"{rms_val:.4f}", delta="正常" if rms_val < 0.08 else "偏高", delta_color="inverse")
+    m_col2.metric("頻譜中心 (Spectral Centroid)", f"{int(cent_val)} Hz", delta="平穩" if cent_val < 1500 else "高頻偏多", delta_color="inverse")
+    m_col3.metric("過零率 (Zero Crossing Rate)", f"{zcr_val:.4f}", delta="滑順" if zcr_val < 0.08 else "爆音/摩擦", delta_color="inverse")
 
 # Tab 2: 歷史趨勢與數據表
 with tab2:
@@ -328,3 +344,19 @@ with tab3:
     
     plt.tight_layout()
     st.pyplot(fig)
+
+# 側邊欄匯出報告按鈕
+import json
+report_data = {
+    "device_category": category,
+    "status_option": status_option,
+    "mse_score": mse_score,
+    "health_index": f"{hi_score}%",
+    "alert_level": alert_level
+}
+st.sidebar.download_button(
+    label="📥 下載聲學巡檢報告 (JSON)",
+    data=json.dumps(report_data, ensure_ascii=False, indent=2),
+    file_name=f"acoustic_report_{category_en}.json",
+    mime="application/json"
+)
