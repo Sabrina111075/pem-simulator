@@ -31,12 +31,6 @@ def standardize_audio(audio, target_peak=0.85):
     return audio
 
 def generate_highly_differentiated_audio(category, state):
-    """
-    state: 
-      0 -> Normal (純淨平穩運轉音)
-      1 -> Warning (具備極高辨識度之預警聲學特徵：拍頻/氣泡/摩擦/抖動)
-      2 -> Fault (強烈金屬衝擊/爆裂/嚴重洩漏/斷齒)
-    """
     np.random.seed(42 + state * 100)
     bg_noise = np.random.normal(0, 0.003, len(t))
     
@@ -44,11 +38,9 @@ def generate_highly_differentiated_audio(category, state):
     if category == "fan":
         base = 0.5 * np.sin(2 * np.pi * 35 * t) + 0.15 * np.sin(2 * np.pi * 70 * t)
         if state == 1:
-            # 輕微不平衡：強烈 4Hz 低頻擺動脈動 (Wobble Beat)
-            wobble = (1.0 + 0.7 * np.sin(2 * np.pi * 4 * t)) # 強烈 4Hz 調變
+            wobble = (1.0 + 0.7 * np.sin(2 * np.pi * 4 * t))
             return standardize_audio(base * wobble + np.random.normal(0, 0.015, len(t)))
         elif state == 2:
-            # 嚴重破損：強烈金屬卡阻與頻繁刮削聲
             clack = np.zeros_like(t)
             idx = np.arange(0, len(t), int(sr * 0.12))
             clack[idx] = 0.8
@@ -60,12 +52,10 @@ def generate_highly_differentiated_audio(category, state):
     elif category == "motor":
         base = 0.5 * np.sin(2 * np.pi * 50 * t) + 0.25 * np.sin(2 * np.pi * 100 * t)
         if state == 1:
-            # 轉子偏心：7Hz 明顯電磁拍頻與顫音 (Electromagnetic Humming Beat)
             beat_mod = 1.0 + 0.65 * np.sin(2 * np.pi * 7 * t)
             sub_hum = 0.3 * np.sin(2 * np.pi * 150 * t) * beat_mod
             return standardize_audio((base + sub_hum) * beat_mod + np.random.normal(0, 0.01, len(t)))
         elif state == 2:
-            # 嚴重軸承磨損：高頻刺耳哮聲與金屬磨損
             squeal = 0.7 * np.sin(2 * np.pi * 3600 * t) * (1 + 0.4 * np.sin(2 * np.pi * 12 * t))
             impacts = np.random.normal(0, 0.18, len(t))
             return standardize_audio(base + squeal + impacts)
@@ -75,12 +65,10 @@ def generate_highly_differentiated_audio(category, state):
     elif category == "pump":
         base = 0.45 * np.sin(2 * np.pi * 40 * t) + 0.2 * np.sin(2 * np.pi * 80 * t)
         if state == 1:
-            # 流體輕微氣蝕：顯著且綿密的中高頻氣泡破裂聲 (Bubbling Cavitation Noise)
             bubble_env = (np.sin(2 * np.pi * 12 * t) + 1.2) / 2.2
             bubbles = 0.35 * np.random.normal(0, 0.08, len(t)) * bubble_env * np.sin(2 * np.pi * 1600 * t)
             return standardize_audio(base + bubbles + np.random.normal(0, 0.02, len(t)))
         elif state == 2:
-            # 軸封嚴重磨損/空轉：巨大金屬水錘爆裂聲
             blasts = np.zeros_like(t)
             b_idx = np.random.choice(len(t), size=45, replace=False)
             blasts[b_idx] = np.random.uniform(0.7, 1.0, size=45)
@@ -92,27 +80,25 @@ def generate_highly_differentiated_audio(category, state):
     elif category == "valve":
         base = 0.3 * np.sin(2 * np.pi * 100 * t)
         if state == 1:
-            # 閥體輕微結垢：動作滯遲與明顯的高頻滑動摩擦氣音 (Sluggish Friction Hiss)
             friction_hiss = 0.4 * np.random.normal(0, 0.08, len(t)) * np.sin(2 * np.pi * 2400 * t)
             ticks = np.zeros_like(t)
-            ticks[::int(sr*0.5)] = 0.5 # 每 0.5 秒一次卡阻咯噠聲
+            ticks[::int(sr*0.5)] = 0.5
             return standardize_audio(base + friction_hiss + ticks + np.random.normal(0, 0.01, len(t)))
         elif state == 2:
-            # 嚴重洩漏：強烈高壓噴射嘶嘶聲
             jet_leak = 0.8 * np.random.normal(0, 0.18, len(t)) * (np.sin(2 * np.pi * 5000 * t) + 1.5)
             return standardize_audio(base * 0.2 + jet_leak)
         return standardize_audio(base + bg_noise)
 
-    # ---------------- 5. 線性滑軌 (Slider) ----------------
+    # ---------------- 5. 線性滑軌 (Slide Rail) - 強力重構版本 ----------------
     elif category == "slider":
-        slide_env = np.abs(np.sin(2 * np.pi * 0.5 * t)) # 來回行程包絡線
-        base = 0.4 * slide_env * np.sin(2 * np.pi * 160 * t)
+        slide_env = np.abs(np.sin(2 * np.pi * 0.5 * t)) # 來回行程包絡線 (2秒一個週期)
+        base = 0.4 * slide_env * np.sin(2 * np.pi * 150 * t) # 純淨低頻滑動音
         if state == 1:
-            # 潤滑油脂不足：顯著的高頻金屬乾摩擦嘶嘶聲 (Dry Metallic Friction)
-            dry_friction = 0.45 * slide_env * np.random.normal(0, 0.09, len(t)) * np.sin(2 * np.pi * 2800 * t)
-            return standardize_audio(base + dry_friction + np.random.normal(0, 0.015, len(t)))
+            # 潤滑油脂不足：大幅強化中高頻（2200Hz + 3500Hz）金屬乾摩擦「吱嘶/乾磨」音
+            dry_squeak = 0.6 * slide_env * (np.sin(2 * np.pi * 2200 * t) + np.sin(2 * np.pi * 3500 * t)) * np.random.normal(0, 0.12, len(t))
+            return standardize_audio(base * 0.5 + dry_squeak)
         elif state == 2:
-            # 軌道刮傷：刺耳刮削聲與連續衝擊
+            # 軌道刮傷：極度刺耳高頻金屬刮削聲
             screech = 0.85 * slide_env * np.random.normal(0, 0.2, len(t)) * np.sin(2 * np.pi * 6200 * t)
             return standardize_audio(base * 0.2 + screech)
         return standardize_audio(base + bg_noise)
@@ -121,11 +107,9 @@ def generate_highly_differentiated_audio(category, state):
     else:
         gmf = 0.5 * np.sin(2 * np.pi * 380 * t)
         if state == 1:
-            # 齒面輕微點蝕：5Hz 週期性咬合邊頻與微弱點蝕聲
             pitting = 0.35 * np.sin(2 * np.pi * 380 * t) * np.sin(2 * np.pi * 5 * t)
             return standardize_audio(gmf + pitting + np.random.normal(0, 0.015, len(t)))
         elif state == 2:
-            # 輪齒嚴重點蝕/缺角：劇烈齒輪敲擊衝擊音
             impact = 0.9 * (np.sin(2 * np.pi * 10 * t) ** 14) * np.sin(2 * np.pi * 2000 * t)
             return standardize_audio(gmf * 0.3 + impact + np.random.normal(0, 0.1, len(t)))
         return standardize_audio(gmf + bg_noise)
@@ -157,4 +141,4 @@ for cat in categories:
     fault_filename = f"anomaly_{'blade' if cat=='fan' else 'bearing' if cat=='motor' else 'cavitation' if cat=='pump' else 'leak' if cat=='valve' else 'scratch' if cat=='slider' else 'gear'}_01.wav"
     save_wav_16bit(os.path.join(folder_path, fault_filename), generate_highly_differentiated_audio(cat, 2))
 
-print("✅ 已完成全平台 6 大設備【正常 vs 警告 vs 嚴重故障】聽感特徵重構與 RMS 響度標準化！")
+print("✅ 已重新生成並強化線性滑軌【潤滑油脂不足】乾摩擦聲音特徵！")
