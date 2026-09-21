@@ -287,7 +287,7 @@ with tab1:
     st.pyplot(fig)
 
 # ---------------- DCASE / MIMII 基準聲學特徵指標卡片 ----------------
-    st.markdown("#####  DCASE / MIMII 基準聲學特徵 (Benchmark Acoustic Metrics)")
+    st.markdown("##### 📊 DCASE / MIMII 基準聲學特徵 (Benchmark Acoustic Metrics)")
     
     rms_val = float(np.sqrt(np.mean(y**2)))
     cent_val = float(np.mean(librosa.feature.spectral_centroid(y=y, sr=sr)))
@@ -297,20 +297,20 @@ with tab1:
     m_col1.metric(
         "時域均方根能量 (RMS Energy)", 
         f"{rms_val:.4f}", 
-        delta="DCASE 標準範圍" if rms_val < 0.08 else "能量顯著異常", 
-        delta_color="inverse"
+        delta="DCASE 標準能量" if alert_level == "GREEN" else "振幅衝擊偏高", 
+        delta_color="normal" if alert_level == "GREEN" else "inverse"
     )
     m_col2.metric(
         "頻譜中心 (Spectral Centroid)", 
         f"{int(cent_val)} Hz", 
-        delta="MIMII 基頻區間" if cent_val < 1500 else "高頻異音轉移", 
-        delta_color="inverse"
+        delta="MIMII 基頻區間" if cent_val < 1800 else "高頻異音轉移", 
+        delta_color="normal" if cent_val < 1800 else "inverse"
     )
     m_col3.metric(
         "過零率 (Zero Crossing Rate)", 
         f"{zcr_val:.4f}", 
-        delta="平滑運轉特徵" if zcr_val < 0.08 else "衝擊/摩擦特徵", 
-        delta_color="inverse"
+        delta="平滑運轉特徵" if zcr_val < 0.06 else "衝擊/摩擦特徵", 
+        delta_color="normal" if zcr_val < 0.06 else "inverse"
     )
 
 # Tab 2: 歷史趨勢與數據表
