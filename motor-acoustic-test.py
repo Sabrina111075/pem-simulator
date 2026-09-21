@@ -228,12 +228,12 @@ tab1, tab2, tab3 = st.tabs([
 # Tab 1: 梅爾頻譜圖
 with tab1:
     st.markdown("#### 邊緣 AI 聲學特徵分析 (Edge AI Feature)")
-    st.caption("💡 **圖表指引**：橫軸 (X-axis) 表示時間 [秒]，縱軸 (Y-axis) 表示梅爾對數頻率 [Hz]，顏色深淺表示能量強度 (dB)。")
-    
+    st.caption("📊 **圖表指引**：橫軸 (X-axis) 表示時間 [秒]，縱軸 (Y-axis) 表示梅爾對數頻率 [Hz]，顏色深淺表示能量強度 (dB)。")
+
     if os.path.exists(audio_file):
         y, sr = librosa.load(audio_file, sr=16000)
     else:
-        # 當音訊檔不存在時，自動生成高擬真模擬聲學波形
+        # 當音訊檔不存在時，自動生成高仿真模擬聲學波形
         sr = 16000
         duration = 2.0
         t = np.linspace(0, duration, int(sr * duration))
@@ -246,16 +246,39 @@ with tab1:
 
     S = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, fmax=8000)
     S_dB = librosa.power_to_db(S, ref=np.max)
-    
+
     fig, ax = plt.subplots(figsize=(10, 4))
     img = librosa.display.specshow(S_dB, x_axis='time', y_axis='mel', sr=sr, fmax=8000, ax=ax, cmap='magma')
-    
+
     ax.set_xlabel("Time (s)", fontsize=10)
     ax.set_ylabel("Frequency (Hz)", fontsize=10)
     cbar = fig.colorbar(img, ax=ax, format='%+2.0f dB')
     cbar.set_label("Power (dB)", fontsize=9)
-    category_en = category.split("(")[-1].replace(")", "").strip() # 自動提取英文名稱
-    ax.set_title(f"Edge AI Feature: Mel-Spectrogram ({category_en} - {status_option.split(' ')[0]})", fontsize=12, pad=10)
+
+    # 1. 建立純英文狀態映射表 (徹底消除中文字導致的豆腐字)
+    status_en_map = {
+        "正常 (Normal)": "Normal",
+        "輕微不平衡/積塵 (Warning)": "Warning - Imbalance",
+        "葉片嚴重破損/異物 (Blade Fault)": "Fault - Blade Damage",
+        "輕微轉子偏心 (Warning)": "Warning - Eccentricity",
+        "嚴重軸承磨損 (Bearing Fault)": "Fault - Bearing Wear",
+        "流體輕微微氣蝕 (Warning)": "Warning - Cavitation",
+        "軸封嚴重磨損/空轉 (Pump Cavitation)": "Fault - Severe Cavitation",
+        "閥體輕微結垢/滯遲 (Warning)": "Warning - Sluggish",
+        "氣體/液體嚴重洩漏 (Valve Leakage)": "Fault - Leakage",
+        "潤滑油脂不足 (Warning)": "Warning - Low Lube",
+        "軌道金屬剝落/刮傷 (Rail Scratch)": "Fault - Rail Scratch",
+        "齒面輕微點蝕 (Warning)": "Warning - Pitting",
+        "輪齒嚴重點蝕/缺角 (Gear Damage)": "Fault - Tooth Damage"
+    }
+
+    # 2. 自動取得英文名稱與英文狀態
+    category_en = category.split("(")[-1].replace(")", "").strip()
+    status_en = status_en_map.get(status_option, "Normal")
+
+    # 3. 繪製純英文 Title
+    ax.set_title(f"Edge AI Feature: Mel-Spectrogram ({category_en} - {status_en})", fontsize=12, pad=10)
+
     plt.tight_layout()
     st.pyplot(fig)
 
