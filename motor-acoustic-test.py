@@ -116,6 +116,18 @@ elif category == "工業齒輪箱 (Gearbox)":
     else:
         audio_file = "samples/gearbox/anomaly_gear_01.wav"
 
+elif category == "風力發電機 - 齒輪箱 (Wind Turbine - Gearbox)":
+    status_option = st.sidebar.selectbox(
+        "2. 選擇測試狀態/故障型態",
+        ["正常 (Normal)", "齒輪箱咬合微幅偏心 (Warning)", "齒輪面嚴重磨損/缺失 (Gear Fault)"]
+    )
+    if "正常" in status_option:
+        audio_file = "samples/gearbox/normal_01.wav"
+    elif "Warning" in status_option:
+        audio_file = "samples/gearbox/warning_01.wav" if os.path.exists("samples/gearbox/warning_01.wav") else "samples/gearbox/anomaly_gear_01.wav"
+    else:
+        audio_file = "samples/gearbox/anomaly_gear_01.wav"
+
 elif category == "風力發電機 - 發電機 (Wind Turbine - Generator)":
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
@@ -128,18 +140,17 @@ elif category == "風力發電機 - 發電機 (Wind Turbine - Generator)":
     else:
         audio_file = "samples/motor/anomaly_bearing_01.wav"
 
-# 新增的實測風場聲區塊 (緊接在下方)
 elif category == "風力發電機 - 實測風場聲 (Wind Turbine Field Acoustics)":
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
         ["低風速正常運轉 (Low Wind - Normal)", "高風速氣流切風聲 (High Wind - Swish)", "強風噪下傳動異常 (Fault under Wind Noise)"]
     )
     if "低風速" in status_option:
-        audio_file = "samples/wind_field/low_wind_normal.wav"
+        audio_file = "samples/wind_field/low_wind_normal.wav" if os.path.exists("samples/wind_field/low_wind_normal.wav") else "samples/fan/normal_01.wav"
     elif "高風速" in status_option:
-        audio_file = "samples/wind_field/high_wind_normal.wav"
+        audio_file = "samples/wind_field/high_wind_normal.wav" if os.path.exists("samples/wind_field/high_wind_normal.wav") else "samples/fan/warning_01.wav"
     else:
-        audio_file = "samples/wind_field/wind_fault.wav"
+        audio_file = "samples/wind_field/wind_fault.wav" if os.path.exists("samples/wind_field/wind_fault.wav") else "samples/fan/anomaly_blade_01.wav"
 
 # -------------------------------------------------------------------
 # 提示框請加在 elif 區塊結束後的這個位置
