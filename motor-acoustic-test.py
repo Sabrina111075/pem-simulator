@@ -38,7 +38,8 @@ category = st.sidebar.selectbox(
         "線性滑軌 (Slide Rail)",
         "工業齒輪箱 (Gearbox)",
         "風力發電機 - 齒輪箱 (Wind Turbine - Gearbox)",
-        "風力發電機 - 發電機 (Wind Turbine - Generator)"
+        "風力發電機 - 發電機 (Wind Turbine - Generator)",
+        "風力發電機 - 實測風場聲 (Wind Turbine Field Acoustics)" # ➕ 新增這行
     ]
 )
 
@@ -115,19 +116,6 @@ elif category == "工業齒輪箱 (Gearbox)":
     else:
         audio_file = "samples/gearbox/anomaly_gear_01.wav"
 
-elif category == "風力發電機 - 齒輪箱 (Wind Turbine - Gearbox)":
-    status_option = st.sidebar.selectbox(
-        "2. 選擇測試狀態/故障型態",
-        ["正常 (Normal)", "齒輪箱咬合微幅偏心 (Warning)", "齒輪面嚴重磨損/缺失 (Gear Fault)"]
-    )
-    if "正常" in status_option:
-        audio_file = "samples/gearbox/normal_01.wav"
-    elif "Warning" in status_option:
-        audio_file = "samples/gearbox/warning_01.wav" if os.path.exists("samples/gearbox/warning_01.wav") else "samples/gearbox/anomaly_gear_01.wav"
-    else:
-        audio_file = "samples/gearbox/anomaly_gear_01.wav"  # ✅ 修正檔名為 anomaly_gear_01.wav
-
-# 3. 風力發電機 - 發電機 (新加的項目)
 elif category == "風力發電機 - 發電機 (Wind Turbine - Generator)":
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
@@ -139,6 +127,34 @@ elif category == "風力發電機 - 發電機 (Wind Turbine - Generator)":
         audio_file = "samples/motor/warning_01.wav" if os.path.exists("samples/motor/warning_01.wav") else "samples/motor/anomaly_bearing_01.wav"
     else:
         audio_file = "samples/motor/anomaly_bearing_01.wav"
+
+# 新增的實測風場聲區塊 (緊接在下方)
+elif category == "風力發電機 - 實測風場聲 (Wind Turbine Field Acoustics)":
+    status_option = st.sidebar.selectbox(
+        "2. 選擇測試狀態/故障型態",
+        ["低風速正常運轉 (Low Wind - Normal)", "高風速氣流切風聲 (High Wind - Swish)", "強風噪下傳動異常 (Fault under Wind Noise)"]
+    )
+    if "低風速" in status_option:
+        audio_file = "samples/wind_field/low_wind_normal.wav"
+    elif "高風速" in status_option:
+        audio_file = "samples/wind_field/high_wind_normal.wav"
+    else:
+        audio_file = "samples/wind_field/wind_fault.wav"
+
+# -------------------------------------------------------------------
+# 提示框請加在 elif 區塊結束後的這個位置
+# -------------------------------------------------------------------
+if "實測風場聲" in category:
+    st.warning(
+        "⚠️ **戶外環境風噪提示 (Field Acoustics)**：\n"
+        "此數據集來自 IEEE DataPort / Zenodo 戶外實測風場，包含不同風速（4m/s ~ 12m/s）下的強烈氣流切風聲 (Swish Noise)。\n"
+        "邊緣 AI 模型將自動啟用前置高通/帶通濾波器 (Bandpass Filter)，以進行背景風噪與內部結構異音的解耦分析。"
+    )
+
+st.sidebar.markdown("---")
+st.sidebar.caption("📋 **驗證標準**：IEEE 1451.4 & DCASE MIMII Benchmark")
+
+# # 4. 判斷三級告警狀態 (接續原本程式碼)
 
 st.sidebar.markdown("---")
 st.sidebar.caption("🛡️ **驗證標準** : IEEE 1451.4 & DCASE MIMII Benchmark")
