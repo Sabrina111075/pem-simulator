@@ -115,7 +115,6 @@ elif category == "工業齒輪箱 (Gearbox)":
     else:
         audio_file = "samples/gearbox/anomaly_gear_01.wav"
 
-# 2. 風力發電機 - 齒輪箱 (新加的項目)
 elif category == "風力發電機 - 齒輪箱 (Wind Turbine - Gearbox)":
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
@@ -124,9 +123,9 @@ elif category == "風力發電機 - 齒輪箱 (Wind Turbine - Gearbox)":
     if "正常" in status_option:
         audio_file = "samples/gearbox/normal_01.wav"
     elif "Warning" in status_option:
-        audio_file = "samples/gearbox/warning_01.wav" if os.path.exists("samples/gearbox/warning_01.wav") else "samples/gearbox/anomaly_01.wav"
+        audio_file = "samples/gearbox/warning_01.wav" if os.path.exists("samples/gearbox/warning_01.wav") else "samples/gearbox/anomaly_gear_01.wav"
     else:
-        audio_file = "samples/gearbox/anomaly_01.wav"
+        audio_file = "samples/gearbox/anomaly_gear_01.wav"  # ✅ 修正檔名為 anomaly_gear_01.wav
 
 # 3. 風力發電機 - 發電機 (新加的項目)
 elif category == "風力發電機 - 發電機 (Wind Turbine - Generator)":
