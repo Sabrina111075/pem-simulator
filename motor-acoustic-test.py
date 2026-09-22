@@ -165,32 +165,27 @@ if "實測風場聲" in category:
 st.sidebar.markdown("---")
 st.sidebar.caption("📋 **驗證標準**：IEEE 1451.4 & DCASE MIMII Benchmark")
 
-# # 4. 判斷三級告警狀態 (接續原本程式碼)
-
-st.sidebar.markdown("---")
-st.sidebar.caption("🛡️ **驗證標準** : IEEE 1451.4 & DCASE MIMII Benchmark")
-
 # 4. 判斷三級告警狀態 (綠 Normal / 黃 Warning / 紅 Fault)
-if "正常" in status_option:
+if "低風速" in status_option or "正常" in status_option:
     alert_level = "GREEN"
     hi_score = 98
     mse_score = 0.0015
     status_text = "正常 (Normal)"
     history_mse = [0.0012, 0.0014, 0.0011, 0.0015, 0.0013, 0.0016, mse_score]
 
-elif "Warning" in status_option:
+elif "高風速" in status_option or "Warning" in status_option:
     alert_level = "YELLOW"
-    hi_score = 59
-    mse_score = 0.0582
-    status_text = "警告/預警 (Warning)"
-    history_mse = [0.0015, 0.0021, 0.0085, 0.0241, 0.0380, 0.0490, mse_score]
+    hi_score = 72
+    mse_score = 0.0325
+    status_text = "風噪干擾/需注意 (Wind Noise / Warning)"
+    history_mse = [0.0012, 0.0018, 0.0025, 0.0150, 0.0280, 0.0310, mse_score]
 
-else:
+else: # 強風噪下傳動異常
     alert_level = "RED"
     hi_score = 38
     mse_score = 0.0915
     status_text = "嚴重故障 (Fault/Danger)"
-    history_mse = [0.0015, 0.0021, 0.0085, 0.0241, 0.0512, 0.0720, mse_score]
+    history_mse = [0.0015, 0.0030, 0.0120, 0.0450, 0.0780, 0.0890, mse_score]
 
 # 5. 指標與音訊播放區 (頂部 4 欄併排)
 col1, col2, col3, col4 = st.columns([1, 1, 1, 1.3])
