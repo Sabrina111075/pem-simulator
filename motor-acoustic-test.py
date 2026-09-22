@@ -102,7 +102,8 @@ elif category == "線性滑軌 (Slide Rail)":
     else:
         audio_file = "samples/slider/anomaly_scratch_01.wav"
 
-else:  # 工業齒輪箱 (Gearbox)
+# 1. 工業齒輪箱 (原本的項目，請確認上方有這行 elif)
+elif category == "工業齒輪箱 (Gearbox)":
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
         ["正常 (Normal)", "齒面輕微點蝕 (Warning)", "輪齒嚴重點蝕/缺角 (Gear Damage)"]
@@ -114,25 +115,27 @@ else:  # 工業齒輪箱 (Gearbox)
     else:
         audio_file = "samples/gearbox/anomaly_gear_01.wav"
 
+# 2. 風力發電機 - 齒輪箱 (新加的項目)
 elif category == "風力發電機 - 齒輪箱 (Wind Turbine - Gearbox)":
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
         ["正常 (Normal)", "齒輪箱咬合微幅偏心 (Warning)", "齒輪面嚴重磨損/缺失 (Gear Fault)"]
     )
     if "正常" in status_option:
-        audio_file = "samples/gearbox/normal_01.wav"  # 映射至 MIMII Gearbox 正常音
+        audio_file = "samples/gearbox/normal_01.wav"
     elif "Warning" in status_option:
         audio_file = "samples/gearbox/warning_01.wav" if os.path.exists("samples/gearbox/warning_01.wav") else "samples/gearbox/anomaly_01.wav"
     else:
         audio_file = "samples/gearbox/anomaly_01.wav"
 
+# 3. 風力發電機 - 發電機 (新加的項目)
 elif category == "風力發電機 - 發電機 (Wind Turbine - Generator)":
     status_option = st.sidebar.selectbox(
         "2. 選擇測試狀態/故障型態",
         ["正常 (Normal)", "轉子不平衡/異音 (Warning)", "軸承嚴重損傷 (Bearing Fault)"]
     )
     if "正常" in status_option:
-        audio_file = "samples/motor/normal_01.wav"  # 映射至 MIMII Motor 正常音
+        audio_file = "samples/motor/normal_01.wav"
     elif "Warning" in status_option:
         audio_file = "samples/motor/warning_01.wav" if os.path.exists("samples/motor/warning_01.wav") else "samples/motor/anomaly_bearing_01.wav"
     else:
