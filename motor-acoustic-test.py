@@ -371,15 +371,36 @@ with tab2:
         "MSE Loss": history_mse
     })
     st.line_chart(chart_data.set_index("Batch"))
-    
+
     st.markdown("#### 歷史巡檢詳細紀錄表 (Inspection Records)")
+    
+    # 計算歷史健康度 (純數字)
+    history_hi = [int(max(0, min(100, 100 - (m * 680)))) for m in history_mse]
+
+    # 動態產生對應的狀態標籤 (統一簡短格式)
+    history_status = []
+    for m in history_mse:
+        if m < 0.005:
+            history_status.append("正常")
+        elif m < 0.05:
+            history_status.append("預警 / 風噪干擾" if "實測風場聲" in category else "預警")
+        else:
+            history_status.append("嚴重故障")
+
+    # 產生日期序列 (T-6 至 今日)
+    from datetime import datetime, timedelta
+    base_date = datetime.now() - timedelta(days=6)
+    dates = [(base_date + timedelta(days=i)).strftime("%Y-%m-%d 08:00") for i in range(7)]
+
     df_history = pd.DataFrame({
-        "巡檢時間": ["2026-09-12 08:00", "2026-09-13 08:00", "2026-09-14 08:00", "2026-09-15 08:00", "2026-09-16 08:00", "2026-09-17 08:00", "2026-09-18 08:00"],
-        "設備狀態": ["正常", "正常", "正常", "正常" if alert_level=="GREEN" else "預警", "正常" if alert_level=="GREEN" else status_text, "正常" if alert_level=="GREEN" else status_text, status_text],
-        "MSE 重構誤差": history_mse,
-        "健康度 (HI)": [99, 98, 99, 97 if alert_level=="GREEN" else 82, 98 if alert_level=="GREEN" else 68, 98 if alert_level=="GREEN" else 61, f"{hi_score}%"]
+        "巡檢時間": dates,
+        "設備狀態": history_status,
+        "MSE 重構誤差": [round(m, 4) for m in history_mse],
+        "健康度 (HI)": history_hi
     })
-    st.dataframe(df_history, use_container_width=True)
+
+    # 顯示表格 (隱藏左側數字索引)
+    st.dataframe(df_history, use_container_width=True, hide_index=True)
 
 # Tab 3: 時域波形與 FFT 頻譜
 with tab3:
