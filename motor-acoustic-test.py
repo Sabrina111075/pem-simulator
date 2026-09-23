@@ -152,6 +152,20 @@ elif category == "風力發電機 - 實測風場聲 (Wind Turbine Field Acoustic
     else:
         audio_file = "samples/wind_field/wind_fault.wav" if os.path.exists("samples/wind_field/wind_fault.wav") else "samples/fan/anomaly_blade_01.wav"
 
+elif category == "電動車電池水冷泵浦 (EV Battery Cooling Pump)":
+    status_option = st.sidebar.selectbox(
+        "2. 選擇測試狀態/故障型態",
+        ["正常運轉狀態 (Normal)", "泵浦軸承磨損 (Bearing Fault)", "液體空蝕異常 (Cavitation Fault)", "轉子卡死/堵塞 (Rotor Lock)"]
+    )
+    if "正常" in status_option:
+        audio_file = "samples/cooling_pump/normal_01.wav" if os.path.exists("samples/cooling_pump/normal_01.wav") else "samples/pump/normal_01.wav"
+    elif "軸承" in status_option:
+        audio_file = "samples/cooling_pump/bearing_fault.wav" if os.path.exists("samples/cooling_pump/bearing_fault.wav") else "samples/pump/anomaly_bearing_01.wav"
+    elif "空蝕" in status_option:
+        audio_file = "samples/cooling_pump/cavitation_fault.wav" if os.path.exists("samples/cooling_pump/cavitation_fault.wav") else "samples/pump/anomaly_cavitation_01.wav"
+    else:
+        audio_file = "samples/cooling_pump/rotor_lock.wav" if os.path.exists("samples/cooling_pump/rotor_lock.wav") else "samples/pump/anomaly_rotor_01.wav"
+
 # -------------------------------------------------------------------
 # 提示框請加在 elif 區塊結束後的這個位置
 # -------------------------------------------------------------------
@@ -160,6 +174,13 @@ if "實測風場聲" in category:
         "⚠️ **戶外環境風噪提示 (Field Acoustics)**：\n"
         "此數據集來自 IEEE DataPort / Zenodo 戶外實測風場，包含不同風速（4m/s ~ 12m/s）下的強烈氣流切風聲 (Swish Noise)。\n"
         "邊緣 AI 模型將自動啟用前置高通/帶通濾波器 (Bandpass Filter)，以進行背景風噪與內部結構異音的解耦分析。"
+    )
+
+if "水冷泵浦" in category:
+    st.warning(
+        "⚠️ **車載與冷卻運轉環境提示 (Cooling System Acoustics)**：\n"
+        "此數據集基準參照 MIMII Dataset (Pump)。車載運轉環境下，邊緣 AI 模型將自動啟用前置 500Hz - 8kHz 帶通濾波器 (Bandpass Filter)，"
+        "以濾除低頻結構共振與車體馬達嗡鳴聲。"
     )
 
 st.sidebar.markdown("---")
