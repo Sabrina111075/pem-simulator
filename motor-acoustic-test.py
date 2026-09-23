@@ -188,26 +188,36 @@ st.sidebar.markdown("---")
 st.sidebar.caption("📋 **驗證標準**：IEEE 1451.4 & DCASE MIMII Benchmark")
 
 # 4. 判斷三級告警狀態 (綠 Normal / 黃 Warning / 紅 Fault)
-if "低風速" in status_option or "正常" in status_option:
+if "正常" in status_option or "低風速" in status_option:
     alert_level = "GREEN"
-    hi_score = 98
+    hi_score = 96
     mse_score = 0.0015
     status_text = "正常 (Normal)"
     history_mse = [0.0012, 0.0014, 0.0011, 0.0015, 0.0013, 0.0016, mse_score]
 
-elif "高風速" in status_option or "Warning" in status_option:
+elif "軸承" in status_option or "Warning" in status_option or "高風速" in status_option:
+    # 🟡 歸類為「黃色警告」階段
     alert_level = "YELLOW"
-    hi_score = 72
-    mse_score = 0.0325
-    status_text = "風噪干擾/需注意 (Wind Noise / Warning)"
-    history_mse = [0.0012, 0.0018, 0.0025, 0.0150, 0.0280, 0.0310, mse_score]
+    hi_score = 68
+    mse_score = 0.0285
+    status_text = "警告 (Warning - 初期異常/需關注)"
+    history_mse = [0.0015, 0.0030, 0.0080, 0.0150, 0.0210, 0.0250, mse_score]
 
-else: # 強風噪下傳動異常
+elif "空蝕" in status_option:
+    # 🔴 歸類為「嚴重警告/流量受阻」
     alert_level = "RED"
-    hi_score = 38
-    mse_score = 0.0915
-    status_text = "嚴重故障 (Fault/Danger)"
-    history_mse = [0.0015, 0.0030, 0.0120, 0.0450, 0.0780, 0.0890, mse_score]
+    hi_score = 45
+    mse_score = 0.0720
+    status_text = "嚴重警告 (Warning - 空蝕/流量不足)"
+    history_mse = [0.0020, 0.0050, 0.0180, 0.0350, 0.0520, 0.0650, mse_score]
+
+else:
+    # 🔴 歸類為「嚴重故障」
+    alert_level = "RED"
+    hi_score = 18
+    mse_score = 0.1450
+    status_text = "嚴重故障 (Fault/Danger - 轉子卡死/強風傳動異常)"
+    history_mse = [0.0050, 0.0200, 0.0500, 0.0800, 0.1100, 0.1300, mse_score]
 
 # 5. 指標與音訊播放區 (頂部 4 欄併排)
 col1, col2, col3, col4 = st.columns([1, 1, 1, 1.3])
