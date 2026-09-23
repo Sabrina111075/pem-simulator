@@ -39,7 +39,8 @@ category = st.sidebar.selectbox(
         "工業齒輪箱 (Gearbox)",
         "風力發電機 - 齒輪箱 (Wind Turbine - Gearbox)",
         "風力發電機 - 發電機 (Wind Turbine - Generator)",
-        "風力發電機 - 實測風場聲 (Wind Turbine Field Acoustics)" # ➕ 新增這行
+        "風力發電機 - 實測風場聲 (Wind Turbine Field Acoustics)",
+        "電動車電池水冷泵浦 (EV Battery Cooling Pump)" 
     ]
 )
 
