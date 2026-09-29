@@ -20,11 +20,9 @@ page = st.sidebar.selectbox(
 )
 
 if page == "🎓 OpenMAIC 聲學 AI 學院":
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("openmaic_academy", "pages/openmaic_academy.py")
-    academy_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(academy_module)
-    st.stop()  
+    with open("pages/openmaic_academy.py", "r", encoding="utf-8") as f:
+        exec(f.read())
+    st.stop()
 
 # 2. 標題與簡介
 st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)")
