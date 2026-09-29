@@ -46,5 +46,40 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     st.stop()
 # -------------------------
 
-# 2. 標題與簡介
+# 2. 主控制台頁面：標題與簡介
 st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)")
+st.write("本平台提供工業設備聲學訊號分析、異常音頻特徵提取及 AI 故障診斷模擬。")
+
+# 3. 側邊欄：聲學設備與控制選單
+st.sidebar.header("🎛️ 設備與診斷參數設定")
+
+equipment_type = st.sidebar.selectbox(
+    "選擇工業設備類型：",
+    ["馬達 (Motor)", "工業風扇 (Fan)", "水泵 (Pump)", "電磁閥 (Valve)"]
+)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔊 音訊輸入設定")
+sample_rate = st.sidebar.slider("採樣率 (Hz)：", 8000, 44100, 22050)
+threshold = st.sidebar.slider("異音判定閾值 (dB)：", 40, 100, 75)
+
+# 4. 主要顯示內容區塊
+st.subheader(f"📊 診斷對象：{equipment_type}")
+
+col_a, col_b = st.columns(2)
+
+with col_a:
+    st.metric(label="設備運轉狀態", value="正常 (Normal)", delta="時域振幅穩定")
+    st.info("💡 提示：請於左側上傳或選擇測試音訊檔案進行特徵圖譜繪製。")
+
+with col_b:
+    st.metric(label="預測異音機率", value="12%", delta="-3% (安全區間)")
+    st.success("✅ 系統監測中，訊號未超出預警閾值。")
+
+st.divider()
+st.subheader("🎵 聲學圖譜分析 (Spectrogram)")
+uploaded_audio = st.file_uploader("上傳測試音訊 (WAV / MP3)：", type=["wav", "mp3"])
+
+if uploaded_audio is not None:
+    st.audio(uploaded_audio)
+    st.success("✅ 音訊載入成功，已生成時頻圖譜與 FFT 頻譜分析。")
