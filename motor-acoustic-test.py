@@ -1,4 +1,19 @@
-﻿# ---- 切換頁面選單控制 ----
+﻿import streamlit as st
+import librosa
+import librosa.display
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import os
+
+# 1. 頁面基本配置
+st.set_page_config(
+    page_title="馬達與工業設備聲學診斷測試平台",
+    page_icon="⚙️",
+    layout="wide"
+)
+
+# ---- 切換頁面選單控制 ----
 page = st.sidebar.selectbox(
     "📌 切換功能模組：",
     ["⚙️ 設備與測試控制台", "🎓 OpenMAIC 聲學 AI 學院"]
@@ -28,5 +43,10 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     if uploaded_file is not None:
         st.success("✅ 巡檢報告已成功接收！正在將診斷數據回寫至 Knowledge Container...")
         
-    st.stop()  # 停止執行下方原本的診斷平台UI
+    st.stop()
 # -------------------------
+
+# 2. 標題與簡介
+st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)")
+...
+```[cite: 10]
