@@ -23,20 +23,100 @@ page = st.sidebar.selectbox(
 
 if page == "🎓 OpenMAIC 聲學 AI 學院":
     import streamlit.components.v1 as components
-    
-    st.title("🎓 OpenMAIC 聲學 AI 學院 × 虛擬聲學診斷實驗室")
-    st.caption("結合 OpenMAIC 多智能體 AI 課堂與 Streamlit 邊緣聲學診斷模擬")
-    st.info("💡 本頁面將 OpenMAIC AI 課堂與現有馬達聲學測試平台進行整合。")
 
+    st.title("🎓 OpenMAIC 聲學 AI 學院 × 虛擬聲學診斷實驗室")
+    st.caption("OpenMAIC Multi-Agent AI Interactive Classroom & Acoustic Diagnostic Lab")
+    st.info("💡 本頁面結合 OpenMAIC 多智能體 AI 課堂導引與 Streamlit 邊緣聲學診斷實作。")
+
+    # 建立左右兩欄
     col1, col2 = st.columns([1, 1])
 
     with col1:
-        st.subheader("🤖 OpenMAIC AI 課堂 & 導師引導")
-        components.iframe("https://openmaic.chat/", height=600, scrolling=True)
+        st.subheader("🤖 OpenMAIC 多智能體 AI 導師課堂")
+        st.caption("Acoustic AI Agent Mentoring Classroom (中英對照 / Traditional Chinese)")
+        
+        # 1. AI 導師角色選擇
+        agent_role = st.selectbox(
+            "🎓 請選擇互動 AI 導師 / Select AI Mentor:",
+            [
+                "👨‍🏫 聲學總導師 (Acoustic Master Agent) - 基礎原理與特徵圖譜解析",
+                "🛠️ 工業診斷專家 (Industrial Diagnostic Agent) - 軸承與馬達故障判讀",
+                "⚡ 邊緣運算架構師 (Edge Computing Architect) - ESP32-S3/RPi5 佈署導引"
+            ]
+        )
 
+        st.divider()
+
+        # 2. 中英文教學教材面板
+        if "聲學總導師" in agent_role:
+            st.markdown("### 📚 課程 1：梅爾頻譜圖 (Mel-Spectrogram) 基礎概念")
+            st.markdown("""
+            **【中文導引】**
+            歡迎來到聲學 AI 學院！梅爾頻譜圖將聲音的**時間、頻率與能量 (分貝)** 轉換為 2D 視覺圖像。
+            * **X 軸 (Time)**：時間軸 (秒)。
+            * **Y 軸 (Frequency)**：頻率 (Hz)，採用符合人類聽覺特性的 Mel 刻度。
+            * **顏色 (Amplitude)**：顏色越亮 (紅/黃) 代表該頻率能量越強。
+
+            ---
+            **【English Guide】**
+            Welcome to Acoustic AI Academy! Mel-Spectrogram transforms sound into a 2D image depicting **Time, Frequency, and Amplitude (dB)**.
+            * **X-axis**: Time (seconds).
+            * **Y-axis**: Frequency (Hz) converted to human auditory Mel-scale.
+            * **Color Intensity**: Brighter colors represent higher sound energy.
+            """)
+            
+            st.info("💬 **導師提示**：請在右側診斷平台選擇「軸承異音」並觀察頻譜圖的高頻能量變化！")
+
+        elif "工業診斷專家" in agent_role:
+            st.markdown("### 📚 課程 2：馬達與軸承常見聲學異常特徵")
+            st.markdown("""
+            **【中文導引】**
+            工業設備診斷需關注三大異常特徵：
+            1. **軸承磨損 (Bearing Fault)**：在高頻區 (4kHz~8kHz) 出現週期性衝擊脈衝。
+            2. **馬達偏心/不平衡 (Imbalance)**：在基頻 (如 50Hz/60Hz) 及其倍頻出現異常突起。
+            3. **氣蝕現象 (Cavitation)**：幫浦常見的高頻連續寬頻噪音。
+
+            ---
+            **【English Guide】**
+            Three main acoustic fault patterns in industrial equipment:
+            1. **Bearing Wear**: Periodic impact pulses in high-frequency zone (4kHz-8kHz).
+            2. **Motor Unbalance**: Abnormally high peaks at fundamental frequency and harmonics.
+            3. **Cavitation**: Broadband high-frequency noise commonly seen in pumps.
+            """)
+
+            st.warning("⚠️ **導師提示**：請在右側調整「異音判定閾值 (dB)」，觀察告警狀態變化。")
+
+        else:
+            st.markdown("### 📚 課程 3：邊緣 AI 部署與模型微型化")
+            st.markdown("""
+            **【中文導引】**
+            將聲學 AI 模型部署至 MCU (如 ESP32-S3) 的關鍵步驟：
+            1. **音訊降採樣**：採樣率設定為 22,050 Hz 以節省 SRAM 記憶體。
+            2. **FFT 與 Feature Extraction**：在 MCU 端即時算完 MFCC 特徵。
+            3. **TensorFlow Lite for Microcontrollers (TFLM)**：模型量化 (INT8 Quantization)。
+
+            ---
+            **【English Guide】**
+            Key steps to deploy Acoustic AI on Edge MCUs (ESP32-S3):
+            1. **Audio Downsampling**: Set sampling rate to 22.050 kHz to optimize SRAM usage.
+            2. **Feature Extraction**: Real-time MFCC computation on edge nodes.
+            3. **Quantization**: INT8 quantization using TFLM.
+            """)
+
+            st.success("💡 **導師提示**：請至右側「邊緣硬體規格」查看 ESP32-S3 的記憶體預估消耗。")
+
+        # 3. 課堂 AI 提問互動框
+        st.divider()
+        st.subheader("💬 向 OpenMAIC AI 導師提問 (Q&A)")
+        user_query = st.text_input("輸入您的診斷疑問 (例如：如何判讀軸承特徵頻率？):")
+        if user_query:
+            st.chat_message("user").write(user_query)
+            st.chat_message("assistant").write(f"🤖 **[{agent_role.split(' ')[1]}] 回覆**：針對「{user_query}」，建議您結合右側診斷平台的時域波形與頻譜圖做對照分析。通常高頻區段的能量突起為關鍵指標！")
+
+    # 右欄：馬達聲學診斷平台內嵌
     with col2:
-        st.subheader("⚙️ 馬達與工業設備聲學診斷測試平台")
-        components.iframe("https://motor-acoustic-test.streamlit.app", height=600, scrolling=True)
+        st.subheader("⚙️ 實作實驗室：馬達與工業設備聲學診斷")
+        components.iframe("https://motor-acoustic-test.streamlit.app", height=750, scrolling=True)
 
     st.divider()
     st.subheader("📥 學習與實驗成果回寫 (Governed Writeback)")
@@ -44,8 +124,8 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
 
     if uploaded_file is not None:
         st.success("✅ 巡檢報告已成功接收！正在將診斷數據回寫至 Knowledge Container...")
-        
-    st.stop()  # 當選學院時停在這裡，不執行下方原本的控制台
+
+    st.stop()
 
 # 2. 標題與簡介
 st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)")
