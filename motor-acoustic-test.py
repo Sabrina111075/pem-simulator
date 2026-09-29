@@ -48,5 +48,3 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
 
 # 2. 標題與簡介
 st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)")
-...
-```[cite: 10]
