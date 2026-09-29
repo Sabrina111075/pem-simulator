@@ -2,7 +2,7 @@
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
-import numpy asnp
+import numpy as np
 import pandas as pd
 import os
 
