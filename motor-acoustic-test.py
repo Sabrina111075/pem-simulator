@@ -24,59 +24,7 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     spec = importlib.util.spec_from_file_location("openmaic_academy", "pages/openmaic_academy.py")
     academy_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(academy_module)
-    st.stop()  # 選到 OpenMAIC 時，停止執行下方原本的診斷平台內容
-# -------------------------
-```[cite: 10]
-
----
-
-### 🔍 修改後的程式碼前後對照範例：
-
-插入後，您的記事本前幾行看起來會像這樣：
-
-```python
-import streamlit as st
-import librosa
-import librosa.display
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import os
-
-# 1. 頁面基本配置
-st.set_page_config(
-    page_title="馬達與工業設備聲學診斷測試平台",
-    page_icon="⚙️",
-    layout="wide"
-)
-
-# ---- 切換頁面選單控制 ----
-page = st.sidebar.selectbox(
-    "📌 切換功能模組：",
-    ["⚙️ 設備與測試控制台", "🎓 OpenMAIC 聲學 AI 學院"]
-)
-
-if page == "🎓 OpenMAIC 聲學 AI 學院":
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("openmaic_academy", "pages/openmaic_academy.py")
-    academy_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(academy_module)
-    st.stop()
-# -------------------------
-
-# 2. 標題與簡介
-st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)")
-st.caption("邊緣運算前置驗證平台 | 支援 ESP32-S3 + Raspberry Pi 5 模擬測試")
-...
-```[cite: 10]
-
----
-
-### 💾 儲存與上傳
-
-1. 在記事本點擊 **檔案 $\rightarrow$ 儲存檔案**（或按 `Ctrl + S`）[cite: 10]。
-2. 將修改後的 `motor-acoustic-test.py` 上傳/Push 到 GitHub[cite: 10]。
-3. 重新整理 Streamlit Cloud 網頁，左側邊欄頂部就會出現 **「📌 切換功能模組」** 的下拉選單了！
+    st.stop()  
 
 # 2. 標題與簡介
 st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)")
