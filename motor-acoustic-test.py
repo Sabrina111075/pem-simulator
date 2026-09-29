@@ -13,6 +13,14 @@ st.set_page_config(
     layout="wide"
 )
 
+# =========================================================
+# 📌 [關鍵修正] 必須先定義 page 變數，下方 if 才不會噴 NameError
+# =========================================================
+page = st.sidebar.selectbox(
+    "📌 切換功能模組：",
+    ["⚙️ 設備與測試控制台", "🎓 OpenMAIC 聲學 AI 學院"]
+)
+
 if page == "🎓 OpenMAIC 聲學 AI 學院":
     import streamlit.components.v1 as components
 
