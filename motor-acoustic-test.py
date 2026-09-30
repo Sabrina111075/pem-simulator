@@ -29,8 +29,11 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     st.info("💡 本頁面採用單欄動態視圖：上方為 AI 導師講授區，下方為聲學診斷實作實驗室。")
 
 # --------------------------------------------------
-    # 區塊 1：OpenMAIC 聲學 AI 學院 (課程總結 + 多 Agent 動態互動)
+    # 區塊 1：OpenMAIC 聲學 AI 學院 (課程總結 + 穩定線上語音 + 動態互動)
     # --------------------------------------------------
+    import urllib.parse
+    import json
+
     st.subheader("🎓 OpenMAIC 多智體互動 AI 學院")
     st.caption("OpenMAIC Multi-Agent AI Interactive Classroom & Course Hub")
 
@@ -47,7 +50,7 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
                 {"role": "professor", "avatar": "👨‍🏫", "name": "Prof. Acoustic (聲學總導師)", "content": "同學們好！歡迎來到課程 1。傳統 FFT 頻譜是線性頻率，但為什麼在工業 AI 診斷中，我們偏好使用梅爾標度（Mel Scale）？"},
                 {"role": "student_a", "avatar": "🙋‍♂️", "name": "Student Alex (初學者)", "content": "教授，是因為人耳對低頻變化比較敏感，而梅爾標度正好看得比較清楚嗎？"},
                 {"role": "professor", "avatar": "👨‍🏫", "name": "Prof. Acoustic (聲學總導師)", "content": "完全正確！梅爾標度做對數轉換後，能精準放大 1kHz 以下的關鍵頻段，這正是馬達轉速與軸承損傷特徵最密集的區域。"},
-                {"role": "student_b", "avatar": "🙋‍♀️️", "name": "Student Beth (AI 工程師)", "content": "補充一下！在將資料送入 CNN / DCASE 模型時，梅爾頻譜圖也能有效降低資料維度，大幅提升運算效率。"}
+                {"role": "student_b", "avatar": "🙋‍♀️", "name": "Student Beth (AI 工程師)", "content": "補充一下！在將資料送入 CNN / DCASE 模型時，梅爾頻譜圖也能有效降低資料維度，大幅提升運算效率。"}
             ],
             "quiz": {
                 "q": "問：為什麼梅爾頻譜圖比傳統線性 FFT 更適合用於馬達聲學 AI 診斷？",
@@ -65,8 +68,8 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
             "dialogue": [
                 {"role": "professor", "avatar": "👨‍🏫", "name": "Prof. Acoustic (聲學總導師)", "content": "在課程 2 中，我們探討 MIMII 工業數據集。當馬達發生軸承損壞時，頻譜圖會出現什麼特徵？"},
                 {"role": "student_b", "avatar": "🙋‍♀️", "name": "Student Beth (AI 工程師)", "content": "報告教授，軸承初期損壞時，會在 4kHz 以上高頻區出現很明顯的頻繁衝擊波形！"},
-                {"role": "student_a", "avatar": "🙋‍♂️", "name": "Student Alex (初學者)", "content": "那如果只是馬達螺絲沒鎖緊呢？"},
-                {"role": "professor", "avatar": "👨‍‍🏫", "name": "Prof. Acoustic (聲學總導師)", "content": "螺絲鬆動或不平衡，特徵會集中在低頻 1X/2X RPM 轉速頻率上，這兩者在頻譜圖上的區域截然不同。"}
+                {"role": "student_a", "avatar": "🙋‍♂️️", "name": "Student Alex (初學者)", "content": "那如果只是馬達螺絲沒鎖緊呢？"},
+                {"role": "professor", "avatar": "👨‍🏫", "name": "Prof. Acoustic (聲學總導師)", "content": "螺絲鬆動或不平衡，特徵會集中在低頻 1X/2X RPM 轉速頻率上，這兩者在頻譜圖上的區域截然不同。"}
             ],
             "quiz": {
                 "q": "問：軸承早期損傷的聲學特徵通常出現在哪個頻段？",
@@ -90,14 +93,34 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         for point in current_lesson["summary"]:
             st.markdown(f"• {point}")
 
-    # --- 區塊 B：OpenMAIC 多智體對話實況 ---
-    st.markdown("#### 🎭 OpenMAIC 智體課堂對話討實況")
+    # --- 區塊 B：穩定線上語音朗讀系統 ---
+    st.markdown("#### 🎙️ 本課語音導覽與實務解說")
+    
+    # 組合本課重點成為朗讀文本
+    speech_text = f"歡迎來到{current_lesson['title']}。" + "。".join([p.replace('*', '') for p in current_lesson['summary']])
+    encoded_text = urllib.parse.quote(speech_text[:200]) # 取前200字確保 URL 穩定
+    audio_url = f"https://translate.google.com/translate_tts?ie=UTF-8&q={encoded_text}&tl=zh-TW&client=tw-ob"
+
+    tts_card = f"""
+    <div style="background: #f0f8ff; padding: 15px; border-radius: 10px; border-left: 5px solid #0056b3; margin-bottom: 20px;">
+        <p style="margin:0 0 8px 0; font-weight:bold; color:#0056b3;">🔊 播放本課重點精華語音（線上高音質）：</p>
+        <audio controls style="width: 100%; height: 40px;">
+            <source src="{audio_url}" type="audio/mpeg">
+            您的瀏覽器不支援音訊播放。
+        </audio>
+    </div>
+    """
+    st.components.v1.html(tts_card, height=100)
+
+    # --- 區塊 C：OpenMAIC 多智體對話實況 ---
+    st.markdown("#### 🎭 OpenMAIC 智體課堂對話實況")
     for msg in current_lesson["dialogue"]:
         with st.chat_message(msg["role"], avatar=msg["avatar"]):
             st.markdown(f"**{msg['name']}**")
             st.markdown(msg["content"])
 
-    # --- 區塊 C：隨堂互動問答測驗 ---
+    # --- 區塊 D：隨堂互動問答測驗 ---
+    st.markdown("---")
     st.markdown("#### 🧪 隨堂觀念互動測驗")
     quiz = current_lesson["quiz"]
     user_ans = st.radio(quiz["q"], quiz["options"], key=selected_lesson_key)
@@ -107,7 +130,7 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         else:
             st.error(f"❌ 答錯囉！正確答案是：{quiz['ans']}")
 
-    # --- 區塊 D：學員與 OpenMAIC Agents 即時動態對話區 ---
+    # --- 區塊 E：學員與 OpenMAIC Agents 即時動態對話區 ---
     st.markdown("---")
     st.markdown("#### 💬 向 OpenMAIC AI 導師群提問 (多角色動態回應)")
     user_q = st.text_input("請輸入您對本課程的疑難雜症（例如：如何設定 Mel 濾波器數量？）：")
