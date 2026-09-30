@@ -230,6 +230,54 @@ if user_q:
             st.error(f"❌ Gemini API 呼叫失敗：{e}")
             res_text = None
 
+    # 定義 4 位角色的頭像與設定
+    agents_config = [
+        {
+            "key": "prof_reply",
+            "title": "[Prof. Acoustic] 聲學總導師 (理論與原理)",
+            "avatar": "👨‍🏫",
+            "lang": "zh-tw",
+            "slow": False
+        },
+        {
+            "key": "beth_reply",
+            "title": "[Engineer Beth] AI 邊緣部署工程師 (硬體實務)",
+            "avatar": "👩‍💻",
+            "lang": "zh-CN",
+            "slow": False
+        },
+        {
+            "key": "alex_reply",
+            "title": "[Data Scientist Alex] 數據科學專家 (訊號與特徵)",
+            "avatar": "👨‍‍🔬",
+            "lang": "zh-tw",
+            "slow": True
+        },
+        {
+            "key": "cathy_reply",
+            "title": "[Product Manager Cathy] 工業產品經理 (場域落地與 ROI)",
+            "avatar": "👩‍💼",
+            "lang": "zh-CN",
+            "slow": False
+        }
+    ]
+
+    # 解析 JSON 與渲染 Agent 留言板
+    if res_text:
+        import json
+        try:
+            # 清理 Markdown json 標籤（若有的話）
+            cleaned_text = res_text.replace("```json", "").replace("```", "").strip()
+            replies = json.loads(cleaned_text)
+
+            for agent in agents_config:
+                reply_content = replies.get(agent["key"], "（無回應）")
+                with st.chat_message(agent["key"], avatar=agent["avatar"]):
+                    st.markdown(f"**{agent['title']}** : {reply_content}")
+        except Exception as parse_e:
+            st.error(f"⚠️ 解析 Agent 回應失敗：{parse_e}")
+            st.code(res_text)
+
                 # 定義 4 位角色的頭像、名稱與語音設定 (透過不同語言代碼/地區區分男女聲感)
         agents_config = [
                     {
