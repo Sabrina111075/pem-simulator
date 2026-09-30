@@ -161,7 +161,8 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     st.markdown("---")
     st.markdown("#### 💬 向 OpenMAIC AI 導師提問 (Gemini 多智體動態解答)")
 
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
     import json
 
     # 從 Streamlit Secrets 讀取 Gemini API Key
@@ -181,9 +182,8 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
             st.warning("⚠️ 未檢測到 API Key，請確保已在 Streamlit Secrets 中設定 `GEMINI_API_KEY`。")
         else:
             try:
-                # 設定 API Key 與模型
-                genai.configure(api_key=gemini_key)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # 初始化最新版 Client
+                client = genai.Client(api_key=gemini_key)
 
                 # 多智體角色提示詞
                 prompt = f"""
@@ -200,9 +200,13 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
 """
 
                 with st.spinner("🤖 OpenMAIC 多導師群（Gemini 驅動）思考中..."):
-                    response = model.generate_content(
-                        prompt,
-                        generation_config={"response_mime_type": "application/json"}
+                    response = client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            temperature=0.3
+                        )
                     )
 
                 res_data = json.loads(response.text)

@@ -4,4 +4,4 @@ pandas
 plotly
 matplotlib
 librosa
-google-generativeai
+google-genai
