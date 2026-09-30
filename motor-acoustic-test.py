@@ -231,7 +231,7 @@ if user_q:
             res_text = None
 
                 # 定義 4 位角色的頭像、名稱與語音設定 (透過不同語言代碼/地區區分男女聲感)
-                agents_config = [
+        agents_config = [
                     {
                         "key": "prof_reply",
                         "title": "[Prof. Acoustic] 聲學總導師 (理論與原理)",
@@ -275,7 +275,7 @@ if user_q:
                             tts.write_to_fp(fp)
                             st.audio(fp.getvalue(), format="audio/mp3")
 
-            except Exception as e:
+        except Exception as e:
                 st.error(f"❌ Gemini API 呼叫失敗：{str(e)}")
 
     st.markdown("---")
