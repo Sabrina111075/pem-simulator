@@ -155,7 +155,7 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         else:
             st.error(f"❌ 答錯囉！正確答案是：{quiz['ans']}")
 
-# --- 區塊 E：學員與 OpenMAIC Agents 即時動態對話區 (已修復 NameError 與亂碼) ---
+# --- 區塊 E：學員與 OpenMAIC Agents 即時動態對話區 (徹底修復 NameError 與圖示) ---
     st.markdown("---")
     st.markdown("#### 💬 向 OpenMAIC AI 導師提問 (Q&A)")
     
@@ -165,19 +165,19 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     )
     
     if user_q:
-        # 1. 呈現使用者提問 (避免使用特殊圖示造成字型亂碼)
+        # 1. 呈現使用者提問
         with st.chat_message("user", avatar="🧑‍💻"):
             st.markdown(f"**學員 (You)**：{user_q}")
             
-        # 2. 聲學總導師理論回覆 (使用明確變數，避免 NameError)
-        prof_name = "Prof. Acoustic (聲學總導師)"
+        # 2. 聲學總導師理論回覆
+        prof_title = "Prof. Acoustic (聲學總導師)"
         with st.chat_message("professor", avatar="👨‍🏫"):
-            st.markdown(f"**{prof_name}**：針對「*{user_q}*」，在理論與訊號處理上，這主要牽涉到 FFT 頻譜諧波與時域特徵（如峰值因子 factor）的變化分析。")
+            st.markdown(f"**[{prof_title}] 專業解答**：針對「*{user_q}*」，在理論與訊號處理上，這主要牽涉到 FFT 頻譜諧波與時域特徵（如峰值因子 Factor）的變化分析。")
             
         # 3. AI 工程師實務部署回覆
-        eng_name = "Student Beth (AI 工程師)"
+        eng_title = "Student Beth (AI 工程師)"
         with st.chat_message("student_b", avatar="🙋‍♀️"):
-            st.markdown(f"**{eng_name}**：補充實務做法！在 MIMII / DCASE 數據集中，建議先將音訊做預處理擷取 Log-Mel 頻譜，再丟入微型 CNN 即可達到 90% 以上的異常偵測率。")
+            st.markdown(f"**[{eng_title}] 實務經驗**：補充實務做法！在 MIMII / DCASE 數據集中，建議先將音訊做預處理擷取 Log-Mel 頻譜，再丟入微型 CNN 即可達到 90% 以上的異常偵測率。")
 
     st.markdown("---")
 
