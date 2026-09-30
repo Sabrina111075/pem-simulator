@@ -1,4 +1,6 @@
 ﻿streamlit
-numpy
 librosa
 matplotlib
+numpy
+pandas
+gTTS
