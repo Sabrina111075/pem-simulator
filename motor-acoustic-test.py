@@ -29,9 +29,9 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     st.info("💡 本頁面採用單欄動態視圖：上方為 AI 導師講授區，下方為聲學診斷實作實驗室。")
 
 # --------------------------------------------------
-    # 區塊 1：OpenMAIC 多智體 AI 導師對話課堂 (原生 HTML5 語音朗讀)
+    # 區塊 1：OpenMAIC 多智體 AI 導師對話課堂 (強化優化版)
     # --------------------------------------------------
-    st.subheader("🗣️ 1. OpenMAIC 多智體 AI 導師對話課堂")
+    st.subheader("🎓 1. OpenMAIC 多智體 AI 導師對話課堂")
     st.caption("Acoustic AI Agent Mentoring Classroom (繁體中文 / 中英對照)")
 
     # 定義 OpenMAIC 多 Agent 對話劇本
@@ -66,19 +66,21 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         }
     ]
 
-    # 1. 瀏覽器原生 HTML5 語音朗讀器 (無需額外安裝任何套件)
+    # 1. 修正高度與自適應樣式的 HTML5 語音朗讀面板 (height 加大至 180)
     full_lecture_script = "\\n".join([f"{d['name']}說：{d['tts_text']}" for d in dialogue_data])
     
     tts_html = f"""
-    <div style="background-color: #f0f8ff; padding: 15px; border-radius: 10px; border-left: 5px solid #007bff; margin-bottom: 20px;">
-        <h4 style="margin-0; color: #007bff;">🎙️ OpenMAIC 語音朗讀系統 (無套件依賴版)</h4>
-        <p style="font-size: 14px; color: #555;">點擊下方按鈕，直接由瀏覽器內建語音引擎朗讀課堂教授與學生對話：</p>
-        <button onclick="playLecture()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-right: 10px;">
-            ▶️ 播放 AI 課堂對話
-        </button>
-        <button onclick="stopLecture()" style="background-color: #dc3545; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer;">
-            ⏹️ 停止朗讀
-        </button>
+    <div style="background: linear-gradient(135deg, #e6f2ff 0%, #ffffff 100%); padding: 18px; border-radius: 12px; border-left: 6px solid #0056b3; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px;">
+        <h4 style="margin: 0 0 8px 0; color: #0056b3; font-size: 16px; font-weight: bold;">🎙️ OpenMAIC 語音朗讀系統 (自適應高畫質版)</h4>
+        <p style="font-size: 13px; color: #444; margin-bottom: 12px;">點擊下方按鈕，直接由瀏覽器語音引擎朗讀 OpenMAIC 課堂對話：</p>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button onclick="playLecture()" style="background-color: #28a745; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                ▶️ 播放 AI 課堂對話
+            </button>
+            <button onclick="stopLecture()" style="background-color: #dc3545; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                ⏹️ 停止朗讀
+            </button>
+        </div>
     </div>
 
     <script>
@@ -91,7 +93,7 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         }}
         var msg = new SpeechSynthesisUtterance(lectureText);
         msg.lang = 'zh-TW';
-        msg.rate = 0.95; // 調整語速
+        msg.rate = 0.95;
         synth.speak(msg);
     }}
     
@@ -102,7 +104,8 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     }}
     </script>
     """
-    st.components.v1.html(tts_html, height=140)
+    # 這裡將 height 調整為 180，徹底解決按鈕被遮擋問題
+    st.components.v1.html(tts_html, height=180)
 
     st.markdown("---")
 
@@ -112,7 +115,6 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
             st.markdown(f"**{msg['name']}**")
             st.markdown(msg["content"])
 
-    # 3. 學生即時提問互動區
     st.markdown("---")
 
 # ---------------------------------------------------------
