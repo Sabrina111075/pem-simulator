@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import os
-from gtts import gTTS
 
 # 1. 頁面基本配置
 st.set_page_config(
@@ -30,7 +29,7 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     st.info("💡 本頁面採用單欄動態視圖：上方為 AI 導師講授區，下方為聲學診斷實作實驗室。")
 
 # --------------------------------------------------
-    # 區塊 1：OpenMAIC 多智體 AI 導師對話課堂 (含語音 TTS)
+    # 區塊 1：OpenMAIC 多智體 AI 導師對話課堂 (原生 HTML5 語音朗讀)
     # --------------------------------------------------
     st.subheader("🗣️ 1. OpenMAIC 多智體 AI 導師對話課堂")
     st.caption("Acoustic AI Agent Mentoring Classroom (繁體中文 / 中英對照)")
@@ -53,7 +52,7 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         },
         {
             "role": "professor",
-            "avatar": "👨‍‍🏫",
+            "avatar": "👨‍🏫",
             "name": "Prof. Acoustic (聲學總導師)",
             "content": "完全正確！人耳對 1000Hz 以下的低頻變化非常敏感，但對高頻不敏感。梅爾標度（Mel Scale）將頻率做對數轉換，能精準模擬人耳聽覺與工業設備軸承、馬達運轉的臨界特徵！",
             "tts_text": "完全正確！人耳對1000赫茲以下的低頻變化非常敏感，但對高頻不敏感。梅爾標度將頻率做對數轉換，能精準模擬人耳聽覺與工業設備軸承、馬達運轉的臨界特徵！"
@@ -67,15 +66,43 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         }
     ]
 
-    # 1. 語音 Podcast 生成按鈕
-    if st.button("🎙️ 生成/播放 AI 課堂語音 Podcast (TTS)"):
-        with st.spinner("AI 導師與學生語音生成中..."):
-            full_text = " ".join([d["tts_text"] for d in dialogue_data])
-            tts = gTTS(text=full_text, lang='zh-tw')
-            audio_path = "openmaic_lecture.mp3"
-            tts.save(audio_path)
-            st.audio(audio_path, format="audio/mp3")
-            st.success("🎉 語音 Podcast 生成完畢！點擊上方播放器即可收聽完整對話。")
+    # 1. 瀏覽器原生 HTML5 語音朗讀器 (無需額外安裝任何套件)
+    full_lecture_script = "\\n".join([f"{d['name']}說：{d['tts_text']}" for d in dialogue_data])
+    
+    tts_html = f"""
+    <div style="background-color: #f0f8ff; padding: 15px; border-radius: 10px; border-left: 5px solid #007bff; margin-bottom: 20px;">
+        <h4 style="margin-0; color: #007bff;">🎙️ OpenMAIC 語音朗讀系統 (無套件依賴版)</h4>
+        <p style="font-size: 14px; color: #555;">點擊下方按鈕，直接由瀏覽器內建語音引擎朗讀課堂教授與學生對話：</p>
+        <button onclick="playLecture()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-right: 10px;">
+            ▶️ 播放 AI 課堂對話
+        </button>
+        <button onclick="stopLecture()" style="background-color: #dc3545; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer;">
+            ⏹️ 停止朗讀
+        </button>
+    </div>
+
+    <script>
+    var lectureText = `{full_lecture_script}`;
+    var synth = window.speechSynthesis;
+    
+    function playLecture() {{
+        if (synth.speaking) {{
+            synth.cancel();
+        }}
+        var msg = new SpeechSynthesisUtterance(lectureText);
+        msg.lang = 'zh-TW';
+        msg.rate = 0.95; // 調整語速
+        synth.speak(msg);
+    }}
+    
+    function stopLecture() {{
+        if (synth.speaking) {{
+            synth.cancel();
+        }}
+    }}
+    </script>
+    """
+    st.components.v1.html(tts_html, height=140)
 
     st.markdown("---")
 
