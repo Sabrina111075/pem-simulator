@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import os
+model = genai.GenerativeModel('gemini-3.6-flash')
 
 # 1. 頁面基本配置
 st.set_page_config(
@@ -161,11 +162,9 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     st.markdown("---")
     st.markdown("#### 💬 向 OpenMAIC AI 導師提問 (Gemini 多智體動態解答)")
 
-    from google import genai
-    from google.genai import types
+    import google.generativeai as genai
     import json
 
-    # 從 Streamlit Secrets 讀取 Gemini API Key
     gemini_key = st.secrets.get("GEMINI_API_KEY", "")
 
     user_q = st.text_input(
@@ -174,7 +173,6 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     )
 
     if user_q:
-        # 呈現學員提問
         with st.chat_message("user", avatar="🧑‍💻"):
             st.markdown(f"**學員 (You)**：{user_q}")
 
@@ -182,10 +180,12 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
             st.warning("⚠️ 未檢測到 API Key，請確保已在 Streamlit Secrets 中設定 `GEMINI_API_KEY`。")
         else:
             try:
-                # 初始化最新版 Client
-                client = genai.Client(api_key=gemini_key)
+                # 使用 configure 設定金鑰
+                genai.configure(api_key=gemini_key)
+                
+                # 指定使用 gemini-1.5-flash 模型
+                model = genai.GenerativeModel('gemini-1.5-flash')
 
-                # 多智體角色提示詞
                 prompt = f"""
 你現在是 OpenMAIC 雙學 AI 學院的多智體系統。請針對學員提問：「{user_q}」，分別以兩個不同角色的立場給出專業、簡明扼要（各約 80-120 字）的解答：
 
@@ -200,22 +200,16 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
 """
 
                 with st.spinner("🤖 OpenMAIC 多導師群（Gemini 驅動）思考中..."):
-                    response = client.models.generate_content(
-                        model="gemini-2.5-flash",
-                        contents=prompt,
-                        config=types.GenerateContentConfig(
-                            response_mime_type="application/json",
-                            temperature=0.3
-                        )
+                    response = model.generate_content(
+                        prompt,
+                        generation_config={"response_mime_type": "application/json"}
                     )
 
                 res_data = json.loads(response.text)
 
-                # 呈現 Prof. Acoustic 動態回覆
                 with st.chat_message("professor", avatar="👨‍🏫"):
                     st.markdown(f"**[Prof. Acoustic] 專業解答**：{res_data.get('professor_reply', '')}")
 
-                # 呈現 Student Beth 動態回覆
                 with st.chat_message("student_b", avatar="🙋‍♀️"):
                     st.markdown(f"**[Student Beth] 實務經驗**：{res_data.get('engineer_reply', '')}")
 
@@ -223,26 +217,6 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
                 st.error(f"❌ Gemini API 呼叫失敗：{str(e)}")
 
     st.markdown("---")
-
-    # ---------------------------------------------------------
-    # 區塊 2：實作實驗室 (放在下方，獨立滿版顯示)
-    # ---------------------------------------------------------
-    st.subheader("⚙️ 2. 實作實驗室：馬達與工業設備聲學診斷測試")
-    st.caption("可以直接使用瀏覽器滾動條（ScrollBar）上下滑動操作此平台")
-    components.iframe("https://motor-acoustic-test.streamlit.app", height=800, scrolling=True)
-
-    st.divider()
-
-    # ---------------------------------------------------------
-    # 區塊 3：成果回寫區 (最底部)
-    # ---------------------------------------------------------
-    st.subheader("📥 3. 學習與實驗成果回寫 (Governed Writeback)")
-    uploaded_file = st.file_uploader("上傳聲學巡檢報告 (JSON)：", type=['json'])
-
-    if uploaded_file is not None:
-        st.success("✅ 巡檢報告已成功接收！正在將診斷數據回寫至 Knowledge Container...")
-
-    st.stop()
 
 # 2. 標題與簡介
 st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)")
