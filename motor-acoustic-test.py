@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import os
+from gtts import gTTS
 
 # 1. 頁面基本配置
 st.set_page_config(
@@ -28,75 +29,64 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     st.caption("OpenMAIC Multi-Agent AI Interactive Classroom & Acoustic Diagnostic Lab")
     st.info("💡 本頁面採用單欄動態視圖：上方為 AI 導師講授區，下方為聲學診斷實作實驗室。")
 
-    # ---------------------------------------------------------
-    # 區塊 1：AI 導師課堂教學 (放在最上方，單欄寬版)
-    # ---------------------------------------------------------
-    st.subheader("🤖 1. OpenMAIC 多智能體 AI 導師課堂")
+# --------------------------------------------------
+    # 區塊 1：OpenMAIC 多智體 AI 導師對話課堂 (含語音 TTS)
+    # --------------------------------------------------
+    st.subheader("🗣️ 1. OpenMAIC 多智體 AI 導師對話課堂")
     st.caption("Acoustic AI Agent Mentoring Classroom (繁體中文 / 中英對照)")
-    
-    agent_role = st.selectbox(
-        "🎓 請選擇互動 AI 導師 / Select AI Mentor:",
-        [
-            "👨‍🏫 聲學總導師 (Acoustic Master Agent) - 基礎原理與特徵圖譜解析",
-            "🛠️ 工業診斷專家 (Industrial Diagnostic Agent) - 軸承與馬達故障判讀",
-            "⚡ 邊緣運算架構師 (Edge Computing Architect) - ESP32-S3/RPi5 佈署導引"
-        ]
-    )
 
-    # 動態渲染導師教材內容
-    if "聲學總導師" in agent_role:
-        st.markdown("### 📚 課程 1：梅爾頻譜圖 (Mel-Spectrogram) 基礎概念")
-        st.markdown("""
-        **【中文導引】**
-        歡迎來到聲學 AI 學院！梅爾頻譜圖將聲音的**時間、頻率與能量 (分貝)** 轉換為 2D 視覺圖像。
-        * **X 軸 (Time)**：時間軸 (秒)。
-        * **Y 軸 (Frequency)**：頻率 (Hz)，採用符合人類聽覺特性的 Mel 刻度。
-        * **顏色 (Amplitude)**：顏色越亮 (紅/黃) 代表該頻率能量越強。
+    # 定義 OpenMAIC 多 Agent 對話劇本
+    dialogue_data = [
+        {
+            "role": "professor",
+            "avatar": "👨‍🏫",
+            "name": "Prof. Acoustic (聲學總導師)",
+            "content": "同學們好！今天我們要解密的是 **梅爾頻譜圖 (Mel-Spectrogram)**。傳統 FFT 頻譜是線性頻率，但為什麼在工業 AI 聲學診斷中，我們更喜歡用梅爾標度呢？",
+            "tts_text": "同學們好！今天我們要解密的是梅爾頻譜圖。傳統FFT頻譜是線性頻率，但為什麼在工業AI聲學診斷中，我們更喜歡用梅爾標度呢？"
+        },
+        {
+            "role": "student_a",
+            "avatar": "🙋‍♂️",
+            "name": "Student Alex (初學者)",
+            "content": "教授，是因為人類耳朵對低頻與高頻的敏感度不一樣嗎？",
+            "tts_text": "教授，是因為人類耳朵對低頻與高頻的敏感度不一樣嗎？"
+        },
+        {
+            "role": "professor",
+            "avatar": "👨‍‍🏫",
+            "name": "Prof. Acoustic (聲學總導師)",
+            "content": "完全正確！人耳對 1000Hz 以下的低頻變化非常敏感，但對高頻不敏感。梅爾標度（Mel Scale）將頻率做對數轉換，能精準模擬人耳聽覺與工業設備軸承、馬達運轉的臨界特徵！",
+            "tts_text": "完全正確！人耳對1000赫茲以下的低頻變化非常敏感，但對高頻不敏感。梅爾標度將頻率做對數轉換，能精準模擬人耳聽覺與工業設備軸承、馬達運轉的臨界特徵！"
+        },
+        {
+            "role": "student_b",
+            "avatar": "🙋‍♀️",
+            "name": "Student Beth (AI 工程師)",
+            "content": "那這在馬達異音診斷（如 MIMII 數據集）上，能帶來什麼優勢？",
+            "tts_text": "那這在馬達異音診斷上，能帶來什麼優勢？"
+        }
+    ]
 
-        ---
-        **【English Guide】**
-        Welcome to Acoustic AI Academy! Mel-Spectrogram transforms sound into a 2D image depicting **Time, Frequency, and Amplitude (dB)**.
-        * **X-axis**: Time (seconds).
-        * **Y-axis**: Frequency (Hz) converted to human auditory Mel-scale.
-        * **Color Intensity**: Brighter colors represent higher sound energy.
-        """)
-        st.info("💬 **導師提示**：請向下滑動至實作區域，選擇「軸承異音」並觀察頻譜圖的高頻能量變化！")
+    # 1. 語音 Podcast 生成按鈕
+    if st.button("🎙️ 生成/播放 AI 課堂語音 Podcast (TTS)"):
+        with st.spinner("AI 導師與學生語音生成中..."):
+            full_text = " ".join([d["tts_text"] for d in dialogue_data])
+            tts = gTTS(text=full_text, lang='zh-tw')
+            audio_path = "openmaic_lecture.mp3"
+            tts.save(audio_path)
+            st.audio(audio_path, format="audio/mp3")
+            st.success("🎉 語音 Podcast 生成完畢！點擊上方播放器即可收聽完整對話。")
 
-    elif "工業診斷專家" in agent_role:
-        st.markdown("### 📚 課程 2：馬達與軸承常見聲學異常特徵")
-        st.markdown("""
-        **【中文導引】**
-        工業設備診斷需關注三大異常特徵：
-        1. **軸承磨損 (Bearing Fault)**：在高頻區 (4kHz~8kHz) 出現週期性衝擊脈衝。
-        2. **馬達偏心/不平衡 (Imbalance)**：在基頻 (如 50Hz/60Hz) 及其倍頻出現異常突起。
-        3. **氣蝕現象 (Cavitation)**：幫浦常見的高頻連續寬頻噪音。
+    st.markdown("---")
 
-        ---
-        **【English Guide】**
-        Three main acoustic fault patterns in industrial equipment:
-        1. **Bearing Wear**: Periodic impact pulses in high-frequency zone (4kHz-8kHz).
-        2. **Motor Unbalance**: Abnormally high peaks at fundamental frequency and harmonics.
-        3. **Cavitation**: Broadband high-frequency noise commonly seen in pumps.
-        """)
-        st.warning("⚠️ **導師提示**：請向下滑動至實作區域，調整「異音判定閾值 (dB)」，觀察告警狀態變化。")
+    # 2. 渲染多 Agent 對話氣泡流
+    for msg in dialogue_data:
+        with st.chat_message(msg["role"], avatar=msg["avatar"]):
+            st.markdown(f"**{msg['name']}**")
+            st.markdown(msg["content"])
 
-    else:
-        st.markdown("### 📚 課程 3：邊緣 AI 部署與模型微型化")
-        st.markdown("""
-        **【中文導引】**
-        將聲學 AI 模型部署至 MCU (如 ESP32-S3) 的關鍵步驟：
-        1. **音訊降採樣**：採樣率設定為 22,050 Hz 以節省 SRAM 記憶體。
-        2. **FFT 與 Feature Extraction**：在 MCU 端即時算完 MFCC 特徵。
-        3. **TensorFlow Lite for Microcontrollers (TFLM)**：模型量化 (INT8 Quantization)。
-
-        ---
-        **【English Guide】**
-        Key steps to deploy Acoustic AI on Edge MCUs (ESP32-S3):
-        1. **Audio Downsampling**: Set sampling rate to 22.050 kHz to optimize SRAM usage.
-        2. **Feature Extraction**: Real-time MFCC computation on edge nodes.
-        3. **Quantization**: INT8 quantization using TFLM.
-        """)
-        st.success("💡 **導師提示**：請向下滑動查看 ESP32-S3 的邊緣硬體規格與記憶體預估消耗。")
+    # 3. 學生即時提問互動區
+    st.markdown("---")
 
 # ---------------------------------------------------------
     # Q&A 智能知識庫回應系統 (包含工業風扇、軸承、馬達、幫浦等專業知識)
