@@ -191,7 +191,7 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         with st.chat_message("user", avatar="🧑‍💻"):
             st.markdown(f"**學員 (You)**：{user_q}")
 
-if not gemini_key and not use_mock:
+    if not gemini_key and not use_mock:
         st.warning("⚠️ 未檢測到 API Key，請確保已在 Streamlit Secrets 中設定 `GEMINI_API_KEY`。")
     else:
         try:
