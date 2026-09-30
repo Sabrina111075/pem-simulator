@@ -29,106 +29,98 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     st.info("💡 本頁面採用單欄動態視圖：上方為 AI 導師講授區，下方為聲學診斷實作實驗室。")
 
 # --------------------------------------------------
-    # 區塊 1：OpenMAIC 多智體 AI 導師對話課堂 (佇列朗讀修正版)
+    # 區塊 1：OpenMAIC 聲學 AI 學院 (課程總結 + 多 Agent 動態互動)
     # --------------------------------------------------
-    st.subheader("🎓 1. OpenMAIC 多智體 AI 導師對話課堂")
-    st.caption("Acoustic AI Agent Mentoring Classroom (繁體中文 / 中英對照)")
+    st.subheader("🎓 OpenMAIC 多智體互動 AI 學院")
+    st.caption("OpenMAIC Multi-Agent AI Interactive Classroom & Course Hub")
 
-    # 定義 OpenMAIC 多 Agent 對話劇本
-    dialogue_data = [
-        {
-            "role": "professor",
-            "avatar": "👨‍🏫",
-            "name": "Prof. Acoustic (聲學總導師)",
-            "content": "同學們好！今天我們要解密的是 **梅爾頻譜圖 (Mel-Spectrogram)**。傳統 FFT 頻譜是線性頻率，但為什麼在工業 AI 聲學診斷中，我們更喜歡用梅爾標度呢？",
-            "tts_text": "同學們好！今天我們要解密的是梅爾頻譜圖。傳統FFT頻譜是線性頻率，但為什麼在工業AI聲學診斷中，我們更喜歡用梅爾標度呢？"
+    # 1. 建立結構化課程庫 (Domain Knowledge Base)
+    course_database = {
+        "lesson_1": {
+            "title": "課程 1：梅爾頻譜圖 (Mel-Spectrogram) 基礎原理",
+            "summary": [
+                "**核心概念**：將時域聲學訊號轉為 2D 頻譜圖，並將 Y 軸頻率轉為符合人類聽覺特性的 Mel Scale。",
+                "**關鍵優勢**：人耳對 1000Hz 以下的低頻極度敏感，梅爾標度能放大低頻特徵、壓制無效高頻雜訊。",
+                "**工業應用**：適用於馬達運轉聲、泵浦氣蝕與軸承微弱撞擊音的早期特徵擷取。"
+            ],
+            "dialogue": [
+                {"role": "professor", "avatar": "👨‍🏫", "name": "Prof. Acoustic (聲學總導師)", "content": "同學們好！歡迎來到課程 1。傳統 FFT 頻譜是線性頻率，但為什麼在工業 AI 診斷中，我們偏好使用梅爾標度（Mel Scale）？"},
+                {"role": "student_a", "avatar": "🙋‍♂️", "name": "Student Alex (初學者)", "content": "教授，是因為人耳對低頻變化比較敏感，而梅爾標度正好看得比較清楚嗎？"},
+                {"role": "professor", "avatar": "👨‍🏫", "name": "Prof. Acoustic (聲學總導師)", "content": "完全正確！梅爾標度做對數轉換後，能精準放大 1kHz 以下的關鍵頻段，這正是馬達轉速與軸承損傷特徵最密集的區域。"},
+                {"role": "student_b", "avatar": "🙋‍♀️️", "name": "Student Beth (AI 工程師)", "content": "補充一下！在將資料送入 CNN / DCASE 模型時，梅爾頻譜圖也能有效降低資料維度，大幅提升運算效率。"}
+            ],
+            "quiz": {
+                "q": "問：為什麼梅爾頻譜圖比傳統線性 FFT 更適合用於馬達聲學 AI 診斷？",
+                "options": ["A. 能放大人耳敏感的低頻特徵與轉速諧波", "B. 只能處理高頻聲音", "C. 檔案體積比較大"],
+                "ans": "A. 能放大人耳敏感的低頻特徵與轉速諧波"
+            }
         },
-        {
-            "role": "student_a",
-            "avatar": "🙋‍♂️",
-            "name": "Student Alex (初學者)",
-            "content": "教授，是因為人類耳朵對低頻與高頻的敏感度不一樣嗎？",
-            "tts_text": "教授，是因為人類耳朵對低頻與高頻的敏感度不一樣嗎？"
-        },
-        {
-            "role": "professor",
-            "avatar": "👨‍🏫",
-            "name": "Prof. Acoustic (聲學總導師)",
-            "content": "完全正確！人耳對 1000Hz 以下的低頻變化非常敏感，但對高頻不敏感。梅爾標度（Mel Scale）將頻率做對數轉換，能精準模擬人耳聽覺與工業設備軸承、馬達運轉的臨界特徵！",
-            "tts_text": "完全正確！人耳對1000赫茲以下的低頻變化非常敏感，但對高頻不敏感。梅爾標度將頻率做對數轉換，能精準模擬人耳聽覺與工業設備軸承、馬達運轉的臨界特徵！"
-        },
-        {
-            "role": "student_b",
-            "avatar": "🙋‍♀️",
-            "name": "Student Beth (AI 工程師)",
-            "content": "那這在馬達異音診斷（如 MIMII 數據集）上，能帶來什麼優勢？",
-            "tts_text": "那這在馬達異音診斷上，能帶來什麼優勢？"
+        "lesson_2": {
+            "title": "課程 2：馬達與軸承異音特徵與 MIMII 數據集判讀",
+            "summary": [
+                "**軸承磨損 (Bearing Wear)**：在 4kHz~8kHz 高頻區段出現週期性衝擊脈衝 (Impact Pulses)。",
+                "**馬達不平衡 (Unbalance)**：在旋轉基頻 (1X RPM) 及倍頻處出現異常高能量峰值。",
+                "**氣蝕現象 (Cavitation)**：泵浦與液體設備常見的高頻連續寬頻連續噪音。"
+            ],
+            "dialogue": [
+                {"role": "professor", "avatar": "👨‍🏫", "name": "Prof. Acoustic (聲學總導師)", "content": "在課程 2 中，我們探討 MIMII 工業數據集。當馬達發生軸承損壞時，頻譜圖會出現什麼特徵？"},
+                {"role": "student_b", "avatar": "🙋‍♀️", "name": "Student Beth (AI 工程師)", "content": "報告教授，軸承初期損壞時，會在 4kHz 以上高頻區出現很明顯的頻繁衝擊波形！"},
+                {"role": "student_a", "avatar": "🙋‍♂️", "name": "Student Alex (初學者)", "content": "那如果只是馬達螺絲沒鎖緊呢？"},
+                {"role": "professor", "avatar": "👨‍‍🏫", "name": "Prof. Acoustic (聲學總導師)", "content": "螺絲鬆動或不平衡，特徵會集中在低頻 1X/2X RPM 轉速頻率上，這兩者在頻譜圖上的區域截然不同。"}
+            ],
+            "quiz": {
+                "q": "問：軸承早期損傷的聲學特徵通常出現在哪個頻段？",
+                "options": ["A. 低頻轉速區 (10Hz-50Hz)", "B. 中高頻衝擊區 (4kHz-8kHz)", "C. 完全不會有特徵"],
+                "ans": "B. 中高頻衝擊區 (4kHz-8kHz)"
+            }
         }
-    ]
+    }
 
-    # 將每句對話轉為 JS 陣列
-    import json
-    lines_js = json.dumps([f"{d['name']}說：{d['tts_text']}" for d in dialogue_data], ensure_ascii=False)
+    # 選擇當前學習課程
+    selected_lesson_key = st.selectbox(
+        "📖 請選擇 OpenMAIC 學習課程主題：",
+        options=list(course_database.keys()),
+        format_func=lambda x: course_database[x]["title"]
+    )
 
-    tts_html = f"""
-    <div style="background: linear-gradient(135deg, #e6f2ff 0%, #ffffff 100%); padding: 18px; border-radius: 12px; border-left: 6px solid #0056b3; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px;">
-        <h4 style="margin: 0 0 8px 0; color: #0056b3; font-size: 16px; font-weight: bold;">🎙️ OpenMAIC 語音朗讀系統 (無中斷佇列版)</h4>
-        <p style="font-size: 13px; color: #444; margin-bottom: 12px;">點擊下方按鈕，直接由瀏覽器語音引擎逐句朗讀完整 AI 課堂對話：</p>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button onclick="startQueue()" style="background-color: #28a745; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">
-                ▶️ 播放完整 AI 課堂對話
-            </button>
-            <button onclick="stopQueue()" style="background-color: #dc3545; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">
-                ⏹️ 停止朗讀
-            </button>
-        </div>
-    </div>
+    current_lesson = course_database[selected_lesson_key]
 
-    <script>
-    var speechLines = {lines_js};
-    var currentIndex = 0;
-    var synth = window.speechSynthesis;
+    # --- 區塊 A：課程精華總結卡片 ---
+    with st.expander("📌 點擊展開/收合：本課精華重點總結 (Course Summary)", expanded=True):
+        for point in current_lesson["summary"]:
+            st.markdown(f"• {point}")
 
-    function speakNextLine() {{
-        if (currentIndex < speechLines.length) {{
-            var msg = new SpeechSynthesisUtterance(speechLines[currentIndex]);
-            msg.lang = 'zh-TW';
-            msg.rate = 0.95;
-            msg.onend = function() {{
-                currentIndex++;
-                speakNextLine();
-            }};
-            msg.onerror = function() {{
-                currentIndex++;
-                speakNextLine();
-            }};
-            synth.speak(msg);
-        }}
-    }}
-
-    function startQueue() {{
-        stopQueue();
-        currentIndex = 0;
-        speakNextLine();
-    }}
-
-    function stopQueue() {{
-        if (synth.speaking) {{
-            synth.cancel();
-        }}
-        currentIndex = speechLines.length;
-    }}
-    </script>
-    """
-    st.components.v1.html(tts_html, height=180)
-
-    st.markdown("---")
-
-    # 2. 渲染多 Agent 對話氣泡流
-    for msg in dialogue_data:
+    # --- 區塊 B：OpenMAIC 多智體對話實況 ---
+    st.markdown("#### 🎭 OpenMAIC 智體課堂對話討實況")
+    for msg in current_lesson["dialogue"]:
         with st.chat_message(msg["role"], avatar=msg["avatar"]):
             st.markdown(f"**{msg['name']}**")
             st.markdown(msg["content"])
+
+    # --- 區塊 C：隨堂互動問答測驗 ---
+    st.markdown("#### 🧪 隨堂觀念互動測驗")
+    quiz = current_lesson["quiz"]
+    user_ans = st.radio(quiz["q"], quiz["options"], key=selected_lesson_key)
+    if st.button("提交答案", key=f"btn_{selected_lesson_key}"):
+        if user_ans == quiz["ans"]:
+            st.success("🎉 回答正確！代表您已掌握本課的核心觀念。")
+        else:
+            st.error(f"❌ 答錯囉！正確答案是：{quiz['ans']}")
+
+    # --- 區塊 D：學員與 OpenMAIC Agents 即時動態對話區 ---
+    st.markdown("---")
+    st.markdown("#### 💬 向 OpenMAIC AI 導師群提問 (多角色動態回應)")
+    user_q = st.text_input("請輸入您對本課程的疑難雜症（例如：如何設定 Mel 濾波器數量？）：")
+    
+    if user_q:
+        with st.chat_message("user", avatar="🧑‍💻"):
+            st.markdown(f"**學員 (You)**：{user_q}")
+            
+        with st.chat_message("professor", avatar="👨‍🏫"):
+            st.markdown(f"**Prof. Acoustic (聲學總導師)**：針對「*{user_q}*」，在理論上這牽涉到頻率解析度與計算資源的平衡。")
+            
+        with st.chat_message("student_b", avatar="🙋‍♀️"):
+            st.markdown(f"**Student Beth (AI 工程師)**：從實務經驗來看，如果是部署到 ESP32-S3 等邊緣硬體，建議將 Mel n_mels 設為 32 或 64 即可！")
 
     st.markdown("---")
 
