@@ -29,9 +29,8 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     st.info("💡 本頁面採用單欄動態視圖：上方為 AI 導師講授區，下方為聲學診斷實作實驗室。")
 
 # --------------------------------------------------
-    # 區塊 1：OpenMAIC 聲學 AI 學院 (課程總結 + 穩定線上語音 + 動態互動)
+    # 區塊 1：OpenMAIC 聲學 AI 學院 (課程總結 + 穩定語音 + 動態互動)
     # --------------------------------------------------
-    import urllib.parse
     import json
 
     st.subheader("🎓 OpenMAIC 多智體互動 AI 學院")
@@ -93,24 +92,50 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         for point in current_lesson["summary"]:
             st.markdown(f"• {point}")
 
-    # --- 區塊 B：穩定線上語音朗讀系統 ---
-    st.markdown("#### 🎙️ 本課語音導覽與實務解說")
+    # --- 區塊 B：穩定語音導覽卡片 (原生 Web Speech 語音引擎) ---
+    st.markdown("#### 🎙️ 本課重點語音導覽")
     
-    # 組合本課重點成為朗讀文本
-    speech_text = f"歡迎來到{current_lesson['title']}。" + "。".join([p.replace('*', '') for p in current_lesson['summary']])
-    encoded_text = urllib.parse.quote(speech_text[:200]) # 取前200字確保 URL 穩定
-    audio_url = f"https://translate.google.com/translate_tts?ie=UTF-8&q={encoded_text}&tl=zh-TW&client=tw-ob"
+    # 清理朗讀文字（去除 Markdown 符號）
+    raw_summary = "。".join([p.replace('*', '') for p in current_lesson['summary']])
+    speech_text_js = json.dumps(f"歡迎來到{current_lesson['title']}。重點如下：{raw_summary}", ensure_ascii=False)
 
-    tts_card = f"""
-    <div style="background: #f0f8ff; padding: 15px; border-radius: 10px; border-left: 5px solid #0056b3; margin-bottom: 20px;">
-        <p style="margin:0 0 8px 0; font-weight:bold; color:#0056b3;">🔊 播放本課重點精華語音（線上高音質）：</p>
-        <audio controls style="width: 100%; height: 40px;">
-            <source src="{audio_url}" type="audio/mpeg">
-            您的瀏覽器不支援音訊播放。
-        </audio>
+    tts_card_html = f"""
+    <div style="background: linear-gradient(135deg, #e6f2ff 0%, #ffffff 100%); padding: 16px; border-radius: 10px; border-left: 5px solid #0056b3; box-shadow: 0 2px 4px rgba(0,0,0,0.08); margin-bottom: 20px;">
+        <p style="margin: 0 0 10px 0; font-weight: bold; color: #0056b3; font-size: 15px;">🔊 點擊按鈕，由 AI 語音導師朗讀本課重點：</p>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="playVoice()" style="background-color: #0056b3; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                ▶️ 播放本課重點語音
+            </button>
+            <button onclick="stopVoice()" style="background-color: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                ⏹️ 停止播放
+            </button>
+        </div>
     </div>
+
+    <script>
+    var speakText = {speech_text_js};
+    
+    function playVoice() {{
+        window.speechSynthesis.cancel(); // 先清空先前佇列
+        
+        // 拆成短句子播放，避免長句遭中斷
+        var sentences = speakText.split("。");
+        sentences.forEach(function(seq) {{
+            if (seq.trim().length > 0) {{
+                var msg = new SpeechSynthesisUtterance(seq);
+                msg.lang = 'zh-TW';
+                msg.rate = 1.0;
+                window.speechSynthesis.speak(msg);
+            }}
+        }});
+    }}
+
+    function stopVoice() {{
+        window.speechSynthesis.cancel();
+    }}
+    </script>
     """
-    st.components.v1.html(tts_card, height=100)
+    st.components.v1.html(tts_card_html, height=120)
 
     # --- 區塊 C：OpenMAIC 多智體對話實況 ---
     st.markdown("#### 🎭 OpenMAIC 智體課堂對話實況")
