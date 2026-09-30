@@ -270,7 +270,6 @@ if user_q:
             cleaned_text = res_text.replace("```json", "").replace("```", "").strip()
             replies = json.loads(cleaned_text)
 
-            # 👈 檢查這行！for 必須跟上面的 cleaned_text、replies 最左側對齊（通常為 12 個空格）
             for agent in agents_config:
                 reply_content = replies.get(agent["key"], "（無回應）")
                 with st.chat_message(agent["key"], avatar=agent["avatar"]):
