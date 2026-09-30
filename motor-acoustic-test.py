@@ -155,20 +155,29 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         else:
             st.error(f"❌ 答錯囉！正確答案是：{quiz['ans']}")
 
-    # --- 區塊 E：學員與 OpenMAIC Agents 即時動態對話區 ---
+# --- 區塊 E：學員與 OpenMAIC Agents 即時動態對話區 (已修復 NameError 與亂碼) ---
     st.markdown("---")
-    st.markdown("#### 💬 向 OpenMAIC AI 導師群提問 (多角色動態回應)")
-    user_q = st.text_input("請輸入您對本課程的疑難雜症（例如：如何設定 Mel 濾波器數量？）：")
+    st.markdown("#### 💬 向 OpenMAIC AI 導師提問 (Q&A)")
+    
+    user_q = st.text_input(
+        "輸入您的診斷疑問 (例如：如何判斷工業風扇故障？、軸承頻率特徵是什麼？)：",
+        key="qa_input_box"
+    )
     
     if user_q:
+        # 1. 呈現使用者提問 (避免使用特殊圖示造成字型亂碼)
         with st.chat_message("user", avatar="🧑‍💻"):
             st.markdown(f"**學員 (You)**：{user_q}")
             
+        # 2. 聲學總導師理論回覆 (使用明確變數，避免 NameError)
+        prof_name = "Prof. Acoustic (聲學總導師)"
         with st.chat_message("professor", avatar="👨‍🏫"):
-            st.markdown(f"**Prof. Acoustic (聲學總導師)**：針對「*{user_q}*」，在理論上這牽涉到頻率解析度與計算資源的平衡。")
+            st.markdown(f"**{prof_name}**：針對「*{user_q}*」，在理論與訊號處理上，這主要牽涉到 FFT 頻譜諧波與時域特徵（如峰值因子 factor）的變化分析。")
             
+        # 3. AI 工程師實務部署回覆
+        eng_name = "Student Beth (AI 工程師)"
         with st.chat_message("student_b", avatar="🙋‍♀️"):
-            st.markdown(f"**Student Beth (AI 工程師)**：從實務經驗來看，如果是部署到 ESP32-S3 等邊緣硬體，建議將 Mel n_mels 設為 32 或 64 即可！")
+            st.markdown(f"**{eng_name}**：補充實務做法！在 MIMII / DCASE 數據集中，建議先將音訊做預處理擷取 Log-Mel 頻譜，再丟入微型 CNN 即可達到 90% 以上的異常偵測率。")
 
     st.markdown("---")
 
