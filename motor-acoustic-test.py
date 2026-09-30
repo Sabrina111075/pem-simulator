@@ -156,18 +156,26 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
             st.error(f"❌ 答錯囉！正確答案是：{quiz['ans']}")
 
 # --------------------------------------------------
-    # 區塊 E：向 OpenMAIC AI 導師提問 (Q&A - Gemini 動態生成)
+    # 區塊 E：OpenMAIC 雙學 AI 學院 (課程選擇 + 語音多智體互動)
     # --------------------------------------------------
     st.markdown("---")
-    st.markdown("#### 💬 向 OpenMAIC AI 導師提問 (Gemini 多智體動態解答)")
+    st.markdown("#### 🎓 OpenMAIC 雙學 AI 學院 (課程選擇與語音互動)")
 
-    import google.generativeai as genai
-    import json
+    from gtts import gTTS
+    import io
 
-    gemini_key = st.secrets.get("GEMINI_API_KEY", "")
+    # 1. 提供學習課程選擇
+    course_option = st.selectbox(
+        "📚 請選擇您想學習的課程主題：",
+        [
+            "馬達與風扇聲學故障診斷",
+            "Edge AI 邊緣運算與輕量化模型部署",
+            " signal 訊號處理與 FFT 頻譜分析"
+        ]
+    )
 
     user_q = st.text_input(
-        "輸入您的診斷疑問 (例如：如何判斷工業風扇故障？、軸承特徵頻率是什麼？)：",
+        f"輸入您關於【{course_option}】的診斷疑問：",
         key="qa_input_box"
     )
 
@@ -179,17 +187,15 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
             st.warning("⚠️ 未檢測到 API Key，請確保已在 Streamlit Secrets 中設定 `GEMINI_API_KEY`。")
         else:
             try:
-                # 使用 configure 設定金鑰
                 genai.configure(api_key=gemini_key)
-                
-                # 指定使用 gemini-3.6-flash 模型
                 model = genai.GenerativeModel('gemini-3.6-flash')
 
                 prompt = f"""
-你現在是 OpenMAIC 雙學 AI 學院的多智體系統。請針對學員提問：「{user_q}」，分別以兩個不同角色的立場給出專業、簡明扼要（各約 80-120 字）的解答：
+你現在是 OpenMAIC 雙學 AI 學院的多智體系統，當前課程主題為：「{course_option}」。
+請針對學員提問：「{user_q}」，分別以兩個不同角色的立場給出專業、簡明扼要（各約 60-90 字）的解答：
 
-1. Prof. Acoustic（聲學總導師）：著重於聲學理論、FFT 頻譜、諧波、時域波形與特徵頻率（如 BPFO/BPFI）等理論分析。
-2. Student Beth（AI 工程師）：著重於 Edge AI 實務部署、MIMII/DCASE 資料集預處理（如 Log-Mel 頻譜）、模型架構與硬體優化。
+1. Prof. Acoustic（聲學總導師）：著重於理論分析與原理。
+2. Student Beth（AI 工程師）：著重於工程實務與部署應用。
 
 請嚴格輸出 JSON 格式如下：
 {{
@@ -198,19 +204,33 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
 }}
 """
 
-                with st.spinner("🤖 OpenMAIC 多導師群（Gemini 驅動）思考中..."):
+                with st.spinner("🤖 OpenMAIC 多導師群思考與合成語音中..."):
                     response = model.generate_content(
                         prompt,
                         generation_config={"response_mime_type": "application/json"}
                     )
+                    res_data = json.loads(response.text)
 
-                res_data = json.loads(response.text)
+                prof_text = res_data.get('professor_reply', '')
+                beth_text = res_data.get('engineer_reply', '')
 
+                # --- 呈現 Prof. Acoustic 文字與語音 ---
                 with st.chat_message("professor", avatar="👨‍🏫"):
-                    st.markdown(f"**[Prof. Acoustic] 專業解答**：{res_data.get('professor_reply', '')}")
+                    st.markdown(f"**[Prof. Acoustic] 專業解答**：{prof_text}")
+                    # 生成教授語音
+                    tts_p = gTTS(text=prof_text, lang='zh-tw')
+                    fp_p = io.BytesIO()
+                    tts_p.write_to_fp(fp_p)
+                    st.audio(fp_p.getvalue(), format="audio/mp3")
 
-                with st.chat_message("student_b", avatar="🙋‍♀️"):
-                    st.markdown(f"**[Student Beth] 實務經驗**：{res_data.get('engineer_reply', '')}")
+                # --- 呈現 Student Beth 文字與語音 ---
+                with st.chat_message("student_b", avatar="🙋‍♀️️"):
+                    st.markdown(f"**[Student Beth] 實務經驗**：{beth_text}")
+                    # 生成 Beth 語音
+                    tts_b = gTTS(text=beth_text, lang='zh-tw')
+                    fp_b = io.BytesIO()
+                    tts_b.write_to_fp(fp_b)
+                    st.audio(fp_b.getvalue(), format="audio/mp3")
 
             except Exception as e:
                 st.error(f"❌ Gemini API 呼叫失敗：{str(e)}")
