@@ -156,31 +156,32 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
             st.error(f"❌ 答錯囉！正確答案是：{quiz['ans']}")
 
 # --------------------------------------------------
-    # 區塊 E：OpenMAIC 雙學 AI 學院 (課程選擇 + 語音多智體互動)
+    # 區塊 E：OpenMAIC 多智體研討會學院 (進階 4 角色與男女語音互動)
     # --------------------------------------------------
     st.markdown("---")
-    st.markdown("#### 🎓 OpenMAIC 雙學 AI 學院 (課程選擇與語音互動)")
+    st.markdown("#### 🎓 OpenMAIC 多智體互動研討會")
 
     import google.generativeai as genai
     from gtts import gTTS
     import io
     import json
 
-    # 取得 Gemini API Key (加上此行即可修復 NameError)
     gemini_key = st.secrets.get("GEMINI_API_KEY", "")
 
-    # 1. 提供學習課程選擇
+    # 1. 擴充學習課程主題
     course_option = st.selectbox(
-        "📚 請選擇您想學習的課程主題：",
+        "📚 請選擇您想研討的課程主題：",
         [
-            "馬達與風扇聲學故障診斷",
-            "Edge AI 邊緣運算與輕量化模型部署",
-            "聲學訊號處理與 FFT 頻譜分析"
+            "馬達與風扇聲學故障診斷 (Acoustic Fault Diagnosis)",
+            "Edge AI 邊緣運算與輕量化模型部署 (Edge Deployment)",
+            "聲學訊號處理與 FFT/STFT 頻譜分析 (Signal Processing)",
+            "MEMS 感測器雜訊濾波與 Kalman Filter 應用 (Sensor Fusion)",
+            "工業物聯網 (IIoT) 設備預測性維護 SOP (Predictive Maintenance)"
         ]
     )
 
     user_q = st.text_input(
-        f"輸入您關於【{course_option}】的診斷疑問：",
+        f"輸入您關於【{course_option.split(' (')[0]}】的研討疑問：",
         key="qa_input_box"
     )
 
@@ -195,47 +196,76 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
                 genai.configure(api_key=gemini_key)
                 model = genai.GenerativeModel('gemini-3.6-flash')
 
+                # 提示詞：要求 4 位具備不同立場的 Agent 進行多人研討
                 prompt = f"""
-你現在是 OpenMAIC 雙學 AI 學院的多智體系統，當前課程主題為：「{course_option}」。
-請針對學員提問：「{user_q}」，分別以兩個不同角色的立場給出專業、簡明扼要（各約 60-90 字）的解答：
+你現在是 OpenMAIC 多智體互動研討會系統，當前主題為：「{course_option}」。
+請針對學員提問：「{user_q}」，分別以 4 個不同角色的立場進行多人圓桌討論（每人發言約 60-90 字，彼此回應、補足或對照）：
 
-1. Prof. Acoustic（聲學總導師）：著重於理論分析與原理。
-2. Student Beth（AI 工程師）：著重於工程實務與部署應用。
+1. Prof. Acoustic（男聲，聲學總導師）：著重於理論分析、物理原理與數學公式背後的意義。
+2. Engineer Beth（女聲，AI 邊緣部署工程師）：著重於模型量化 (INT8/FP16)、C++ / TensorRT 實務與硬體資源限制。
+3. Data Scientist Alex（男聲，數據科學專家）：著重於資料集處理 (MIMII/DCASE)、Mel 頻譜特徵提取與特徵工程。
+4. Product Manager Cathy（女聲，工業產品經理）：著重於商業 ROI、預測性維護 SOP、現場落地可行性與客戶痛點。
 
 請嚴格輸出 JSON 格式如下：
 {{
-  "professor_reply": "教授的回應內容",
-  "engineer_reply": "Beth 的回應內容"
+  "prof_reply": "Prof. Acoustic 的回應",
+  "beth_reply": "Engineer Beth 的回應",
+  "alex_reply": "Data Scientist Alex 的回應",
+  "cathy_reply": "Product Manager Cathy 的回應"
 }}
 """
 
-                with st.spinner("🤖 OpenMAIC 多導師群思考與合成語音中..."):
+                with st.spinner("🤖 OpenMAIC 多智體團隊 (4 人研討小組) 思考與合成語音中..."):
                     response = model.generate_content(
                         prompt,
                         generation_config={"response_mime_type": "application/json"}
                     )
                     res_data = json.loads(response.text)
 
-                prof_text = res_data.get('professor_reply', '')
-                beth_text = res_data.get('engineer_reply', '')
+                # 定義 4 位角色的頭像、名稱與語音設定 (透過不同語言代碼/地區區分男女聲感)
+                agents_config = [
+                    {
+                        "key": "prof_reply",
+                        "title": "[Prof. Acoustic] 聲學總導師 (理論與原理)",
+                        "avatar": "👨‍🏫",
+                        "lang": "zh-tw",     # 標準男聲偏向
+                        "slow": False
+                    },
+                    {
+                        "key": "beth_reply",
+                        "title": "[Engineer Beth] AI 邊緣部署工程師 (硬體實務)",
+                        "avatar": "👩‍💻",
+                        "lang": "zh-CN",     # 切換不同發音庫以示區隔 (女聲感)
+                        "slow": False
+                    },
+                    {
+                        "key": "alex_reply",
+                        "title": "[Data Scientist Alex] 數據科學專家 (訊號與特徵)",
+                        "avatar": "👨‍🔬",
+                        "lang": "zh-tw",     # 稍慢速度以塑造穩重男聲
+                        "slow": True
+                    },
+                    {
+                        "key": "cathy_reply",
+                        "title": "[Product Manager Cathy] 工業產品經理 (場域落地與 ROI)",
+                        "avatar": "👩‍💼",
+                        "lang": "zh-CN",     # 節奏較快的女聲
+                        "slow": False
+                    }
+                ]
 
-                # --- 呈現 Prof. Acoustic 文字與語音 ---
-                with st.chat_message("professor", avatar="👨‍🏫"):
-                    st.markdown(f"**[Prof. Acoustic] 專業解答**：{prof_text}")
-                    # 生成教授語音
-                    tts_p = gTTS(text=prof_text, lang='zh-tw')
-                    fp_p = io.BytesIO()
-                    tts_p.write_to_fp(fp_p)
-                    st.audio(fp_p.getvalue(), format="audio/mp3")
-
-                # --- 呈現 Student Beth 文字與語音 ---
-                with st.chat_message("student_b", avatar="🙋‍♀️️"):
-                    st.markdown(f"**[Student Beth] 實務經驗**：{beth_text}")
-                    # 生成 Beth 語音
-                    tts_b = gTTS(text=beth_text, lang='zh-tw')
-                    fp_b = io.BytesIO()
-                    tts_b.write_to_fp(fp_b)
-                    st.audio(fp_b.getvalue(), format="audio/mp3")
+                # 依次渲染 4 位智體的發言與專屬語音播放器
+                for agent in agents_config:
+                    reply_text = res_data.get(agent["key"], "")
+                    if reply_text:
+                        with st.chat_message(agent["key"], avatar=agent["avatar"]):
+                            st.markdown(f"**{agent['title']}**：{reply_text}")
+                            
+                            # 生成專屬語音
+                            tts = gTTS(text=reply_text, lang=agent["lang"], slow=agent["slow"])
+                            fp = io.BytesIO()
+                            tts.write_to_fp(fp)
+                            st.audio(fp.getvalue(), format="audio/mp3")
 
             except Exception as e:
                 st.error(f"❌ Gemini API 呼叫失敗：{str(e)}")
