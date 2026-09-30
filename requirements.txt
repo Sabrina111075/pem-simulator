@@ -5,4 +5,3 @@ plotly
 matplotlib
 librosa
 google-genai
-model = genai.GenerativeModel('gemini-3.6-flash')

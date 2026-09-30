@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import os
-model = genai.GenerativeModel('gemini-3.6-flash')
 
 # 1. 頁面基本配置
 st.set_page_config(
@@ -183,8 +182,8 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
                 # 使用 configure 設定金鑰
                 genai.configure(api_key=gemini_key)
                 
-                # 指定使用 gemini-1.5-flash 模型
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # 指定使用 gemini-3.6-flash 模型
+                model = genai.GenerativeModel('gemini-3.6-flash')
 
                 prompt = f"""
 你現在是 OpenMAIC 雙學 AI 學院的多智體系統。請針對學員提問：「{user_q}」，分別以兩個不同角色的立場給出專業、簡明扼要（各約 80-120 字）的解答：
