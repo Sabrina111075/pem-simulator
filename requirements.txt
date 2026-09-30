@@ -1,6 +1,7 @@
 ﻿streamlit
-librosa
-matplotlib
 numpy
 pandas
-gTTS
+plotly
+matplotlib
+librosa
+google-generativeai

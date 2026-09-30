@@ -156,28 +156,67 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
             st.error(f"❌ 答錯囉！正確答案是：{quiz['ans']}")
 
 # --------------------------------------------------
-    # 區塊 E：向 OpenMAIC AI 導師提問 (Q&A) (安全完全版)
+    # 區塊 E：向 OpenMAIC AI 導師提問 (Q&A - Gemini 動態生成)
     # --------------------------------------------------
     st.markdown("---")
-    st.markdown("#### 💬 向 OpenMAIC AI 導師提問 (Q&A)")
+    st.markdown("#### 💬 向 OpenMAIC AI 導師提問 (Gemini 多智體動態解答)")
+
+    import google.generativeai as genai
+    import json
+
+    # 從 Streamlit Secrets 讀取 Gemini API Key
+    gemini_key = st.secrets.get("GEMINI_API_KEY", "")
 
     user_q = st.text_input(
-        "輸入您的診斷疑問 (例如：如何判斷工業風扇故障？、軸承頻率特徵是什麼？)：",
+        "輸入您的診斷疑問 (例如：如何判斷工業風扇故障？、軸承特徵頻率是什麼？)：",
         key="qa_input_box"
     )
 
     if user_q:
-        # 1. 呈現學員提問
+        # 呈現學員提問
         with st.chat_message("user", avatar="🧑‍💻"):
             st.markdown(f"**學員 (You)**：{user_q}")
 
-        # 2. 聲學總導師解答 (固定寫死角色名稱，不使用動態變數)
-        with st.chat_message("professor", avatar="👨‍🏫"):
-            st.markdown(f"**[Prof. Acoustic] 專業解答**：針對「*{user_q}*」，在理論與訊號處理上，這主要牽涉到 FFT 頻譜諧波與時域特徵（如峰值因子 Factor）的變化分析。")
+        if not gemini_key:
+            st.warning("⚠️ 未檢測到 API Key，請確保已在 Streamlit Secrets 中設定 `GEMINI_API_KEY`。")
+        else:
+            try:
+                # 設定 API Key 與模型
+                genai.configure(api_key=gemini_key)
+                model = genai.GenerativeModel('gemini-1.5-flash')
 
-        # 3. AI 工程師解答 (固定寫死角色名稱)
-        with st.chat_message("student_b", avatar="🙋‍♀️"):
-            st.markdown(f"**[Student Beth] 實務經驗**：補充實務做法！在 MIMII / DCASE 數據集中，建議先將音訊預處理擷取 Log-Mel 頻譜，再丟入微型 CNN 即可達到 90% 以上的異常偵測率。")
+                # 多智體角色提示詞
+                prompt = f"""
+你現在是 OpenMAIC 雙學 AI 學院的多智體系統。請針對學員提問：「{user_q}」，分別以兩個不同角色的立場給出專業、簡明扼要（各約 80-120 字）的解答：
+
+1. Prof. Acoustic（聲學總導師）：著重於聲學理論、FFT 頻譜、諧波、時域波形與特徵頻率（如 BPFO/BPFI）等理論分析。
+2. Student Beth（AI 工程師）：著重於 Edge AI 實務部署、MIMII/DCASE 資料集預處理（如 Log-Mel 頻譜）、模型架構與硬體優化。
+
+請嚴格輸出 JSON 格式如下：
+{{
+  "professor_reply": "教授的回應內容",
+  "engineer_reply": "Beth 的回應內容"
+}}
+"""
+
+                with st.spinner("🤖 OpenMAIC 多導師群（Gemini 驅動）思考中..."):
+                    response = model.generate_content(
+                        prompt,
+                        generation_config={"response_mime_type": "application/json"}
+                    )
+
+                res_data = json.loads(response.text)
+
+                # 呈現 Prof. Acoustic 動態回覆
+                with st.chat_message("professor", avatar="👨‍🏫"):
+                    st.markdown(f"**[Prof. Acoustic] 專業解答**：{res_data.get('professor_reply', '')}")
+
+                # 呈現 Student Beth 動態回覆
+                with st.chat_message("student_b", avatar="🙋‍♀️"):
+                    st.markdown(f"**[Student Beth] 實務經驗**：{res_data.get('engineer_reply', '')}")
+
+            except Exception as e:
+                st.error(f"❌ Gemini API 呼叫失敗：{str(e)}")
 
     st.markdown("---")
 
