@@ -21,6 +21,8 @@ page = st.sidebar.selectbox(
     ["⚙️ 設備與測試控制台", "🎓 OpenMAIC 聲學 AI 學院"]
 )
 
+use_mock = st.sidebar.checkbox("🛠️ 開啟 Mock 開發模式 (免 API 額度)", value=True)
+
 if page == "🎓 OpenMAIC 聲學 AI 學院":
     import streamlit.components.v1 as components
 
@@ -189,15 +191,12 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         with st.chat_message("user", avatar="🧑‍💻"):
             st.markdown(f"**學員 (You)**：{user_q}")
 
-        if not gemini_key:
-            st.warning("⚠️ 未檢測到 API Key，請確保已在 Streamlit Secrets 中設定 `GEMINI_API_KEY`。")
-        else:
-            try:
-                genai.configure(api_key=gemini_key)
-                model = genai.GenerativeModel('gemini-3.8-flash')
-
-                # 提示詞：要求 4 位具備不同立場的 Agent 進行多人研討
-                prompt = f"""
+if not gemini_key and not use_mock:
+        st.warning("⚠️ 未檢測到 API Key，請確保已在 Streamlit Secrets 中設定 `GEMINI_API_KEY`。")
+    else:
+        try:
+            # 提示詞：要求4位具備不同立場的 Agent 進行多人研討
+            prompt = f"""
 你現在是 OpenMAIC 多智體互動研討會系統，當前主題為：「{course_option}」。
 請針對學員提問：「{user_q}」，分別以 4 個不同角色的立場進行多人圓桌討論（每人發言約 60-90 字，彼此回應、補足或對照）：
 
@@ -215,12 +214,22 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
 }}
 """
 
-                with st.spinner("🤖 OpenMAIC 多智體團隊 (4 人研討小組) 思考與合成語音中..."):
-                    response = model.generate_content(
-                        prompt,
-                        generation_config={"response_mime_type": "application/json"}
-                    )
-                    res_data = json.loads(response.text)
+            # 💡 判斷：若開啟 Mock 模式則直接回傳假 JSON，不呼叫 API
+            if use_mock:
+                import time
+                time.sleep(0.3) # 模擬 0.3 秒網路延遲
+                res_text = """{
+  "prof_reply": "【Mock 測試】Prof. Acoustic：從物理與頻譜角度來看，馬達與風扇故障會反映在 FFT 特徵峰值與諧波分量。",
+  "beth_reply": "【Mock 測試】Engineer Beth：部署至 ESP32 或 Raspberry Pi 時需考慮模型量化 INT8 降低記憶體佔用。",
+  "alex_reply": "【Mock 測試】Data Scientist Alex：建議提取 Mel 頻譜特徵後，結合 Autoencoder 進行無監督異常分數計算。",
+  "cathy_reply": "【Mock 測試】Product Manager Cathy：此預測性維護方案能有效替工廠預防非預期停機，節省維護成本。"
+}"""
+            else:
+                # 💡 關閉 Mock 模式時，才真正呼叫 Gemini API
+                genai.configure(api_key=gemini_key)
+                model = genai.GenerativeModel('gemini-3.8-flash')
+                response = model.generate_content(prompt)
+                res_text = response.text
 
                 # 定義 4 位角色的頭像、名稱與語音設定 (透過不同語言代碼/地區區分男女聲感)
                 agents_config = [
