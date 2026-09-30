@@ -266,7 +266,6 @@ if user_q:
     if res_text:
         import json
         try:
-            # 清理 Markdown json 標籤
             cleaned_text = res_text.replace("```json", "").replace("```", "").strip()
             replies = json.loads(cleaned_text)
 
