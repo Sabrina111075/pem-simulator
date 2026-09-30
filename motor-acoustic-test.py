@@ -262,18 +262,20 @@ if user_q:
         }
     ]
 
-    # 解析 JSON 與渲染 Agent 留言板
+# 解析 JSON 與渲染 Agent 留言板
     if res_text:
         import json
         try:
-            # 清理 Markdown json 標籤（若有的話）
+            # 清理 Markdown json 標籤
             cleaned_text = res_text.replace("```json", "").replace("```", "").strip()
             replies = json.loads(cleaned_text)
 
+            # 👈 檢查這行！for 必須跟上面的 cleaned_text、replies 最左側對齊（通常為 12 個空格）
             for agent in agents_config:
                 reply_content = replies.get(agent["key"], "（無回應）")
                 with st.chat_message(agent["key"], avatar=agent["avatar"]):
                     st.markdown(f"**{agent['title']}** : {reply_content}")
+
         except Exception as parse_e:
             st.error(f"⚠️ 解析 Agent 回應失敗：{parse_e}")
             st.code(res_text)
