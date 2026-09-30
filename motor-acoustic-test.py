@@ -194,7 +194,7 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         else:
             try:
                 genai.configure(api_key=gemini_key)
-                model = genai.GenerativeModel('gemini-3.6-flash')
+                model = genai.GenerativeModel('gemini-2.0-flash')
 
                 # 提示詞：要求 4 位具備不同立場的 Agent 進行多人研討
                 prompt = f"""
