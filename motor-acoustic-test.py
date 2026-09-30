@@ -161,8 +161,13 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     st.markdown("---")
     st.markdown("#### 🎓 OpenMAIC 雙學 AI 學院 (課程選擇與語音互動)")
 
+    import google.generativeai as genai
     from gtts import gTTS
     import io
+    import json
+
+    # 取得 Gemini API Key (加上此行即可修復 NameError)
+    gemini_key = st.secrets.get("GEMINI_API_KEY", "")
 
     # 1. 提供學習課程選擇
     course_option = st.selectbox(
@@ -170,7 +175,7 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         [
             "馬達與風扇聲學故障診斷",
             "Edge AI 邊緣運算與輕量化模型部署",
-            " signal 訊號處理與 FFT 頻譜分析"
+            "聲學訊號處理與 FFT 頻譜分析"
         ]
     )
 
