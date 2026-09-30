@@ -29,7 +29,7 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
     st.info("💡 本頁面採用單欄動態視圖：上方為 AI 導師講授區，下方為聲學診斷實作實驗室。")
 
 # --------------------------------------------------
-    # 區塊 1：OpenMAIC 多智體 AI 導師對話課堂 (強化優化版)
+    # 區塊 1：OpenMAIC 多智體 AI 導師對話課堂 (佇列朗讀修正版)
     # --------------------------------------------------
     st.subheader("🎓 1. OpenMAIC 多智體 AI 導師對話課堂")
     st.caption("Acoustic AI Agent Mentoring Classroom (繁體中文 / 中英對照)")
@@ -66,45 +66,60 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         }
     ]
 
-    # 1. 修正高度與自適應樣式的 HTML5 語音朗讀面板 (height 加大至 180)
-    full_lecture_script = "\\n".join([f"{d['name']}說：{d['tts_text']}" for d in dialogue_data])
-    
+    # 將每句對話轉為 JS 陣列
+    import json
+    lines_js = json.dumps([f"{d['name']}說：{d['tts_text']}" for d in dialogue_data], ensure_ascii=False)
+
     tts_html = f"""
     <div style="background: linear-gradient(135deg, #e6f2ff 0%, #ffffff 100%); padding: 18px; border-radius: 12px; border-left: 6px solid #0056b3; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px;">
-        <h4 style="margin: 0 0 8px 0; color: #0056b3; font-size: 16px; font-weight: bold;">🎙️ OpenMAIC 語音朗讀系統 (自適應高畫質版)</h4>
-        <p style="font-size: 13px; color: #444; margin-bottom: 12px;">點擊下方按鈕，直接由瀏覽器語音引擎朗讀 OpenMAIC 課堂對話：</p>
+        <h4 style="margin: 0 0 8px 0; color: #0056b3; font-size: 16px; font-weight: bold;">🎙️ OpenMAIC 語音朗讀系統 (無中斷佇列版)</h4>
+        <p style="font-size: 13px; color: #444; margin-bottom: 12px;">點擊下方按鈕，直接由瀏覽器語音引擎逐句朗讀完整 AI 課堂對話：</p>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button onclick="playLecture()" style="background-color: #28a745; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">
-                ▶️ 播放 AI 課堂對話
+            <button onclick="startQueue()" style="background-color: #28a745; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                ▶️ 播放完整 AI 課堂對話
             </button>
-            <button onclick="stopLecture()" style="background-color: #dc3545; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+            <button onclick="stopQueue()" style="background-color: #dc3545; color: white; border: none; padding: 8px 18px; font-size: 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">
                 ⏹️ 停止朗讀
             </button>
         </div>
     </div>
 
     <script>
-    var lectureText = `{full_lecture_script}`;
+    var speechLines = {lines_js};
+    var currentIndex = 0;
     var synth = window.speechSynthesis;
-    
-    function playLecture() {{
-        if (synth.speaking) {{
-            synth.cancel();
+
+    function speakNextLine() {{
+        if (currentIndex < speechLines.length) {{
+            var msg = new SpeechSynthesisUtterance(speechLines[currentIndex]);
+            msg.lang = 'zh-TW';
+            msg.rate = 0.95;
+            msg.onend = function() {{
+                currentIndex++;
+                speakNextLine();
+            }};
+            msg.onerror = function() {{
+                currentIndex++;
+                speakNextLine();
+            }};
+            synth.speak(msg);
         }}
-        var msg = new SpeechSynthesisUtterance(lectureText);
-        msg.lang = 'zh-TW';
-        msg.rate = 0.95;
-        synth.speak(msg);
     }}
-    
-    function stopLecture() {{
+
+    function startQueue() {{
+        stopQueue();
+        currentIndex = 0;
+        speakNextLine();
+    }}
+
+    function stopQueue() {{
         if (synth.speaking) {{
             synth.cancel();
         }}
+        currentIndex = speechLines.length;
     }}
     </script>
     """
-    # 這裡將 height 調整為 180，徹底解決按鈕被遮擋問題
     st.components.v1.html(tts_html, height=180)
 
     st.markdown("---")
