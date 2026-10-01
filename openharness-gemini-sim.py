@@ -17,9 +17,9 @@ with st.sidebar:
     
     model_choice = st.selectbox(
         "模型版本選擇",
-        ["gemini-2.5-flash", "gemini-3.8-flash", "gemini-2.5-pro"],
+        ["gemini-3.8-flash", "gemini-3.8-pro"],
         index=0,
-        help="若遇到 503 伺服器繁忙，請切換至 gemini-2.5-flash 即可正常執行"
+        help="Google 官方最新推薦的模型系列"
     )
     
     system_prompt = st.text_area(
