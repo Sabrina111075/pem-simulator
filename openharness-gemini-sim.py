@@ -42,21 +42,21 @@ if prompt:
         # 建立 Agent 實例
         agent = OpenHarnessGeminiAgent(api_key=api_key, model_name=model_choice)
         
-        col1, col2 = st.columns([2, 1])
-        
-        with col1:
+        with st.spinner("OpenHarness 正在協同 Gemini 推理中..."):
+            result = agent.run(prompt=prompt, system_instruction=system_prompt)
+            
+            # 上方：主要執行結果（滿版寬度，閱讀極佳）
             st.subheader("💬 Agent 執行結果")
-            with st.spinner("OpenHarness 正在協同 Gemini 推理中..."):
-                result = agent.run(prompt=prompt, system_instruction=system_prompt)
-                
-                if result["status"] == "success":
-                    st.success("執行成功！")
-                    st.markdown(result["response"])
-                else:
-                    st.error(result["response"])
-
-        with col2:
-            st.subheader("🔍 OpenHarness 運作日誌")
-            st.info("追蹤 Agent 思考與 Harness 機制的底層日誌：")
-            for log in result["logs"]:
-                st.code(log, language="text")
+            if result["status"] == "success":
+                st.success("執行成功！")
+                st.markdown(result["response"])
+            else:
+                st.error(result["response"])
+            
+            st.divider()  # 分割線
+            
+            # 下方：OpenHarness 運作日誌（垂直呈現，附帶捲軸/折疊選單）
+            with st.expander("🔍 OpenHarness 運作日誌 (點擊展開/收合)", expanded=True):
+                st.info("追蹤 Agent 思考與 Harness 機制的底層日誌：")
+                log_text = "\n".join(result["logs"])
+                st.code(log_text, language="text", line_numbers=True)
