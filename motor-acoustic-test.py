@@ -124,147 +124,176 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
       )
 
 # ==============================================================================
-# ⚙️ 功能模組 2：設備與測試控制台 (含真實異音區隔聲學模擬與專業圖表)
+# ⚙️ 功能模組 2：設備與測試控制台 (含精準設備/異常聲音區隔 + 字體亂碼修復)
 # ==============================================================================
 else:
-  st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)")
-  st.caption("邊緣運算前置驗證平台 | 支援 ESP32-S3 + Raspberry Pi 5 模擬測試")
+  import matplotlib
+
+  # 嘗試設定中文字體，避免 Matplotlib 出現 □□ 方塊亂碼
+  plt.rcParams['font.sans-serif'] = [
+      'Microsoft JhengHei',
+      'DFKai-SB',
+      'SimHei',
+      'Arial',
+  ]
+  plt.rcParams['axes.unicode_minus'] = False
+
+  st.title('⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)')
+  st.caption('邊緣運算前置驗證平台 | 支援 ESP32-S3 + Raspberry Pi 5 模擬測試')
 
   st.info(
-      "📊 **聲學基準數據來源 (Benchmark Dataset)**：本平台測試音訊基準參照 DCASE Challenge Task"
-      " 2 / MIMII Dataset (Fan, Motor, Pump, Valve, Slide Rail, Gearbox)"
-      " 之設備聲學特徵與頻域指標進行標定與驗證。"
+      '📊 **聲學基準數據來源 (Benchmark Dataset)**：本平台測試音訊基準參照 DCASE Challenge Task'
+      ' 2 / MIMII Dataset (Fan, Motor, Pump, Valve, Slide Rail, Gearbox)'
+      ' 之設備聲學特徵與頻域指標進行標定與驗證。'
   )
 
   # 側邊欄控制台選項
-  st.sidebar.header("⚙️️ 設備與測試控制台")
+  st.sidebar.header('⚙️ 設備與測試控制台')
   category = st.sidebar.selectbox(
-      "1. 選擇設備類別 (Category)",
+      '1. 選擇設備類別 (Category)',
       [
-          "工業風扇 (Fan)",
-          "工業馬達 (Motor)",
-          "工業水泵 (Pump)",
-          "電磁閥門 (Valve)",
-          "線性滑軌 (Slide Rail)",
-          "工業齒輪箱 (Gearbox)",
-          "風力發電機 - 齒輪箱 (Wind Turbine - Gearbox)",
-          "風力發電機 - 發電機 (Wind Turbine - Generator)",
-          "風力發電機 - 實測風場聲 (Wind Turbine Field Acoustics)",
-          "電動車電池水冷泵浦 (EV Battery Cooling Pump)",
+          '工業風扇 (Fan)',
+          '工業馬達 (Motor)',
+          '工業水泵 (Pump)',
+          '電磁閥門 (Valve)',
+          '線性滑軌 (Slide Rail)',
+          '工業齒輪箱 (Gearbox)',
+          '風力發電機 - 齒輪箱 (Wind Turbine - Gearbox)',
+          '風力發電機 - 發電機 (Wind Turbine - Generator)',
+          '風力發電機 - 實測風場聲 (Wind Turbine Field Acoustics)',
+          '電動車電池水冷泵浦 (EV Battery Cooling Pump)',
       ],
   )
 
   status_option = st.sidebar.selectbox(
-      "2. 選擇測試狀態/故障型態",
+      '2. 選擇測試狀態/故障型態',
       [
-          "正常 (Normal)",
-          "異常 - 軸承磨損 (Abnormal - Bearing Wear)",
-          "異常 - 不平衡 (Abnormal - Unbalance)",
-          "異常 - 異物卡阻 (Abnormal - Blockage)",
+          '正常 (Normal)',
+          '異常 - 軸承磨損 (Abnormal - Bearing Wear)',
+          '異常 - 不平衡 (Abnormal - Unbalance)',
+          '異常 - 異物卡阻 (Abnormal - Blockage)',
       ],
   )
 
-  is_normal = "正常" in status_option
+  is_normal = '正常' in status_option
 
   # --- Top 狀態指標列 ---
   k1, k2, k3, k4 = st.columns([1, 1, 1, 1.8])
 
   if is_normal:
-    k1.metric("設備健康指標 (HI)", "96 %", "↑ 良好")
-    k2.metric("重構誤差 (MSE)", "0.0015", "↑ 門檻: 0.05")
+    k1.metric('設備健康指標 (HI)', '96 %', '↑ 良好')
+    k2.metric('重構誤差 (MSE)', '0.0015', '↑ 門檻: 0.05')
     with k3:
-      st.success("### 診斷狀態\n✅ 正常 (Normal)")
-  elif "軸承磨損" in status_option:
-    k1.metric("設備健康指標 (HI)", "38 %", "🚨 嚴重離線")
-    k2.metric("重構誤差 (MSE)", "0.1980", "🚨 高頻衝擊超標")
+      st.success('### 診斷狀態\n✅ 正常 (Normal)')
+  elif '軸承磨損' in status_option:
+    k1.metric('設備健康指標 (HI)', '38 %', '🚨 嚴重離線')
+    k2.metric('重構誤差 (MSE)', '0.1980', '🚨 高頻衝擊超標')
     with k3:
-      st.error("### 診斷狀態\n🚨 軸承磨損")
-  elif "不平衡" in status_option:
-    k1.metric("設備健康指標 (HI)", "52 %", "⚠️ 需進行校正")
-    k2.metric("重構誤差 (MSE)", "0.1240", "⚠️ 1X轉速振幅過大")
+      st.error('### 診斷狀態\n🚨 軸承磨損')
+  elif '不平衡' in status_option:
+    k1.metric('設備健康指標 (HI)', '52 %', '⚠️ 需進行校正')
+    k2.metric('重構誤差 (MSE)', '0.1240', '⚠️ 1X轉速振幅過大')
     with k3:
-      st.warning("### 診斷狀態\n⚠️ 轉子不平衡")
+      st.warning('### 診斷狀態\n⚠️ 轉子不平衡')
   else:  # 異物卡阻
-    k1.metric("設備健康指標 (HI)", "25 %", "🚨 建議立即停機")
-    k2.metric("重構誤差 (MSE)", "0.2850", "🚨 紊流與異常碰撞")
+    k1.metric('設備健康指標 (HI)', '25 %', '🚨 建議劃定停機')
+    k2.metric('重構誤差 (MSE)', '0.2850', '🚨 紊流與異常碰撞')
     with k3:
-      st.error("### 診斷狀態\n🚨 異物卡阻")
+      st.error('### 診斷狀態\n🚨 異物卡阻')
 
-  # --- 專業聲學訊號生成演算法 (擬真異音) ---
+  # --- 專業聲學訊號生成演算法 (設備與異常雙重顯著化) ---
   fs = 16000  # 採樣率 16kHz
   duration = 2.5  # 2.5 秒音訊
   t = np.linspace(0, duration, int(fs * duration), endpoint=False)
 
-  # 根據設備調整基頻
-  base_freq = 50  # 預設 50 Hz
-  if "風扇" in category:
-    base_freq = 60
-  elif "馬達" in category:
-    base_freq = 120
-  elif "水泵" in category or "泵浦" in category:
-    base_freq = 85
-  elif "齒輪箱" in category:
-    base_freq = 200
+  # A. 依據「設備類別」調配獨特聲學基頻與特徵音色
+  if '風扇' in category:
+    base_f = 45
+    # 低頻風噪 + 風扇葉片切風聲
+    bg_sound = 0.3 * np.sin(2 * np.pi * base_f * t) + 0.15 * np.sin(
+        2 * np.pi * (base_f * 4) * t
+    )
+    device_noise = 0.08 * np.random.normal(size=t.shape)
+  elif '水泵' in category or '泵浦' in category:
+    base_f = 90
+    # 水流抽吸高頻白雜訊 + 泵浦運轉聲
+    bg_sound = 0.25 * np.sin(2 * np.pi * base_f * t)
+    device_noise = 0.18 * np.random.normal(size=t.shape)  # 水流聲
+  elif '齒輪箱' in category:
+    base_f = 180
+    # 低速重型齒輪咬合聲 (多重諧波)
+    bg_sound = (
+        0.35 * np.sin(2 * np.pi * base_f * t)
+        + 0.2 * np.sin(2 * np.pi * base_f * 2.5 * t)
+        + 0.1 * np.sin(2 * np.pi * base_f * 4 * t)
+    )
+    device_noise = 0.04 * np.random.normal(size=t.shape)
+  elif '滑軌' in category or '閥門' in category:
+    base_f = 300
+    bg_sound = 0.2 * np.sin(2 * np.pi * base_f * t)
+    device_noise = 0.02 * np.random.normal(size=t.shape)
+  else:  # 工業馬達
+    base_f = 120
+    # 標準電磁嗡嗡聲
+    bg_sound = 0.4 * np.sin(2 * np.pi * base_f * t) + 0.2 * np.sin(
+        2 * np.pi * base_f * 2 * t
+    )
+    device_noise = 0.03 * np.random.normal(size=t.shape)
 
-  # 1. 基頻與諧波 (基礎馬達轉動嗡嗡聲)
-  fundamental = 0.4 * np.sin(2 * np.pi * base_freq * t)
-  harmonic = 0.2 * np.sin(2 * np.pi * base_freq * 2 * t)
-  background_noise = np.random.normal(0, 0.03, size=t.shape)
+  signal = bg_sound + device_noise
 
-  signal = fundamental + harmonic + background_noise
+  # B. 依據「故障型態」注入強烈異音特徵
+  if '軸承磨損' in status_option:
+    # 高頻刺耳金屬摩擦尖銳聲 (3200Hz) + 週期性衝擊嗒嗒聲 (15Hz BPFO)
+    squeal = 0.45 * np.sin(2 * np.pi * 3200 * t)
+    impact_env = np.maximum(0, np.sin(2 * np.pi * 15 * t)) ** 12
+    impacts = impact_env * np.random.normal(0, 0.8, size=t.shape)
+    signal = signal + squeal + impacts
 
-  # 2. 依據故障型態注入顯著聲學特徵
-  if "軸承磨損" in status_option:
-    # 高頻刺耳聲 (2500Hz) + 週期性衝擊嗒嗒聲 (12Hz BPFO 軸承特徵)
-    high_freq_squeal = 0.3 * np.sin(2 * np.pi * 2500 * t)
-    impact_env = np.maximum(0, np.sin(2 * np.pi * 12 * t)) ** 10
-    impacts = impact_env * np.random.normal(0, 0.6, size=t.shape)
-    signal = signal + high_freq_squeal + impacts
+  elif '不平衡' in status_option:
+    # 週期性重低音強烈調幅 (1X 轉速重低音嗡嗡震撼聲)
+    am_envelope = 1.0 + 0.85 * np.sin(2 * np.pi * (base_f / 8) * t)
+    heavy_unbalance = (
+        0.85 * np.sin(2 * np.pi * (base_f / 2) * t) * am_envelope
+    )
+    signal = signal + heavy_unbalance
 
-  elif "不平衡" in status_option:
-    # 低頻重低音 1X 轉速強烈調幅 (週期性低頻強弱波動)
-    am_modulation = 1.0 + 0.8 * np.sin(2 * np.pi * (base_freq / 10) * t)
-    heavy_bass = 0.8 * np.sin(2 * np.pi * (base_freq / 2) * t) * am_modulation
-    signal = signal + heavy_bass
+  elif '異物卡阻' in status_option:
+    # 隨機金屬爆衝聲 + 劇烈紊流噪聲
+    clicks = np.zeros_like(t)
+    click_pts = np.random.choice(len(t), size=40, replace=False)
+    clicks[click_pts] = np.random.uniform(1.0, 2.0, size=40)
+    turbulent = np.random.normal(0, 0.35, size=t.shape)
+    signal = signal + clicks + turbulent
 
-  elif "異物卡阻" in status_option:
-    # 不規則衝擊爆音 + 強烈白雜訊紊流聲
-    random_clicks = np.zeros_like(t)
-    click_indices = np.random.choice(
-        len(t), size=30, replace=False
-    )  # 隨機 30 次卡阻衝擊
-    random_clicks[click_indices] = np.random.uniform(0.8, 1.5, size=30)
-    turbulent_noise = np.random.normal(0, 0.25, size=t.shape)
-    signal = signal + random_clicks + turbulent_noise
-
-  # 訊號正規化，避免音訊破音
+  # 歸一化音量，避免破音
   signal = signal / np.max(np.abs(signal))
 
   with k4:
-    st.markdown("### 🔊 測試音頻模擬試聽")
+    st.markdown('### 🔊 測試音頻模擬試聽')
     st.audio(signal, sample_rate=fs)
 
   st.divider()
 
-  # --- 繪製專業聲學分析圖表 (波形圖、FFT 頻譜、梅爾頻譜) ---
-  st.subheader(f"📈 【{category}】 聲學特徵即時分析圖表")
+  # --- 繪製專業聲學分析圖表 ---
+  st.subheader(f'📈 【{category}】 聲學特徵即時分析圖表')
 
   tab_time, tab_fft, tab_mel = st.tabs([
-      "🌊 時域波形圖 (Waveform)",
-      "📊 快速傅立葉變換 (FFT Spectrum)",
-      "🖼️ 梅爾頻譜圖 (Mel-Spectrogram)",
+      '🌊 時域波形圖 (Waveform)',
+      '📊 快速傅立葉變換 (FFT Spectrum)',
+      '🖼️ 梅爾頻譜圖 (Mel-Spectrogram)',
   ])
 
   # 1. 時域波形圖
   with tab_time:
     fig_time, ax_time = plt.subplots(figsize=(10, 3.5))
-    ax_time.plot(t[:3200], signal[:3200], color="#2563eb", lw=1)
+    ax_time.plot(t[:3200], signal[:3200], color='#2563eb', lw=1)
     ax_time.set_title(
-        f"{category} - 時域訊號 [{status_option}] (前 0.2 秒)", fontsize=11
+        f'{category} - Waveform [{status_option}] (First 0.2s)', fontsize=11
     )
-    ax_time.set_xlabel("時間 (秒)")
-    ax_time.set_ylabel("振幅 (Amplitude)")
-    ax_time.grid(True, linestyle="--", alpha=0.5)
+    ax_time.set_xlabel('Time (s)')
+    ax_time.set_ylabel('Amplitude')
+    ax_time.grid(True, linestyle='--', alpha=0.5)
     st.pyplot(fig_time)
 
   # 2. FFT 頻譜圖
@@ -272,26 +301,25 @@ else:
     fig_fft, ax_fft = plt.subplots(figsize=(10, 3.5))
     fft_vals = np.abs(np.fft.rfft(signal))
     fft_freqs = np.fft.rfftfreq(len(signal), 1 / fs)
-    ax_fft.plot(fft_freqs[:3000], fft_vals[:3000], color="#059669", lw=1)
+    ax_fft.plot(fft_freqs[:3500], fft_vals[:3500], color='#059669', lw=1)
     ax_fft.set_title(
-        f"{category} - 頻域響應 (FFT Spectrum) [{status_option}]", fontsize=11
+        f'{category} - FFT Spectrum [{status_option}]', fontsize=11
     )
-    ax_fft.set_xlabel("頻率 (Hz)")
-    ax_fft.set_ylabel("能量 (Magnitude)")
-    ax_fft.grid(True, linestyle="--", alpha=0.5)
+    ax_fft.set_xlabel('Frequency (Hz)')
+    ax_fft.set_ylabel('Magnitude')
+    ax_fft.grid(True, linestyle='--', alpha=0.5)
     st.pyplot(fig_fft)
 
-  # 3. 梅爾頻譜圖
+  # 3. 梅爾頻譜圖 (STFT)
   with tab_mel:
     fig_mel, ax_mel = plt.subplots(figsize=(10, 3.5))
     Pxx, freqs, bins, im = ax_mel.specgram(
-        signal, NFFT=512, Fs=fs, noverlap=256, cmap="magma"
+        signal, NFFT=512, Fs=fs, noverlap=256, cmap='magma'
     )
     ax_mel.set_title(
-        f"{category} - 時頻圖 (STFT/Mel-Spectrogram) [{status_option}]",
-        fontsize=11,
+        f'{category} - Mel-Spectrogram [{status_option}]', fontsize=11
     )
-    ax_mel.set_xlabel("時間 (秒)")
-    ax_mel.set_ylabel("頻率 (Hz)")
-    fig_mel.colorbar(im, ax=ax_mel, format="%+2.0f dB")
+    ax_mel.set_xlabel('Time (s)')
+    ax_mel.set_ylabel('Frequency (Hz)')
+    fig_mel.colorbar(im, ax=ax_mel, format='%+2.0f dB')
     st.pyplot(fig_mel)
