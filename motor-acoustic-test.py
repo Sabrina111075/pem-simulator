@@ -21,8 +21,6 @@ page = st.sidebar.selectbox(
     ["⚙️ 設備與測試控制台", "🎓 OpenMAIC 聲學 AI 學院"]
 )
 
-use_mock = st.sidebar.checkbox("🛠️ 開啟 Mock 開發模式 (免 API 額度)", value=True)
-
 if page == "🎓 OpenMAIC 聲學 AI 學院":
     import streamlit.components.v1 as components
 
@@ -187,15 +185,20 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
         key="qa_input_box"
     )
 
-if user_q:
-    with st.chat_message("user", avatar="🎓"):
-        st.markdown(f"**學員 (You)** : {user_q}")
+    if user_q:
+        with st.chat_message("user", avatar="🧑‍💻"):
+            st.markdown(f"**學員 (You)**：{user_q}")
 
-    if not gemini_key and not use_mock:
-        st.warning("⚠️ 未檢測到 API Key，請確保已在 Streamlit Secrets 中設定 `GEMINI_API_KEY`。")
-    else:
-        try:
-            prompt = f"""你現在是 OpenMAIC 多智體互動研討會系統，當前主題為：「{course_option}」。
+        if not gemini_key:
+            st.warning("⚠️ 未檢測到 API Key，請確保已在 Streamlit Secrets 中設定 `GEMINI_API_KEY`。")
+        else:
+            try:
+                genai.configure(api_key=gemini_key)
+                model = genai.GenerativeModel('gemini-3.6-flash')
+
+                # 提示詞：要求 4 位具備不同立場的 Agent 進行多人研討
+                prompt = f"""
+你現在是 OpenMAIC 多智體互動研討會系統，當前主題為：「{course_option}」。
 請針對學員提問：「{user_q}」，分別以 4 個不同角色的立場進行多人圓桌討論（每人發言約 60-90 字，彼此回應、補足或對照）：
 
 1. Prof. Acoustic（男聲，聲學總導師）：著重於理論分析、物理原理與數學公式背後的意義。
@@ -209,77 +212,18 @@ if user_q:
   "beth_reply": "Engineer Beth 的回應",
   "alex_reply": "Data Scientist Alex 的回應",
   "cathy_reply": "Product Manager Cathy 的回應"
-}}"""
+}}
+"""
 
-            if use_mock:
-                import time
-                time.sleep(0.3)
-                res_text = """{
-  "prof_reply": "【Mock 測試】Prof. Acoustic：從物理與頻譜角度來看，馬達與風扇故障會反映在 FFT 特徵峰值與諧波分量。",
-  "beth_reply": "【Mock 測試】Engineer Beth：部署至 ESP32 或 Raspberry Pi 時需考慮模型量化 INT8 降低記憶體佔用。",
-  "alex_reply": "【Mock 測試】Data Scientist Alex：建議提取 Mel 頻譜特徵後，結合 Autoencoder 進行無監督異常分數計算。",
-  "cathy_reply": "【Mock 測試】Product Manager Cathy：此預測性維護方案能有效替工廠預防非預期停機，節省維護成本。"
-}"""
-            else:
-                genai.configure(api_key=gemini_key)
-                model = genai.GenerativeModel('gemini-3.8-flash')
-                response = model.generate_content(prompt)
-                res_text = response.text
-
-        except Exception as e:
-            st.error(f"❌ Gemini API 呼叫失敗：{e}")
-            res_text = None
-
-    # 定義 4 位角色的頭像與設定
-    agents_config = [
-        {
-            "key": "prof_reply",
-            "title": "[Prof. Acoustic] 聲學總導師 (理論與原理)",
-            "avatar": "👨‍🏫",
-            "lang": "zh-tw",
-            "slow": False
-        },
-        {
-            "key": "beth_reply",
-            "title": "[Engineer Beth] AI 邊緣部署工程師 (硬體實務)",
-            "avatar": "👩‍💻",
-            "lang": "zh-CN",
-            "slow": False
-        },
-        {
-            "key": "alex_reply",
-            "title": "[Data Scientist Alex] 數據科學專家 (訊號與特徵)",
-            "avatar": "👨‍‍🔬",
-            "lang": "zh-tw",
-            "slow": True
-        },
-        {
-            "key": "cathy_reply",
-            "title": "[Product Manager Cathy] 工業產品經理 (場域落地與 ROI)",
-            "avatar": "👩‍💼",
-            "lang": "zh-CN",
-            "slow": False
-        }
-    ]
-
-# 解析 JSON 與渲染 Agent 留言板
-    if res_text:
-        import json
-        try:
-            cleaned_text = res_text.replace("```json", "").replace("```", "").strip()
-            replies = json.loads(cleaned_text)
-
-            for agent in agents_config:
-                reply_content = replies.get(agent["key"], "（無回應）")
-                with st.chat_message(agent["key"], avatar=agent["avatar"]):
-                    st.markdown(f"**{agent['title']}** : {reply_content}")
-
-        except Exception as parse_e:
-            st.error(f"⚠️ 解析 Agent 回應失敗：{parse_e}")
-            st.code(res_text)
+                with st.spinner("🤖 OpenMAIC 多智體團隊 (4 人研討小組) 思考與合成語音中..."):
+                    response = model.generate_content(
+                        prompt,
+                        generation_config={"response_mime_type": "application/json"}
+                    )
+                    res_data = json.loads(response.text)
 
                 # 定義 4 位角色的頭像、名稱與語音設定 (透過不同語言代碼/地區區分男女聲感)
-        agents_config = [
+                agents_config = [
                     {
                         "key": "prof_reply",
                         "title": "[Prof. Acoustic] 聲學總導師 (理論與原理)",
@@ -323,7 +267,7 @@ if user_q:
                             tts.write_to_fp(fp)
                             st.audio(fp.getvalue(), format="audio/mp3")
 
-        except Exception as e:
+            except Exception as e:
                 st.error(f"❌ Gemini API 呼叫失敗：{str(e)}")
 
     st.markdown("---")
