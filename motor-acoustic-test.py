@@ -103,114 +103,161 @@ else:
     with k3:
       st.error('### 診斷狀態\n🚨 異物卡阻')
 
-  # --- 音訊讀取邏輯：優先 samples/ 資料匣，次選數學合成模型 ---
-  fs = 16000
-  signal = None
-  audio_source_label = '數學聲學模型生成'
+# ==============================================================================
+# 音訊讀取與真實 samples/ 對接 + 深度設備聲學特徵差異化合成機制
+# ==============================================================================
+fs = 16000
+signal = None
+audio_source_label = '數學聲學模型生成'
 
-  dev_kw = (
-      'fan'
-      if '風扇' in category
-      else (
-          'pump'
-          if '水泵' in category or '泵浦' in category
-          else (
-              'gearbox'
-              if '齒輪' in category
-              else 'motor' if '馬達' in category else 'slider'
-          )
-      )
-  )
-  status_kw = (
-      'normal'
-      if is_normal
-      else (
-          'bearing'
-          if '軸承' in status_option
-          else 'unbalance' if '不平衡' in status_option else 'clog'
-      )
-  )
+# 1. 設備關鍵字精細匹配
+if '風扇' in category:
+  dev_kw = 'fan'
+elif '泵' in category:
+  dev_kw = 'pump'
+elif '齒輪' in category:
+  dev_kw = 'gearbox'
+elif '馬達' in category or '發電機' in category:
+  dev_kw = 'motor'
+elif '滑軌' in category:
+  dev_kw = 'slider'
+elif '風場' in category:
+  dev_kw = 'wind'
+else:
+  dev_kw = 'valve'
 
-  samples_dir = 'samples'
-  found_file = None
-  if os.path.exists(samples_dir):
-    all_files = glob.glob(os.path.join(samples_dir, '*.*'))
+# 2. 狀態關鍵字匹配
+status_kw = (
+    'normal'
+    if is_normal
+    else (
+        'bearing'
+        if '軸承' in status_option
+        else 'unbalance' if '不平衡' in status_option else 'clog'
+    )
+)
+
+# 3. 優先尋找 samples/ 資料匣檔案
+samples_dir = 'samples'
+found_file = None
+if os.path.exists(samples_dir):
+  all_files = glob.glob(os.path.join(samples_dir, '*.*'))
+  # 完全匹配 (設備 + 狀態)
+  for fpath in all_files:
+    fname = os.path.basename(fpath).lower()
+    if dev_kw in fname and status_kw in fname:
+      found_file = fpath
+      break
+  # 次要匹配 (僅狀態)
+  if not found_file:
     for fpath in all_files:
       fname = os.path.basename(fpath).lower()
-      if dev_kw in fname and status_kw in fname:
+      if status_kw in fname:
         found_file = fpath
         break
-    if not found_file:
-      for fpath in all_files:
-        fname = os.path.basename(fpath).lower()
-        if status_kw in fname:
-          found_file = fpath
-          break
 
-  if found_file:
-    try:
-      fs_read, data_read = wavfile.read(found_file)
-      fs = fs_read
-      if data_read.ndim > 1:
-        data_read = data_read[:, 0]
-      signal = data_read.astype(np.float32)
-      signal = signal / (np.max(np.abs(signal)) + 1e-6)
-      audio_source_label = f'真實音檔 ({os.path.basename(found_file)})'
-    except Exception:
-      signal = None
-
-  # 數學備用合成演算法（顯著差異化）
-  if signal is None:
-    duration = 2.5
-    t = np.linspace(0, duration, int(fs * duration), endpoint=False)
-    base_f = (
-        45
-        if '風扇' in category
-        else (
-            90
-            if '水泵' in category or '泵浦' in category
-            else (
-                180
-                if '齒輪' in category
-                else 300 if '滑軌' in category else 120
-            )
-        )
-    )
-
-    if is_normal:
-      signal = 0.4 * np.sin(2 * np.pi * base_f * t) + 0.15 * np.sin(
-          2 * np.pi * base_f * 2 * t
-      )
-      signal += 0.01 * np.random.normal(size=t.shape)
-    else:
-      if '軸承磨損' in status_option:
-        high_squeal = 0.5 * np.sin(2 * np.pi * 3500 * t)
-        pulses = (
-            np.maximum(0, np.sin(2 * np.pi * 18 * t)) ** 10
-        ) * np.random.normal(0, 0.9, size=t.shape)
-        signal = 0.3 * np.sin(2 * np.pi * base_f * t) + high_squeal + pulses
-      elif '不平衡' in status_option:
-        am = 1.0 + 0.9 * np.sin(2 * np.pi * 6 * t)
-        signal = 0.8 * np.sin(2 * np.pi * (base_f / 2) * t) * am + 0.1 * np.random.normal(
-            size=t.shape
-        )
-      else:
-        clicks = np.zeros_like(t)
-        pts = np.random.choice(len(t), size=60, replace=False)
-        clicks[pts] = np.random.uniform(1.5, 3.0, size=60)
-        signal = (
-            0.2 * np.sin(2 * np.pi * base_f * t)
-            + clicks
-            + np.random.normal(0, 0.3, size=t.shape)
-        )
-
+if found_file:
+  try:
+    fs_read, data_read = wavfile.read(found_file)
+    fs = fs_read
+    if data_read.ndim > 1:
+      data_read = data_read[:, 0]
+    signal = data_read.astype(np.float32)
     signal = signal / (np.max(np.abs(signal)) + 1e-6)
+    audio_source_label = f'真實音檔 ({os.path.basename(found_file)})'
+  except Exception:
+    signal = None
 
-  with k4:
-    st.markdown(f'### 🔊 測試音頻試聽 ({audio_source_label})')
-    st.audio(signal, sample_rate=fs)
+# 4. 若無真實音檔，執行多設備極大化差異之數學合成演算法
+if signal is None:
+  duration = 2.5
+  t = np.linspace(0, duration, int(fs * duration), endpoint=False)
 
-  st.divider()
+  # --- 各設備獨立基頻與聲學參數標定 ---
+  if '風扇' in category:
+    base_f, harmonic_weight = 45, [1.0, 0.3, 0.1]
+  elif '水泵' in category or '水冷泵' in category:
+    base_f, harmonic_weight = 120, [1.0, 0.5, 0.2]
+  elif '齒輪箱' in category:
+    base_f, harmonic_weight = 250, [1.0, 0.8, 0.6]  # 齒輪咬合高頻
+  elif '發電機' in category or '馬達' in category:
+    base_f, harmonic_weight = 60, [1.0, 0.2, 0.05]
+  elif '風場聲' in category:
+    base_f, harmonic_weight = 15, [1.0, 0.9, 0.7]  # 低頻風噪
+  elif '滑軌' in category:
+    base_f, harmonic_weight = 320, [1.0, 0.1, 0.0]
+  else:
+    base_f, harmonic_weight = 90, [1.0, 0.4, 0.1]
+
+  # --- 正常音與三類故障音之顯著差異化合成 ---
+  if is_normal:
+    # 正常音：純淨規律諧波，幾乎極低雜訊
+    signal = (
+        harmonic_weight[0] * np.sin(2 * np.pi * base_f * t)
+        + harmonic_weight[1] * np.sin(2 * np.pi * base_f * 2 * t)
+        + harmonic_weight[2] * np.sin(2 * np.pi * base_f * 3 * t)
+    )
+    signal += 0.005 * np.random.normal(size=t.shape)  # 微量背景底噪
+
+  elif '軸承磨損' in status_option:
+    # 軸承磨損：高頻刺耳金屬摩擦 (3000Hz~4500Hz) + 16Hz 高頻衝擊包絡
+    carrier = np.sin(2 * np.pi * (base_f * 15 + 1200) * t)
+    modulator = (np.maximum(0, np.sin(2 * np.pi * 16 * t)) ** 8) * 1.5
+    friction_noise = np.random.normal(0, 0.2, size=t.shape)
+    signal = 0.3 * np.sin(2 * np.pi * base_f * t) + carrier * modulator + friction_noise
+
+  elif '不平衡' in status_option:
+    # 不平衡：強烈低頻重音週期擺動 (5Hz AM 包絡調幅)
+    am_envelope = 1.0 + 0.85 * np.sin(2 * np.pi * 5 * t)
+    fundamental = np.sin(2 * np.pi * base_f * t) * am_envelope
+    sub_harmonic = 0.4 * np.sin(2 * np.pi * (base_f / 2) * t)
+    signal = fundamental + sub_harmonic + 0.02 * np.random.normal(size=t.shape)
+
+  else:  # 異物卡阻 (Abnormal - Blockage)
+    # 異物卡阻：針對不同設備加入獨特爆沖與氣蝕/卡死亂流
+    if '齒輪' in category:
+      # 齒輪卡死：低頻金屬巨響 + 不規則碰撞
+      impact_freq = 8
+      clicks = (np.random.uniform(0, 1, size=t.shape) > 0.996).astype(
+          np.float32
+      ) * 2.5
+      rumble = np.sin(2 * np.pi * 35 * t) * (1.0 + np.sin(2 * np.pi * 3 * t))
+      signal = 0.2 * np.sin(2 * np.pi * base_f * t) + clicks + 0.6 * rumble
+    elif '風場' in category or '風扇' in category:
+      # 風道阻塞：極強爆破紊流 (Turbulence Noise) + 高頻風笛刮削聲
+      whistle = np.sin(2 * np.pi * 2800 * t) * (
+          0.5 + 0.5 * np.sin(2 * np.pi * 12 * t)
+      )
+      turbulence = np.random.normal(0, 0.6, size=t.shape)
+      signal = (
+          0.2 * np.sin(2 * np.pi * base_f * t) + whistle + 0.8 * turbulence
+      )
+    elif '水泵' in category or '泵浦' in category:
+      # 泵浦卡阻：強烈氣蝕空化爆裂聲 (Cavitation Explosive Bubbles)
+      cavitation = (np.random.uniform(0, 1, size=t.shape) > 0.991).astype(
+          np.float32
+      ) * np.random.uniform(1.2, 3.0, size=t.shape)
+      fluid_noise = np.random.normal(0, 0.4, size=t.shape)
+      signal = (
+          0.3 * np.sin(2 * np.pi * base_f * t) + cavitation + fluid_noise
+      )
+    else:
+      # 一般馬達/滑軌異物卡阻：高強度不定期爆衝打擊聲
+      impacts = (np.random.uniform(0, 1, size=t.shape) > 0.993).astype(
+          np.float32
+      ) * 2.0
+      signal = (
+          0.2 * np.sin(2 * np.pi * base_f * t)
+          + impacts
+          + np.random.normal(0, 0.35, size=t.shape)
+      )
+
+  # 正規化振幅，防止爆音
+  signal = signal / (np.max(np.abs(signal)) + 1e-6)
+
+with k4:
+  st.markdown(f'### 🔊 測試音頻試聽 ({audio_source_label})')
+  st.audio(signal, sample_rate=fs)
 
   # --- 聲學分析圖表 (時域/FFT/梅爾頻譜) ---
   st.subheader(f'📈 【{category}】 聲學特徵即時分析圖表')
