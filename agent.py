@@ -2,6 +2,7 @@
 import sys
 import io
 import re
+import time
 
 class OpenHarnessGeminiAgent:
     def __init__(self, api_key: str, model_name: str = "gemini-3.6-flash"):
@@ -14,7 +15,6 @@ class OpenHarnessGeminiAgent:
         import numpy as np
         import matplotlib.pyplot as plt
         
-        # 設置沙盒的全域變數，預載常用的科學計算庫
         sandbox_globals = {
             "__builtins__": __builtins__,
             "np": np,
@@ -28,12 +28,11 @@ class OpenHarnessGeminiAgent:
         sys.stdout = redirected_output
         
         try:
-            plt.close('all')  # 清空之前的畫布
+            plt.close('all')
             exec(code, sandbox_globals)
             sys.stdout = old_stdout
             execution_output = redirected_output.getvalue()
             
-            # 優先抓取 explicit 的 fig，若沒有則抓取當前 Matplotlib 的圖表
             fig = sandbox_globals.get("fig", None)
             if fig is None:
                 fig = plt.gcf()
@@ -43,6 +42,20 @@ class OpenHarnessGeminiAgent:
             sys.stdout = old_stdout
             err_msg = str(exec_err)
             return False, None, redirected_output.getvalue(), err_msg
+
+    def _send_message_with_retry(self, chat, message: str, max_api_retries: int = 3):
+        """處理 API 429 Rate Limit 的自動等待與重試」"""
+        for attempt in range(max_api_retries):
+            try:
+                return chat.send_message(message)
+            except Exception as e:
+                err_str = str(e)
+                if "429" in err_str or "Quota exceeded" in err_str:
+                    if attempt < max_api_retries - 1:
+                        wait_time = (attempt + 1) * 10
+                        time.sleep(wait_time)
+                        continue
+                raise e
 
     def run(self, prompt: str, system_instruction: str = "", max_retries: int = 2) -> dict:
         logs = []
@@ -65,7 +78,7 @@ class OpenHarnessGeminiAgent:
             chat = model.start_chat(history=[])
             logs.append("[OpenHarness Pipeline] 正在傳送任務至 Gemini API...")
             
-            response = chat.send_message(prompt)
+            response = self._send_message_with_retry(chat, prompt)
             text_response = response.text
             logs.append("[OpenHarness Pipeline] 收到 Agent 思考邏輯與回應。")
             
@@ -77,10 +90,9 @@ class OpenHarnessGeminiAgent:
                 code = code_match.group(1)
                 logs.append("[OpenHarness Sandbox] 檢測到 Python 執行代碼，啟動自動化沙盒...")
                 
-                # 初次執行
                 success, fig, execution_output, error_msg = self._execute_code(code, logs)
                 
-                # --- 自動修復機制 (Self-Healing Loop) ---
+                # 自動修復機制 (Self-Healing Loop)
                 retry_count = 0
                 while not success and retry_count < max_retries:
                     retry_count += 1
@@ -94,7 +106,7 @@ class OpenHarnessGeminiAgent:
                         f"請僅輸出修正後的完整 ```python ... ``` 區塊。"
                     )
                     
-                    fix_response = chat.send_message(fix_prompt)
+                    fix_response = self._send_message_with_retry(chat, fix_prompt)
                     text_response += f"\n\n--- 🔧 Agent 自動自我修正 (第 {retry_count} 次) ---\n" + fix_response.text
                     
                     new_code_match = re.search(r"```python\s*(.*?)\s*```", fix_response.text, re.DOTALL)
@@ -121,10 +133,16 @@ class OpenHarnessGeminiAgent:
             }
             
         except Exception as e:
-            logs.append(f"[OpenHarness Error] 異常: {str(e)}")
+            err_msg = str(e)
+            if "429" in err_msg or "Quota exceeded" in err_msg:
+                user_friendly_msg = "⚠️ **API 使用配額超出限制 (429 Rate Limit)**：\n`gemini-3.6-flash` 的免費層級請求次數已達上限，請稍等約半分鐘再試，或暫時切換回 `gemini-3.5-flash-lite` 模型繼續使用。"
+            else:
+                user_friendly_msg = f"❌ 執行失敗：{err_msg}"
+                
+            logs.append(f"[OpenHarness Error] 異常: {err_msg}")
             return {
                 "status": "error",
-                "response": f"❌ 執行失敗：{str(e)}",
+                "response": user_friendly_msg,
                 "fig": None,
                 "execution_output": "",
                 "logs": logs
