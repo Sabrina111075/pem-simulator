@@ -3,3 +3,4 @@ google-genai
 google-generativeai
 tenacity
 python-dotenv
+matplotlib
