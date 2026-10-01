@@ -214,13 +214,23 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
   "cathy_reply": "Product Manager Cathy 的回應"
 }}
 """
-
-                with st.spinner("🤖 OpenMAIC 多智體團隊 (4 人研討小組) 思考與合成語音中..."):
-                    response = model.generate_content(
-                        prompt,
-                        generation_config={"response_mime_type": "application/json"}
-                    )
-                    res_data = json.loads(response.text)
+with st.spinner("💬 OpenMAIC 多智體團隊 (4 人研討小組) 思考與合成語音中..."):
+        try:
+            # 1. 嘗試呼叫 Gemini API
+            response = model.generate_content(
+                prompt,
+                generation_config={"response_mime_type": "application/json"}
+            )
+            res_data = json.loads(response.text)
+        except Exception as e:
+            # 2. 當 API 配額超限 (429) 或出錯時，自動切換至靜態專家研討備份，確保開會展示順暢
+            st.warning("⚠️️ 目前 API 請求頻繁，已自動啟動【專家研討備用快取模式】進行展示：")
+            res_data = {
+                "prof_reply": f"針對【{course_option}】的核心原理，聲學訊號處理主要依賴時頻分析技術（如 STFT），將一維聲音壓強訊號轉換為二維時頻譜，為後續特徵提取與物理場建模提供扎實理論基礎。",
+                "beth_reply": f"在【{course_option}】的硬體落地方面，我們採用 INT8 量化與 MobileNet / MicroNet 輕量化架構，能將模型記憶體佔用降低 70% 以上，順利部署於 STM32 與 ESP32 等邊緣 MCU 晶片上。",
+                "alex_reply": f"從數據科學角度來看，我們針對 MIMII 與 DCASE 基準資料集進行特徵工程，提煉出 Mel-Spectrogram 與高階統計量，能在高背景雜訊環境下維持 95% 以上的異常偵測準確率。",
+                "cathy_reply": f"從商業 ROI 與 SOP 落地考量，結合【{course_option}】的線上預測性維護（PdM）系統，能幫助工廠大幅降低非預期停機風險，平均提昇設備 OEE 並降低 30% 運維成本。"
+            }
 
                 # 定義 4 位角色的頭像、名稱與語音設定 (透過不同語言代碼/地區區分男女聲感)
                 agents_config = [
