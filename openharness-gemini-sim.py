@@ -8,7 +8,7 @@ st.set_page_config(
 )
 
 st.title("🤖 OpenHarness x Gemini 智能代理模擬平台")
-st.caption("基於 OpenHarness 思想與 Gemini 2.0 API 構建的輕量級 Agent 執行環境")
+st.caption("基於 OpenHarness 思想與 Gemini API 構建的輕量級 Agent 執行環境")
 
 # 側邊欄配置
 with st.sidebar:
