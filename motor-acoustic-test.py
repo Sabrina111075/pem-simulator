@@ -124,12 +124,18 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
       )
 
 # ==============================================================================
-# ⚙️ 功能模組 2：設備與測試控制台 (含精準設備/異常聲音區隔 + 字體亂碼修復)
+# ⚙️ 功能模組 2：設備與測試控制台 (支援 samples/ 音訊檔 + SOP 建議 + 聲學顯著區隔)
 # ==============================================================================
 else:
+  import os
+  import glob
   import matplotlib
+  import matplotlib.pyplot as plt
+  import numpy as np
+  import streamlit as st
+  from scipy.io import wavfile
 
-  # 嘗試設定中文字體，避免 Matplotlib 出現 □□ 方塊亂碼
+  # 設定中文字體避免方塊亂碼
   plt.rcParams['font.sans-serif'] = [
       'Microsoft JhengHei',
       'DFKai-SB',
@@ -201,70 +207,221 @@ else:
     with k3:
       st.error('### 診斷狀態\n🚨 異物卡阻')
 
-  # --- 專業聲學訊號生成演算法 (設備與異常雙重顯著化) ---
-  fs = 16000  # 採樣率 16kHz
-  duration = 2.5  # 2.5 秒音訊
-  t = np.linspace(0, duration, int(fs * duration), endpoint=False)
+  # --- 音訊讀取與真實 samples/ 對接機制 ---
+  fs = 16000
+  signal = None
+  audio_source_label = '數學聲學模型生成'
 
-  # A. 依據「設備類別」調配獨特聲學基頻與特徵音色
-  if '風扇' in category:
-    base_f = 45
-    # 低頻風噪 + 風扇葉片切風聲
-    bg_sound = 0.3 * np.sin(2 * np.pi * base_f * t) + 0.15 * np.sin(
-        2 * np.pi * (base_f * 4) * t
+  # 關鍵字對應字典
+  dev_kw = (
+      'fan'
+      if '風扇' in category
+      else (
+          'pump'
+          if '水泵' in category or '泵浦' in category
+          else (
+              'gearbox'
+              if '齒輪' in category
+              else 'motor' if '馬達' in category else 'slider'
+          )
+      )
+  )
+  status_kw = (
+      'normal'
+      if is_normal
+      else (
+          'bearing'
+          if '軸承' in status_option
+          else 'unbalance' if '不平衡' in status_option else 'clog'
+      )
+  )
+
+  # 搜尋 samples/ 目錄下是否有符合關鍵字的 wav/mp3 檔案
+  samples_dir = 'samples'
+  found_file = None
+  if os.path.exists(samples_dir):
+    all_files = glob.glob(os.path.join(samples_dir, '*.*'))
+    for fpath in all_files:
+      fname = os.path.basename(fpath).lower()
+      if dev_kw in fname and status_kw in fname:
+        found_file = fpath
+        break
+    if not found_file:
+      # 退而求其次，只匹配狀態或設備
+      for fpath in all_files:
+        fname = os.path.basename(fpath).lower()
+        if status_kw in fname:
+          found_file = fpath
+          break
+
+  if found_file:
+    try:
+      fs_read, data_read = wavfile.read(found_file)
+      fs = fs_read
+      if data_read.ndim > 1:
+        data_read = data_read[:, 0]
+      signal = data_read.astype(np.float32)
+      signal = signal / (np.max(np.abs(signal)) + 1e-6)
+      audio_source_label = f'真實音檔 ({os.path.basename(found_file)})'
+    except Exception as e:
+      signal = None
+
+  # 若無實體 Samples，採用高度區隔化的數學合成演算法
+  if signal is None:
+    duration = 2.5
+    t = np.linspace(0, duration, int(fs * duration), endpoint=False)
+
+    # 設備基頻設定
+    base_f = (
+        45
+        if '風扇' in category
+        else (
+            90
+            if '水泵' in category or '泵浦' in category
+            else (
+                180
+                if '齒輪' in category
+                else 300 if '滑軌' in category else 120
+            )
+        )
     )
-    device_noise = 0.08 * np.random.normal(size=t.shape)
-  elif '水泵' in category or '泵浦' in category:
-    base_f = 90
-    # 水流抽吸高頻白雜訊 + 泵浦運轉聲
-    bg_sound = 0.25 * np.sin(2 * np.pi * base_f * t)
-    device_noise = 0.18 * np.random.normal(size=t.shape)  # 水流聲
-  elif '齒輪箱' in category:
-    base_f = 180
-    # 低速重型齒輪咬合聲 (多重諧波)
-    bg_sound = (
-        0.35 * np.sin(2 * np.pi * base_f * t)
-        + 0.2 * np.sin(2 * np.pi * base_f * 2.5 * t)
-        + 0.1 * np.sin(2 * np.pi * base_f * 4 * t)
+
+    if is_normal:
+      # 正常音：純淨低頻運轉音，幾乎無白雜訊
+      signal = 0.4 * np.sin(2 * np.pi * base_f * t) + 0.15 * np.sin(
+          2 * np.pi * base_f * 2 * t
+      )
+      signal += 0.01 * np.random.normal(size=t.shape)
+    else:
+      # 異常音：依據型態拉開極大聲學差異
+      if '軸承磨損' in status_option:
+        # 高頻刺耳衝擊聲 (3500Hz 尖銳金屬摩擦 + 18Hz 週期性打擊)
+        high_squeal = 0.5 * np.sin(2 * np.pi * 3500 * t)
+        pulses = (
+            np.maximum(0, np.sin(2 * np.pi * 18 * t)) ** 10
+        ) * np.random.normal(0, 0.9, size=t.shape)
+        signal = (
+            0.3 * np.sin(2 * np.pi * base_f * t) + high_squeal + pulses
+        )  # 聲響極度刺耳
+      elif '不平衡' in status_option:
+        # 重低音強烈調幅包絡 (擺動重音)
+        am = 1.0 + 0.9 * np.sin(2 * np.pi * 6 * t)
+        signal = 0.8 * np.sin(2 * np.pi * (base_f / 2) * t) * am + 0.1 * np.random.normal(
+            size=t.shape
+        )
+      else:  # 異物卡阻
+        # 爆衝金屬聲與亂流
+        clicks = np.zeros_like(t)
+        pts = np.random.choice(len(t), size=60, replace=False)
+        clicks[pts] = np.random.uniform(1.5, 3.0, size=60)
+        signal = (
+            0.2 * np.sin(2 * np.pi * base_f * t)
+            + clicks
+            + np.random.normal(0, 0.3, size=t.shape)
+        )
+
+    signal = signal / (np.max(np.abs(signal)) + 1e-6)
+
+  with k4:
+    st.markdown(f'### 🔊 測試音頻試聽 ({audio_source_label})')
+    st.audio(signal, sample_rate=fs)
+
+  st.divider()
+
+  # --- 聲學分析圖表 (時域 / 頻域 / 梅爾頻譜) ---
+  st.subheader(f'📈 【{category}】 聲學特徵即時分析圖表')
+
+  tab_time, tab_fft, tab_mel = st.tabs([
+      '🌊 時域波形圖 (Waveform)',
+      '📊 快速傅立葉變換 (FFT Spectrum)',
+      '🖼️ 梅爾頻譜圖 (Mel-Spectrogram)',
+  ])
+
+  t_axis = np.linspace(0, len(signal) / fs, len(signal))
+
+  with tab_time:
+    fig_time, ax_time = plt.subplots(figsize=(10, 3.2))
+    n_show = min(int(fs * 0.25), len(signal))
+    ax_time.plot(t_axis[:n_show], signal[:n_show], color='#2563eb', lw=1)
+    ax_time.set_title(
+        f'{category} - 波形圖 (Time Domain) [{status_option}]', fontsize=11
     )
-    device_noise = 0.04 * np.random.normal(size=t.shape)
-  elif '滑軌' in category or '閥門' in category:
-    base_f = 300
-    bg_sound = 0.2 * np.sin(2 * np.pi * base_f * t)
-    device_noise = 0.02 * np.random.normal(size=t.shape)
-  else:  # 工業馬達
-    base_f = 120
-    # 標準電磁嗡嗡聲
-    bg_sound = 0.4 * np.sin(2 * np.pi * base_f * t) + 0.2 * np.sin(
-        2 * np.pi * base_f * 2 * t
+    ax_time.set_xlabel('時間 (Time / s)')
+    ax_time.set_ylabel('振幅 (Amplitude)')
+    ax_time.grid(True, linestyle='--', alpha=0.5)
+    st.pyplot(fig_time)
+
+  with tab_fft:
+    fig_fft, ax_fft = plt.subplots(figsize=(10, 3.2))
+    fft_vals = np.abs(np.fft.rfft(signal))
+    fft_freqs = np.fft.rfftfreq(len(signal), 1 / fs)
+    ax_fft.plot(fft_freqs, fft_vals, color='#059669', lw=1)
+    ax_fft.set_xlim(0, fs / 2)
+    ax_fft.set_title(
+        f'{category} - FFT 頻譜圖 (FFT Spectrum) [{status_option}]',
+        fontsize=11,
     )
-    device_noise = 0.03 * np.random.normal(size=t.shape)
+    ax_fft.set_xlabel('頻率 (Frequency / Hz)')
+    ax_fft.set_ylabel('能量強度 (Magnitude)')
+    ax_fft.grid(True, linestyle='--', alpha=0.5)
+    st.pyplot(fig_fft)
 
-  signal = bg_sound + device_noise
+  with tab_mel:
+    fig_mel, ax_mel = plt.subplots(figsize=(10, 3.2))
+    Pxx, freqs, bins, im = ax_mel.specgram(
+        signal, NFFT=512, Fs=fs, noverlap=256, cmap='magma'
+    )
+    ax_mel.set_title(
+        f'{category} - 梅爾頻譜圖 (Mel-Spectrogram) [{status_option}]',
+        fontsize=11,
+    )
+    ax_mel.set_xlabel('時間 (Time / s)')
+    ax_mel.set_ylabel('頻率 (Frequency / Hz)')
+    fig_mel.colorbar(im, ax=ax_mel, format='%+2.0f dB')
+    st.pyplot(fig_mel)
 
-  # B. 依據「故障型態」注入強烈異音特徵
-  if '軸承磨損' in status_option:
-    # 高頻刺耳金屬摩擦尖銳聲 (3200Hz) + 週期性衝擊嗒嗒聲 (15Hz BPFO)
-    squeal = 0.45 * np.sin(2 * np.pi * 3200 * t)
-    impact_env = np.maximum(0, np.sin(2 * np.pi * 15 * t)) ** 12
-    impacts = impact_env * np.random.normal(0, 0.8, size=t.shape)
-    signal = signal + squeal + impacts
+  st.divider()
 
+  # --- 設備異常排除建議 SOP 模組 (補回功能) ---
+  st.subheader('📋 設備異常排除與維護建議 SOP')
+
+  if is_normal:
+    st.success("""
+        **✅ 設備運行狀態：優良 (Normal)**
+        - **維護建議**：無需立即處置，保持例行巡檢。
+        - **建議保養週期**：依照原廠規範於 1,000 運轉小時後進行潤滑油脂補充。
+        - **監控重點**：持續記錄 1X/2X 轉速諧波能量變動趨勢。
+        """)
+  elif '軸承磨損' in status_option:
+    st.error("""
+        **🚨 故障類型：軸承磨損 (Bearing Wear - BPFO/BPFI High Frequency Impact)**
+        - **緊急程度**：高 (建議 48 小時內規劃停機檢修)
+        - **可能原因**：潤滑油乾涸劣化、外圈滾道點蝕剝落、安裝偏心過大。
+        - **標準處置 SOP**：
+          1. 使用振規/聲學探針確認軸承座高頻 (2kHz-5kHz) 衝擊峰值。
+          2. 檢查潤滑油品是否含有金屬磨屑，必要時重新加注 ISO VG68 潤滑油。
+          3. 若高頻特徵持續增加，請準備備品並更換同型號深溝球/滾子軸承。
+        """)
   elif '不平衡' in status_option:
-    # 週期性重低音強烈調幅 (1X 轉速重低音嗡嗡震撼聲)
-    am_envelope = 1.0 + 0.85 * np.sin(2 * np.pi * (base_f / 8) * t)
-    heavy_unbalance = (
-        0.85 * np.sin(2 * np.pi * (base_f / 2) * t) * am_envelope
-    )
-    signal = signal + heavy_unbalance
-
-  elif '異物卡阻' in status_option:
-    # 隨機金屬爆衝聲 + 劇烈紊流噪聲
-    clicks = np.zeros_like(t)
-    click_pts = np.random.choice(len(t), size=40, replace=False)
-    clicks[click_pts] = np.random.uniform(1.0, 2.0, size=40)
-    turbulent = np.random.normal(0, 0.35, size=t.shape)
-    signal = signal + clicks + turbulent
+    st.warning("""
+        **⚠️ 故障類型：轉子不平衡 (Rotor Unbalance - 1X Rotational Frequency Dominant)**
+        - **緊急程度**：中 (建議於本週保養時排程校正)
+        - **可能原因**：葉片/轉子附著異物、平衡塊脫落、軸心熱彎曲變形。
+        - **標準處置 SOP**：
+          1. 停機清潔風扇葉片或轉子表面積垢。
+          2. 使用動平衡儀進行現場單面/雙面動平衡校正 (Dynamic Balancing)。
+          3. 檢查基座螺栓是否鬆動並重新以扭力板手締緊。
+        """)
+  else:  # 異物卡阻
+    st.error("""
+        **🚨 故障類型：管道/腔體異物卡阻 (Blockage / Cavitation / Impact Noise)**
+        - **緊急程度**：極高 (請立即切斷電源並停機檢查)
+        - **可能原因**：管道進氣/進水閥門阻塞、泵浦腔體產生氣蝕、機械組件外來異物侵入。
+        - **標準處置 SOP**：
+          1. 立即啟動緊急停機程序，避免電機過載燒毀。
+          2. 拆卸進出口管路與濾網，清除卡阻之雜物或沉澱物。
+          3. 檢查流體壓力與流量是否恢復正常水準。
+        """)
 
   # 歸一化音量，避免破音
   signal = signal / np.max(np.abs(signal))
