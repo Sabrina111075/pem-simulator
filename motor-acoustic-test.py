@@ -202,7 +202,7 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
 請針對學員提問：「{user_q}」，分別以 4 個不同角色的立場進行多人圓桌討論（每人發言約 60-90 字，彼此回應、補足或對照）：
 
 1. Prof. Acoustic（男聲，聲學總導師）：著重於理論分析、物理原理與數學公式背後的意義。
-2. Engineer Beth（女聲，AI 邊緣部署工程師）：著重於模型量化 (INT8/FP16)、C++/TensorRT 實務與硬體資源限制。
+2. Engineer Beth（女聲，AI 邊緣部署工程師）：著重於模型量化 (INT8/FP16)、C++ / TensorRT 實務與硬體資源限制。
 3. Data Scientist Alex（男聲，數據科學專家）：著重於資料集處理 (MIMII/DCASE)、Mel 頻譜特徵提取與特徵工程。
 4. Product Manager Cathy（女聲，工業產品經理）：著重於商業 ROI、預測性維護 SOP、現場落地可行性與客戶痛點。
 
@@ -215,13 +215,12 @@ if page == "🎓 OpenMAIC 聲學 AI 學院":
 }}
 """
 
-with st.spinner("💬 OpenMAIC 多智體團隊 (4 人研討小組) 思考與合成語音中..."):
-            res_data = {
-                "prof_reply": f"針對【{course_option}】的核心原理，聲學訊號處理主要依賴時頻分析技術（如 STFT），將一維聲音壓強訊號轉換為二維時頻譜，為後續特徵提取與物理場建模提供扎實理論基礎。",
-                "beth_reply": f"在【{course_option}】的硬體落地方面，我們採用 INT8 量化與 MobileNet / MicroNet 輕量化架構，能將模型記憶體佔用降低 70% 以上，順利部署於 STM32 與 ESP32 等邊緣 MCU 晶片上。",
-                "alex_reply": f"從數據科學角度來看，我們針對 MIMII 與 DCASE 基準資料集進行特徵工程，提煉出 Mel-Spectrogram 與高階統計量，能在高背景雜訊環境下維持 95% 以上的異常偵測準確率。",
-                "cathy_reply": f"從商業 ROI 與 SOP 落地考量，結合【{course_option}】的線上預測性維護（PdM）系統，能幫助工廠大幅降低非預期停機風險，平均提昇設備 OEE 並降低 30% 運維成本。"
-            }
+                with st.spinner("🤖 OpenMAIC 多智體團隊 (4 人研討小組) 思考與合成語音中..."):
+                    response = model.generate_content(
+                        prompt,
+                        generation_config={"response_mime_type": "application/json"}
+                    )
+                    res_data = json.loads(response.text)
 
                 # 定義 4 位角色的頭像、名稱與語音設定 (透過不同語言代碼/地區區分男女聲感)
                 agents_config = [
