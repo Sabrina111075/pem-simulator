@@ -4,7 +4,7 @@ from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 class OpenHarnessGeminiAgent:
-    def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash"):
+    def __init__(self, api_key: str, model_name: str = "gemini-3.8-flash"):
         """
         初始化 Harness 代理器
         """

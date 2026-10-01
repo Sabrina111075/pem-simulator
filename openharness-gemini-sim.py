@@ -17,9 +17,9 @@ with st.sidebar:
     
     model_choice = st.selectbox(
         "模型版本選擇",
-        ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-flash"],
+        ["gemini-3.8-flash", "gemini-3.0-flash", "gemini-2.5-flash"],
         index=0,
-        help="預設使用 Gemini 2.0 Flash，兼具速度與高額度配額"
+        help="預設使用最新版的 Gemini 3.8 Flash"
     )
     
     system_prompt = st.text_area(
