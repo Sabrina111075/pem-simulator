@@ -1,51 +1,49 @@
-﻿import time
-from google import genai
-from google.genai import types
-from tenacity import retry, stop_after_attempt, wait_random_exponential
+﻿import google.generativeai as genai
 
 class OpenHarnessGeminiAgent:
-    def __init__(self, api_key: str, model_name: str = "gemini-3.8-flash"):
+    def __init__(self, api_key: str, model_name: str = "gemini-3.5-flash-lite"):
+        """
+        初始化 OpenHarness Gemini Agent 模擬環境
+        """
         self.api_key = api_key
         self.model_name = model_name
-        self.client = genai.Client(api_key=self.api_key)
-        self.execution_logs = []
-
-    def _log(self, message: str):
-        self.execution_logs.append(message)
-
-    @retry(wait=wait_random_exponential(min=2, max=10), stop=stop_after_attempt(5))
-     def __init__(self, api_key: str, model_name: str = "gemini-3.5-flash-lite"):
-        self.execution_logs.clear()
-        self._log(f"[Harness Initialized] 模型: {self.model_name}")
-        self._log(f"[Input Prompt] {prompt}")
-
+        
+        # 設定 Google Generative AI API Key
+        genai.configure(api_key=self.api_key)
+        
+    def run(self, prompt: str, system_instruction: str = "") -> dict:
+        """
+        執行 Harness 模擬流程，包含日誌記錄與 API 呼叫
+        """
+        logs = []
+        logs.append("[OpenHarness Core] 初始化 Agent 環境...")
+        logs.append(f"[OpenHarness Core] 掛載模型: {self.model_name}")
+        logs.append("[OpenHarness Core] 正在建立連線與檢查安全權限...")
+        
         try:
-            config = types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.7,
+            # 建立模型實例
+            model = genai.GenerativeModel(
+                model_name=self.model_name,
+                system_instruction=system_instruction if system_instruction else None
             )
             
-            self._log("[API Call] 送出請求至 Gemini API...")
+            logs.append("[OpenHarness Pipeline] 正在傳送請求給 Gemini API...")
             
-            # 加入重試機制防範 503 瞬間流量
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt,
-                config=config
-            )
+            response = model.generate_content(prompt)
             
-            self._log("[API Response] 成功接收回應")
+            logs.append("[OpenHarness Pipeline] 成功接收來自 Gemini 的回應！")
+            logs.append("[OpenHarness Core] 任務完成，解構代理環境。")
             
             return {
                 "status": "success",
                 "response": response.text,
-                "logs": self.execution_logs
+                "logs": logs
             }
-
+            
         except Exception as e:
-            self._log(f"[Harness Error] 發生異常: {str(e)}")
+            logs.append(f"[OpenHarness Error] 執行過程發生異常: {str(e)}")
             return {
                 "status": "error",
-                "response": f"執行失敗: {str(e)}",
-                "logs": self.execution_logs
+                "response": f"❌ 執行失敗：{str(e)}",
+                "logs": logs
             }
