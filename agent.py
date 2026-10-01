@@ -17,8 +17,9 @@ class OpenHarnessGeminiAgent:
         """Harness 內部透明日誌追蹤"""
         self.execution_logs.append(message)
 
-    @retry(wait=wait_random_exponential(min=1, max=10), stop=stop_after_attempt(5))
-    def run(self, prompt: str, system_instruction: str = "你是一個運作在 OpenHarness 模擬平台上的智能 Agent。") -> dict:
+    # 增加重試次數與拉長等待時間，自動消化 503 伺服器突發流量
+    @retry(wait=wait_random_exponential(min=2, max=15), stop=stop_after_attempt(5))
+    def run(self, prompt: str, system_instruction: str = "我是一個運作在 OpenHarness 模擬平台上的智能 Agent。") -> dict:
         """
         帶有自動指數退避重試（防止 429 限制）的 Agent 執行核心
         """
