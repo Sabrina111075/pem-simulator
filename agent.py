@@ -14,7 +14,7 @@ class OpenHarnessGeminiAgent:
         self.execution_logs.append(message)
 
     @retry(wait=wait_random_exponential(min=2, max=10), stop=stop_after_attempt(5))
-    def run(self, prompt: str, system_instruction: str = "你是一個運作在 OpenHarness 模擬平台上的智能 Agent。") -> dict:
+     def __init__(self, api_key: str, model_name: str = "gemini-3.5-flash-lite"):
         self.execution_logs.clear()
         self._log(f"[Harness Initialized] 模型: {self.model_name}")
         self._log(f"[Input Prompt] {prompt}")
