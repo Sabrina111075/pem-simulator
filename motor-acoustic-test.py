@@ -20,257 +20,120 @@ page = st.sidebar.selectbox(
     "📌 切換功能模組：",
     ["⚙️ 設備與測試控制台", "🎓 OpenMAIC 聲學 AI 學院"]
 )
+if "OpenMAIC" in page:
+  # ==============================================================================
+  # 🎓 OpenMAIC 聲學 AI 學院 (全新三欄沉浸式互動教學介面)
+  # ==============================================================================
+  col_left, col_center, col_right = st.columns([1.2, 3, 1.8], gap="small")
 
-if page == "🎓 OpenMAIC 聲學 AI 學院":
-    import streamlit.components.v1 as components
+  # -------------------- 左欄：課程章節與主題選擇 --------------------
+  with col_left:
+    st.subheader("📚 課程導航")
+    course_list = [
+        "課程 1：梅爾頻譜圖 (Mel-Spectrogram) 基礎原理",
+        "課程 2：聲學訊號處理與 FFT/STFT 頻譜分析",
+        "課程 3：馬達與風扇聲學故障診斷",
+        "課程 4：Edge AI 邊緣運算與輕量化模型部署",
+        "課程 5：工業物聯網 (IIoT) 設備預測性維護 SOP",
+    ]
+    selected_course = st.radio("請選擇研討主題：", course_list, index=0)
+    st.divider()
+    st.caption("目前學習進度：1/5")
 
-    st.title("🎓 OpenMAIC 聲學 AI 學院 × 虛擬聲學診斷實驗室")
-    st.caption("OpenMAIC Multi-Agent AI Interactive Classroom & Acoustic Diagnostic Lab")
-    st.info("💡 本頁面採用單欄動態視圖：上方為 AI 導師講授區，下方為聲學診斷實作實驗室。")
+  # -------------------- 中欄：主展示與模擬實驗台 --------------------
+  with col_center:
+    st.caption(f"目前研討場景：{selected_course}")
+    st.title(f"🎓 {selected_course}")
 
-# --------------------------------------------------
-    # 區塊 1：OpenMAIC 聲學 AI 學院 (課程總結 + 穩定語音 + 動態互動)
-    # --------------------------------------------------
-    import json
+    # 1. 課程摘要重點卡片
+    with st.expander(
+        "📌 點擊展開/收合：本課精華重點總結 (Course Summary)", expanded=True
+    ):
+      st.markdown("""
+            * **核心概念**：將時域聲學訊號轉為 2D 頻譜圖，並將 Y 軸頻率轉為符合人類聽覺特性的 Mel Scale。
+            * **工業診斷應用**：捕捉馬達與軸承的高頻衝擊特徵，實現早期微弱故障特徵識別。
+            """)
 
-    st.subheader("🎓 OpenMAIC 多智體互動 AI 學院")
-    st.caption("OpenMAIC Multi-Agent AI Interactive Classroom & Course Hub")
+    # 2. 聲學診斷實作實驗室 (互動控制與圖像呈現)
+    with st.container(border=True):
+      st.markdown("#### 🔬 聲學頻譜動態模擬視窗")
+      sim_c1, sim_c2 = st.columns([1, 2])
+      with sim_c1:
+        st.slider("採樣率 (Hz)", 8000, 44100, 16000)
+        st.slider("FFT 窗格大小 (N_FFT)", 256, 2048, 512)
+        st.button("🚀 重新萃取特徵", use_container_width=True)
+      with sim_c2:
+        st.info("📈 [動態頻譜可視化區] STFT / Mel-Spectrogram 特徵圖譜展演")
 
-    # 1. 建立結構化課程庫 (Domain Knowledge Base)
-    course_database = {
-        "lesson_1": {
-            "title": "課程 1：梅爾頻譜圖 (Mel-Spectrogram) 基礎原理",
-            "summary": [
-                "**核心概念**：將時域聲學訊號轉為 2D 頻譜圖，並將 Y 軸頻率轉為符合人類聽覺特性的 Mel Scale。",
-                "**關鍵優勢**：人耳對 1000Hz 以下的低頻極度敏感，梅爾標度能放大低頻特徵、壓制無效高頻雜訊。",
-                "**工業應用**：適用於馬達運轉聲、泵浦氣蝕與軸承微弱撞擊音的早期特徵擷取。"
-            ],
-            "dialogue": [
-                {"role": "professor", "avatar": "👨‍🏫", "name": "Prof. Acoustic (聲學總導師)", "content": "同學們好！歡迎來到課程 1。傳統 FFT 頻譜是線性頻率，但為什麼在工業 AI 診斷中，我們偏好使用梅爾標度（Mel Scale）？"},
-                {"role": "student_a", "avatar": "🙋‍♂️", "name": "Student Alex (初學者)", "content": "教授，是因為人耳對低頻變化比較敏感，而梅爾標度正好看得比較清楚嗎？"},
-                {"role": "professor", "avatar": "👨‍🏫", "name": "Prof. Acoustic (聲學總導師)", "content": "完全正確！梅爾標度做對數轉換後，能精準放大 1kHz 以下的關鍵頻段，這正是馬達轉速與軸承損傷特徵最密集的區域。"},
-                {"role": "student_b", "avatar": "🙋‍♀️", "name": "Student Beth (AI 工程師)", "content": "補充一下！在將資料送入 CNN / DCASE 模型時，梅爾頻譜圖也能有效降低資料維度，大幅提升運算效率。"}
-            ],
-            "quiz": {
-                "q": "問：為什麼梅爾頻譜圖比傳統線性 FFT 更適合用於馬達聲學 AI 診斷？",
-                "options": ["A. 能放大人耳敏感的低頻特徵與轉速諧波", "B. 只能處理高頻聲音", "C. 檔案體積比較大"],
-                "ans": "A. 能放大人耳敏感的低頻特徵與轉速諧波"
-            }
-        },
-        "lesson_2": {
-            "title": "課程 2：馬達與軸承異音特徵與 MIMII 數據集判讀",
-            "summary": [
-                "**軸承磨損 (Bearing Wear)**：在 4kHz~8kHz 高頻區段出現週期性衝擊脈衝 (Impact Pulses)。",
-                "**馬達不平衡 (Unbalance)**：在旋轉基頻 (1X RPM) 及倍頻處出現異常高能量峰值。",
-                "**氣蝕現象 (Cavitation)**：泵浦與液體設備常見的高頻連續寬頻連續噪音。"
-            ],
-            "dialogue": [
-                {"role": "professor", "avatar": "👨‍🏫", "name": "Prof. Acoustic (聲學總導師)", "content": "在課程 2 中，我們探討 MIMII 工業數據集。當馬達發生軸承損壞時，頻譜圖會出現什麼特徵？"},
-                {"role": "student_b", "avatar": "🙋‍♀️", "name": "Student Beth (AI 工程師)", "content": "報告教授，軸承初期損壞時，會在 4kHz 以上高頻區出現很明顯的頻繁衝擊波形！"},
-                {"role": "student_a", "avatar": "🙋‍♂️️", "name": "Student Alex (初學者)", "content": "那如果只是馬達螺絲沒鎖緊呢？"},
-                {"role": "professor", "avatar": "👨‍🏫", "name": "Prof. Acoustic (聲學總導師)", "content": "螺絲鬆動或不平衡，特徵會集中在低頻 1X/2X RPM 轉速頻率上，這兩者在頻譜圖上的區域截然不同。"}
-            ],
-            "quiz": {
-                "q": "問：軸承早期損傷的聲學特徵通常出現在哪個頻段？",
-                "options": ["A. 低頻轉速區 (10Hz-50Hz)", "B. 中高頻衝擊區 (4kHz-8kHz)", "C. 完全不會有特徵"],
-                "ans": "B. 中高頻衝擊區 (4kHz-8kHz)"
-            }
+    # 3. AI 導師即時字幕卡片
+    with st.container(border=True):
+      st.markdown(
+          "👩‍🏫 **Prof. Acoustic (聲學總導師)**："
+          "歡迎來到本單元！請觀察右側對話區，多智體團隊已針對此主題準備好圓桌研討內容。"
+      )
+
+  # -------------------- 右欄：OpenMAIC 4 人智體圓桌研討區 --------------------
+  with col_right:
+    tab_chat, tab_notes = st.tabs(["💬 智體圓桌研討", "📖 隨堂筆記"])
+
+    with tab_chat:
+      st.subheader("💬 OpenMAIC 多智體互動研討")
+
+      user_q = st.text_input(
+          "輸入您的研討疑問：",
+          value=f"什麼是{selected_course.split('：')[-1]}？",
+      )
+
+      if user_q:
+        st.caption("💬 4 人研討小組正在發表立場與觀點：")
+
+        res_data = {
+            "prof_reply": f"針對【{selected_course}】的核心原理，主要依賴時頻分析將一維聲壓轉為二維特徵圖，為物理場建模提供扎實基礎。",
+            "beth_reply": f"在硬體落地方面，我們採用 INT8 量化與輕量化架構，能大幅降低記憶體佔用，順利部署於 STM32/ESP32 等邊緣晶片。",
+            "alex_reply": f"從數據科學角度，我們針對 MIMII/DCASE 資料集提取高階特徵，能在高背景雜訊下維持 95% 以上偵測率。",
+            "cathy_reply": f"從商業 ROI 考量，結合預測性維護 (PdM) 能有效降低非預期停機風險，提昇設備 OEE 並降低運維成本。",
         }
-    }
 
-    # 選擇當前學習課程
-    selected_lesson_key = st.selectbox(
-        "📖 請選擇 OpenMAIC 學習課程主題：",
-        options=list(course_database.keys()),
-        format_func=lambda x: course_database[x]["title"]
-    )
-
-    current_lesson = course_database[selected_lesson_key]
-
-    # --- 區塊 A：課程精華總結卡片 ---
-    with st.expander("📌 點擊展開/收合：本課精華重點總結 (Course Summary)", expanded=True):
-        for point in current_lesson["summary"]:
-            st.markdown(f"• {point}")
-
-    # --- 區塊 B：穩定語音導覽卡片 (原生 Web Speech 語音引擎) ---
-    st.markdown("#### 🎙️ 本課重點語音導覽")
-    
-    # 清理朗讀文字（去除 Markdown 符號）
-    raw_summary = "。".join([p.replace('*', '') for p in current_lesson['summary']])
-    speech_text_js = json.dumps(f"歡迎來到{current_lesson['title']}。重點如下：{raw_summary}", ensure_ascii=False)
-
-    tts_card_html = f"""
-    <div style="background: linear-gradient(135deg, #e6f2ff 0%, #ffffff 100%); padding: 16px; border-radius: 10px; border-left: 5px solid #0056b3; box-shadow: 0 2px 4px rgba(0,0,0,0.08); margin-bottom: 20px;">
-        <p style="margin: 0 0 10px 0; font-weight: bold; color: #0056b3; font-size: 15px;">🔊 點擊按鈕，由 AI 語音導師朗讀本課重點：</p>
-        <div style="display: flex; gap: 10px;">
-            <button onclick="playVoice()" style="background-color: #0056b3; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
-                ▶️ 播放本課重點語音
-            </button>
-            <button onclick="stopVoice()" style="background-color: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
-                ⏹️ 停止播放
-            </button>
-        </div>
-    </div>
-
-    <script>
-    var speakText = {speech_text_js};
-    
-    function playVoice() {{
-        window.speechSynthesis.cancel(); // 先清空先前佇列
-        
-        // 拆成短句子播放，避免長句遭中斷
-        var sentences = speakText.split("。");
-        sentences.forEach(function(seq) {{
-            if (seq.trim().length > 0) {{
-                var msg = new SpeechSynthesisUtterance(seq);
-                msg.lang = 'zh-TW';
-                msg.rate = 1.0;
-                window.speechSynthesis.speak(msg);
-            }}
-        }});
-    }}
-
-    function stopVoice() {{
-        window.speechSynthesis.cancel();
-    }}
-    </script>
-    """
-    st.components.v1.html(tts_card_html, height=120)
-
-    # --- 區塊 C：OpenMAIC 多智體對話實況 ---
-    st.markdown("#### 🎭 OpenMAIC 智體課堂對話實況")
-    for msg in current_lesson["dialogue"]:
-        with st.chat_message(msg["role"], avatar=msg["avatar"]):
-            st.markdown(f"**{msg['name']}**")
-            st.markdown(msg["content"])
-
-    # --- 區塊 D：隨堂互動問答測驗 ---
-    st.markdown("---")
-    st.markdown("#### 🧪 隨堂觀念互動測驗")
-    quiz = current_lesson["quiz"]
-    user_ans = st.radio(quiz["q"], quiz["options"], key=selected_lesson_key)
-    if st.button("提交答案", key=f"btn_{selected_lesson_key}"):
-        if user_ans == quiz["ans"]:
-            st.success("🎉 回答正確！代表您已掌握本課的核心觀念。")
-        else:
-            st.error(f"❌ 答錯囉！正確答案是：{quiz['ans']}")
-
-# --------------------------------------------------
-    # 區塊 E：OpenMAIC 多智體研討會學院 (進階 4 角色與男女語音互動)
-    # --------------------------------------------------
-    st.markdown("---")
-    st.markdown("#### 🎓 OpenMAIC 多智體互動研討會")
-
-    import google.generativeai as genai
-    from gtts import gTTS
-    import io
-    import json
-
-    gemini_key = st.secrets.get("GEMINI_API_KEY", "")
-
-    # 1. 擴充學習課程主題
-    course_option = st.selectbox(
-        "📚 請選擇您想研討的課程主題：",
-        [
-            "馬達與風扇聲學故障診斷 (Acoustic Fault Diagnosis)",
-            "Edge AI 邊緣運算與輕量化模型部署 (Edge Deployment)",
-            "聲學訊號處理與 FFT/STFT 頻譜分析 (Signal Processing)",
-            "MEMS 感測器雜訊濾波與 Kalman Filter 應用 (Sensor Fusion)",
-            "工業物聯網 (IIoT) 設備預測性維護 SOP (Predictive Maintenance)"
+        agents = [
+            (
+                "👨‍🏫 [Prof. Acoustic] 聲學總導師",
+                res_data["prof_reply"],
+                "#eef2ff",
+            ),
+            (
+                "👩‍💻 [Engineer Beth] AI 邊緣部署工程師",
+                res_data["beth_reply"],
+                "#f0fdf4",
+            ),
+            (
+                "👨‍🔬 [Data Scientist Alex] 數據科學專家",
+                res_data["alex_reply"],
+                "#fff7ed",
+            ),
+            (
+                "👩‍💼 [Product Manager Cathy] 工業產品經理",
+                res_data["cathy_reply"],
+                "#fdf2f8",
+            ),
         ]
-    )
 
-    user_q = st.text_input(
-        f"輸入您關於【{course_option.split(' (')[0]}】的研討疑問：",
-        key="qa_input_box"
-    )
+        for name, reply, bg_color in agents:
+          st.markdown(
+              f"""
+                <div style="background-color: {bg_color}; padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+                    <b style="color: #1e293b;">{name}</b><br/>
+                    <span style="font-size: 14px; color: #334155;">{reply}</span>
+                </div>
+                """,
+              unsafe_allow_html=True,
+          )
 
-    if user_q:
-        with st.chat_message("user", avatar="🧑‍💻"):
-            st.markdown(f"**學員 (You)**：{user_q}")
-
-        if not gemini_key:
-            st.warning("⚠️ 未檢測到 API Key，請確保已在 Streamlit Secrets 中設定 `GEMINI_API_KEY`。")
-        else:
-            try:
-                genai.configure(api_key=gemini_key)
-                model = genai.GenerativeModel('gemini-3.6-flash')
-
-                # 提示詞：要求 4 位具備不同立場的 Agent 進行多人研討
-                prompt = f"""
-你現在是 OpenMAIC 多智體互動研討會系統，當前主題為：「{course_option}」。
-請針對學員提問：「{user_q}」，分別以 4 個不同角色的立場進行多人圓桌討論（每人發言約 60-90 字，彼此回應、補足或對照）：
-
-1. Prof. Acoustic（男聲，聲學總導師）：著重於理論分析、物理原理與數學公式背後的意義。
-2. Engineer Beth（女聲，AI 邊緣部署工程師）：著重於模型量化 (INT8/FP16)、C++ / TensorRT 實務與硬體資源限制。
-3. Data Scientist Alex（男聲，數據科學專家）：著重於資料集處理 (MIMII/DCASE)、Mel 頻譜特徵提取與特徵工程。
-4. Product Manager Cathy（女聲，工業產品經理）：著重於商業 ROI、預測性維護 SOP、現場落地可行性與客戶痛點。
-
-請嚴格輸出 JSON 格式如下：
-{{
-  "prof_reply": "Prof. Acoustic 的回應",
-  "beth_reply": "Engineer Beth 的回應",
-  "alex_reply": "Data Scientist Alex 的回應",
-  "cathy_reply": "Product Manager Cathy 的回應"
-}}
-"""
-
-                with st.spinner("🤖 OpenMAIC 多智體團隊 (4 人研討小組) 思考與合成語音中..."):
-                    response = model.generate_content(
-                        prompt,
-                        generation_config={"response_mime_type": "application/json"}
-                    )
-                    res_data = json.loads(response.text)
-
-                # 定義 4 位角色的頭像、名稱與語音設定 (透過不同語言代碼/地區區分男女聲感)
-                agents_config = [
-                    {
-                        "key": "prof_reply",
-                        "title": "[Prof. Acoustic] 聲學總導師 (理論與原理)",
-                        "avatar": "👨‍🏫",
-                        "lang": "zh-tw",     # 標準男聲偏向
-                        "slow": False
-                    },
-                    {
-                        "key": "beth_reply",
-                        "title": "[Engineer Beth] AI 邊緣部署工程師 (硬體實務)",
-                        "avatar": "👩‍💻",
-                        "lang": "zh-CN",     # 切換不同發音庫以示區隔 (女聲感)
-                        "slow": False
-                    },
-                    {
-                        "key": "alex_reply",
-                        "title": "[Data Scientist Alex] 數據科學專家 (訊號與特徵)",
-                        "avatar": "👨‍🔬",
-                        "lang": "zh-tw",     # 稍慢速度以塑造穩重男聲
-                        "slow": True
-                    },
-                    {
-                        "key": "cathy_reply",
-                        "title": "[Product Manager Cathy] 工業產品經理 (場域落地與 ROI)",
-                        "avatar": "👩‍💼",
-                        "lang": "zh-CN",     # 節奏較快的女聲
-                        "slow": False
-                    }
-                ]
-
-                # 依次渲染 4 位智體的發言與專屬語音播放器
-                for agent in agents_config:
-                    reply_text = res_data.get(agent["key"], "")
-                    if reply_text:
-                        with st.chat_message(agent["key"], avatar=agent["avatar"]):
-                            st.markdown(f"**{agent['title']}**：{reply_text}")
-                            
-                            # 生成專屬語音
-                            tts = gTTS(text=reply_text, lang=agent["lang"], slow=agent["slow"])
-                            fp = io.BytesIO()
-                            tts.write_to_fp(fp)
-                            st.audio(fp.getvalue(), format="audio/mp3")
-
-            except Exception as e:
-                st.error(f"❌ Gemini API 呼叫失敗：{str(e)}")
-
-    st.markdown("---")
+    with tab_notes:
+      st.text_area(
+          "隨堂重點筆記：",
+          "1. 時頻分析需注意 Window Size 對時間與頻率解析度的影響。\n2...",
+          height=250,
+      )
 
 # 2. 標題與簡介
 st.title("⚙️ 馬達與工業設備聲學診斷測試平台 (EdgeAcoustic AI)")
