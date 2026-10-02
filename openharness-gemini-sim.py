@@ -2,6 +2,7 @@
 import re
 import sys
 import io
+import traceback
 import streamlit as st
 import google.generativeai as genai
 import matplotlib.pyplot as plt
@@ -17,12 +18,12 @@ st.set_page_config(
     layout="wide"
 )
 
-# 支援中文字體顯示 (避免 Matplotlib 亂碼)
-plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'DejaVu Sans', 'Arial']
+# 設定 Matplotlib 中文字體與負號顯示
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Microsoft JhengHei']
 plt.rcParams['axes.unicode_minus'] = False
 
 # ==========================================
-# 2. 讀取 API Key (優先從 Secrets，備用環境變數)
+# 2. 讀取 API Key
 # ==========================================
 SECRET_API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 
@@ -33,7 +34,7 @@ with st.sidebar:
     st.header("⚙️ 系統設定")
     
     api_key_input = st.text_input(
-        "AQ.Ab8RN6Jz8WYBm69yT5tRt8w1aMxZtZHTh02o_WJJYwGjyXur1g",
+        "Gemini API Key",
         value=SECRET_API_KEY,
         type="password",
         help="已自動載入固定的 API Key"
@@ -51,8 +52,15 @@ with st.sidebar:
     
     system_instruction_input = st.text_area(
         "System Instruction (系統指令)",
-        value="你是一個專門服務於 PEM 水分解與數位分身（Digital Twin）領域的高智商 AI 工程師。請精確解答並提供自動化 Python 分析代碼。請確保生成的程式碼包含完整的 import 與數據計算，最後呼叫 plt.show()。",
-        height=140
+        value=(
+            "你是一個專門服務於 PEM 水分解與數位分身（Digital Twin）領域的高智商 AI 工程師。"
+            "請精確解答並提供自動化 Python 分析代碼。"
+            "注意事項：\n"
+            "1. 必須引入所有需要的模組（如 import numpy as np, import matplotlib.pyplot as plt）。\n"
+            "2. 避免在 f-string 中混用複雜的 LaTeX 大括號（如 f'${R_p}$' 改寫為 'R_p = ' + str(R_p_val)）。\n"
+            "3. 程式碼最後呼叫 plt.show()。"
+        ),
+        height=180
     )
 
 # ==========================================
@@ -66,28 +74,24 @@ if "messages" not in st.session_state:
 if "harness_logs" not in st.session_state:
     st.session_state.harness_logs = []
 
-# 顯示歷史訊息
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # ==========================================
-# 5. OpenHarness 沙盒執行函數
+# 5. OpenHarness 增強型沙盒執行器
 # ==========================================
 def execute_python_code(code_str):
-    """在受控沙盒環境中執行 Python 程式碼並捕獲 Matplotlib 圖表與輸出"""
+    """在受控沙盒環境中執行 Python 程式碼並捕獲 Matplotlib 圖表與報錯"""
     st.session_state.harness_logs.append("[OpenHarness Sandbox] 提取 Python 代碼區塊成功...")
     st.session_state.harness_logs.append("[OpenHarness Sandbox] 啟動內嵌沙盒編譯執行環境...")
     
-    # 重定向標準輸出
     old_stdout = sys.stdout
     redirected_output = sys.stdout = io.StringIO()
     
-    # 清理舊的 figure
     plt.close('all')
-    fig = None
     
-    # 全局與局部變數空間
+    # 預載常用的科學計算庫
     exec_globals = {
         'plt': plt,
         'np': np,
@@ -95,17 +99,22 @@ def execute_python_code(code_str):
         'st': st
     }
     
+    # 嘗試動態載入 scipy (若有安裝)
     try:
-        # 執行程式碼
+        import scipy
+        exec_globals['scipy'] = scipy
+    except ImportError:
+        pass
+
+    try:
         exec(code_str, exec_globals)
-        
-        # 捕獲目前繪製的 Matplotlib 圖表
         fig = plt.gcf()
         st.session_state.harness_logs.append("[OpenHarness Sandbox] 程式碼執行完畢，圖表成功捕獲！")
         return redirected_output.getvalue(), fig, None
     except Exception as e:
+        error_detail = traceback.format_exc()
         st.session_state.harness_logs.append(f"[OpenHarness Error] 沙盒執行異常: {str(e)}")
-        return redirected_output.getvalue(), None, str(e)
+        return redirected_output.getvalue(), None, error_detail
     finally:
         sys.stdout = old_stdout
 
@@ -139,23 +148,23 @@ if user_prompt:
             response = model.generate_content(user_prompt)
             result_text = response.text
             
-            # 1. 顯示 AI 分析文本與程式碼
             st.markdown(result_text)
             
-            # 2. 自動抓取程式碼區塊並用 OpenHarness 沙盒執行
+            # 自動抓取程式碼區塊
             code_blocks = re.findall(r"```python\n(.*?)```", result_text, re.DOTALL)
             if code_blocks:
                 st.subheader("📊 OpenHarness 沙盒自動渲染圖表")
                 for idx, code in enumerate(code_blocks):
                     with st.status(f"🚀 沙盒正在執行第 {idx+1} 段 Python 模擬代碼...", expanded=True) as status:
-                        output, fig, error = execute_python_code(code)
+                        output, fig, error_detail = execute_python_code(code)
                         
                         if fig and len(fig.get_axes()) > 0:
                             st.pyplot(fig)
                             status.update(label="✅ 圖表模擬渲染成功！", state="complete")
-                        elif error:
-                            st.error(f"沙盒執行出錯：{error}")
-                            status.update(label="❌ 執行失敗", state="error")
+                        elif error_detail:
+                            st.error("❌ 沙盒執行錯誤細節：")
+                            st.code(error_detail, language="python")
+                            status.update(label="❌ 執行失敗（請查看下方錯誤記錄）", state="error")
                         else:
                             status.update(label="ℹ️ 程式碼執行完成（無產出視覺化圖表）", state="complete")
                             
