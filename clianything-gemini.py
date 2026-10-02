@@ -1,4 +1,6 @@
 ﻿import os
+import time
+import datetime
 import streamlit as st
 import streamlit.components.v1 as components
 from google import genai
@@ -92,6 +94,7 @@ class ThreeJSOutput(BaseModel):
 class HarnessTestOutput(BaseModel):
     test_title: str = Field(description="測試案例名稱")
     test_script: str = Field(description="自動化測試或 CLI 執行腳本內容，需完整不截斷")
+    execution_steps: list[str] = Field(description="詳細的系統推演與執行步驟說明清單")
     expected_result: str = Field(description="預期測試結果與驗證標準")
 
 # -------------------------------------------------------------------
@@ -117,7 +120,7 @@ with tab1:
             try:
                 res_harness, used_model = generate_with_fallback(
                     contents=prompt_harness,
-                    system_instruction="你是一個資深系統測試工程師與 OpenHarness 架構專家。請根據需求設計完整的測試腳本與驗證邏輯。",
+                    system_instruction="你是一個資深系統測試工程師與 OpenHarness 架構專家。請根據需求設計完整的測試腳本與詳細的步驟記錄。",
                     response_schema=HarnessTestOutput,
                     temperature=0.2
                 )
@@ -125,15 +128,39 @@ with tab1:
                 st.subheader(f"📋 {res_harness.test_title}")
                 st.success(f"✅ 測試腳本規劃完成！（成功調用模型：`{used_model}`）")
                 
-                st.markdown("**自動化 Harness 執行腳本：**")
-                # terminal 風格 CSS，解決換行與截斷問題
-                cmd_html = f"""
-                <div style="background-color: #0e1117; color: #39ff14; padding: 16px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; border: 1px solid #30363d; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
-{res_harness.test_script}
-                </div>
-                """
-                st.markdown(cmd_html, unsafe_allow_html=True)
+                col_left, col_right = st.columns([1, 1])
                 
+                with col_left:
+                    st.markdown("**自動化 Harness 執行腳本：**")
+                    cmd_html = f"""
+                    <div style="background-color: #0e1117; color: #39ff14; padding: 16px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; border: 1px solid #30363d; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
+{res_harness.test_script}
+                    </div>
+                    """
+                    st.markdown(cmd_html, unsafe_allow_html=True)
+                
+                with col_right:
+                    st.markdown("**🖥️ 系統執行模擬 Console 日誌 (Logs)：**")
+                    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    
+                    logs = [
+                        f"[{now_str}] [INFO] [OpenHarness Core] Initializing test harness runner...",
+                        f"[{now_str}] [INFO] [Gemini Engine] Target model loaded: {used_model}",
+                        f"[{now_str}] [INFO] Parsing test specification and input boundaries...",
+                    ]
+                    for idx, step in enumerate(res_harness.execution_steps, 1):
+                        logs.append(f"[{now_str}] [STEP {idx}] {step}")
+                    logs.append(f"[{now_str}] [SUCCESS] Harness execution completed with Exit Code 0.")
+
+                    log_text = "\n".join(logs)
+                    
+                    console_html = f"""
+                    <div style="background-color: #1e1e1e; color: #d4d4d4; padding: 14px; border-radius: 8px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; height: 180px; overflow-y: auto; border: 1px solid #444; line-height: 1.5;">
+<pre style="margin: 0; white-space: pre-wrap; word-break: break-all; color: #85c1e9;">{log_text}</pre>
+                    </div>
+                    """
+                    st.markdown(console_html, unsafe_allow_html=True)
+
                 st.markdown("<br><b>驗證點與預期結果：</b>", unsafe_allow_html=True)
                 st.info(res_harness.expected_result)
                     
