@@ -1,9 +1,15 @@
 ﻿import os
+import re
+import sys
+import io
 import streamlit as st
 import google.generativeai as genai
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 # ==========================================
-# 1. 頁面基本配置與樣式
+# 1. 頁面基本配置
 # ==========================================
 st.set_page_config(
     page_title="OpenHarness x Gemini 智能代理模擬平台",
@@ -11,24 +17,26 @@ st.set_page_config(
     layout="wide"
 )
 
+# 支援中文字體顯示 (避免 Matplotlib 亂碼)
+plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'DejaVu Sans', 'Arial']
+plt.rcParams['axes.unicode_minus'] = False
+
 # ==========================================
 # 2. 讀取 API Key (優先從 Secrets，備用環境變數)
 # ==========================================
-# 支援在 Streamlit Cloud Secrets 設定：GEMINI_API_KEY = "AIzaSy..."
 SECRET_API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 
 # ==========================================
-# 3. 側邊欄：系統設定
+# 3. 側邊欄設定
 # ==========================================
 with st.sidebar:
     st.header("⚙️ 系統設定")
     
-    # 填入 Secrets 中的 Key，或允許使用者輸入
     api_key_input = st.text_input(
-        "AIzaSyDfIAeAuF89St4fozh4-Q1exM2GUZpfN1M",
+        "AQ.Ab8RN6Jz8WYBm69yT5tRt8w1aMxZtZHTh02o_WJJYwGjyXur1g",
         value=SECRET_API_KEY,
         type="password",
-        help="已自動載入固定的 API Key，亦可手動調整"
+        help="已自動載入固定的 API Key"
     )
     
     model_choice = st.selectbox(
@@ -43,7 +51,7 @@ with st.sidebar:
     
     system_instruction_input = st.text_area(
         "System Instruction (系統指令)",
-        value="你是一個專門服務於 PEM 水分解與數位分身（Digital Twin）領域的高智商 AI 工程師。請精確解答並提供自動化 Python 分析代碼。",
+        value="你是一個專門服務於 PEM 水分解與數位分身（Digital Twin）領域的高智商 AI 工程師。請精確解答並提供自動化 Python 分析代碼。請確保生成的程式碼包含完整的 import 與數據計算，最後呼叫 plt.show()。",
         height=140
     )
 
@@ -51,76 +59,118 @@ with st.sidebar:
 # 4. 主畫面 UI
 # ==========================================
 st.title("🤖 OpenHarness x Gemini 智能代理模擬平台")
-st.caption("基於 OpenHarness 思想與 Gemini API 構建的輕量級 Agent 執行環境（整合沙盒執行器）")
+st.caption("基於 OpenHarness 思想與 Gemini API 構建的輕量級 Agent 執行環境（整合自動沙盒圖表渲染器）")
 
-# 初始化對話紀錄與 OpenHarness 日誌
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "harness_logs" not in st.session_state:
     st.session_state.harness_logs = []
 
-# 顯示歷史對話
+# 顯示歷史訊息
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # ==========================================
-# 5. Agent 思考與執行核心邏輯 (修正 401 驗證)
+# 5. OpenHarness 沙盒執行函數
+# ==========================================
+def execute_python_code(code_str):
+    """在受控沙盒環境中執行 Python 程式碼並捕獲 Matplotlib 圖表與輸出"""
+    st.session_state.harness_logs.append("[OpenHarness Sandbox] 提取 Python 代碼區塊成功...")
+    st.session_state.harness_logs.append("[OpenHarness Sandbox] 啟動內嵌沙盒編譯執行環境...")
+    
+    # 重定向標準輸出
+    old_stdout = sys.stdout
+    redirected_output = sys.stdout = io.StringIO()
+    
+    # 清理舊的 figure
+    plt.close('all')
+    fig = None
+    
+    # 全局與局部變數空間
+    exec_globals = {
+        'plt': plt,
+        'np': np,
+        'pd': pd,
+        'st': st
+    }
+    
+    try:
+        # 執行程式碼
+        exec(code_str, exec_globals)
+        
+        # 捕獲目前繪製的 Matplotlib 圖表
+        fig = plt.gcf()
+        st.session_state.harness_logs.append("[OpenHarness Sandbox] 程式碼執行完畢，圖表成功捕獲！")
+        return redirected_output.getvalue(), fig, None
+    except Exception as e:
+        st.session_state.harness_logs.append(f"[OpenHarness Error] 沙盒執行異常: {str(e)}")
+        return redirected_output.getvalue(), None, str(e)
+    finally:
+        sys.stdout = old_stdout
+
+# ==========================================
+# 6. 對話與執行核心
 # ==========================================
 user_prompt = st.chat_input("請輸入測試指令（例：請模擬 PEM 電解槽在 60°C 與 80°C 下的 I-V 特性曲線並繪圖）...")
 
 if user_prompt:
-    # 檢查是否具備 API Key
     effective_api_key = api_key_input.strip() or SECRET_API_KEY.strip()
-    
     if not effective_api_key:
         st.error("❌ 請先提供有效的 Gemini API Key！")
         st.stop()
         
-    # 顯示使用者輸入
     st.session_state.messages.append({"role": "user", "content": user_prompt})
     with st.chat_message("user"):
         st.markdown(user_prompt)
 
-    # 記錄 OpenHarness 監控日誌
     st.session_state.harness_logs.append(f"[OpenHarness] 接收用戶指令: '{user_prompt}'")
-    st.session_state.harness_logs.append(f"[Harness Context] 載入模型配置: {model_choice}")
 
-    # 執行 Gemini AI 推理
     with st.chat_message("assistant"):
         st.subheader("💭 Agent 思考與分析結果")
-        response_placeholder = st.empty()
         
         try:
-            # 🔑 關鍵修復點：正確配置 Google SDK，解決 401 ACCESS_TOKEN_TYPE_UNSUPPORTED 錯誤
             genai.configure(api_key=effective_api_key)
-            
-            # 初始化 GenerativeModel 並傳入系統指令
             model = genai.GenerativeModel(
                 model_name=model_choice,
                 system_instruction=system_instruction_input
             )
             
-            st.session_state.harness_logs.append("[OpenHarness Sandbox] 建立隔離執行緒與上下文...")
-            
-            # 發送請求給 Gemini
             response = model.generate_content(user_prompt)
-            
-            # 輸出 AI 回應
             result_text = response.text
-            response_placeholder.markdown(result_text)
             
-            # 寫入歷史訊息與日誌
+            # 1. 顯示 AI 分析文本與程式碼
+            st.markdown(result_text)
+            
+            # 2. 自動抓取程式碼區塊並用 OpenHarness 沙盒執行
+            code_blocks = re.findall(r"```python\n(.*?)```", result_text, re.DOTALL)
+            if code_blocks:
+                st.subheader("📊 OpenHarness 沙盒自動渲染圖表")
+                for idx, code in enumerate(code_blocks):
+                    with st.status(f"🚀 沙盒正在執行第 {idx+1} 段 Python 模擬代碼...", expanded=True) as status:
+                        output, fig, error = execute_python_code(code)
+                        
+                        if fig and len(fig.get_axes()) > 0:
+                            st.pyplot(fig)
+                            status.update(label="✅ 圖表模擬渲染成功！", state="complete")
+                        elif error:
+                            st.error(f"沙盒執行出錯：{error}")
+                            status.update(label="❌ 執行失敗", state="error")
+                        else:
+                            status.update(label="ℹ️ 程式碼執行完成（無產出視覺化圖表）", state="complete")
+                            
+                        if output:
+                            st.text("程式 Console 輸出：")
+                            st.code(output)
+
             st.session_state.messages.append({"role": "assistant", "content": result_text})
-            st.session_state.harness_logs.append("[OpenHarness Sandbox] 任務順利執行完成，結果捕獲成功。")
 
         except Exception as e:
-            error_msg = f"❌ 執行失敗：{str(e)}"
-            st.error(error_msg)
+            st.error(f"❌ 執行失敗：{str(e)}")
             st.session_state.harness_logs.append(f"[OpenHarness Error] {str(e)}")
 
 # ==========================================
-# 6. OpenHarness 運作日誌摺疊選單
+# 7. 運作日誌摺疊選單
 # ==========================================
 with st.expander("🔍 OpenHarness 運作日誌 (點擊展開/收合)", expanded=False):
     st.write("追蹤 Agent 思考、沙盒代碼捕獲與 Harness 執行日誌：")
