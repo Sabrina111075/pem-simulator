@@ -6,10 +6,10 @@ from google.genai import types
 from pydantic import BaseModel, Field
 
 # 頁面標題與佈局設定
-st.set_page_config(page_title="CLI + Gemini 模擬器", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="OpenHarness & CLI + Gemini AI 整合平台", layout="wide", page_icon="⚡")
 
-st.title("🚀 CLI + Gemini 自動生成流程圖與 3D 模擬")
-st.caption("結合 Gemini 2.5 結構化輸出與前端渲染技術")
+st.title("⚡ OpenHarness & CLI-Anything + Gemini AI 整合工作台")
+st.caption("結合系統自動化測試、Mermaid 流程圖繪製與 Three.js 3D 互動模擬")
 
 # 優先讀取 Streamlit Secrets 或環境變數
 api_key = None
@@ -28,7 +28,10 @@ if not api_key:
 
 client = genai.Client(api_key=api_key)
 
+# -------------------------------------------------------------------
 # Pydantic 結構化輸出定義
+# -------------------------------------------------------------------
+
 class FlowchartOutput(BaseModel):
     title: str = Field(description="流程圖標題")
     mermaid_code: str = Field(description="合法的 Mermaid.js flowchart 語法內容，請勿包含 markdown 標籤")
@@ -39,12 +42,61 @@ class ThreeJSOutput(BaseModel):
     html_code: str = Field(description="包含完整 Three.js 腳本的可執行 HTML 程式碼")
     summary: str = Field(description="3D 場景說明")
 
-# 功能頁籤
-tab1, tab2 = st.tabs(["📊 Mermaid 流程圖生成", "🎲 Three.js 3D 模擬生成"])
+class HarnessTestOutput(BaseModel):
+    test_title: str = Field(description="測試案例名稱")
+    test_script: str = Field(description="自動化測試或 CLI 執行腳本內容")
+    expected_result: str = Field(description="預期測試結果與驗證標準")
 
-# Tab 1: 流程圖生成器
+# -------------------------------------------------------------------
+# 功能頁籤
+# -------------------------------------------------------------------
+tab1, tab2, tab3 = st.tabs([
+    "🛠️ OpenHarness 自動化測試引擎", 
+    "📊 Mermaid 流程圖生成", 
+    "🎲 Three.js 3D 模擬生成"
+])
+
+# Tab 1: OpenHarness 測試引擎
 with tab1:
-    st.header("Mermaid 流程圖自動生成")
+    st.header("🛠️ OpenHarness 系統測試與 Harness 腳本生成")
+    prompt_harness = st.text_area(
+        "輸入欲進行測試的系統模組或功能需求：",
+        value="針對 PEM 電解槽模擬系統，設計一套涵蓋電流密度輸入、電壓響應計算與溫度邊界條件的自動化 Harness 測試腳本。",
+        height=100
+    )
+    
+    if st.button("生成 OpenHarness 測試案例", type="primary"):
+        with st.spinner("OpenHarness 引擎正在規劃測試腳本..."):
+            try:
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt_harness,
+                    config=types.GenerateContentConfig(
+                        system_instruction="你是一個資深系統測試工程師與 OpenHarness 架構專家。請根據需求設計完整的測試腳本與驗證邏輯。",
+                        response_mime_type="application/json",
+                        response_schema=HarnessTestOutput,
+                        temperature=0.2,
+                    ),
+                )
+                res_harness: HarnessTestOutput = response.parsed
+                
+                st.subheader(f"📋 {res_harness.test_title}")
+                st.success("✅ 測試腳本規劃完成！")
+                
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    st.markdown("**自動化 Harness 執行腳本：**")
+                    st.code(res_harness.test_script, language="python")
+                with col2:
+                    st.markdown("**驗證點與預期結果：**")
+                    st.info(res_harness.expected_result)
+                    
+            except Exception as e:
+                st.error(f"生成失敗：{e}")
+
+# Tab 2: 流程圖生成器
+with tab2:
+    st.header("📊 Mermaid 流程圖自動生成")
     prompt_flow = st.text_area(
         "輸入流程圖需求描述：",
         value="請繪製一個使用者登入與雙重驗證 (2FA) 的流程，包含登入失敗重試與驗證碼發送。",
@@ -92,9 +144,9 @@ with tab1:
             except Exception as e:
                 st.error(f"生成失敗：{e}")
 
-# Tab 2: 3D 模擬生成器
-with tab2:
-    st.header("Three.js 3D 互動模擬生成")
+# Tab 3: 3D 模擬生成器
+with tab3:
+    st.header("🎲 Three.js 3D 互動模擬生成")
     prompt_3d = st.text_area(
         "輸入 3D 場景需求描述：",
         value="創建一個太陽系 3D 模擬，包含中央發光的太陽、繞行的地球，並加入 OrbitControls 旋轉視角。",
