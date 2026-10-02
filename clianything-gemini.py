@@ -8,16 +8,6 @@ from pydantic import BaseModel, Field
 # 頁面標題與佈局設定
 st.set_page_config(page_title="OpenHarness & CLI + Gemini AI 整合平台", layout="wide", page_icon="⚡")
 
-# 自訂 CSS 優化文字顯示與程式碼換行
-st.markdown("""
-<style>
-    .stCodeBlock code {
-        white-space: pre-wrap !important;
-        word-break: break-all !important;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 st.title("⚡ OpenHarness & CLI-Anything + Gemini AI 整合工作台")
 st.caption("結合系統自動化測試、Mermaid 流程圖繪製與 Three.js 3D 互動模擬")
 
@@ -109,7 +99,7 @@ with tab1:
             try:
                 res_harness, used_model = generate_with_fallback(
                     contents=prompt_harness,
-                    system_instruction="你是一個資深系統測試工程師與 OpenHarness 架構專家。請根據需求設計完整的測試腳本與驗證邏輯，並確保命令列格式清晰可用。",
+                    system_instruction="你是一個資深系統測試工程師與 OpenHarness 架構專家。請根據需求設計完整的測試腳本與驗證邏輯。",
                     response_schema=HarnessTestOutput,
                     temperature=0.2
                 )
@@ -118,9 +108,15 @@ with tab1:
                 st.success(f"✅ 測試腳本規劃完成！（成功調用模型：`{used_model}`）")
                 
                 st.markdown("**自動化 Harness 執行腳本：**")
-                st.code(res_harness.test_script, language="bash")
+                # 使用原生 HTML/CSS 解決指令截斷問題，自動換行
+                cmd_html = f"""
+                <div style="background-color: #0e1117; color: #00ff66; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 14px; white-space: pre-wrap; word-break: break-all; border: 1px solid #30363d;">
+{res_harness.test_script}
+                </div>
+                """
+                st.markdown(cmd_html, unsafe_allow_html=True)
                 
-                st.markdown("**驗證點與預期結果：**")
+                st.markdown("<br><b>驗證點與預期結果：</b>", unsafe_allow_html=True)
                 st.info(res_harness.expected_result)
                     
             except Exception as e:
@@ -140,7 +136,7 @@ with tab2:
             try:
                 res, used_model = generate_with_fallback(
                     contents=prompt_flow,
-                    system_instruction="你是一個頂級系統架構師，請根據需求生成標準、節點清晰且方向明確的 Mermaid.js flowchart (TD 或 LR) 語法。",
+                    system_instruction="你是一個頂級系統架構師，請根據需求生成標準、結構清晰的 Mermaid.js flowchart (TD 或 LR) 語法。",
                     response_schema=FlowchartOutput,
                     temperature=0.2
                 )
@@ -149,33 +145,56 @@ with tab2:
                 st.caption(f"使用模型：`{used_model}`")
                 st.write(res.description)
                 
-                # 優化 Mermaid 視窗，調高容器並加入縮放居中樣式
+                # Mermaid 容器加入 svg-pan-zoom 與最適比例控制，解決 giant-node 與捲軸問題
                 html_code = f"""
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <meta charset="utf-8">
                     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-                    <script>
-                        mermaid.initialize({{
-                            startOnLoad: true, 
-                            theme: 'neutral',
-                            flowchart: {{ useMaxWidth: true, htmlLabels: true, curve: 'basis' }}
-                        }});
-                    </script>
+                    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
                     <style>
-                        body {{ margin: 0; padding: 20px; background: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 90vh; }}
-                        .mermaid {{ width: 100%; text-align: center; }}
+                        body {{ margin: 0; padding: 0; background: #fafafa; overflow: hidden; }}
+                        #container {{ width: 100vw; height: 500px; border: 1px solid #e0e0e0; border-radius: 8px; background: #ffffff; display: flex; justify-content: center; align-items: center; }}
+                        .mermaid {{ width: 100%; height: 100%; }}
+                        .hint {{ position: absolute; top: 10px; right: 15px; font-size: 12px; color: #888; background: rgba(255,255,255,0.8); padding: 4px 8px; border-radius: 4px; pointer-events: none; }}
                     </style>
                 </head>
                 <body>
-                    <div class="mermaid">
-                    {res.mermaid_code}
+                    <div class="hint">💡 可使用滑鼠滾輪放大/縮小，按住左鍵拖拽移動</div>
+                    <div id="container">
+                        <div class="mermaid">
+                        {res.mermaid_code}
+                        </div>
                     </div>
+                    <script>
+                        mermaid.initialize({{
+                            startOnLoad: true,
+                            theme: 'neutral',
+                            flowchart: {{ useMaxWidth: false, htmlLabels: true }}
+                        }});
+                        
+                        setTimeout(() => {{
+                            const svg = document.querySelector("#container svg");
+                            if (svg) {{
+                                svg.style.maxWidth = "none";
+                                svg.style.height = "100%";
+                                svg.style.width = "100%";
+                                svgPanZoom(svg, {{
+                                    zoomEnabled: true,
+                                    controlIconsEnabled: true,
+                                    fit: true,
+                                    center: true,
+                                    minZoom: 0.5,
+                                    maxZoom: 5
+                                }});
+                            }}
+                        }}, 600);
+                    </script>
                 </body>
                 </html>
                 """
-                components.html(html_code, height=750, scrolling=True)
+                components.html(html_code, height=530)
                 
                 with st.expander("檢視原始 Mermaid 語法"):
                     st.code(res.mermaid_code, language="mermaid")
@@ -210,8 +229,9 @@ with tab3:
                 st.caption(f"使用模型：`{used_model}`")
                 st.write(res_3d.summary)
                 
-                # 渲染 3D HTML，高度提升至 650
-                components.html(res_3d.html_code, height=650)
+                # 渲染 3D HTML 並附帶互動說明
+                components.html(res_3d.html_code, height=550)
+                st.caption("💡 **3D 操作說明**：按住滑鼠左鍵可拖拽旋轉視角，滑鼠滾輪拉近/拉遠，按住右鍵拖拽可平移畫面。")
                 
             except Exception as e:
                 st.error(f"生成失敗：{e}")
