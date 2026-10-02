@@ -13,7 +13,7 @@ st.caption("基於 OpenHarness 思想與 Gemini API 構建的輕量級 Agent 執
 # 側邊欄配置
 with st.sidebar:
     st.header("⚙️ 系統設定")
-    api_key = st.text_input("Gemini API Key", type="password", help="AQ.Ab8RN6JDcsOVBjuxZv_JNkw5Ks2xXU-7_HS-XkFngIUtiiSnLQ")
+    api_key = st.text_input("Gemini API Key", type="password", help="AQ.Ab8RN6JDcsOVBjuxZv_JNkw5Ks2xXU-7_HS-XkFngIUtiiSnLQ ")
     
     model_choice = st.selectbox(
         "模型版本選擇",
