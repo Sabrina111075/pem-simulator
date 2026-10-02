@@ -84,21 +84,21 @@ def generate_with_fallback(contents, system_instruction, response_schema, temper
 # -------------------------------------------------------------------
 
 class FlowchartOutput(BaseModel):
-    title: str = Field(description="流程圖標題")
+    title: str = Field(description="流程圖標題，使用繁體中文")
     mermaid_code: str = Field(description="合法的 Mermaid.js flowchart 語法內容，請勿包含 markdown 標籤")
-    description: str = Field(description="流程圖說明")
+    description: str = Field(description="流程圖說明，使用繁體中文")
 
 class ThreeJSOutput(BaseModel):
-    title: str = Field(description="3D 場景標題")
+    title: str = Field(description="3D 場景標題，使用繁體中文")
     html_code: str = Field(description="包含完整 Three.js 腳本的可執行 HTML 程式碼")
-    summary: str = Field(description="3D 場景說明")
+    summary: str = Field(description="3D 場景說明，使用繁體中文")
 
 class HarnessTestOutput(BaseModel):
-    test_title: str = Field(description="測試案例名稱")
+    test_title: str = Field(description="測試案例名稱，使用繁體中文")
     test_script: str = Field(description="自動化測試或 CLI 執行腳本內容，需完整不截斷")
-    formulas_description: str = Field(description="PEM 電解槽數理化學極化模型計算與推導文字說明")
-    execution_steps: list[str] = Field(description="詳細的系統推演與執行步驟說明清單")
-    expected_result: str = Field(description="預期測試結果與驗證標準")
+    formulas_description: str = Field(description="PEM 電解槽數理化學極化模型計算與推導說明，請務必使用台灣繁體中文")
+    execution_steps: list[str] = Field(description="詳細的系統推演與執行步驟說明清單，請務必使用台灣繁體中文描述")
+    expected_result: str = Field(description="預期測試結果與驗證標準，請務必使用台灣繁體中文描述")
 
 # -------------------------------------------------------------------
 # 功能頁籤
@@ -109,7 +109,7 @@ tab1, tab2, tab3 = st.tabs([
     "🎲 Three.js 3D 模擬生成"
 ])
 
-# Tab 1: OpenHarness 測試與極化曲線模擬引擎 (全垂直流向)
+# Tab 1: OpenHarness 測試與極化曲線模擬引擎 (全繁體中文輸出)
 with tab1:
     st.header("🛠️ OpenHarness PEM 電解槽模擬、極化曲線與自動化測試")
     
@@ -129,7 +129,11 @@ with tab1:
             try:
                 res_harness, used_model = generate_with_fallback(
                     contents=prompt_harness,
-                    system_instruction="你是一個 PEM 電解槽與系統測試專家。請撰寫包含 Butler-Volmer、歐姆過電位與極化曲線驗證的 Harness 測試說明與公式。",
+                    system_instruction=(
+                        "你是一個 PEM 電解槽與 OpenHarness 測試專家。"
+                        "請撰寫包含 Butler-Volmer、歐姆過電位與極化曲線驗證的 Harness 測試說明。"
+                        "所有輸出的說明文字、執行步驟 (execution_steps) 與預期結果 (expected_result) 必須嚴格使用台灣繁體中文 (Traditional Chinese)。"
+                    ),
                     response_schema=HarnessTestOutput,
                     temperature=0.2
                 )
@@ -152,14 +156,14 @@ with tab1:
                 v_cell = v_rev + v_act + v_ohm
                 
                 fig, ax = plt.subplots(figsize=(10, 4.2))
-                ax.plot(current_density, v_cell, 'r-', linewidth=2.5, label='Total Cell Voltage ($V_{cell}$)')
-                ax.plot(current_density, v_rev, 'b--', linewidth=1.5, label='Reversible Voltage ($E_{rev}$)')
-                ax.plot(current_density, v_act, 'g:', linewidth=1.5, label='Activation Overpotential ($\eta_{act}$)')
-                ax.plot(current_density, v_ohm, 'm-.', linewidth=1.5, label='Ohmic Overpotential ($\eta_{ohm}$)')
+                ax.plot(current_density, v_cell, 'r-', linewidth=2.5, label='總單電池電壓 Total Cell Voltage ($V_{cell}$)')
+                ax.plot(current_density, v_rev, 'b--', linewidth=1.5, label='可逆熱力學電位 Reversible Voltage ($E_{rev}$)')
+                ax.plot(current_density, v_act, 'g:', linewidth=1.5, label='活化過電位 Activation Overpotential ($\eta_{act}$)')
+                ax.plot(current_density, v_ohm, 'm-.', linewidth=1.5, label='歐姆過電位 Ohmic Overpotential ($\eta_{ohm}$)')
                 
-                ax.set_title("PEM Electrolyzer Polarization Curve (80°C Operating Boundary)", fontsize=12, fontweight='bold')
-                ax.set_xlabel("Current Density $i$ ($A/cm^2$)", fontsize=10)
-                ax.set_ylabel("Cell Voltage $V$ (Volts)", fontsize=10)
+                ax.set_title("PEM Electrolyzer Polarization Curve (80°C Boundary)", fontsize=12, fontweight='bold')
+                ax.set_xlabel("電流密度 Current Density $i$ ($A/cm^2$)", fontsize=10)
+                ax.set_ylabel("單電池電壓 Cell Voltage $V$ (Volts)", fontsize=10)
                 ax.grid(True, linestyle='--', alpha=0.6)
                 ax.legend(fontsize=9, loc='upper left')
                 plt.tight_layout()
@@ -189,26 +193,35 @@ with tab1:
 
                 st.divider()
 
-                # --- 4. Console Logs 模擬 ---
+                # --- 4. Console Logs 模擬 (清晰換行與繁體中文支援) ---
                 st.markdown("### 4. 🖥️ 系統執行 Console 日誌 (Execution Logs)")
                 now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
                 logs = [
-                    f"[{now_str}] [INFO] [OpenHarness Core] Initializing PEM Electrolyzer Test Engine...",
-                    f"[{now_str}] [INFO] Target Model: {used_model} | Temperature Boundary: 353.15K (80°C)",
-                    f"[{now_str}] [DATA] Generating 100 evaluation points (0.01 to 2.00 A/cm²)...",
-                    f"[{now_str}] [CALC] Reversible potential E_rev = 1.23V verified.",
-                    f"[{now_str}] [CALC] Max Cell Voltage recorded: {v_cell[-1]:.3f}V at 2.0 A/cm².",
+                    f"[{now_str}] [資訊] [OpenHarness 核心] 初始化 PEM 電解槽測試引擎...",
+                    f"[{now_str}] [資訊] 使用模型: {used_model} | 運作溫度邊界: 353.15K (80°C)",
+                    f"[{now_str}] [數據] 產生 100 個評估採樣點 (0.01 至 2.00 A/cm²)...",
+                    f"[{now_str}] [計算] 驗證可逆熱力學電位 E_rev = 1.23V 正確。",
+                    f"[{now_str}] [計算] 於 2.0 A/cm² 條件下紀錄最大單電池電壓: {v_cell[-1]:.3f}V",
                 ]
                 for idx, step in enumerate(res_harness.execution_steps, 1):
-                    logs.append(f"[{now_str}] [STEP {idx}] {step}")
-                logs.append(f"[{now_str}] [SUCCESS] PEM Harness Simulation test passed with status 0.")
+                    logs.append(f"[{now_str}] [步驟 {idx}] {step}")
+                logs.append(f"[{now_str}] [成功] PEM Harness 模擬測試完成，返回狀態碼 0。")
 
-                log_text = "\n".join(logs)
+                log_html_lines = []
+                for line in logs:
+                    if "[成功]" in line:
+                        log_html_lines.append(f'<span style="color: #58a6ff;">{line}</span>')
+                    elif "[步驟" in line:
+                        log_html_lines.append(f'<span style="color: #7ee787;">{line}</span>')
+                    else:
+                        log_html_lines.append(f'<span style="color: #8b949e;">{line}</span>')
+                
+                log_text = "<br>".join(log_html_lines)
                 
                 console_html = f"""
-                <div style="background-color: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12.5px; height: 220px; overflow-y: auto; border: 1px solid #444; line-height: 1.5;">
-<pre style="margin: 0; white-space: pre-wrap; word-break: break-all; color: #85c1e9;">{log_text}</pre>
+                <div style="background-color: #0d1117; padding: 16px; border-radius: 8px; font-family: 'Consolas', 'Courier New', monospace; font-size: 13px; height: 240px; overflow-y: auto; border: 1px solid #30363d; line-height: 1.8;">
+                    {log_text}
                 </div>
                 """
                 st.markdown(console_html, unsafe_allow_html=True)
@@ -236,7 +249,7 @@ with tab2:
             try:
                 res, used_model = generate_with_fallback(
                     contents=prompt_flow,
-                    system_instruction="你是一個頂級系統架構師，請根據需求生成標準、結構清晰的 Mermaid.js flowchart (TD 或 LR) 語法。",
+                    system_instruction="你是一個頂級系統架構師，請根據需求生成標準、結構清晰的 Mermaid.js flowchart (TD 或 LR) 語法。圖中節點文字請全部使用繁體中文。",
                     response_schema=FlowchartOutput,
                     temperature=0.2
                 )
@@ -322,7 +335,7 @@ with tab3:
                     system_instruction=(
                         "你是一個 Three.js 3D 專家。"
                         "請生成一個包含 CDN 引入 (Three.js + OrbitControls)、點光源/環境光、高質感材質、明顯的 requestAnimationFrame 動態旋轉動畫，"
-                        "以及滿版 Canvas 的單一完整 HTML 檔案。"
+                        "以及滿版 Canvas 的單一完整 HTML 檔案。說明文字請全部使用繁體中文。"
                     ),
                     response_schema=ThreeJSOutput,
                     temperature=0.4
@@ -336,5 +349,5 @@ with tab3:
                 components.html(res_3d.html_code, height=550)
                 st.caption("💡 **3D 操作說明**：按住滑鼠左鍵可拖拽旋轉視角，滑鼠滾輪拉近/拉遠，按住右鍵拖拽可平移畫面。")
                 
-            except Exception as e:
+            except Exception ase:
                 st.error(f"生成失敗：{e}")
