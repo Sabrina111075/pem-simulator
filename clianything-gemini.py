@@ -193,7 +193,7 @@ with tab1:
 
                 st.divider()
 
-                # --- 4. Console Logs 模擬 (清晰換行與繁體中文支援) ---
+                # --- 4. Console Logs 模擬 (獨立分行與繁體中文顯示) ---
                 st.markdown("### 4. 🖥️ 系統執行 Console 日誌 (Execution Logs)")
                 now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
@@ -349,5 +349,5 @@ with tab3:
                 components.html(res_3d.html_code, height=550)
                 st.caption("💡 **3D 操作說明**：按住滑鼠左鍵可拖拽旋轉視角，滑鼠滾輪拉近/拉遠，按住右鍵拖拽可平移畫面。")
                 
-            except Exception ase:
+            except Exception as e:
                 st.error(f"生成失敗：{e}")
