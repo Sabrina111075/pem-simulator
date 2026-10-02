@@ -28,8 +28,35 @@ if not api_key:
 
 client = genai.Client(api_key=api_key)
 
-# 設定採用的 Gemini 模型名稱
-MODEL_NAME = "gemini-2.5-flash"
+# -------------------------------------------------------------------
+# 免費模式優先順序：3.5 Flash-Lite -> 3.6 Flash -> 3.1 Pro
+# -------------------------------------------------------------------
+MODEL_CANDIDATES = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.6-flash",
+    "gemini-3.1-pro"
+]
+
+def generate_with_fallback(contents, system_instruction, response_schema, temperature=0.2):
+    """具備自動備援機制的生成函式"""
+    last_error = None
+    for model_name in MODEL_CANDIDATES:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    response_mime_type="application/json",
+                    response_schema=response_schema,
+                    temperature=temperature,
+                ),
+            )
+            return response.parsed, model_name
+        except Exception as e:
+            last_error = e
+            continue
+    raise RuntimeError(f"所有模型呼叫皆失敗，最後錯誤訊息：{last_error}")
 
 # -------------------------------------------------------------------
 # Pydantic 結構化輸出定義
@@ -54,7 +81,7 @@ class HarnessTestOutput(BaseModel):
 # 功能頁籤
 # -------------------------------------------------------------------
 tab1, tab2, tab3 = st.tabs([
-    "🛠️ OpenHarness 自動化測試引擎", 
+    "🛠️️ OpenHarness 自動化測試引擎", 
     "📊 Mermaid 流程圖生成", 
     "🎲 Three.js 3D 模擬生成"
 ])
@@ -71,20 +98,15 @@ with tab1:
     if st.button("生成 OpenHarness 測試案例", type="primary"):
         with st.spinner("OpenHarness 引擎正在規劃測試腳本..."):
             try:
-                response = client.models.generate_content(
-                    model=MODEL_NAME,
+                res_harness, used_model = generate_with_fallback(
                     contents=prompt_harness,
-                    config=types.GenerateContentConfig(
-                        system_instruction="你是一個資深系統測試工程師與 OpenHarness 架構專家。請根據需求設計完整的測試腳本與驗證邏輯。",
-                        response_mime_type="application/json",
-                        response_schema=HarnessTestOutput,
-                        temperature=0.2,
-                    ),
+                    system_instruction="你是一個資深系統測試工程師與 OpenHarness 架構專家。請根據需求設計完整的測試腳本與驗證邏輯。",
+                    response_schema=HarnessTestOutput,
+                    temperature=0.2
                 )
-                res_harness: HarnessTestOutput = response.parsed
                 
                 st.subheader(f"📋 {res_harness.test_title}")
-                st.success("✅ 測試腳本規劃完成！")
+                st.success(f"✅ 測試腳本規劃完成！（成功調用模型：`{used_model}`）")
                 
                 col1, col2 = st.columns([2, 1])
                 with col1:
@@ -109,19 +131,15 @@ with tab2:
     if st.button("生成流程圖", type="primary"):
         with st.spinner("Gemini 正在規劃流程圖架構..."):
             try:
-                response = client.models.generate_content(
-                    model=MODEL_NAME,
+                res, used_model = generate_with_fallback(
                     contents=prompt_flow,
-                    config=types.GenerateContentConfig(
-                        system_instruction="你是一個頂級系統架構師，請根據需求生成標準的 Mermaid.js flowchart (TD或LR) 語法。",
-                        response_mime_type="application/json",
-                        response_schema=FlowchartOutput,
-                        temperature=0.2,
-                    ),
+                    system_instruction="你是一個頂級系統架構師，請根據需求生成標準的 Mermaid.js flowchart (TD或LR) 語法。",
+                    response_schema=FlowchartOutput,
+                    temperature=0.2
                 )
-                res: FlowchartOutput = response.parsed
                 
                 st.subheader(res.title)
+                st.caption(f"使用模型：`{used_model}`")
                 st.write(res.description)
                 
                 # HTML 渲染 Mermaid
@@ -159,19 +177,15 @@ with tab3:
     if st.button("生成 3D 場景", type="primary"):
         with st.spinner("Gemini 正在撰寫 Three.js 程式碼..."):
             try:
-                response = client.models.generate_content(
-                    model=MODEL_NAME,
+                res_3d, used_model = generate_with_fallback(
                     contents=prompt_3d,
-                    config=types.GenerateContentConfig(
-                        system_instruction="你是一個 Three.js 3D 專家。請生成一個包含 CDN 引入、燈光、軌道控制與動畫循環的完整單一 HTML 檔案。",
-                        response_mime_type="application/json",
-                        response_schema=ThreeJSOutput,
-                        temperature=0.4,
-                    ),
+                    system_instruction="你是一個 Three.js 3D 專家。請生成一個包含 CDN 引入、燈光、軌道控制與動畫循環的完整單一 HTML 檔案。",
+                    response_schema=ThreeJSOutput,
+                    temperature=0.4
                 )
-                res_3d: ThreeJSOutput = response.parsed
                 
                 st.subheader(res_3d.title)
+                st.caption(f"使用模型：`{used_model}`")
                 st.write(res_3d.summary)
                 
                 # 渲染 3D HTML
