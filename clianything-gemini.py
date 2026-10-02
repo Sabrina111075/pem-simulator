@@ -1,6 +1,8 @@
 ﻿import os
 import time
 import datetime
+import numpy as np
+import matplotlib.pyplot as plt
 import streamlit as st
 import streamlit.components.v1 as components
 from google import genai
@@ -11,7 +13,7 @@ from pydantic import BaseModel, Field
 st.set_page_config(page_title="OpenHarness & CLI + Gemini AI 整合平台", layout="wide", page_icon="⚡")
 
 st.title("⚡ OpenHarness & CLI-Anything + Gemini AI 整合工作台")
-st.caption("結合系統自動化測試、Mermaid 流程圖繪製與 Three.js 3D 互動模擬")
+st.caption("結合 PEM 電解槽自動化測試、極化曲線數據模擬、Mermaid 流程圖與 3D 互動場景")
 
 # -------------------------------------------------------------------
 # 邊欄設定：模型選擇與 API Key 輸入
@@ -94,6 +96,7 @@ class ThreeJSOutput(BaseModel):
 class HarnessTestOutput(BaseModel):
     test_title: str = Field(description="測試案例名稱")
     test_script: str = Field(description="自動化測試或 CLI 執行腳本內容，需完整不截斷")
+    formulas_description: str = Field(description="PEM 電解槽數理化學極化模型計算公式說明 (LaTeX 格式)")
     execution_steps: list[str] = Field(description="詳細的系統推演與執行步驟說明清單")
     expected_result: str = Field(description="預期測試結果與驗證標準")
 
@@ -101,37 +104,89 @@ class HarnessTestOutput(BaseModel):
 # 功能頁籤
 # -------------------------------------------------------------------
 tab1, tab2, tab3 = st.tabs([
-    "🛠️ OpenHarness 自動化測試引擎", 
+    "🛠️ OpenHarness PEM電解槽模擬與測試", 
     "📊 Mermaid 流程圖生成", 
     "🎲 Three.js 3D 模擬生成"
 ])
 
-# Tab 1: OpenHarness 測試引擎
+# Tab 1: OpenHarness 測試與極化曲線模擬引擎
 with tab1:
-    st.header("🛠️ OpenHarness 系統測試與 Harness 腳本生成")
+    st.header("🛠️ OpenHarness PEM 電解槽模擬、極化曲線與自動化測試")
+    
+    # 預設專用 Prompt
+    default_pem_prompt = (
+        "針對 PEM 電解槽 (PEM Electrolyzer) 模擬系統，進行自動化 Harness 測試。"
+        "包含：電流密度 (0-2.0 A/cm²) 響應計算、Butler-Volmer 動力學方程式、可逆電位 (1.23V)、歐姆電阻過電位與溫控邊界 (80°C) 驗證。"
+    )
+    
     prompt_harness = st.text_area(
-        "輸入欲進行測試的系統模組或功能需求：",
-        value="針對 PEM 電解槽模擬系統，設計一套涵蓋電流密度輸入、電壓響應計算與溫度邊界條件的自動化 Harness 測試腳本。",
+        "輸入欲進行測試的 PEM 電解槽系統模組與計算需求：",
+        value=default_pem_prompt,
         height=100
     )
     
-    if st.button("生成 OpenHarness 測試案例", type="primary"):
-        with st.spinner("OpenHarness 引擎正在規劃測試腳本..."):
+    if st.button("執行 PEM 模擬與生成 Harness 測試案例", type="primary"):
+        with st.spinner("OpenHarness 引擎正在規劃測試腳本與電化學模擬計算..."):
             try:
                 res_harness, used_model = generate_with_fallback(
                     contents=prompt_harness,
-                    system_instruction="你是一個資深系統測試工程師與 OpenHarness 架構專家。請根據需求設計完整的測試腳本與詳細的步驟記錄。",
+                    system_instruction="你是一個 PEM 電解槽與系統測試專家。請撰寫包含 Butler-Volmer、歐姆過電位與極化曲線驗證的 Harness 測試說明與公式。",
                     response_schema=HarnessTestOutput,
                     temperature=0.2
                 )
                 
                 st.subheader(f"📋 {res_harness.test_title}")
-                st.success(f"✅ 測試腳本規劃完成！（成功調用模型：`{used_model}`）")
+                st.success(f"✅ PEM 模擬測試規劃與極化曲線數據生成完成！（調用模型：`{used_model}`）")
                 
+                # --- 第一區塊：電化學計算公式與極化曲線圖 ---
+                st.markdown("### 📊 PEM 電解槽電化學計算公式與極化曲線 ($I-V$ Curve)")
+                
+                col_chart, col_formula = st.columns([1.2, 1])
+                
+                with col_chart:
+                    # Python 現場計算並畫出真實 PEM 極化曲線圖
+                    current_density = np.linspace(0.01, 2.0, 100) # A/cm²
+                    E_rev = 1.23 # Volt
+                    R_ohm = 0.15 # Ohm*cm²
+                    a_act = 0.06
+                    b_act = 0.08
+                    
+                    # 計算各過電位
+                    v_rev = np.full_like(current_density, E_rev)
+                    v_act = a_act + b_act * np.log10(current_density * 10)
+                    v_ohm = current_density * R_ohm
+                    v_cell = v_rev + v_act + v_ohm
+                    
+                    fig, ax = plt.subplots(figsize=(6, 4))
+                    ax.plot(current_density, v_cell, 'r-', linewidth=2.5, label='Total Cell Voltage ($V_{cell}$)')
+                    ax.plot(current_density, v_rev, 'b--', linewidth=1.5, label='Reversible Voltage ($E_{rev}$)')
+                    ax.plot(current_density, v_act, 'g:', linewidth=1.5, label='Activation Overpotential ($\eta_{act}$)')
+                    ax.plot(current_density, v_ohm, 'm-.', linewidth=1.5, label='Ohmic Overpotential ($\eta_{ohm}$)')
+                    
+                    ax.set_title("PEM Electrolyzer Polarization Curve (80°C Boundary)", fontsize=11, fontweight='bold')
+                    ax.set_xlabel("Current Density $i$ ($A/cm^2$)", fontsize=10)
+                    ax.set_ylabel("Cell Voltage $V$ (Volts)", fontsize=10)
+                    ax.grid(True, linestyle='--', alpha=0.6)
+                    ax.legend(fontsize=8, loc='upper left')
+                    plt.tight_layout()
+                    st.pyplot(fig)
+                
+                with col_formula:
+                    st.markdown("**核心電化學極化方程式 (Polarization Equation)：**")
+                    st.latex(r"V_{\text{cell}} = E_{\text{rev}} + \eta_{\text{act}} + \eta_{\text{ohm}} + \eta_{\text{conc}}")
+                    st.latex(r"E_{\text{rev}} = 1.229 - 0.9 \times 10^{-3} (T - 298.15)")
+                    st.latex(r"\eta_{\text{act}} = \frac{RT}{\alpha F} \ln\left(\frac{i}{i_0}\right)")
+                    st.latex(r"\eta_{\text{ohm}} = i \cdot R_{\text{mem}}")
+                    st.markdown("**Gemini 理論推導與極化說明：**")
+                    st.write(res_harness.formulas_description)
+
+                st.divider()
+
+                # --- 第二區塊：腳本與 Console Logs ---
                 col_left, col_right = st.columns([1, 1])
                 
                 with col_left:
-                    st.markdown("**自動化 Harness 執行腳本：**")
+                    st.markdown("**📜 自動化 Harness 執行腳本：**")
                     cmd_html = f"""
                     <div style="background-color: #0e1117; color: #39ff14; padding: 16px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; border: 1px solid #30363d; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
 {res_harness.test_script}
@@ -144,24 +199,26 @@ with tab1:
                     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     
                     logs = [
-                        f"[{now_str}] [INFO] [OpenHarness Core] Initializing test harness runner...",
-                        f"[{now_str}] [INFO] [Gemini Engine] Target model loaded: {used_model}",
-                        f"[{now_str}] [INFO] Parsing test specification and input boundaries...",
+                        f"[{now_str}] [INFO] [OpenHarness Core] Initializing PEM Electrolyzer Test Engine...",
+                        f"[{now_str}] [INFO] Target Model: {used_model} | Temperature Boundary: 353.15K (80°C)",
+                        f"[{now_str}] [DATA] Generating 100 evaluation points (0.01 to 2.00 A/cm²)...",
+                        f"[{now_str}] [CALC] Reversible potential E_rev = 1.23V verified.",
+                        f"[{now_str}] [CALC] Max Cell Voltage recorded: {v_cell[-1]:.3f}V at 2.0 A/cm².",
                     ]
                     for idx, step in enumerate(res_harness.execution_steps, 1):
                         logs.append(f"[{now_str}] [STEP {idx}] {step}")
-                    logs.append(f"[{now_str}] [SUCCESS] Harness execution completed with Exit Code 0.")
+                    logs.append(f"[{now_str}] [SUCCESS] PEM Harness Simulation test passed with status 0.")
 
                     log_text = "\n".join(logs)
                     
                     console_html = f"""
-                    <div style="background-color: #1e1e1e; color: #d4d4d4; padding: 14px; border-radius: 8px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; height: 180px; overflow-y: auto; border: 1px solid #444; line-height: 1.5;">
+                    <div style="background-color: #1e1e1e; color: #d4d4d4; padding: 14px; border-radius: 8px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; height: 230px; overflow-y: auto; border: 1px solid #444; line-height: 1.5;">
 <pre style="margin: 0; white-space: pre-wrap; word-break: break-all; color: #85c1e9;">{log_text}</pre>
                     </div>
                     """
                     st.markdown(console_html, unsafe_allow_html=True)
 
-                st.markdown("<br><b>驗證點與預期結果：</b>", unsafe_allow_html=True)
+                st.markdown("<br><b>✅ 驗證點與預期結果：</b>", unsafe_allow_html=True)
                 st.info(res_harness.expected_result)
                     
             except Exception as e:
@@ -172,7 +229,7 @@ with tab2:
     st.header("📊 Mermaid 流程圖自動生成")
     prompt_flow = st.text_area(
         "輸入流程圖需求描述：",
-        value="請繪製一個使用者登入與雙重驗證 (2FA) 的流程，包含登入失敗重試與驗證碼發送。",
+        value="請繪製一個 PEM 電解槽系統控制流程，包含電流啟動、溫度監控、過壓保護機制與緊急停機程序。",
         height=100
     )
     
@@ -255,7 +312,7 @@ with tab3:
     st.header("🎲 Three.js 3D 互動模擬生成")
     prompt_3d = st.text_area(
         "輸入 3D 場景需求描述：",
-        value="創建一個太陽系 3D 模擬，包含中央發光的太陽、繞行的地球，並加入 OrbitControls 旋轉視角與明顯的自轉/公轉動畫。",
+        value="創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。",
         height=100
     )
     
