@@ -11,13 +11,19 @@ st.set_page_config(page_title="CLI + Gemini 模擬器", layout="wide", page_icon
 st.title("🚀 CLI + Gemini 自動生成流程圖與 3D 模擬")
 st.caption("結合 Gemini 2.5 結構化輸出與前端渲染技術")
 
-# 檢查與取得 API Key (優先讀取 Secrets，若無則提供 Sidebar 輸入)
-api_key = os.environ.get("GEMINI_API_KEY")
+# 優先讀取 Streamlit Secrets 或環境變數
+api_key = None
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+elif os.environ.get("GEMINI_API_KEY"):
+    api_key = os.environ.get("GEMINI_API_KEY")
+
+# 如果 Secrets 沒設定，才在左側顯示手動輸入框作為備用
 if not api_key:
     api_key = st.sidebar.text_input("輸入 Gemini API Key", type="password")
 
 if not api_key:
-    st.warning("請先在左側邊欄輸入你的 GEMINI_API_KEY，或於 Streamlit Secrets 中設定。")
+    st.warning("請先在 Streamlit Secrets 設定 GEMINI_API_KEY，或於左側邊欄輸入金鑰。")
     st.stop()
 
 client = genai.Client(api_key=api_key)
