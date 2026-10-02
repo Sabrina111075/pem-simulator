@@ -25,7 +25,7 @@ with st.sidebar:
     
     # 填入 Secrets 中的 Key，或允許使用者輸入
     api_key_input = st.text_input(
-        "AQ.Ab8RN6JDcsOVBjuxZv_JNkw5Ks2xXU-7_HS-XkFngIUtiiSnLQ",
+        "AIzaSyDfIAeAuF89St4fozh4-Q1exM2GUZpfN1M",
         value=SECRET_API_KEY,
         type="password",
         help="已自動載入固定的 API Key，亦可手動調整"
