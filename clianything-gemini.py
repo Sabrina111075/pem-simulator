@@ -11,6 +11,11 @@ st.set_page_config(page_title="OpenHarness & CLI + Gemini AI 整合平台", layo
 st.title("⚡ OpenHarness & CLI-Anything + Gemini AI 整合工作台")
 st.caption("結合系統自動化測試、Mermaid 流程圖繪製與 Three.js 3D 互動模擬")
 
+# -------------------------------------------------------------------
+# 邊欄設定：模型選擇與 API Key 輸入
+# -------------------------------------------------------------------
+st.sidebar.header("⚙️ 系統設定")
+
 # 優先讀取 Streamlit Secrets 或環境變數
 api_key = None
 if "GEMINI_API_KEY" in st.secrets:
@@ -25,19 +30,32 @@ if not api_key:
     st.warning("請先在 Streamlit Secrets 設定 GEMINI_API_KEY，或於左側邊欄輸入金鑰。")
     st.stop()
 
+# 模型選擇選單 (以 3.5-flash-lite 為優先)
+selected_model_option = st.sidebar.selectbox(
+    "選擇偏好的 Gemini 模型：",
+    options=[
+        "gemini-3.5-flash-lite (最快回應)",
+        "gemini-3.6-flash (全方位)",
+        "gemini-3.1-pro (進階推論)",
+        "自動備援 (Auto Fallback)"
+    ],
+    index=0
+)
+
+# 解析選定的模型名稱
+if "3.5-flash-lite" in selected_model_option:
+    MODEL_CANDIDATES = ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.1-pro"]
+elif "3.6-flash" in selected_model_option:
+    MODEL_CANDIDATES = ["gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro"]
+elif "3.1-pro" in selected_model_option:
+    MODEL_CANDIDATES = ["gemini-3.1-pro", "gemini-3.6-flash", "gemini-3.5-flash-lite"]
+else:
+    MODEL_CANDIDATES = ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.1-pro"]
+
 client = genai.Client(api_key=api_key)
 
-# -------------------------------------------------------------------
-# 模型備援順序
-# -------------------------------------------------------------------
-MODEL_CANDIDATES = [
-    "gemini-3.5-flash-lite",
-    "gemini-3.6-flash",
-    "gemini-3.1-pro"
-]
-
 def generate_with_fallback(contents, system_instruction, response_schema, temperature=0.2):
-    """具備自動備援機制的生成函式"""
+    """具備模型調用與自動備援機制的生成函式"""
     last_error = None
     for model_name in MODEL_CANDIDATES:
         try:
@@ -55,7 +73,7 @@ def generate_with_fallback(contents, system_instruction, response_schema, temper
         except Exception as e:
             last_error = e
             continue
-    raise RuntimeError(f"所有模型呼叫皆失敗，最後錯誤訊息：{last_error}")
+    raise RuntimeError(f"模型呼叫失敗，錯誤訊息：{last_error}")
 
 # -------------------------------------------------------------------
 # Pydantic 結構化輸出定義
@@ -108,9 +126,9 @@ with tab1:
                 st.success(f"✅ 測試腳本規劃完成！（成功調用模型：`{used_model}`）")
                 
                 st.markdown("**自動化 Harness 執行腳本：**")
-                # 使用原生 HTML/CSS 解決指令截斷問題，自動換行
+                # terminal 風格 CSS，解決換行與截斷問題
                 cmd_html = f"""
-                <div style="background-color: #0e1117; color: #00ff66; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 14px; white-space: pre-wrap; word-break: break-all; border: 1px solid #30363d;">
+                <div style="background-color: #0e1117; color: #39ff14; padding: 16px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; border: 1px solid #30363d; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
 {res_harness.test_script}
                 </div>
                 """
@@ -145,7 +163,7 @@ with tab2:
                 st.caption(f"使用模型：`{used_model}`")
                 st.write(res.description)
                 
-                # Mermaid 容器加入 svg-pan-zoom 與最適比例控制，解決 giant-node 與捲軸問題
+                # Mermaid 放大、置中與可互動縮放模組
                 html_code = f"""
                 <!DOCTYPE html>
                 <html>
@@ -154,15 +172,15 @@ with tab2:
                     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
                     <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
                     <style>
-                        body {{ margin: 0; padding: 0; background: #fafafa; overflow: hidden; }}
-                        #container {{ width: 100vw; height: 500px; border: 1px solid #e0e0e0; border-radius: 8px; background: #ffffff; display: flex; justify-content: center; align-items: center; }}
-                        .mermaid {{ width: 100%; height: 100%; }}
-                        .hint {{ position: absolute; top: 10px; right: 15px; font-size: 12px; color: #888; background: rgba(255,255,255,0.8); padding: 4px 8px; border-radius: 4px; pointer-events: none; }}
+                        body {{ margin: 0; padding: 0; background: #fafafa; font-family: sans-serif; overflow: hidden; }}
+                        #container {{ width: 100vw; height: 620px; border: 1px solid #dcdcdc; border-radius: 8px; background: #ffffff; display: flex; justify-content: center; align-items: center; position: relative; }}
+                        .mermaid {{ width: 100%; height: 100%; text-align: center; }}
+                        .hint {{ position: absolute; top: 12px; right: 16px; font-size: 13px; color: #555; background: rgba(240,240,240,0.9); padding: 6px 12px; border-radius: 6px; z-index: 10; border: 1px solid #ccc; pointer-events: none; }}
                     </style>
                 </head>
                 <body>
-                    <div class="hint">💡 可使用滑鼠滾輪放大/縮小，按住左鍵拖拽移動</div>
                     <div id="container">
+                        <div class="hint">🔍 滑鼠滾輪可放大/縮小，按住左鍵拖拽平移</div>
                         <div class="mermaid">
                         {res.mermaid_code}
                         </div>
@@ -170,8 +188,8 @@ with tab2:
                     <script>
                         mermaid.initialize({{
                             startOnLoad: true,
-                            theme: 'neutral',
-                            flowchart: {{ useMaxWidth: false, htmlLabels: true }}
+                            theme: 'default',
+                            flowchart: {{ useMaxWidth: false, htmlLabels: true, curve: 'basis' }}
                         }});
                         
                         setTimeout(() => {{
@@ -180,21 +198,24 @@ with tab2:
                                 svg.style.maxWidth = "none";
                                 svg.style.height = "100%";
                                 svg.style.width = "100%";
-                                svgPanZoom(svg, {{
+                                const panZoom = svgPanZoom(svg, {{
                                     zoomEnabled: true,
                                     controlIconsEnabled: true,
                                     fit: true,
                                     center: true,
-                                    minZoom: 0.5,
-                                    maxZoom: 5
+                                    minZoom: 0.8,
+                                    maxZoom: 6,
+                                    zoomScaleSensitivity: 0.2
                                 }});
+                                panZoom.zoom(1.25);
+                                panZoom.center();
                             }}
-                        }}, 600);
+                        }}, 700);
                     </script>
                 </body>
                 </html>
                 """
-                components.html(html_code, height=530)
+                components.html(html_code, height=650)
                 
                 with st.expander("檢視原始 Mermaid 語法"):
                     st.code(res.mermaid_code, language="mermaid")
@@ -229,7 +250,7 @@ with tab3:
                 st.caption(f"使用模型：`{used_model}`")
                 st.write(res_3d.summary)
                 
-                # 渲染 3D HTML 並附帶互動說明
+                # 渲染 3D HTML
                 components.html(res_3d.html_code, height=550)
                 st.caption("💡 **3D 操作說明**：按住滑鼠左鍵可拖拽旋轉視角，滑鼠滾輪拉近/拉遠，按住右鍵拖拽可平移畫面。")
                 
