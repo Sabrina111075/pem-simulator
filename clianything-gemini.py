@@ -8,6 +8,16 @@ from pydantic import BaseModel, Field
 # 頁面標題與佈局設定
 st.set_page_config(page_title="OpenHarness & CLI + Gemini AI 整合平台", layout="wide", page_icon="⚡")
 
+# 自訂 CSS 優化文字顯示與程式碼換行
+st.markdown("""
+<style>
+    .stCodeBlock code {
+        white-space: pre-wrap !important;
+        word-break: break-all !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("⚡ OpenHarness & CLI-Anything + Gemini AI 整合工作台")
 st.caption("結合系統自動化測試、Mermaid 流程圖繪製與 Three.js 3D 互動模擬")
 
@@ -18,7 +28,6 @@ if "GEMINI_API_KEY" in st.secrets:
 elif os.environ.get("GEMINI_API_KEY"):
     api_key = os.environ.get("GEMINI_API_KEY")
 
-# 如果 Secrets 沒設定，才在左側顯示手動輸入框作為備用
 if not api_key:
     api_key = st.sidebar.text_input("輸入 Gemini API Key", type="password")
 
@@ -29,7 +38,7 @@ if not api_key:
 client = genai.Client(api_key=api_key)
 
 # -------------------------------------------------------------------
-# 免費模式優先順序：3.5 Flash-Lite -> 3.6 Flash -> 3.1 Pro
+# 模型備援順序
 # -------------------------------------------------------------------
 MODEL_CANDIDATES = [
     "gemini-3.5-flash-lite",
@@ -74,14 +83,14 @@ class ThreeJSOutput(BaseModel):
 
 class HarnessTestOutput(BaseModel):
     test_title: str = Field(description="測試案例名稱")
-    test_script: str = Field(description="自動化測試或 CLI 執行腳本內容")
+    test_script: str = Field(description="自動化測試或 CLI 執行腳本內容，需完整不截斷")
     expected_result: str = Field(description="預期測試結果與驗證標準")
 
 # -------------------------------------------------------------------
 # 功能頁籤
 # -------------------------------------------------------------------
 tab1, tab2, tab3 = st.tabs([
-    "🛠️️ OpenHarness 自動化測試引擎", 
+    "🛠️ OpenHarness 自動化測試引擎", 
     "📊 Mermaid 流程圖生成", 
     "🎲 Three.js 3D 模擬生成"
 ])
@@ -100,7 +109,7 @@ with tab1:
             try:
                 res_harness, used_model = generate_with_fallback(
                     contents=prompt_harness,
-                    system_instruction="你是一個資深系統測試工程師與 OpenHarness 架構專家。請根據需求設計完整的測試腳本與驗證邏輯。",
+                    system_instruction="你是一個資深系統測試工程師與 OpenHarness 架構專家。請根據需求設計完整的測試腳本與驗證邏輯，並確保命令列格式清晰可用。",
                     response_schema=HarnessTestOutput,
                     temperature=0.2
                 )
@@ -108,13 +117,11 @@ with tab1:
                 st.subheader(f"📋 {res_harness.test_title}")
                 st.success(f"✅ 測試腳本規劃完成！（成功調用模型：`{used_model}`）")
                 
-                col1, col2 = st.columns([2, 1])
-                with col1:
-                    st.markdown("**自動化 Harness 執行腳本：**")
-                    st.code(res_harness.test_script, language="python")
-                with col2:
-                    st.markdown("**驗證點與預期結果：**")
-                    st.info(res_harness.expected_result)
+                st.markdown("**自動化 Harness 執行腳本：**")
+                st.code(res_harness.test_script, language="bash")
+                
+                st.markdown("**驗證點與預期結果：**")
+                st.info(res_harness.expected_result)
                     
             except Exception as e:
                 st.error(f"生成失敗：{e}")
@@ -133,7 +140,7 @@ with tab2:
             try:
                 res, used_model = generate_with_fallback(
                     contents=prompt_flow,
-                    system_instruction="你是一個頂級系統架構師，請根據需求生成標準的 Mermaid.js flowchart (TD或LR) 語法。",
+                    system_instruction="你是一個頂級系統架構師，請根據需求生成標準、節點清晰且方向明確的 Mermaid.js flowchart (TD 或 LR) 語法。",
                     response_schema=FlowchartOutput,
                     temperature=0.2
                 )
@@ -142,22 +149,33 @@ with tab2:
                 st.caption(f"使用模型：`{used_model}`")
                 st.write(res.description)
                 
-                # HTML 渲染 Mermaid
+                # 優化 Mermaid 視窗，調高容器並加入縮放居中樣式
                 html_code = f"""
                 <!DOCTYPE html>
                 <html>
                 <head>
+                    <meta charset="utf-8">
                     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-                    <script>mermaid.initialize({{startOnLoad:true, theme:'default'}});</script>
+                    <script>
+                        mermaid.initialize({{
+                            startOnLoad: true, 
+                            theme: 'neutral',
+                            flowchart: {{ useMaxWidth: true, htmlLabels: true, curve: 'basis' }}
+                        }});
+                    </script>
+                    <style>
+                        body {{ margin: 0; padding: 20px; background: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 90vh; }}
+                        .mermaid {{ width: 100%; text-align: center; }}
+                    </style>
                 </head>
-                <body style="background:transparent; display:flex; justify-content:center;">
+                <body>
                     <div class="mermaid">
                     {res.mermaid_code}
                     </div>
                 </body>
                 </html>
                 """
-                components.html(html_code, height=450, scrolling=True)
+                components.html(html_code, height=750, scrolling=True)
                 
                 with st.expander("檢視原始 Mermaid 語法"):
                     st.code(res.mermaid_code, language="mermaid")
@@ -170,7 +188,7 @@ with tab3:
     st.header("🎲 Three.js 3D 互動模擬生成")
     prompt_3d = st.text_area(
         "輸入 3D 場景需求描述：",
-        value="創建一個太陽系 3D 模擬，包含中央發光的太陽、繞行的地球，並加入 OrbitControls 旋轉視角。",
+        value="創建一個太陽系 3D 模擬，包含中央發光的太陽、繞行的地球，並加入 OrbitControls 旋轉視角與明顯的自轉/公轉動畫。",
         height=100
     )
     
@@ -179,7 +197,11 @@ with tab3:
             try:
                 res_3d, used_model = generate_with_fallback(
                     contents=prompt_3d,
-                    system_instruction="你是一個 Three.js 3D 專家。請生成一個包含 CDN 引入、燈光、軌道控制與動畫循環的完整單一 HTML 檔案。",
+                    system_instruction=(
+                        "你是一個 Three.js 3D 專家。"
+                        "請生成一個包含 CDN 引入 (Three.js + OrbitControls)、點光源/環境光、高質感材質、明顯的 requestAnimationFrame 動態旋轉動畫，"
+                        "以及滿版 Canvas 的單一完整 HTML 檔案。"
+                    ),
                     response_schema=ThreeJSOutput,
                     temperature=0.4
                 )
@@ -188,8 +210,8 @@ with tab3:
                 st.caption(f"使用模型：`{used_model}`")
                 st.write(res_3d.summary)
                 
-                # 渲染 3D HTML
-                components.html(res_3d.html_code, height=550)
+                # 渲染 3D HTML，高度提升至 650
+                components.html(res_3d.html_code, height=650)
                 
             except Exception as e:
                 st.error(f"生成失敗：{e}")
