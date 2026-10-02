@@ -28,6 +28,9 @@ if not api_key:
 
 client = genai.Client(api_key=api_key)
 
+# 設定採用的 Gemini 模型名稱
+MODEL_NAME = "gemini-2.5-flash"
+
 # -------------------------------------------------------------------
 # Pydantic 結構化輸出定義
 # -------------------------------------------------------------------
@@ -69,7 +72,7 @@ with tab1:
         with st.spinner("OpenHarness 引擎正在規劃測試腳本..."):
             try:
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model=MODEL_NAME,
                     contents=prompt_harness,
                     config=types.GenerateContentConfig(
                         system_instruction="你是一個資深系統測試工程師與 OpenHarness 架構專家。請根據需求設計完整的測試腳本與驗證邏輯。",
@@ -107,7 +110,7 @@ with tab2:
         with st.spinner("Gemini 正在規劃流程圖架構..."):
             try:
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model=MODEL_NAME,
                     contents=prompt_flow,
                     config=types.GenerateContentConfig(
                         system_instruction="你是一個頂級系統架構師，請根據需求生成標準的 Mermaid.js flowchart (TD或LR) 語法。",
@@ -157,7 +160,7 @@ with tab3:
         with st.spinner("Gemini 正在撰寫 Three.js 程式碼..."):
             try:
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model=MODEL_NAME,
                     contents=prompt_3d,
                     config=types.GenerateContentConfig(
                         system_instruction="你是一個 Three.js 3D 專家。請生成一個包含 CDN 引入、燈光、軌道控制與動畫循環的完整單一 HTML 檔案。",
