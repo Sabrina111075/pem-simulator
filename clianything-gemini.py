@@ -329,6 +329,33 @@ with tab3:
     )
 
     if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
-        with st.spinner("Gemini 正在撰寫 Three.js 程式碼..."):
-            # 這裡放置你的 3D 生成與 Three.js 渲染邏輯
-            pass
+        with st.spinner("Gemini 正在撰寫 Three.js 3D 場景程式碼..."):
+            try:
+                # 呼叫 Gemini 生成 Three.js HTML 內容
+                system_prompt_3d = (
+                    "你是一個頂級 3D WebGL / Three.js 開發專家。請根據需求輸出完整的 HTML 程式碼，"
+                    "包含 Three.js (r128) 和 OrbitControls CDN，建構可旋轉/縮放的 3D 場景與動畫。"
+                    "請只輸出 HTML/JS 程式碼，不要包含 Markdown 標記。"
+                )
+                
+                res, used_model = generate_with_fallback(
+                    contents=prompt_3d,
+                    system_instruction=system_prompt_3d,
+                    temperature=0.3
+                )
+
+                st.caption(f"使用模型：`{used_model}`")
+
+                # 清理產出的 HTML 內容（去除可能包裹的 ```html 標記）
+                html_content = res if isinstance(res, str) else getattr(res, 'text', str(res))
+                if "```html" in html_content:
+                    html_content = html_content.split("```html")[1].split("```")[0]
+                elif "```" in html_content:
+                    html_content = html_content.split("```")[1].split("```")[0]
+
+                # 使用 Streamlit HTML 組件渲染 3D 場景
+                import streamlit.components.v1 as components
+                components.html(html_content, height=650, scrolling=True)
+
+            except Exception as e:
+                st.error(f"3D 場景生成失敗：{e}")
