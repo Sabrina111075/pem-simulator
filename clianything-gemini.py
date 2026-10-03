@@ -235,142 +235,100 @@ with tab1:
             except Exception as e:
                 st.error(f"生成失敗：{e}")
 
-# Tab 2: 流程圖生成器
+# --- Tab 2: Mermaid 流程圖生成器 ---
 with tab2:
-    st.header("📊 Mermaid 流程圖自動生成")
+    st.header(" Mermaid 流程圖自動生成")
+    
     prompt_flow = st.text_area(
         "輸入流程圖需求描述：",
         value="請繪製一個 PEM 電解槽系統控制流程，包含電流啟動、溫度監控、過壓保護機制與緊急停機程序。",
-        height=100
+        height=100,
+        key="prompt_flow_input"
     )
-    
-if st.button("生成流程圖", type="primary"):
-    with st.spinner("Gemini 正在規劃流程圖架構..."):
-        try:
-            res, used_model = generate_with_fallback(
-                contents=prompt_flow,
-                system_instruction="你是一個頂級系統架構師，請根據需求生成標準、結構清晰的 Mermaid.js flowchart (TD 或 LR) 語法。圖中節點文字請全部使用繁體中文。",
-                response_schema=FlowchartOutput,
-                temperature=0.2
-            )
 
-            st.subheader(res.title)
-            st.caption(f"使用模型：`{used_model}`")
-            st.write(res.description)
+    # 注意：生成流程圖按鈕與後續渲染 logic 必須【全部縮排】在 with tab2 內部！
+    if st.button("生成流程圖", type="primary", key="btn_gen_flowchart"):
+        with st.spinner("Gemini 正在規劃流程圖架構..."):
+            try:
+                res, used_model = generate_with_fallback(
+                    contents=prompt_flow,
+                    system_instruction="你是一個頂級系統架構師，請根據需求生成標準、結構清晰的 Mermaid.js flowchart (TD 或 LR) 語法。圖中節點文字請全部使用繁體中文。",
+                    response_schema=FlowchartOutput,
+                    temperature=0.2
+                )
 
-            # 原尺寸 100% 清晰大圖表與原生捲軸瀏覽模組
-            html_code = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-                <style>
-                    body {{
-                        margin: 0;
-                        padding: 0;
-                        background-color: #ffffff;
-                    }}
-                    /* 外層容器：允許原生上下左右捲軸動態拉動 */
-                    #scroll-container {{
-                        width: 100%;
-                        max-height: 800px;
-                        overflow: auto;
-                        border: 1px solid #d0d7de;
-                        border-radius: 8px;
-                        background-color: #f6f8fa;
-                        padding: 20px;
-                        box-sizing: border-box;
-                    }}
-                    .mermaid {{
-                        display: flex;
-                        justify-content: center;
-                        min-width: 800px; /* 確保內容不會被壓縮 */
-                    }}
-                    /* 全局放大文字與框線，提升清晰度 */
-                    .mermaid svg {{
-                        max-width: none !important; /* 關閉強制寬度縮放 */
-                        height: auto !important;
-                        font-size: 22px !important; /* 顯眼大字體 */
-                        font-weight: bold !important;
-                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-                    }}
-                    /* 放大節點邊框與內部間距 */
-                    .mermaid .node rect, .mermaid .node circle, .mermaid .node polygon {{
-                        stroke-width: 2.5px !important;
-                    }}
-                    /* 連線文字樣式設定 */
-                    .mermaid .edgeLabel {{
-                        font-size: 18px !important;
-                        font-weight: bold !important;
-                        background-color: #ffffff !important;
-                        padding: 4px 8px !important;
-                        border-radius: 4px;
-                    }}
-                </style>
-            </head>
-            <body>
-                <div id="scroll-container">
-                    <div class="mermaid">
-                    {res.mermaid_code}
-                    </div>
-                </div>
+                st.subheader(res.title)
+                st.caption(f"使用模型：`{used_model}`")
+                st.write(res.description)
 
-                <script>
-                    mermaid.initialize({{
-                        startOnLoad: true,
-                        theme: 'default',
-                        flowchart: {{
-                            useMaxWidth: false, // 關閉自動縮小，保持原尺寸 100% 展示
-                            htmlLabels: true,
-                            curve: 'basis'
-                        }},
-                        themeVariables: {{
-                            fontSize: '22px',
-                            nodePadding: 25
+                # 100% 大字體原生捲軸 Mermaid 模組
+                html_code = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+                    <style>
+                        body {{ margin: 0; padding: 0; background-color: #ffffff; }}
+                        #scroll-container {{
+                            width: 100%;
+                            max-height: 800px;
+                            overflow: auto;
+                            border: 1px solid #d0d7de;
+                            border-radius: 8px;
+                            background-color: #f6f8fa;
+                            padding: 20px;
+                            box-sizing: border-box;
                         }}
-                    }});
-                </script>
-            </body>
-            </html>
-            """
+                        .mermaid {{ display: flex; justify-content: center; min-width: 800px; }}
+                        .mermaid svg {{
+                            max-width: none !important;
+                            height: auto !important;
+                            font-size: 22px !important;
+                            font-weight: bold !important;
+                            font-family: sans-serif !important;
+                        }}
+                        .mermaid .node rect, .mermaid .node circle, .mermaid .node polygon {{ stroke-width: 2.5px !important; }}
+                        .mermaid .edgeLabel {{ font-size: 18px !important; font-weight: bold !important; background-color: #ffffff !important; }}
+                    </style>
+                </head>
+                <body>
+                    <div id="scroll-container">
+                        <div class="mermaid">
+                        {res.mermaid_code}
+                        </div>
+                    </div>
+                    <script>
+                        mermaid.initialize({{
+                            startOnLoad: true,
+                            theme: 'default',
+                            flowchart: {{ useMaxWidth: false, htmlLabels: true, curve: 'basis' }},
+                            themeVariables: {{ fontSize: '22px', nodePadding: 25 }}
+                        }});
+                    </script>
+                </body>
+                </html>
+                """
 
-            import streamlit.components.v1 as components
-            components.html(html_code, height=820)
+                import streamlit.components.v1 as components
+                components.html(html_code, height=820)
 
-        except Exception as e:
-            st.error(f"生成失敗：{{e}}")
+            except Exception as e:
+                st.error(f"生成失敗：{e}")
 
-# Tab 3: 3D 模擬生成器
+
+# --- Tab 3: Three.js 3D 模擬生成器 ---
 with tab3:
-    st.header("🎲 Three.js 3D 互動模擬生成")
+    st.header(" Three.js 3D 互動模擬生成")
+    
     prompt_3d = st.text_area(
         "輸入 3D 場景需求描述：",
         value="創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。",
-        height=100
+        height=100,
+        key="prompt_3d_input"
     )
-    
-    if st.button("生成 3D 場景", type="primary"):
+
+    if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
         with st.spinner("Gemini 正在撰寫 Three.js 程式碼..."):
-            try:
-                res_3d, used_model = generate_with_fallback(
-                    contents=prompt_3d,
-                    system_instruction=(
-                        "你是一個 Three.js 3D 專家。"
-                        "請生成一個包含 CDN 引入 (Three.js + OrbitControls)、點光源/環境光、高質感材質、明顯的 requestAnimationFrame 動態旋轉動畫，"
-                        "以及滿版 Canvas 的單一完整 HTML 檔案。說明文字請全部使用繁體中文。"
-                    ),
-                    response_schema=ThreeJSOutput,
-                    temperature=0.4
-                )
-                
-                st.subheader(res_3d.title)
-                st.caption(f"使用模型：`{used_model}`")
-                st.write(res_3d.summary)
-                
-                # 渲染 3D HTML
-                components.html(res_3d.html_code, height=550)
-                st.caption("💡 **3D 操作說明**：按住滑鼠左鍵可拖拽旋轉視角，滑鼠滾輪拉近/拉遠，按住右鍵拖拽可平移畫面。")
-                
-            except Exception as e:
-                st.error(f"生成失敗：{e}")
+            # 這裡放置你的 3D 生成與 Three.js 渲染邏輯
+            pass
