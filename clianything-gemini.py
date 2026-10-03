@@ -258,59 +258,100 @@ with tab2:
                 st.caption(f"使用模型：`{used_model}`")
                 st.write(res.description)
                 
-                # Mermaid 放大、置中與可互動縮放模組
-                html_code = f"""
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="utf-8">
-                    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-                    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
-                    <style>
-                        body {{ margin: 0; padding: 0; background: #fafafa; font-family: sans-serif; overflow: hidden; }}
-                        #container {{ width: 100vw; height: 620px; border: 1px solid #dcdcdc; border-radius: 8px; background: #ffffff; display: flex; justify-content: center; align-items: center; position: relative; }}
-                        .mermaid {{ width: 100%; height: 100%; text-align: center; }}
-                        .hint {{ position: absolute; top: 12px; right: 16px; font-size: 13px; color: #555; background: rgba(240,240,240,0.9); padding: 6px 12px; border-radius: 6px; z-index: 10; border: 1px solid #ccc; pointer-events: none; }}
-                    </style>
-                </head>
-                <body>
-                    <div id="container">
-                        <div class="hint">🔍 滑鼠滾輪可放大/縮小，按住左鍵拖拽平移</div>
-                        <div class="mermaid">
-                        {res.mermaid_code}
-                        </div>
-                    </div>
-                    <script>
-                        mermaid.initialize({{
-                            startOnLoad: true,
-                            theme: 'default',
-                            flowchart: {{ useMaxWidth: false, htmlLabels: true, curve: 'basis' }}
-                        }});
-                        
-                        setTimeout(() => {{
-                            const svg = document.querySelector("#container svg");
-                            if (svg) {{
-                                svg.style.maxWidth = "none";
-                                svg.style.height = "100%";
-                                svg.style.width = "100%";
-                                const panZoom = svgPanZoom(svg, {{
-                                    zoomEnabled: true,
-                                    controlIconsEnabled: true,
-                                    fit: true,
-                                    center: true,
-                                    minZoom: 0.8,
-                                    maxZoom: 6,
-                                    zoomScaleSensitivity: 0.2
-                                }});
-                                panZoom.zoom(1.25);
-                                panZoom.center();
-                            }}
-                        }}, 700);
-                    </script>
-                </body>
-                </html>
-                """
-                components.html(html_code, height=650)
+        # Mermaid 放大、置中與可互動縮放模組
+        html_code = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+            <style>
+                body {{
+                    margin: 0;
+                    padding: 0;
+                    background-color: #ffffff;
+                }}
+                #container {{
+                    width: 100%;
+                    height: 600px;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 8px;
+                    background-color: #fafafa;
+                    overflow: hidden;
+                    position: relative;
+                }}
+                .mermaid {{
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }}
+                /* 強制將 Mermaid SVG 中的所有文字與節點放大 */
+                .mermaid svg {{
+                    font-size: 18px !important;
+                    font-family: sans-serif !important;
+                }}
+                .mermaid .node rect, .mermaid .node circle, .mermaid .node polygon {{
+                    stroke-width: 2px !important;
+                }}
+                .mermaid .edgeLabel {{
+                    font-size: 16px !important;
+                    background-color: #ffffff !important;
+                }}
+            </style>
+        </head>
+        <body>
+            <div id="container">
+                <div class="mermaid" id="mermaid-target">
+                {res.mermaid_code}
+                </div>
+            </div>
+
+            <script>
+                // 初始化 Mermaid：停用自動最大寬度限制，並加大字體
+                mermaid.initialize({{
+                    startOnLoad: true,
+                    theme: 'default',
+                    flowchart: {{
+                        useMaxWidth: false,
+                        htmlLabels: true,
+                        curve: 'basis'
+                    }},
+                    themeVariables: {{
+                        fontSize: '18px',
+                        nodePadding: 20
+                    }}
+                }});
+
+                // 待 Mermaid 渲染出 SVG 後，綁定 svg-pan-zoom 啟用滾輪縮放與拖拽
+                window.addEventListener('DOMContentLoaded', (event) => {{
+                    setTimeout(function() {{
+                        var svgElement = document.querySelector("#mermaid-target svg");
+                        if (svgElement) {{
+                            svgElement.style.width = "100%";
+                            svgElement.style.height = "100%";
+                            
+                            svgPanZoom(svgElement, {{
+                                zoomEnabled: true,
+                                controlIconsEnabled: true, // 右上角顯示 +/-/Reset 縮放控制鈕
+                                fit: true,
+                                center: true,
+                                minZoom: 0.2,
+                                maxZoom: 10,
+                                zoomScaleSensitivity: 0.2
+                            }});
+                        }}
+                    }}, 600); // 給予 600ms 時間確保 SVG 渲染完成
+                }});
+            </script>
+        </body>
+        </html>
+        """
+
+        import streamlit.components.v1 as components
+        components.html(html_code, height=620)
                 
                 with st.expander("檢視原始 Mermaid 語法"):
                     st.code(res.mermaid_code, language="mermaid")
