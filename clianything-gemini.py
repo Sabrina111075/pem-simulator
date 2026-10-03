@@ -338,14 +338,21 @@ with tab3:
     )
 
     if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
-        with st.spinner("Gemini 正在撰寫 Three.js 3D 場景程式碼..."):
+        with st.spinner("Gemini 正在撰寫明亮清晰的 3D 場景程式碼..."):
             try:
+                # 強化 System Prompt：要求繁體中文、淺色背景、合適的光源與流暢旋轉速度
                 system_prompt_3d = (
-                    "你是一個頂級 3D WebGL / Three.js 開發專家。請根據需求生成完整的 Three.js 3D 模擬場景。"
-                    "html_code 欄位必須包含完整的 <html> 標籤、Three.js (r128) CDN、OrbitControls，以及建構可旋轉/縮放 3D 場景與氣泡動畫的 JavaScript 程式碼。"
+                    "你是一個頂級 3D WebGL / Three.js 開發專家。"
+                    "【語言要求】title 與 description 必須完全使用繁體中文說明。"
+                    "【視覺風格】請建立風格明亮、簡潔且現代化的 3D 場景："
+                    "1. 背景設定為淺灰/白色（例如 #f5f7fa），絕對不要使用黑沉沉的背景。"
+                    "2. 增加 AmbientLight（強度 0.8）與 DirectionalLight（強度 0.8），確保所有組件顏色鮮明且層次清晰。"
+                    "3. 陽極極板（金屬灰）、陰極極板（銀灰色）與中央 PEM 質子膜（半透明天藍色）需有明顯視覺區隔。"
+                    "【效能與控制】"
+                    "1. OrbitControls 啟用 controls.autoRotate = true，並設定 autoRotateSpeed = 2.5 以保證流暢轉動。"
+                    "2. 粒子數量控制在 60 個以內（陽極氧氣泡藍色/陰極氫氣泡紅色），保持高效能與順暢度。"
                 )
                 
-                # 補上 response_schema=ThreeJSOutput 參數
                 res, used_model = generate_with_fallback(
                     contents=prompt_3d,
                     system_instruction=system_prompt_3d,
@@ -357,7 +364,7 @@ with tab3:
                 st.caption(f"使用模型：`{used_model}`")
                 st.write(res.description)
 
-                # 清理 code block 標記（若 Gemini 產出的 html_code 包含 ```html）
+                # 清理代碼區塊標籤
                 raw_html = res.html_code
                 if "```html" in raw_html:
                     raw_html = raw_html.split("```html")[1].split("```")[0]
