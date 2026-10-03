@@ -104,7 +104,7 @@ class HarnessTestOutput(BaseModel):
 # 功能頁籤
 # -------------------------------------------------------------------
 tab1, tab2, tab3 = st.tabs([
-    "🛠️ OpenHarness PEM電解槽模擬與測試", 
+    "🛠️ OpenHarness 自動化引擎模擬與測試", 
     "📊 Mermaid 流程圖生成", 
     "🎲 Three.js 3D 模擬生成"
 ])
