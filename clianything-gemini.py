@@ -258,53 +258,60 @@ if st.button("生成流程圖", type="primary"):
             st.caption(f"使用模型：`{used_model}`")
             st.write(res.description)
 
-            # Mermaid 放大、置中與可互動縮放模組
+            # 原尺寸 100% 清晰大圖表與原生捲軸瀏覽模組
             html_code = f"""
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="utf-8">
-                <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-                <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
                 <style>
                     body {{
                         margin: 0;
                         padding: 0;
                         background-color: #ffffff;
                     }}
-                    #container {{
+                    /* 外層容器：允許原生上下左右捲軸動態拉動 */
+                    #scroll-container {{
                         width: 100%;
-                        height: 600px;
-                        border: 1px solid #e0e0e0;
+                        max-height: 800px;
+                        overflow: auto;
+                        border: 1px solid #d0d7de;
                         border-radius: 8px;
-                        background-color: #fafafa;
-                        overflow: hidden;
-                        position: relative;
+                        background-color: #f6f8fa;
+                        padding: 20px;
+                        box-sizing: border-box;
                     }}
                     .mermaid {{
-                        width: 100%;
-                        height: 100%;
                         display: flex;
                         justify-content: center;
-                        align-items: center;
+                        min-width: 800px; /* 確保內容不會被壓縮 */
                     }}
-                    /* 強制放大字體 */
+                    /* 全局放大文字與框線，提升清晰度 */
                     .mermaid svg {{
-                        font-size: 18px !important;
-                        font-family: sans-serif !important;
+                        max-width: none !important; /* 關閉強制寬度縮放 */
+                        height: auto !important;
+                        font-size: 22px !important; /* 顯眼大字體 */
+                        font-weight: bold !important;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
                     }}
+                    /* 放大節點邊框與內部間距 */
                     .mermaid .node rect, .mermaid .node circle, .mermaid .node polygon {{
-                        stroke-width: 2px !important;
+                        stroke-width: 2.5px !important;
                     }}
+                    /* 連線文字樣式設定 */
                     .mermaid .edgeLabel {{
-                        font-size: 16px !important;
+                        font-size: 18px !important;
+                        font-weight: bold !important;
                         background-color: #ffffff !important;
+                        padding: 4px 8px !important;
+                        border-radius: 4px;
                     }}
                 </style>
             </head>
             <body>
-                <div id="container">
-                    <div class="mermaid" id="mermaid-target">
+                <div id="scroll-container">
+                    <div class="mermaid">
                     {res.mermaid_code}
                     </div>
                 </div>
@@ -314,34 +321,14 @@ if st.button("生成流程圖", type="primary"):
                         startOnLoad: true,
                         theme: 'default',
                         flowchart: {{
-                            useMaxWidth: false,
+                            useMaxWidth: false, // 關閉自動縮小，保持原尺寸 100% 展示
                             htmlLabels: true,
                             curve: 'basis'
                         }},
                         themeVariables: {{
-                            fontSize: '18px',
-                            nodePadding: 20
+                            fontSize: '22px',
+                            nodePadding: 25
                         }}
-                    }});
-
-                    window.addEventListener('DOMContentLoaded', (event) => {{
-                        setTimeout(function() {{
-                            var svgElement = document.querySelector("#mermaid-target svg");
-                            if (svgElement) {{
-                                svgElement.style.width = "100%";
-                                svgElement.style.height = "100%";
-                                
-                                svgPanZoom(svgElement, {{
-                                    zoomEnabled: true,
-                                    controlIconsEnabled: true,
-                                    fit: true,
-                                    center: true,
-                                    minZoom: 0.2,
-                                    maxZoom: 10,
-                                    zoomScaleSensitivity: 0.2
-                                }});
-                            }}
-                        }}, 600);
                     }});
                 </script>
             </body>
@@ -349,7 +336,7 @@ if st.button("生成流程圖", type="primary"):
             """
 
             import streamlit.components.v1 as components
-            components.html(html_code, height=620)
+            components.html(html_code, height=820)
 
         except Exception as e:
             st.error(f"生成失敗：{{e}}")
