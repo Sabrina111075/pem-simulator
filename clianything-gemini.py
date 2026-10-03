@@ -244,120 +244,115 @@ with tab2:
         height=100
     )
     
-    if st.button("生成流程圖", type="primary"):
-        with st.spinner("Gemini 正在規劃流程圖架構..."):
-            try:
-                res, used_model = generate_with_fallback(
-                    contents=prompt_flow,
-                    system_instruction="你是一個頂級系統架構師，請根據需求生成標準、結構清晰的 Mermaid.js flowchart (TD 或 LR) 語法。圖中節點文字請全部使用繁體中文。",
-                    response_schema=FlowchartOutput,
-                    temperature=0.2
-                )
-                
-                st.subheader(res.title)
-                st.caption(f"使用模型：`{used_model}`")
-                st.write(res.description)
-                
-        # Mermaid 放大、置中與可互動縮放模組
-        html_code = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-            <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
-            <style>
-                body {{
-                    margin: 0;
-                    padding: 0;
-                    background-color: #ffffff;
-                }}
-                #container {{
-                    width: 100%;
-                    height: 600px;
-                    border: 1px solid #e0e0e0;
-                    border-radius: 8px;
-                    background-color: #fafafa;
-                    overflow: hidden;
-                    position: relative;
-                }}
-                .mermaid {{
-                    width: 100%;
-                    height: 100%;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                }}
-                /* 強制將 Mermaid SVG 中的所有文字與節點放大 */
-                .mermaid svg {{
-                    font-size: 18px !important;
-                    font-family: sans-serif !important;
-                }}
-                .mermaid .node rect, .mermaid .node circle, .mermaid .node polygon {{
-                    stroke-width: 2px !important;
-                }}
-                .mermaid .edgeLabel {{
-                    font-size: 16px !important;
-                    background-color: #ffffff !important;
-                }}
-            </style>
-        </head>
-        <body>
-            <div id="container">
-                <div class="mermaid" id="mermaid-target">
-                {res.mermaid_code}
-                </div>
-            </div>
+if st.button("生成流程圖", type="primary"):
+    with st.spinner("Gemini 正在規劃流程圖架構..."):
+        try:
+            res, used_model = generate_with_fallback(
+                contents=prompt_flow,
+                system_instruction="你是一個頂級系統架構師，請根據需求生成標準、結構清晰的 Mermaid.js flowchart (TD 或 LR) 語法。圖中節點文字請全部使用繁體中文。",
+                response_schema=FlowchartOutput,
+                temperature=0.2
+            )
 
-            <script>
-                // 初始化 Mermaid：停用自動最大寬度限制，並加大字體
-                mermaid.initialize({{
-                    startOnLoad: true,
-                    theme: 'default',
-                    flowchart: {{
-                        useMaxWidth: false,
-                        htmlLabels: true,
-                        curve: 'basis'
-                    }},
-                    themeVariables: {{
-                        fontSize: '18px',
-                        nodePadding: 20
+            st.subheader(res.title)
+            st.caption(f"使用模型：`{used_model}`")
+            st.write(res.description)
+
+            # Mermaid 放大、置中與可互動縮放模組
+            html_code = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+                <style>
+                    body {{
+                        margin: 0;
+                        padding: 0;
+                        background-color: #ffffff;
                     }}
-                }});
+                    #container {{
+                        width: 100%;
+                        height: 600px;
+                        border: 1px solid #e0e0e0;
+                        border-radius: 8px;
+                        background-color: #fafafa;
+                        overflow: hidden;
+                        position: relative;
+                    }}
+                    .mermaid {{
+                        width: 100%;
+                        height: 100%;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                    }}
+                    /* 強制放大字體 */
+                    .mermaid svg {{
+                        font-size: 18px !important;
+                        font-family: sans-serif !important;
+                    }}
+                    .mermaid .node rect, .mermaid .node circle, .mermaid .node polygon {{
+                        stroke-width: 2px !important;
+                    }}
+                    .mermaid .edgeLabel {{
+                        font-size: 16px !important;
+                        background-color: #ffffff !important;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div id="container">
+                    <div class="mermaid" id="mermaid-target">
+                    {res.mermaid_code}
+                    </div>
+                </div>
 
-                // 待 Mermaid 渲染出 SVG 後，綁定 svg-pan-zoom 啟用滾輪縮放與拖拽
-                window.addEventListener('DOMContentLoaded', (event) => {{
-                    setTimeout(function() {{
-                        var svgElement = document.querySelector("#mermaid-target svg");
-                        if (svgElement) {{
-                            svgElement.style.width = "100%";
-                            svgElement.style.height = "100%";
-                            
-                            svgPanZoom(svgElement, {{
-                                zoomEnabled: true,
-                                controlIconsEnabled: true, // 右上角顯示 +/-/Reset 縮放控制鈕
-                                fit: true,
-                                center: true,
-                                minZoom: 0.2,
-                                maxZoom: 10,
-                                zoomScaleSensitivity: 0.2
-                            }});
+                <script>
+                    mermaid.initialize({{
+                        startOnLoad: true,
+                        theme: 'default',
+                        flowchart: {{
+                            useMaxWidth: false,
+                            htmlLabels: true,
+                            curve: 'basis'
+                        }},
+                        themeVariables: {{
+                            fontSize: '18px',
+                            nodePadding: 20
                         }}
-                    }}, 600); // 給予 600ms 時間確保 SVG 渲染完成
-                }});
-            </script>
-        </body>
-        </html>
-        """
+                    }});
 
-        import streamlit.components.v1 as components
-        components.html(html_code, height=620)
-                
-                with st.expander("檢視原始 Mermaid 語法"):
-                    st.code(res.mermaid_code, language="mermaid")
-                    
-            except Exception as e:
-                st.error(f"生成失敗：{e}")
+                    window.addEventListener('DOMContentLoaded', (event) => {{
+                        setTimeout(function() {{
+                            var svgElement = document.querySelector("#mermaid-target svg");
+                            if (svgElement) {{
+                                svgElement.style.width = "100%";
+                                svgElement.style.height = "100%";
+                                
+                                svgPanZoom(svgElement, {{
+                                    zoomEnabled: true,
+                                    controlIconsEnabled: true,
+                                    fit: true,
+                                    center: true,
+                                    minZoom: 0.2,
+                                    maxZoom: 10,
+                                    zoomScaleSensitivity: 0.2
+                                }});
+                            }}
+                        }}, 600);
+                    }});
+                </script>
+            </body>
+            </html>
+            """
+
+            import streamlit.components.v1 as components
+            components.html(html_code, height=620)
+
+        except Exception as e:
+            st.error(f"生成失敗：{{e}}")
 
 # Tab 3: 3D 模擬生成器
 with tab3:
