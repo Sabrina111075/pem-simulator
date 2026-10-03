@@ -317,6 +317,15 @@ with tab2:
                 st.error(f"生成失敗：{e}")
 
 
+# 1. 如果專案前段尚未定義 ThreeJSOutput，可以在這裡定義 Pydantic 模型
+from pydantic import BaseModel, Field
+
+class ThreeJSOutput(BaseModel):
+    title: str = Field(description="3D 場景標題")
+    description: str = Field(description="3D 場景說明")
+    html_code: str = Field(description="包含完整 Three.js (r128)、OrbitControls 與 WebGL 動畫的 HTML 程式碼")
+
+
 # --- Tab 3: Three.js 3D 模擬生成器 ---
 with tab3:
     st.header(" Three.js 3D 互動模擬生成")
@@ -331,31 +340,33 @@ with tab3:
     if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
         with st.spinner("Gemini 正在撰寫 Three.js 3D 場景程式碼..."):
             try:
-                # 呼叫 Gemini 生成 Three.js HTML 內容
                 system_prompt_3d = (
-                    "你是一個頂級 3D WebGL / Three.js 開發專家。請根據需求輸出完整的 HTML 程式碼，"
-                    "包含 Three.js (r128) 和 OrbitControls CDN，建構可旋轉/縮放的 3D 場景與動畫。"
-                    "請只輸出 HTML/JS 程式碼，不要包含 Markdown 標記。"
+                    "你是一個頂級 3D WebGL / Three.js 開發專家。請根據需求生成完整的 Three.js 3D 模擬場景。"
+                    "html_code 欄位必須包含完整的 <html> 標籤、Three.js (r128) CDN、OrbitControls，以及建構可旋轉/縮放 3D 場景與氣泡動畫的 JavaScript 程式碼。"
                 )
                 
+                # 補上 response_schema=ThreeJSOutput 參數
                 res, used_model = generate_with_fallback(
                     contents=prompt_3d,
                     system_instruction=system_prompt_3d,
+                    response_schema=ThreeJSOutput,
                     temperature=0.3
                 )
 
+                st.subheader(res.title)
                 st.caption(f"使用模型：`{used_model}`")
+                st.write(res.description)
 
-                # 清理產出的 HTML 內容（去除可能包裹的 ```html 標記）
-                html_content = res if isinstance(res, str) else getattr(res, 'text', str(res))
-                if "```html" in html_content:
-                    html_content = html_content.split("```html")[1].split("```")[0]
-                elif "```" in html_content:
-                    html_content = html_content.split("```")[1].split("```")[0]
+                # 清理 code block 標記（若 Gemini 產出的 html_code 包含 ```html）
+                raw_html = res.html_code
+                if "```html" in raw_html:
+                    raw_html = raw_html.split("```html")[1].split("```")[0]
+                elif "```" in raw_html:
+                    raw_html = raw_html.split("```")[1].split("```")[0]
 
-                # 使用 Streamlit HTML 組件渲染 3D 場景
+                # 渲染 3D WebGL Canvas
                 import streamlit.components.v1 as components
-                components.html(html_content, height=650, scrolling=True)
+                components.html(raw_html, height=650)
 
             except Exception as e:
                 st.error(f"3D 場景生成失敗：{e}")
