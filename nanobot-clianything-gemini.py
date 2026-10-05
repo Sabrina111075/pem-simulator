@@ -442,6 +442,10 @@ with tab3:
         key=f"prompt_3d_{selected_tpl_key}"
     )
 
+    # 必須有這行按鈕句！後續的邏輯才會是合理的 8 個空格縮排
+    if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
+        final_prompt_3d = prompt_3d
+
         # 🤖 1. Nano Bot 提示詞精煉與效能預審
         if enable_nano_optimizer and "nano_bot" in st.session_state:
             with st.spinner("🤖 Nano Bot 正進行 3D 場景精煉與效能預審..."):
