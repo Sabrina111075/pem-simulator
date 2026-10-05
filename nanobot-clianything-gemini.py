@@ -142,7 +142,7 @@ class HarnessTestOutput(BaseModel):
     expected_result: str = Field(description="預期測試結果與驗證標準，請務必使用台灣繁體中文描述")
 
 # ==============================================================================
-# 🤖 Step 2: 初始化 Nano Bot 與智慧控制儀表板
+# 🤖 Step 2: Nano Bot 智慧控制中心 (含全域場景切換連動)
 # ==============================================================================
 if "nano_bot" not in st.session_state or st.session_state.get("current_key") != api_key:
     st.session_state.nano_bot = NanoBot(api_key=api_key)
@@ -154,19 +154,39 @@ st.sidebar.subheader("🤖 Nano Bot 代理控制中心")
 enable_nano_optimizer = st.sidebar.checkbox(
     "啟用 Nano Bot 前置提示詞優化", 
     value=True,
-    help="開啟後，Nano Bot 會自動轉化為豐富的繁體中文視覺提示詞。"
+    help="開啟後，Nano Bot 會自動精煉與擴充傳給 Gemini 的提示詞。"
 )
 
-# 🎯 智慧工程快貼指令 (Smart Quick Templates)
 st.sidebar.markdown("**⚡ 快速載入工程測試範本：**")
-quick_template = st.sidebar.selectbox(
+
+# 定義範本資料字典
+TEMPLATES = {
+    "預設單電池場景": {
+        "tab1": "針對 PEM 電解槽 (PEM Electrolyzer) 模擬系統，進行自動化 Harness 測試。包含：電流密度 (0-2.0 A/cm²) 響應計算、Butler-Volmer 動力學方程式、可逆電位 (1.23V)、歐姆電阻過電位與溫控邊界 (80°C) 驗證。",
+        "tab2": "請繪製一個 PEM 電解槽系統控制流程，包含電流啟動、溫度監控、過壓保護機制與緊急停機程序。",
+        "tab3": "創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。"
+    },
+    "高電流密度熱保護測試": {
+        "tab1": "高負載極限測試：設定電流密度為 2.8 A/cm²、電壓 2.1V、系統溫度 82°C，驗證 Butler-Volmer 動力學過電位與極化曲線阻抗變化，並進行熱失控預警處置。",
+        "tab2": "請繪製 PEM 電解槽在高電流密度 (2.8 A/cm²) 運作下的過熱保護、自動降載與冷卻循環警報處置流程圖。",
+        "tab3": "PEM 高負載電解槽單電池 3D 結構，顯示極板過熱紅光發散、密集產生之氧氣/氫氣氣泡與劇烈流場動畫。"
+    },
+    "緊急停機控制流程": {
+        "tab1": "緊急停機 (ESD) 驗證測試：模擬電壓瞬間飆高至 2.5V 且溫控感測失效時，觸發系統連鎖中斷、電路隔離與惰性氣體 (氮氣) 吹掃保護機制。",
+        "tab2": "請繪製 PEM 電解槽緊急停機程序 (ESD)，包含系統異常偵測、電源斷開、快速洩壓、氮氣吹掃與安全隔離之順序流程圖。",
+        "tab3": "PEM 電解槽急停狀態 3D 模擬，雙極板呈現灰色無過電狀態，內部流場顆粒氣泡全面停止流動。"
+    }
+}
+
+# 觸發選擇變更時，自動更新 Session State
+selected_tpl_key = st.sidebar.selectbox(
     "選擇測試場景：",
-    ["預設單電池場景", "高電流密度熱保護測試", "緊急停機控制流程"],
-    index=0
+    options=list(TEMPLATES.keys()),
+    key="template_selector"
 )
 
-# 狀態儀表板卡片
-st.sidebar.info("🟢 **Nano Bot 運作狀態：** 本機微型診斷引擎已就緒")
+# 顯示 Nano Bot 診斷狀態卡片
+st.sidebar.info("🟢 **Nano Bot 運作狀態：** 微型診斷引擎已就緒")
 
 # -------------------------------------------------------------------
 # 功能頁籤
@@ -177,22 +197,38 @@ tab1, tab2, tab3 = st.tabs([
     "🎲 Three.js 3D 模擬生成"
 ])
 
-# Tab 1: OpenHarness 測試與極化曲線模擬引擎 (全繁體中文輸出)
+# Tab 1: OpenHarness 測試與極化曲線模擬引擎
 with tab1:
-    st.header("🛠️ OpenHarness PEM 電解槽模擬、極化曲線與自動化測試")
-    
-    default_pem_prompt = (
-        "針對 PEM 電解槽 (PEM Electrolyzer) 模擬系統，進行自動化 Harness 測試。"
-        "包含：電流密度 (0-2.0 A/cm²) 響應計算、Butler-Volmer 動力學方程式、可逆電位 (1.23V)、歐姆電阻過電位與溫控邊界 (80°C) 驗證。"
-    )
-    
+    st.header("⚡ OpenHarness PEM 電解槽模擬、極化曲線與自動化測試")
+
+    # 1. 自動載入範本輸入框
     prompt_harness = st.text_area(
         "輸入欲進行測試的 PEM 電解槽系統模組與計算需求：",
-        value=default_pem_prompt,
-        height=100
+        value=TEMPLATES[selected_tpl_key]["tab1"],
+        height=100,
+        key=f"prompt_harness_{selected_tpl_key}"
     )
-    
+
     if st.button("執行 PEM 模擬與生成 Harness 測試案例", type="primary"):
+        # 🤖 2. 融入 Nano Bot 輕量物理診斷預審
+        if "nano_bot" in st.session_state:
+            with st.spinner("🤖 Nano Bot 正進行電解槽物理邊界與安全性診斷..."):
+                # 預設極限檢測參數，也可隨輸入自動調整
+                diag_result = st.session_state.nano_bot.diagnose_pem_physics(
+                    cell_voltage=2.1 if "高負載" in prompt_harness else 1.8,
+                    current_density=2.8 if "高負載" in prompt_harness else 1.8,
+                    temp=82.0 if "高負載" in prompt_harness else 75.0
+                )
+                
+                # 渲染 Nano Bot 微型診斷卡片
+                with st.expander("🤖 Nano Bot 系統物理診斷報告", expanded=True):
+                    for msg in diag_result["messages"]:
+                        if "⚠️" in msg:
+                            st.warning(msg)
+                        else:
+                            st.success(msg)
+
+        # ⚡ 3. 呼叫 Gemini 主模型進行 OpenHarness 測試案例規劃
         with st.spinner("OpenHarness 引擎正在規劃測試腳本與電化學模擬計算..."):
             try:
                 res_harness, used_model = generate_with_fallback(
@@ -200,15 +236,18 @@ with tab1:
                     system_instruction=(
                         "你是一個 PEM 電解槽與 OpenHarness 測試專家。"
                         "請撰寫包含 Butler-Volmer、歐姆過電位與極化曲線驗證的 Harness 測試說明。"
-                        "所有輸出的說明文字、執行步驟 (execution_steps) 與預期結果 (expected_result) 必須嚴格使用台灣繁體中文 (Traditional Chinese)。"
+                        "所有輸出的說明文字、執行步驟與預期結果必須嚴格使用台灣繁體中文。"
                     ),
                     response_schema=HarnessTestOutput,
                     temperature=0.2
                 )
-                
-                st.subheader(f"📋 {res_harness.test_title}")
-                st.success(f"✅ PEM 模擬測試規劃與極化曲線數據生成完成！（調用模型：`{used_model}`）")
+
+                st.subheader(f"⚡ {res_harness.test_title}")
+                st.success(f"⚡ PEM 模擬測試規劃與極化曲線數據生成完成！（調用模型：`{used_model}`）")
                 st.divider()
+
+            except Exception as e:
+                st.error(f"Harness 測試規劃失敗：{e}")
 
                 # --- 1. 滿版極化曲線圖表 ---
                 st.markdown("### 1. 📊 PEM 電解槽極化曲線圖 ($I-V$ Polarization Curve)")
@@ -305,13 +344,12 @@ with tab1:
 
 # --- Tab 2: Mermaid 流程圖生成器 ---
 with tab2:
-    st.header(" Mermaid 流程圖自動生成")
-    
+    st.header("Mermaid 流程圖自動生成")
     prompt_flow = st.text_area(
         "輸入流程圖需求描述：",
-        value="請繪製一個 PEM 電解槽系統控制流程，包含電流啟動、溫度監控、過壓保護機制與緊急停機程序。",
+        value=TEMPLATES[selected_tpl_key]["tab2"],
         height=100,
-        key="prompt_flow_input"
+        key=f"prompt_flow_{selected_tpl_key}"
     )
 
     # 注意：生成流程圖按鈕與後續渲染 logic 必須【全部縮排】在 with tab2 內部！
@@ -397,17 +435,12 @@ class ThreeJSOutput(BaseModel):
 # --- Tab 3: Three.js 3D 模擬生成器 ---
 with tab3:
     st.header("Three.js 3D 互動模擬生成")
-
-    # 預設範本邏輯
-    default_text = "創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。"
-    if 'quick_template' in locals() or 'quick_template' in globals():
-        if quick_template == "高電流密度熱保護測試":
-            default_text = "PEM 高負載電解槽單電池，顯示強烈氧氣/氫氣氣泡生成與紅藍色流場。"
-
-    prompt_3d = st.text_area("輸入 3D 場景需求描述：", value=default_text, height=100, key="prompt_3d_input")
-
-    if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
-        final_prompt_3d = prompt_3d
+    prompt_3d = st.text_area(
+        "輸入 3D 場景需求描述：",
+        value=TEMPLATES[selected_tpl_key]["tab3"],
+        height=100,
+        key=f"prompt_3d_{selected_tpl_key}"
+    )
 
         # 🤖 1. Nano Bot 提示詞精煉與效能預審
         if enable_nano_optimizer and "nano_bot" in st.session_state:
