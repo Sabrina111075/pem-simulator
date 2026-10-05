@@ -1,16 +1,38 @@
-﻿import os
-import time
-import datetime
-import numpy as np
-import matplotlib.pyplot as plt
-import streamlit as st
-import streamlit.components.v1 as components
+﻿import streamlit as st
 from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
+import numpy as np
 
 # ==============================================================================
-# 🤖 Step 1: 定義 Nano Bot 輕量代理類別 (NanoBot Class)
+# 1. 頁面組態設定
+# ==============================================================================
+st.set_page_config(
+    page_title="OpenHarness & CLI + Gemini AI 整合工作台",
+    page_icon="⚡",
+    layout="wide"
+)
+
+# ==============================================================================
+# 2. Pydantic 結構化輸出定義
+# ==============================================================================
+class HarnessTestOutput(BaseModel):
+    test_title: str = Field(description="測試案例標題")
+    execution_steps: list[str] = Field(description="詳細執行步驟清單")
+    expected_result: str = Field(description="預期結果與驗證標準")
+
+class FlowchartOutput(BaseModel):
+    title: str = Field(description="流程圖標題")
+    description: str = Field(description="流程說明文字")
+    mermaid_code: str = Field(description="純粹的 Mermaid.js 流程圖程式碼")
+
+class ThreeJSOutput(BaseModel):
+    title: str = Field(description="3D 場景標題")
+    description: str = Field(description="3D 場景說明")
+    html_code: str = Field(description="包含完整 Three.js (r128)、OrbitControls 與 WebGL 動畫的 HTML 程式碼")
+
+# ==============================================================================
+# 3. 🤖 Nano Bot 輕量微型代理 (Micro-Diagnostic Agent)
 # ==============================================================================
 class NanoBot:
     def __init__(self, api_key: str, model_name: str = "gemini-3.5-flash-lite"):
@@ -41,6 +63,31 @@ class NanoBot:
         except Exception:
             return user_prompt
 
+    def diagnose_pem_physics(self, cell_voltage: float, current_density: float, temp: float) -> dict:
+        """⚡ 零延遲 Python 本地物理診斷引擎"""
+        warnings = []
+        status = "HEALTHY"
+
+        if cell_voltage < 1.23:
+            warnings.append("⚠️ 電壓低於熱力學可逆電壓 (1.23V)，反應無法進行")
+            status = "ERROR"
+        elif cell_voltage > 2.2:
+            warnings.append("⚠️ 電壓過高 (>2.2V)，觸發膜材熱老化風險區")
+            status = "WARNING"
+
+        if current_density > 2.5:
+            warnings.append("⚠️ 電流密度 >2.5 A/cm²，陽極氣泡滯留阻抗上升，建議啟動流場脈衝")
+            status = "WARNING"
+
+        if temp > 80.0:
+            warnings.append("⚠️ 溫控超出 80°C 安全門檻，質子膜降解速率加快")
+            status = "WARNING"
+
+        if not warnings:
+            warnings.append("✅ 物理參數符合 Butler-Volmer 電氣化學規範 (系統正常)")
+
+        return {"status": status, "messages": warnings}
+
     def estimate_3d_performance(self, prompt_text: str) -> dict:
         """📊 3D 渲染效能與幾何複雜度預審"""
         particles = 60 if ("氣泡" in prompt_text or "粒子" in prompt_text) else 0
@@ -50,100 +97,49 @@ class NanoBot:
             "fps_target": "60 FPS (WebGL 順暢渲染)"
         }
 
-# 頁面標題與佈局設定
-st.set_page_config(page_title="OpenHarness & CLI + Gemini AI 整合平台", layout="wide", page_icon="⚡")
+# ==============================================================================
+# 4. 側邊欄：API 金鑰與系統設定
+# ==============================================================================
+st.sidebar.title("⚙️ 系統設定")
 
-st.title("⚡ OpenHarness & CLI-Anything + Gemini AI 整合工作台")
-st.caption("結合 PEM 電解槽自動化測試、極化曲線數據模擬、Mermaid 流程圖與 3D 互動場景")
-
-# -------------------------------------------------------------------
-# 邊欄設定：模型選擇與 API Key 輸入
-# -------------------------------------------------------------------
-st.sidebar.header("⚙️ 系統設定")
-
-# 優先讀取 Streamlit Secrets 或環境變數
-api_key = None
+api_key = ""
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
-elif os.environ.get("GEMINI_API_KEY"):
-    api_key = os.environ.get("GEMINI_API_KEY")
+else:
+    api_key = st.sidebar.text_input("輸入 Gemini API Key:", type="password")
 
 if not api_key:
-    api_key = st.sidebar.text_input("輸入 Gemini API Key", type="password")
-
-if not api_key:
-    st.warning("請先在 Streamlit Secrets 設定 GEMINI_API_KEY，或於左側邊欄輸入金鑰。")
+    st.info("請於 Streamlit Secrets 設定 GEMINI_API_KEY 或在側邊欄輸入 API 金鑰以繼續。")
     st.stop()
 
-# 模型選擇選單 (以 3.5-flash-lite 為優先)
-selected_model_option = st.sidebar.selectbox(
+selected_model_name = st.sidebar.selectbox(
     "選擇偏好的 Gemini 模型：",
-    options=[
-        "gemini-3.5-flash-lite (最快回應)",
-        "gemini-3.6-flash (全方位)",
-        "gemini-3.1-pro (進階推論)",
-        "自動備援 (Auto Fallback)"
-    ],
+    ["gemini-3.5-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash"],
     index=0
 )
 
-# 解析選定的模型名稱
-if "3.5-flash-lite" in selected_model_option:
-    MODEL_CANDIDATES = ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.1-pro"]
-elif "3.6-flash" in selected_model_option:
-    MODEL_CANDIDATES = ["gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro"]
-elif "3.1-pro" in selected_model_option:
-    MODEL_CANDIDATES = ["gemini-3.1-pro", "gemini-3.6-flash", "gemini-3.5-flash-lite"]
-else:
-    MODEL_CANDIDATES = ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.1-pro"]
-
-client = genai.Client(api_key=api_key)
-
+# 備援生成函式
 def generate_with_fallback(contents, system_instruction, response_schema, temperature=0.2):
-    """具備模型調用與自動備援機制的生成函式"""
-    last_error = None
-    for model_name in MODEL_CANDIDATES:
+    client = genai.Client(api_key=api_key)
+    models_to_try = [selected_model_name, "gemini-2.0-flash", "gemini-1.5-flash"]
+    for m in models_to_try:
         try:
-            response = client.models.generate_content(
-                model=model_name,
+            resp = client.models.generate_content(
+                model=m,
                 contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
                     response_mime_type="application/json",
                     response_schema=response_schema,
-                    temperature=temperature,
-                ),
+                    temperature=temperature
+                )
             )
-            return response.parsed, model_name
-        except Exception as e:
-            last_error = e
+            return resp.parsed, m
+        except Exception:
             continue
-    raise RuntimeError(f"模型呼叫失敗，錯誤訊息：{last_error}")
+    raise RuntimeError("所有 Gemini 模型端點均未能成功回應。")
 
-# -------------------------------------------------------------------
-# Pydantic 結構化輸出定義
-# -------------------------------------------------------------------
-
-class FlowchartOutput(BaseModel):
-    title: str = Field(description="流程圖標題，使用繁體中文")
-    mermaid_code: str = Field(description="合法的 Mermaid.js flowchart 語法內容，請勿包含 markdown 標籤")
-    description: str = Field(description="流程圖說明，使用繁體中文")
-
-class ThreeJSOutput(BaseModel):
-    title: str = Field(description="3D 場景標題，使用繁體中文")
-    html_code: str = Field(description="包含完整 Three.js 腳本的可執行 HTML 程式碼")
-    summary: str = Field(description="3D 場景說明，使用繁體中文")
-
-class HarnessTestOutput(BaseModel):
-    test_title: str = Field(description="測試案例名稱，使用繁體中文")
-    test_script: str = Field(description="自動化測試或 CLI 執行腳本內容，需完整不截斷")
-    formulas_description: str = Field(description="PEM 電解槽數理化學極化模型計算與推導說明，請務必使用台灣繁體中文")
-    execution_steps: list[str] = Field(description="詳細的系統推演與執行步驟說明清單，請務必使用台灣繁體中文描述")
-    expected_result: str = Field(description="預期測試結果與驗證標準，請務必使用台灣繁體中文描述")
-
-# ==============================================================================
-# 🤖 Step 2: Nano Bot 智慧控制中心 (含全域場景切換連動)
-# ==============================================================================
+# 初始化 Nano Bot
 if "nano_bot" not in st.session_state or st.session_state.get("current_key") != api_key:
     st.session_state.nano_bot = NanoBot(api_key=api_key)
     st.session_state.current_key = api_key
@@ -159,7 +155,6 @@ enable_nano_optimizer = st.sidebar.checkbox(
 
 st.sidebar.markdown("**⚡ 快速載入工程測試範本：**")
 
-# 定義範本資料字典
 TEMPLATES = {
     "預設單電池場景": {
         "tab1": "針對 PEM 電解槽 (PEM Electrolyzer) 模擬系統，進行自動化 Harness 測試。包含：電流密度 (0-2.0 A/cm²) 響應計算、Butler-Volmer 動力學方程式、可逆電位 (1.23V)、歐姆電阻過電位與溫控邊界 (80°C) 驗證。",
@@ -178,30 +173,32 @@ TEMPLATES = {
     }
 }
 
-# 觸發選擇變更時，自動更新 Session State
 selected_tpl_key = st.sidebar.selectbox(
     "選擇測試場景：",
     options=list(TEMPLATES.keys()),
     key="template_selector"
 )
 
-# 顯示 Nano Bot 診斷狀態卡片
 st.sidebar.info("🟢 **Nano Bot 運作狀態：** 微型診斷引擎已就緒")
 
-# -------------------------------------------------------------------
-# 功能頁籤
-# -------------------------------------------------------------------
+# ==============================================================================
+# 5. 主介面 Header 與 Tabs 佈局
+# ==============================================================================
+st.title("⚡ OpenHarness & CLI-Anything + Gemini AI 整合工作台")
+st.caption("結合 PEM 電解槽自動化測試、極化曲線數據模擬、Mermaid 流程圖與 3D 互動場景")
+
 tab1, tab2, tab3 = st.tabs([
-    "🛠️ OpenHarness 自動化引擎模擬與測試", 
-    "📊 Mermaid 流程圖生成", 
-    "🎲 Three.js 3D 模擬生成"
+    "⚡ OpenHarness 自動化引擎模擬與測試",
+    "📊 Mermaid 流程圖生成",
+    "🎨 Three.js 3D 模擬生成"
 ])
 
+# ------------------------------------------------------------------------------
 # Tab 1: OpenHarness 測試與極化曲線模擬引擎
+# ------------------------------------------------------------------------------
 with tab1:
     st.header("⚡ OpenHarness PEM 電解槽模擬、極化曲線與自動化測試")
 
-    # 1. 自動載入範本輸入框
     prompt_harness = st.text_area(
         "輸入欲進行測試的 PEM 電解槽系統模組與計算需求：",
         value=TEMPLATES[selected_tpl_key]["tab1"],
@@ -210,17 +207,14 @@ with tab1:
     )
 
     if st.button("執行 PEM 模擬與生成 Harness 測試案例", type="primary"):
-        # 🤖 2. 融入 Nano Bot 輕量物理診斷預審
         if "nano_bot" in st.session_state:
             with st.spinner("🤖 Nano Bot 正進行電解槽物理邊界與安全性診斷..."):
-                # 預設極限檢測參數，也可隨輸入自動調整
                 diag_result = st.session_state.nano_bot.diagnose_pem_physics(
                     cell_voltage=2.1 if "高負載" in prompt_harness else 1.8,
                     current_density=2.8 if "高負載" in prompt_harness else 1.8,
                     temp=82.0 if "高負載" in prompt_harness else 75.0
                 )
                 
-                # 渲染 Nano Bot 微型診斷卡片
                 with st.expander("🤖 Nano Bot 系統物理診斷報告", expanded=True):
                     for msg in diag_result["messages"]:
                         if "⚠️" in msg:
@@ -228,7 +222,6 @@ with tab1:
                         else:
                             st.success(msg)
 
-        # ⚡ 3. 呼叫 Gemini 主模型進行 OpenHarness 測試案例規劃
         with st.spinner("OpenHarness 引擎正在規劃測試腳本與電化學模擬計算..."):
             try:
                 res_harness, used_model = generate_with_fallback(
@@ -249,102 +242,27 @@ with tab1:
             except Exception as e:
                 st.error(f"Harness 測試規劃失敗：{e}")
 
-                # --- 1. 滿版極化曲線圖表 ---
-                st.markdown("### 1. 📊 PEM 電解槽極化曲線圖 ($I-V$ Polarization Curve)")
-                current_density = np.linspace(0.01, 2.0, 100) # A/cm²
-                E_rev = 1.23 # Volt
-                R_ohm = 0.15 # Ohm*cm²
-                a_act = 0.06
-                b_act = 0.08
-                
-                v_rev = np.full_like(current_density, E_rev)
-                v_act = a_act + b_act * np.log10(current_density * 10)
-                v_ohm = current_density * R_ohm
-                v_cell = v_rev + v_act + v_ohm
-                
-                fig, ax = plt.subplots(figsize=(10, 4.2))
-                ax.plot(current_density, v_cell, 'r-', linewidth=2.5, label='總單電池電壓 Total Cell Voltage ($V_{cell}$)')
-                ax.plot(current_density, v_rev, 'b--', linewidth=1.5, label='可逆熱力學電位 Reversible Voltage ($E_{rev}$)')
-                ax.plot(current_density, v_act, 'g:', linewidth=1.5, label='活化過電位 Activation Overpotential ($\eta_{act}$)')
-                ax.plot(current_density, v_ohm, 'm-.', linewidth=1.5, label='歐姆過電位 Ohmic Overpotential ($\eta_{ohm}$)')
-                
-                ax.set_title("PEM Electrolyzer Polarization Curve (80°C Boundary)", fontsize=12, fontweight='bold')
-                ax.set_xlabel("電流密度 Current Density $i$ ($A/cm^2$)", fontsize=10)
-                ax.set_ylabel("單電池電壓 Cell Voltage $V$ (Volts)", fontsize=10)
-                ax.grid(True, linestyle='--', alpha=0.6)
-                ax.legend(fontsize=9, loc='upper left')
-                plt.tight_layout()
-                st.pyplot(fig)
+    # 滿版極化曲線圖表
+    st.markdown("### 📊 PEM 電解槽極化曲線圖表 ($I-V$ Polarization Curve)")
+    current_density = np.linspace(0.01, 2.0, 100)
+    E_rev = 1.23
+    R_ohm = 0.18
+    a_m = 0.06
+    b_m = 0.08
+    voltage = E_rev + current_density * R_ohm + a_m * np.log10(current_density / 0.01 + 1) + b_m * (current_density**1.2)
 
-                st.divider()
+    import plotly.graph_objects as go
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=current_density, y=voltage, mode='lines', name='Cell Voltage (V)', line=dict(color='#ff4b4b', width=3)))
+    fig.update_layout(title="PEM 電解槽伏安極化特性曲線", xaxis_title="電流密度 Current Density (A/cm²)", yaxis_title="單電池電壓 Cell Voltage (V)", template="plotly_white")
+    st.plotly_chart(fig, use_container_width=True)
 
-                # --- 2. 數理化學極化方程式 ---
-                st.markdown("### 2. 🧮 電化學極化計算方程式 (Polarization Model Equations)")
-                st.latex(r"V_{\text{cell}} = E_{\text{rev}} + \eta_{\text{act}} + \eta_{\text{ohm}} + \eta_{\text{conc}}")
-                st.latex(r"E_{\text{rev}} = 1.229 - 0.9 \times 10^{-3} (T - 298.15)")
-                st.latex(r"\eta_{\text{act}} = \frac{RT}{\alpha F} \ln\left(\frac{i}{i_0}\right) \quad, \quad \eta_{\text{ohm}} = i \cdot R_{\text{mem}}")
-                
-                with st.expander("📖 檢視電化學推導細節說明"):
-                    st.write(res_harness.formulas_description)
-
-                st.divider()
-
-                # --- 3. 自動化 Harness 執行腳本 ---
-                st.markdown("### 3. 📜 自動化 Harness 執行腳本")
-                cmd_html = f"""
-                <div style="background-color: #0e1117; color: #39ff14; padding: 16px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; border: 1px solid #30363d; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
-{res_harness.test_script}
-                </div>
-                """
-                st.markdown(cmd_html, unsafe_allow_html=True)
-
-                st.divider()
-
-                # --- 4. Console Logs 模擬 (獨立分行與繁體中文顯示) ---
-                st.markdown("### 4. 🖥️ 系統執行 Console 日誌 (Execution Logs)")
-                now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                
-                logs = [
-                    f"[{now_str}] [資訊] [OpenHarness 核心] 初始化 PEM 電解槽測試引擎...",
-                    f"[{now_str}] [資訊] 使用模型: {used_model} | 運作溫度邊界: 353.15K (80°C)",
-                    f"[{now_str}] [數據] 產生 100 個評估採樣點 (0.01 至 2.00 A/cm²)...",
-                    f"[{now_str}] [計算] 驗證可逆熱力學電位 E_rev = 1.23V 正確。",
-                    f"[{now_str}] [計算] 於 2.0 A/cm² 條件下紀錄最大單電池電壓: {v_cell[-1]:.3f}V",
-                ]
-                for idx, step in enumerate(res_harness.execution_steps, 1):
-                    logs.append(f"[{now_str}] [步驟 {idx}] {step}")
-                logs.append(f"[{now_str}] [成功] PEM Harness 模擬測試完成，返回狀態碼 0。")
-
-                log_html_lines = []
-                for line in logs:
-                    if "[成功]" in line:
-                        log_html_lines.append(f'<span style="color: #58a6ff;">{line}</span>')
-                    elif "[步驟" in line:
-                        log_html_lines.append(f'<span style="color: #7ee787;">{line}</span>')
-                    else:
-                        log_html_lines.append(f'<span style="color: #8b949e;">{line}</span>')
-                
-                log_text = "<br>".join(log_html_lines)
-                
-                console_html = f"""
-                <div style="background-color: #0d1117; padding: 16px; border-radius: 8px; font-family: 'Consolas', 'Courier New', monospace; font-size: 13px; height: 240px; overflow-y: auto; border: 1px solid #30363d; line-height: 1.8;">
-                    {log_text}
-                </div>
-                """
-                st.markdown(console_html, unsafe_allow_html=True)
-
-                st.divider()
-
-                # --- 5. 驗證結果與標準 ---
-                st.markdown("### 5. ✅ 驗證點與預期結果")
-                st.info(res_harness.expected_result)
-                    
-            except Exception as e:
-                st.error(f"生成失敗：{e}")
-
-# --- Tab 2: Mermaid 流程圖生成器 ---
+# ------------------------------------------------------------------------------
+# Tab 2: Mermaid 流程圖生成器
+# ------------------------------------------------------------------------------
 with tab2:
-    st.header("Mermaid 流程圖自動生成")
+    st.header("📊 Mermaid 流程圖自動生成")
+
     prompt_flow = st.text_area(
         "輸入流程圖需求描述：",
         value=TEMPLATES[selected_tpl_key]["tab2"],
@@ -352,89 +270,64 @@ with tab2:
         key=f"prompt_flow_{selected_tpl_key}"
     )
 
-    # 注意：生成流程圖按鈕與後續渲染 logic 必須【全部縮排】在 with tab2 內部！
-    if st.button("生成流程圖", type="primary", key="btn_gen_flowchart"):
-        with st.spinner("Gemini 正在規劃流程圖架構..."):
+    if st.button("生成流程圖", type="primary", key="btn_gen_flow"):
+        final_prompt_flow = prompt_flow
+
+        if enable_nano_optimizer and "nano_bot" in st.session_state:
+            with st.spinner("🤖 Nano Bot 正分析與結構化流程圖邏輯..."):
+                final_prompt_flow = st.session_state.nano_bot.optimize_3d_prompt(prompt_flow)
+                st.info(f"💡 **Nano Bot 結構化流程提示詞：**\n\n{final_prompt_flow}")
+
+        with st.spinner("Gemini 正在繪製 Mermaid 流程圖..."):
             try:
-                res, used_model = generate_with_fallback(
-                    contents=prompt_flow,
-                    system_instruction="你是一個頂級系統架構師，請根據需求生成標準、結構清晰的 Mermaid.js flowchart (TD 或 LR) 語法。圖中節點文字請全部使用繁體中文。",
+                res_flow, used_model = generate_with_fallback(
+                    contents=final_prompt_flow,
+                    system_instruction=(
+                        "你是個頂級系統流程圖專家。"
+                        "【語言要求】title、description 及 flowchart 節點內的文字，必須完全使用繁體中文。"
+                        "【Mermaid 語法嚴格要求】"
+                        "1. 必須輸出合法的 flowchart TD 或 flowchart LR 語法。"
+                        "2. 節點標籤若包含特殊字元或中文，請務必使用雙引號包覆，例如：A[\"電流啟動\"] --> B{\"溫度過高?\"}。"
+                    ),
                     response_schema=FlowchartOutput,
                     temperature=0.2
                 )
 
-                st.subheader(res.title)
-                st.caption(f"使用模型：`{used_model}`")
-                st.write(res.description)
+                if res_flow and hasattr(res_flow, 'title'):
+                    st.subheader(res_flow.title)
+                    st.caption(f"使用模型：`{used_model}`")
+                    st.write(res_flow.description)
 
-                # 100% 大字體原生捲軸 Mermaid 模組
-                html_code = f"""
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="utf-8">
-                    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-                    <style>
-                        body {{ margin: 0; padding: 0; background-color: #ffffff; }}
-                        #scroll-container {{
-                            width: 100%;
-                            max-height: 800px;
-                            overflow: auto;
-                            border: 1px solid #d0d7de;
-                            border-radius: 8px;
-                            background-color: #f6f8fa;
-                            padding: 20px;
-                            box-sizing: border-box;
-                        }}
-                        .mermaid {{ display: flex; justify-content: center; min-width: 800px; }}
-                        .mermaid svg {{
-                            max-width: none !important;
-                            height: auto !important;
-                            font-size: 22px !important;
-                            font-weight: bold !important;
-                            font-family: sans-serif !important;
-                        }}
-                        .mermaid .node rect, .mermaid .node circle, .mermaid .node polygon {{ stroke-width: 2.5px !important; }}
-                        .mermaid .edgeLabel {{ font-size: 18px !important; font-weight: bold !important; background-color: #ffffff !important; }}
-                    </style>
-                </head>
-                <body>
-                    <div id="scroll-container">
-                        <div class="mermaid">
-                        {res.mermaid_code}
-                        </div>
+                    clean_mermaid = res_flow.mermaid_code
+                    if "```mermaid" in clean_mermaid:
+                        clean_mermaid = clean_mermaid.split("```mermaid")[1].split("```")[0]
+                    elif "```" in clean_mermaid:
+                        clean_mermaid = clean_mermaid.split("```")[1].split("```")[0]
+
+                    with st.expander("檢視 Mermaid 原始程式碼"):
+                        st.code(clean_mermaid, language="mermaid")
+
+                    mermaid_html = f"""
+                    <div class="mermaid" style="background-color: white; padding: 20px; border-radius: 8px;">
+                    {clean_mermaid}
                     </div>
-                    <script>
-                        mermaid.initialize({{
-                            startOnLoad: true,
-                            theme: 'default',
-                            flowchart: {{ useMaxWidth: false, htmlLabels: true, curve: 'basis' }},
-                            themeVariables: {{ fontSize: '22px', nodePadding: 25 }}
-                        }});
+                    <script type="module">
+                      import mermaid from '[https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs](https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs)';
+                      mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
                     </script>
-                </body>
-                </html>
-                """
-
-                import streamlit.components.v1 as components
-                components.html(html_code, height=820)
+                    """
+                    import streamlit.components.v1 as components
+                    components.html(mermaid_html, height=500, scrolling=True)
 
             except Exception as e:
-                st.error(f"生成失敗：{e}")
+                st.error(f"流程圖生成失敗：{e}")
 
-
-# 1. 如果專案前段尚未定義 ThreeJSOutput，可以在這裡定義 Pydantic 模型
-from pydantic import BaseModel, Field
-
-class ThreeJSOutput(BaseModel):
-    title: str = Field(description="3D 場景標題")
-    description: str = Field(description="3D 場景說明")
-    html_code: str = Field(description="包含完整 Three.js (r128)、OrbitControls 與 WebGL 動畫的 HTML 程式碼")
-
-
-# --- Tab 3: Three.js 3D 模擬生成器 ---
+# ------------------------------------------------------------------------------
+# Tab 3: Three.js 3D 模擬生成器
+# ------------------------------------------------------------------------------
 with tab3:
-    st.header("Three.js 3D 互動模擬生成")
+    st.header("🎨 Three.js 3D 互動模擬生成")
+
     prompt_3d = st.text_area(
         "輸入 3D 場景需求描述：",
         value=TEMPLATES[selected_tpl_key]["tab3"],
@@ -442,24 +335,20 @@ with tab3:
         key=f"prompt_3d_{selected_tpl_key}"
     )
 
-    # 必須有這行按鈕句！後續的邏輯才會是合理的 8 個空格縮排
     if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
         final_prompt_3d = prompt_3d
 
-        # 🤖 1. Nano Bot 提示詞精煉與效能預審
         if enable_nano_optimizer and "nano_bot" in st.session_state:
             with st.spinner("🤖 Nano Bot 正進行 3D 場景精煉與效能預審..."):
                 final_prompt_3d = st.session_state.nano_bot.optimize_3d_prompt(prompt_3d)
                 perf_info = st.session_state.nano_bot.estimate_3d_performance(final_prompt_3d)
 
-                # 展示 Nano Bot 智慧診斷卡片
                 with st.expander("🤖 Nano Bot 預審與場景結構報告", expanded=True):
                     st.write(f"💡 **精煉描述：** {final_prompt_3d}")
                     col_a, col_b = st.columns(2)
                     col_a.metric("預估核心組件", perf_info["components"])
                     col_b.metric("粒子動畫負載", perf_info["particles"], delta=perf_info["fps_target"])
 
-        # ⚡ 2. 呼叫 Gemini 生成 Three.js 程式碼
         with st.spinner("Gemini 正在撰寫 3D 場景程式碼..."):
             try:
                 system_prompt_3d = (
@@ -473,26 +362,24 @@ with tab3:
                     "【控制】OrbitControls 啟用 controls.autoRotate = true，autoRotateSpeed = 2.5。"
                 )
 
-                res, used_model = generate_with_fallback(
+                res_3d, used_model = generate_with_fallback(
                     contents=final_prompt_3d,
                     system_instruction=system_prompt_3d,
                     response_schema=ThreeJSOutput,
                     temperature=0.3
                 )
 
-                if res and hasattr(res, 'title'):
-                    st.subheader(res.title)
+                if res_3d and hasattr(res_3d, 'title'):
+                    st.subheader(res_3d.title)
                     st.caption(f"使用模型：`{used_model}`")
-                    st.write(res.description)
+                    st.write(res_3d.description)
 
-                    # 清理 HTML 標籤
-                    raw_html = res.html_code
+                    raw_html = res_3d.html_code
                     if "```html" in raw_html:
                         raw_html = raw_html.split("```html")[1].split("```")[0]
                     elif "```" in raw_html:
                         raw_html = raw_html.split("```")[1].split("```")[0]
 
-                    # 渲染 Canvas
                     import streamlit.components.v1 as components
                     components.html(raw_html, height=650)
                 else:
