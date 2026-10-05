@@ -17,16 +17,16 @@ class NanoBot:
         self.client = genai.Client(api_key=api_key)
         self.model_name = model_name
         self.system_instruction = (
-            "你是一個專門協助 PEM 電解槽數位雙生與 OpenHarness 系統的 Nano Bot 助手。\n"
-            "你的職責是將使用者簡單的需求擴充為適用於原生 Three.js (WebGL) 渲染的單一段落 Prompt。\n"
-            "【重要約束】\n"
-            "1. 嚴禁要求任何後處理特效（如 Bloom 輝光、EffectComposer、陰影貼圖等），以防 JavaScript 崩潰。\n"
-            "2. 背景必須指定為淺灰/白色 (#f5f7fa)。\n"
-            "3. 請輸出連續的描述性段落，不要使用 Markdown 標題或條列清單。"
+            "你是一個專門協助 3D 場景需求擴充的 Nano Bot 助手。\n"
+            "你的任務是將使用者簡單的需求擴充為【一段繁體中文自然語言】。"
+            "【嚴格禁忌】\n"
+            "1. 絕對不要寫任何 JavaScript、Three.js 或 HTML 程式碼！\n"
+            "2. 絕對不要使用 ``` 或代碼區塊！\n"
+            "3. 只用中文描述組件的外觀、顏色、位置與動畫流向（例如：陽極金屬板位於左側，中央為半透明藍色 PEM 膜，伴隨向上浮動的氣泡微粒）。"
         )
 
     def optimize_3d_prompt(self, user_prompt: str) -> str:
-        prompt = f"請將以下 3D 場景需求擴充為原生 Three.js 可直接執行的結構描述：\n{user_prompt}"
+        prompt = f"請將以下 3D 需求擴充為豐富的中文場景視覺描述（請勿寫程式碼）：\n{user_prompt}"
         try:
             response = self.client.models.generate_content(
                 model=self.model_name,
@@ -36,8 +36,8 @@ class NanoBot:
                     temperature=0.2,
                 )
             )
-            return response.text
-        except Exception as e:
+            return response.text if response.text else user_prompt
+        except Exception:
             return user_prompt
 
 # 頁面標題與佈局設定
@@ -393,11 +393,11 @@ with tab3:
     if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
         final_prompt_3d = prompt_3d
 
-        # 🤖 1. Nano Bot 前置提示詞精煉
+        # 🤖 1. Nano Bot 前置提示詞精煉 (確保只處理文字描述)
         if enable_nano_optimizer and "nano_bot" in st.session_state:
-            with st.spinner("🤖 Nano Bot 正快速精煉 3D 場景需求..."):
+            with st.spinner("🤖 Nano Bot 正精煉 3D 視覺描述..."):
                 final_prompt_3d = st.session_state.nano_bot.optimize_3d_prompt(prompt_3d)
-                st.info(f"💡 **Nano Bot 精煉提示詞：**\n\n{final_prompt_3d}")
+                st.info(f"💡 **Nano Bot 精煉描述：**\n\n{final_prompt_3d}")
 
         # ⚡ 2. 呼叫 Gemini 生成 Three.js 程式碼
         with st.spinner("Gemini 正在撰寫 3D 場景程式碼..."):
@@ -420,20 +420,24 @@ with tab3:
                     temperature=0.3
                 )
 
-                st.subheader(res.title)
-                st.caption(f"使用模型：`{used_model}`")
-                st.write(res.description)
+                # 🛡️ 增加 None 安全防護門檻
+                if res and hasattr(res, 'title'):
+                    st.subheader(res.title)
+                    st.caption(f"使用模型：`{used_model}`")
+                    st.write(res.description)
 
-                # 清理 HTML 標籤
-                raw_html = res.html_code
-                if "```html" in raw_html:
-                    raw_html = raw_html.split("```html")[1].split("```")[0]
-                elif "```" in raw_html:
-                    raw_html = raw_html.split("```")[1].split("```")[0]
+                    # 清理 HTML 標籤
+                    raw_html = res.html_code
+                    if "```html" in raw_html:
+                        raw_html = raw_html.split("```html")[1].split("```")[0]
+                    elif "```" in raw_html:
+                        raw_html = raw_html.split("```")[1].split("```")[0]
 
-                # 渲染 Canvas
-                import streamlit.components.v1 as components
-                components.html(raw_html, height=650)
+                    # 渲染 Canvas
+                    import streamlit.components.v1 as components
+                    components.html(raw_html, height=650)
+                else:
+                    st.error("3D 結構生成傳回無效回應，請再點擊一次『生成 3D 場景』。")
 
             except Exception as e:
                 st.error(f"3D 場景生成失敗：{e}")
