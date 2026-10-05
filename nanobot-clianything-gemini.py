@@ -9,36 +9,24 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
 
-import os
-import time
-import datetime
-import numpy as np
-import matplotlib.pyplot as plt
-import streamlit as st
-import streamlit.components.v1 as components
-from google import genai
-from google.genai import types
-from pydantic import BaseModel, Field
-
 # ==============================================================================
 # 🤖 Step 1: 定義 Nano Bot 輕量代理類別 (NanoBot Class)
 # ==============================================================================
 class NanoBot:
     def __init__(self, api_key: str, model_name: str = "gemini-3.5-flash-lite"):
-        # 使用 Google GenAI SDK (Google-GenAI API) 初始化 Client
         self.client = genai.Client(api_key=api_key)
         self.model_name = model_name
         self.system_instruction = (
             "你是一個專門協助 PEM 電解槽數位雙生與 OpenHarness 系統的 Nano Bot 助手。\n"
-            "你的職責是：\n"
-            "1. 快速診斷使用者輸入的 3D 場景描述或物理參數。\n"
-            "2. 將簡短需求擴充為適合 Three.js / Mermaid 生成的精確 Prompt。\n"
-            "3. 回答必須極度精簡、精確且回應迅速。"
+            "你的職責是將使用者簡單的需求擴充為適用於原生 Three.js (WebGL) 渲染的單一段落 Prompt。\n"
+            "【重要約束】\n"
+            "1. 嚴禁要求任何後處理特效（如 Bloom 輝光、EffectComposer、陰影貼圖等），以防 JavaScript 崩潰。\n"
+            "2. 背景必須指定為淺灰/白色 (#f5f7fa)。\n"
+            "3. 請輸出連續的描述性段落，不要使用 Markdown 標題或條列清單。"
         )
 
     def optimize_3d_prompt(self, user_prompt: str) -> str:
-        """輕量任務：優化 3D 場景提示詞"""
-        prompt = f"請將以下 3D 場景需求補充細節，使其更適合生成 Three.js 程式碼：\n{user_prompt}"
+        prompt = f"請將以下 3D 場景需求擴充為原生 Three.js 可直接執行的結構描述：\n{user_prompt}"
         try:
             response = self.client.models.generate_content(
                 model=self.model_name,
@@ -50,15 +38,7 @@ class NanoBot:
             )
             return response.text
         except Exception as e:
-            return f"[Nano Bot 提醒] 提示詞優化跳過 (原因: {str(e)})，將直接使用原輸入。"
-
-    def quick_diagnose_params(self, cell_voltage: float, current_density: float) -> str:
-        """輕量任務：PEM 電解槽參數快速物理診斷"""
-        if cell_voltage < 1.23:
-            return "⚠️ [Nano Bot 警告] 單電池電壓低於熱力學可逆電壓 (1.23V)，請檢查輸入！"
-        elif current_density > 3.0:
-            return "⚠️ [Nano Bot 提醒] 電流密度大於 3.0 A/cm²，進入高傳質阻抗區，氣泡生成速率將暴增。"
-        return "✅ [Nano Bot 診斷] 電解槽運作參數於正常物理範圍內。"
+            return user_prompt
 
 # 頁面標題與佈局設定
 st.set_page_config(page_title="OpenHarness & CLI + Gemini AI 整合平台", layout="wide", page_icon="⚡")
@@ -399,63 +379,61 @@ class ThreeJSOutput(BaseModel):
     html_code: str = Field(description="包含完整 Three.js (r128)、OrbitControls 與 WebGL 動畫的 HTML 程式碼")
 
 
-# --- Tab 3: Three.js 3D 模擬生成器 ---
-with tab3:
-    st.header(" Three.js 3D 互動模擬生成")
-    
-    prompt_3d = st.text_area(
-        "輸入 3D 場景需求描述：",
-        value="創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。",
-        height=100,
-        key="prompt_3d_input"
+# --- Tab 3: Three.js 3D 模擬生成器 ---[cite: 6]
+with tab3:[cite: 6]
+    st.header("Three.js 3D 互動模擬生成")[cite: 6]
+
+    prompt_3d = st.text_area([cite: 6]
+        "輸入 3D 場景需求描述：",[cite: 6]
+        value="創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。",[cite: 6]
+        height=100,[cite: 6]
+        key="prompt_3d_input"[cite: 6]
     )
 
-if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
-    final_prompt_3d = prompt_3d
+    if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):[cite: 6]
+        final_prompt_3d = prompt_3d
 
-    # 🤖 1. 若開啟 Nano Bot，先進行提示詞前置優化與擴充
-    if enable_nano_optimizer and "nano_bot" in st.session_state:
-        with st.spinner("🤖 Nano Bot 正快速精煉與擴充 3D 場景需求..."):
-            final_prompt_3d = st.session_state.nano_bot.optimize_3d_prompt(prompt_3d)
-            st.info(f"💡 **Nano Bot 擴充後的精煉提示詞：**\n\n{final_prompt_3d}")
+        # 🤖 1. Nano Bot 前置提示詞精煉
+        if enable_nano_optimizer and "nano_bot" in st.session_state:
+            with st.spinner("🤖 Nano Bot 正快速精煉 3D 場景需求..."):
+                final_prompt_3d = st.session_state.nano_bot.optimize_3d_prompt(prompt_3d)
+                st.info(f"💡 **Nano Bot 精煉提示詞：**\n\n{final_prompt_3d}")
 
-    # ⚡ 2. 呼叫 Gemini 主模型生成 Three.js 程式碼
-    with st.spinner("Gemini 正在撰寫明亮清晰的 3D 場景程式碼..."):
-        try:
-            # 強化 System Prompt：要求繁體中文、淺色背景、合適的光源與流暢旋轉速度
-            system_prompt_3d = (
-                "你是個頂級 3D WebGL / Three.js 開發專家。"
-                "【語言要求】title 與 description 必須完全使用繁體中文說明。"
-                "【視覺風格】請建立風格明亮、簡潔且現代化的 3D 場景："
-                "1. 背景設定為淺灰/白色（例如 #f5f7fa），絕對不要使用黑沉沉的背景。"
-                "2. 增加 AmbientLight（強度 0.8）與 DirectionalLight（強度 0.8），確保所有組件顏色鮮明且層次清晰。"
-                "3. 陽極極板（金屬灰）、陰極極板（銀灰色）與中央 PEM 質子膜（半透明天藍色）需有明顯視覺區隔。"
-                "【效能與控制】"
-                "1. OrbitControls 啟用 controls.autoRotate = true，並設定 autoRotateSpeed = 2.5 以保證流暢轉動。"
-                "2. 粒子數量控制在 60 個以內（陽極氧氣泡藍色/陰極氫氣泡紅色），保持高效能與順暢度。"
-            )
+        # ⚡ 2. 呼叫 Gemini 生成 Three.js 程式碼
+        with st.spinner("Gemini 正在撰寫 3D 場景程式碼..."):
+            try:
+                system_prompt_3d = (
+                    "你是個頂級 3D WebGL / Three.js 開發專家。"
+                    "【語言要求】title 與 description 必須完全使用繁體中文說明。"
+                    "【視覺風格】請建立風格明亮、簡潔且現代化的 3D 場景："
+                    "1. 背景設定為淺灰/白色（例如 #f5f7fa），絕不使用黑色背景。"
+                    "2. 增加 AmbientLight（強度 0.8）與 DirectionalLight（強度 0.8）。"
+                    "3. 陽極極板（金屬灰）、陰極極板（銀灰色）與中央 PEM 質子膜（半透明天藍色）需有明顯視覺區隔。"
+                    "【語法禁忌】嚴禁包含 EffectComposer、UnrealBloomPass 或任何第三方 postprocessing 庫，必須只使用標準 THREE 命名空間！"
+                    "【控制】OrbitControls 啟用 controls.autoRotate = true，autoRotateSpeed = 2.5。"
+                )
 
-            res, used_model = generate_with_fallback(
-                contents=final_prompt_3d,  # <-- 這裡改傳遞 Nano Bot 優化後的 final_prompt_3d！
-                system_instruction=system_prompt_3d,
-                response_schema=ThreeJSOutput,
-                temperature=0.3
-            )
+                res, used_model = generate_with_fallback(
+                    contents=final_prompt_3d,
+                    system_instruction=system_prompt_3d,
+                    response_schema=ThreeJSOutput,
+                    temperature=0.3
+                )
 
-            st.subheader(res.title)
-            st.caption(f"使用模型：`{used_model}`")
-            st.write(res.description)
+                st.subheader(res.title)
+                st.caption(f"使用模型：`{used_model}`")
+                st.write(res.description)
 
-            # 清理程式碼塊標籤
-            raw_html = res.html_code
-            if "```html" in raw_html:
-                raw_html = raw_html.split("```html")[1].split("```")[0]
-            elif "```" in raw_html:
-                raw_html = raw_html.split("```")[1].split("```")[0]
+                # 清理 HTML 標籤[cite: 7]
+                raw_html = res.html_code
+                if "```html" in raw_html:
+                    raw_html = raw_html.split("```html")[1].split("```")[0]
+                elif "```" in raw_html:
+                    raw_html = raw_html.split("```")[1].split("```")[0]
 
-            # 渲染 3D WebGL Canvas
-            import streamlit.components.v1 as components
-            components.html(raw_html, height=650)
+                # 渲染 Canvas[cite: 7]
+                import streamlit.components.v1 as components[cite: 7]
+                components.html(raw_html, height=650)[cite: 7]
 
-        except Exception as e:
-            st.error(f"3D 場景生成失敗：{e}")
+            except Exception as e:
+                st.error(f"3D 場景生成失敗：{e}")
