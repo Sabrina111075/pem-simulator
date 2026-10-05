@@ -12,9 +12,6 @@ from pydantic import BaseModel, Field
 # ==============================================================================
 # 🤖 Step 1: 定義 Nano Bot 輕量代理類別 (NanoBot Class)
 # ==============================================================================
-# ==============================================================================
-# 🤖 Step 1: 定義 Nano Bot 輕量微型代理 (Micro-Diagnostic Agent)
-# ==============================================================================
 class NanoBot:
     def __init__(self, api_key: str, model_name: str = "gemini-3.5-flash-lite"):
         self.client = genai.Client(api_key=api_key)
@@ -29,7 +26,7 @@ class NanoBot:
         )
 
     def optimize_3d_prompt(self, user_prompt: str) -> str:
-        """輕量任務： Prompt 精煉"""
+        """輕量任務：Prompt 精煉"""
         prompt = f"請將以下 3D 需求擴充為豐富的中文場景視覺描述（請勿寫程式碼）：\n{user_prompt}"
         try:
             response = self.client.models.generate_content(
@@ -44,35 +41,9 @@ class NanoBot:
         except Exception:
             return user_prompt
 
-    def diagnose_pem_physics(self, cell_voltage: float, current_density: float, temp: float) -> dict:
-        """⚡ 零延遲 Python 本地物理診斷引擎"""
-        warnings = []
-        status = "HEALTHY"
-
-        if cell_voltage < 1.23:
-            warnings.append("⚠️ 電壓低於熱力學可逆電壓 (1.23V)，反應無法進行")
-            status = "ERROR"
-        elif cell_voltage > 2.2:
-            warnings.append("⚠️ 電壓過高 (>2.2V)，觸發膜材熱老化風險區")
-            status = "WARNING"
-
-        if current_density > 2.5:
-            warnings.append("⚠️ 電流密度 >2.5 A/cm²，陽極氣泡滯留阻抗上升，建議啟動流場脈衝")
-            status = "WARNING"
-
-        if temp > 80.0:
-            warnings.append("⚠️ 溫控超出 80°C 安全門檻，質子膜降解速率加快")
-            status = "WARNING"
-
-        if not warnings:
-            warnings.append("✅ 物理參數符合 Butler-Volmer 電氣化學規範 (系統正常)")
-
-        return {"status": status, "messages": warnings}
-
     def estimate_3d_performance(self, prompt_text: str) -> dict:
         """📊 3D 渲染效能與幾何複雜度預審"""
-        word_count = len(prompt_text)
-        particles = 60 if "氣泡" in prompt_text or "粒子" in prompt_text else 0
+        particles = 60 if ("氣泡" in prompt_text or "粒子" in prompt_text) else 0
         return {
             "components": "陽極極板、陰極極板、PEM 質子膜",
             "particles": f"約 {particles} 個流體微粒",
@@ -427,10 +398,11 @@ class ThreeJSOutput(BaseModel):
 with tab3:
     st.header("Three.js 3D 互動模擬生成")
 
-    # 帶入快貼範本邏輯
+    # 預設範本邏輯
     default_text = "創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。"
-    if quick_template == "高電流密度熱保護測試":
-        default_text = " PEM 高負載電解槽單電池，顯示強烈氧氣/氫氣氣泡生成與紅藍色流場。"
+    if 'quick_template' in locals() or 'quick_template' in globals():
+        if quick_template == "高電流密度熱保護測試":
+            default_text = "PEM 高負載電解槽單電池，顯示強烈氧氣/氫氣氣泡生成與紅藍色流場。"
 
     prompt_3d = st.text_area("輸入 3D 場景需求描述：", value=default_text, height=100, key="prompt_3d_input")
 
