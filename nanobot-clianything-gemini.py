@@ -379,18 +379,18 @@ class ThreeJSOutput(BaseModel):
     html_code: str = Field(description="包含完整 Three.js (r128)、OrbitControls 與 WebGL 動畫的 HTML 程式碼")
 
 
-# --- Tab 3: Three.js 3D 模擬生成器 ---[cite: 6]
-with tab3:[cite: 6]
-    st.header("Three.js 3D 互動模擬生成")[cite: 6]
+# --- Tab 3: Three.js 3D 模擬生成器 ---
+with tab3:
+    st.header("Three.js 3D 互動模擬生成")
 
-    prompt_3d = st.text_area([cite: 6]
-        "輸入 3D 場景需求描述：",[cite: 6]
-        value="創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。",[cite: 6]
-        height=100,[cite: 6]
-        key="prompt_3d_input"[cite: 6]
+    prompt_3d = st.text_area(
+        "輸入 3D 場景需求描述：",
+        value="創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。",
+        height=100,
+        key="prompt_3d_input"
     )
 
-    if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):[cite: 6]
+    if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
         final_prompt_3d = prompt_3d
 
         # 🤖 1. Nano Bot 前置提示詞精煉
@@ -424,16 +424,16 @@ with tab3:[cite: 6]
                 st.caption(f"使用模型：`{used_model}`")
                 st.write(res.description)
 
-                # 清理 HTML 標籤[cite: 7]
+                # 清理 HTML 標籤
                 raw_html = res.html_code
                 if "```html" in raw_html:
                     raw_html = raw_html.split("```html")[1].split("```")[0]
                 elif "```" in raw_html:
                     raw_html = raw_html.split("```")[1].split("```")[0]
 
-                # 渲染 Canvas[cite: 7]
-                import streamlit.components.v1 as components[cite: 7]
-                components.html(raw_html, height=650)[cite: 7]
+                # 渲染 Canvas
+                import streamlit.components.v1 as components
+                components.html(raw_html, height=650)
 
             except Exception as e:
                 st.error(f"3D 場景生成失敗：{e}")
