@@ -3,6 +3,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
 import numpy as np
+import pandas as pd
 
 # ==============================================================================
 # 1. 頁面組態設定
@@ -210,7 +211,7 @@ with tab1:
         if "nano_bot" in st.session_state:
             with st.spinner("🤖 Nano Bot 正進行電解槽物理邊界與安全性診斷..."):
                 diag_result = st.session_state.nano_bot.diagnose_pem_physics(
-                    cell_voltage=2.1 if "高負載" in prompt_harness else 1.8,
+                    cell_voltage=2.1 if "高負載" in prompt_harness else (2.5 if "緊急" in prompt_harness else 1.8),
                     current_density=2.8 if "高負載" in prompt_harness else 1.8,
                     temp=82.0 if "高負載" in prompt_harness else 75.0
                 )
@@ -242,20 +243,22 @@ with tab1:
             except Exception as e:
                 st.error(f"Harness 測試規劃失敗：{e}")
 
-    # 滿版極化曲線圖表
+    # 滿版極化曲線圖表 (使用原生 st.line_chart，零第三方依賴)
     st.markdown("### 📊 PEM 電解槽極化曲線圖表 ($I-V$ Polarization Curve)")
-    current_density = np.linspace(0.01, 2.0, 100)
+    max_cd = 3.0 if selected_tpl_key == "高電流密度熱保護測試" else 2.0
+    current_density = np.linspace(0.01, max_cd, 100)
     E_rev = 1.23
-    R_ohm = 0.18
+    R_ohm = 0.22 if selected_tpl_key == "高電流密度熱保護測試" else 0.18
     a_m = 0.06
     b_m = 0.08
     voltage = E_rev + current_density * R_ohm + a_m * np.log10(current_density / 0.01 + 1) + b_m * (current_density**1.2)
 
-    import plotly.graph_objects as go
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=current_density, y=voltage, mode='lines', name='Cell Voltage (V)', line=dict(color='#ff4b4b', width=3)))
-    fig.update_layout(title="PEM 電解槽伏安極化特性曲線", xaxis_title="電流密度 Current Density (A/cm²)", yaxis_title="單電池電壓 Cell Voltage (V)", template="plotly_white")
-    st.plotly_chart(fig, use_container_width=True)
+    df_polarization = pd.DataFrame({
+        "電流密度 Current Density (A/cm²)": np.round(current_density, 2),
+        "單電池電壓 Cell Voltage (V)": np.round(voltage, 3)
+    }).set_index("電流密度 Current Density (A/cm²)")
+
+    st.line_chart(df_polarization)
 
 # ------------------------------------------------------------------------------
 # Tab 2: Mermaid 流程圖生成器
