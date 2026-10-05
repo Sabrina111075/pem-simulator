@@ -338,33 +338,35 @@ with tab3:
     )
 
     if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
-        with st.spinner("Gemini 正在撰寫明亮清晰的 3D 場景程式碼..."):
+        with st.spinner("Gemini 正在撰寫輕量防卡頓的 3D 場景程式碼..."):
             try:
-                # 強化 System Prompt：要求繁體中文、淺色背景、合適的光源與流暢旋轉速度
+                # 嚴格約束 Prompt：防止無限迴圈與記憶體洩漏引發網頁無回應
                 system_prompt_3d = (
                     "你是一個頂級 3D WebGL / Three.js 開發專家。"
-                    "【語言要求】title 與 description 必須完全使用繁體中文說明。"
-                    "【視覺風格】請建立風格明亮、簡潔且現代化的 3D 場景："
-                    "1. 背景設定為淺灰/白色（例如 #f5f7fa），絕對不要使用黑沉沉的背景。"
-                    "2. 增加 AmbientLight（強度 0.8）與 DirectionalLight（強度 0.8），確保所有組件顏色鮮明且層次清晰。"
+                    "【語言要求】title 與 description 必須完全使用繁體中文。"
+                    "【防卡頓與穩定性規範 - 極度重要】"
+                    "1. 絕對禁止使用 while(true) 或沒有終止條件的迴圈！"
+                    "2. 在 animate() 動畫迴圈內部，絕對禁止執行 `new THREE...` 建立任何新物件或 Geometry！所有物件必須在 init() 時一次性創建好，animate() 內僅能更新現有物件的位置 (position) 或旋轉 (rotation)。"
+                    "3. 氣泡粒子總數量上限嚴格限制為 40 個，防止顯卡與主執行緒過載。"
+                    "【視覺風格】"
+                    "1. 背景設定為淺灰/白色（#f5f7fa）。"
+                    "2. 加入 AmbientLight（強度 0.9）與 DirectionalLight（強度 0.8），確保畫面明亮清晰。"
                     "3. 陽極極板（金屬灰）、陰極極板（銀灰色）與中央 PEM 質子膜（半透明天藍色）需有明顯視覺區隔。"
-                    "【效能與控制】"
-                    "1. OrbitControls 啟用 controls.autoRotate = true，並設定 autoRotateSpeed = 2.5 以保證流暢轉動。"
-                    "2. 粒子數量控制在 60 個以內（陽極氧氣泡藍色/陰極氫氣泡紅色），保持高效能與順暢度。"
+                    "4. OrbitControls 啟用 controls.autoRotate = true，控制 autoRotateSpeed = 2.0。"
                 )
                 
                 res, used_model = generate_with_fallback(
                     contents=prompt_3d,
                     system_instruction=system_prompt_3d,
                     response_schema=ThreeJSOutput,
-                    temperature=0.3
+                    temperature=0.2  # 降低隨機性，確保生成的程式碼語法嚴謹
                 )
 
                 st.subheader(res.title)
                 st.caption(f"使用模型：`{used_model}`")
                 st.write(res.description)
 
-                # 清理代碼區塊標籤
+                # 清理 Code Block 標記
                 raw_html = res.html_code
                 if "```html" in raw_html:
                     raw_html = raw_html.split("```html")[1].split("```")[0]
