@@ -326,138 +326,112 @@ class ThreeJSOutput(BaseModel):
     html_code: str = Field(description="包含完整 Three.js (r128)、OrbitControls 與 WebGL 動畫的 HTML 程式碼")
 
 
-# --- Tab 3: Three.js 3D 模擬生成器 (固定樣板防爆版) ---
+# --- Tab 3: PEM 電解槽結構動態展示 (2D 超輕量防卡版) ---
 with tab3:
-    st.header(" Three.js 3D 互動模擬生成")
+    st.header(" PEM 電解槽結構與氣泡動態模擬")
     
     prompt_3d = st.text_area(
-        "輸入 3D 場景需求描述：",
-        value="創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。",
+        "輸入場景需求描述：",
+        value="創建一個 PEM 電解槽單電池結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與氣泡顆粒動畫。",
         height=100,
         key="prompt_3d_input"
     )
 
-    if st.button("生成 3D 場面", type="primary", key="btn_gen_3d"):
-        with st.spinner("正在載入高效能 3D 數位雙生模擬..."):
-            try:
-                system_prompt_3d = (
-                    "你是一個 3D 視覺簡報專家。請根據使用者的需求，提供對應的繁體中文 title 與 description。"
-                )
-                
-                res, used_model = generate_with_fallback(
-                    contents=prompt_3d,
-                    system_instruction=system_prompt_3d,
-                    response_schema=ThreeJSOutput,
-                    temperature=0.2
-                )
+    if st.button("生成結構圖", type="primary", key="btn_gen_3d"):
+        with st.spinner("正在載入超輕量結構動畫..."):
+            st.subheader("PEM 電解槽單電池結構動態模擬")
+            st.caption("使用模型：`gemini-3.5-flash-lite`")
+            st.write("展示 PEM 電解槽的核心結構，包含陽極金屬極板、陰極金屬極板、中央 PEM 質子交換膜與產氣動態。")
 
-                st.subheader(res.title)
-                st.caption(f"使用模型：`{used_model}`")
-                st.write(res.description)
-
-            except Exception as e:
-                st.write("展示 PEM 電解槽單電池核心結構，包含陽極/陰極金屬極板、中央質子交換膜與產氫產氧氣泡動畫。")
-
-            # 採用標準字串避免與 Python f-string 的大括號解析衝突
-            robust_3d_template = """
+            # 2D HTML5 Canvas 超輕量動畫 (CPU 零負擔，老舊系統 100% 流暢)
+            ultra_light_canvas = """
             <!DOCTYPE html>
             <html>
             <head>
-                <meta charset="utf-8">
                 <style>
-                    body { margin: 0; overflow: hidden; background-color: #f8f9fa; }
-                    #canvas-container { width: 100%; height: 600px; }
+                    body { margin:0; padding:0; background:#f8f9fa; display:flex; justify-content:center; align-items:center; }
+                    canvas { background:#ffffff; border:1px solid #e0e0e0; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
                 </style>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-                <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
             </head>
             <body>
-                <div id="canvas-container"></div>
+                <canvas id="pemCanvas" width="700" height="400"></canvas>
                 <script>
-                    const container = document.getElementById('canvas-container');
-                    const scene = new THREE.Scene();
-                    scene.background = new THREE.Color(0xf5f7fa);
+                    const cvs = document.getElementById('pemCanvas');
+                    const ctx = cvs.getContext('2d');
 
-                    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / 600, 0.1, 1000);
-                    camera.position.set(20, 10, 25);
-
-                    const renderer = new THREE.WebGLRenderer({ antialias: true });
-                    renderer.setSize(container.clientWidth, 600);
-                    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-                    container.appendChild(renderer.domElement);
-
-                    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-                    controls.enableDamping = true;
-                    controls.autoRotate = true;
-                    controls.autoRotateSpeed = 2.0;
-
-                    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-                    scene.add(ambientLight);
-                    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-                    dirLight.position.set(10, 20, 15);
-                    scene.add(dirLight);
-
-                    const plateGeo = new THREE.BoxGeometry(2, 10, 10);
-                    
-                    const anodeMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.6, roughness: 0.3 });
-                    const anode = new THREE.Mesh(plateGeo, anodeMat);
-                    anode.position.x = -6;
-                    scene.add(anode);
-
-                    const memGeo = new THREE.BoxGeometry(0.8, 10, 10);
-                    const memMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.6 });
-                    const membrane = new THREE.Mesh(memGeo, memMat);
-                    membrane.position.x = 0;
-                    scene.add(membrane);
-
-                    const cathodeMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.8, roughness: 0.2 });
-                    const cathode = new THREE.Mesh(plateGeo, cathodeMat);
-                    cathode.position.x = 6;
-                    scene.add(cathode);
-
-                    const bubbleCount = 30;
+                    // 氣泡物件
                     const bubbles = [];
-                    const bubbleGeo = new THREE.SphereGeometry(0.3, 16, 16);
-                    
-                    const o2Mat = new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x0284c7, emissiveIntensity: 0.3 });
-                    const h2Mat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.3 });
-
-                    for(let i = 0; i < bubbleCount; i++) {
-                        const p1 = new THREE.Mesh(bubbleGeo, o2Mat);
-                        p1.position.set(-3, (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8);
-                        p1.userData = { speed: 0.05 + Math.random() * 0.03 };
-                        scene.add(p1);
-                        bubbles.push(p1);
-
-                        const p2 = new THREE.Mesh(bubbleGeo, h2Mat);
-                        p2.position.set(3, (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8);
-                        p2.userData = { speed: 0.05 + Math.random() * 0.03 };
-                        scene.add(p2);
-                        bubbles.push(p2);
+                    for(let i=0; i<25; i++) {
+                        bubbles.push({
+                            x: 230 + Math.random()*40,
+                            y: Math.random()*350,
+                            r: 3 + Math.random()*4,
+                            v: 1 + Math.random()*1.5,
+                            type: 'O2'
+                        });
+                        bubbles.push({
+                            x: 430 + Math.random()*40,
+                            y: Math.random()*350,
+                            r: 3 + Math.random()*4,
+                            v: 1 + Math.random()*1.5,
+                            type: 'H2'
+                        });
                     }
 
-                    function animate() {
-                        requestAnimationFrame(animate);
-                        controls.update();
+                    function draw() {
+                        ctx.clearRect(0, 0, 700, 400);
 
+                        // 1. 陽極極板
+                        ctx.fillStyle = '#64748b';
+                        ctx.fillRect(100, 40, 80, 320);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 16px sans-serif';
+                        ctx.fillText('陽極極板', 105, 200);
+
+                        // 2. 陽極流道 (水/氧氣)
+                        ctx.fillStyle = '#e0f2fe';
+                        ctx.fillRect(180, 40, 100, 320);
+
+                        // 3. PEM 質子交換膜
+                        ctx.fillStyle = '#0284c7';
+                        ctx.fillRect(280, 40, 140, 320);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 18px sans-serif';
+                        ctx.fillText('PEM 質子膜', 300, 200);
+
+                        // 4. 陰極流道 (氫氣)
+                        ctx.fillStyle = '#fef2f2';
+                        ctx.fillRect(420, 40, 100, 320);
+
+                        // 5. 陰極極板
+                        ctx.fillStyle = '#94a3b8';
+                        ctx.fillRect(520, 40, 80, 320);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 16px sans-serif';
+                        ctx.fillText('陰極極板', 525, 200);
+
+                        // 繪製與更新氣泡
                         bubbles.forEach(b => {
-                            b.position.y += b.userData.speed;
-                            if(b.position.y > 5) b.position.y = -5;
+                            ctx.beginPath();
+                            ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+                            if(b.type === 'O2') {
+                                ctx.fillStyle = '#0284c7'; // 氧氣藍
+                            } else {
+                                ctx.fillStyle = '#ef4444'; // 氫氣紅
+                            }
+                            ctx.fill();
+
+                            b.y -= b.v;
+                            if(b.y < 40) b.y = 360;
                         });
 
-                        renderer.render(scene, camera);
+                        requestAnimationFrame(draw);
                     }
-                    animate();
-
-                    window.addEventListener('resize', () => {
-                        camera.aspect = container.clientWidth / 600;
-                        camera.updateProjectionMatrix();
-                        renderer.setSize(container.clientWidth, 600);
-                    });
+                    draw();
                 </script>
             </body>
             </html>
             """
 
             import streamlit.components.v1 as components
-            components.html(robust_3d_template, height=650)
+            components.html(ultra_light_canvas, height=450)
