@@ -326,112 +326,54 @@ class ThreeJSOutput(BaseModel):
     html_code: str = Field(description="包含完整 Three.js (r128)、OrbitControls 與 WebGL 動畫的 HTML 程式碼")
 
 
-# --- Tab 3: PEM 電解槽結構動態展示 (2D 超輕量防卡版) ---
+# --- Tab 3: Three.js 3D 模擬生成器 ---
 with tab3:
-    st.header(" PEM 電解槽結構與氣泡動態模擬")
+    st.header(" Three.js 3D 互動模擬生成")
     
     prompt_3d = st.text_area(
-        "輸入場景需求描述：",
-        value="創建一個 PEM 電解槽單電池結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與氣泡顆粒動畫。",
+        "輸入 3D 場景需求描述：",
+        value="創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。",
         height=100,
         key="prompt_3d_input"
     )
 
-    if st.button("生成結構圖", type="primary", key="btn_gen_3d"):
-        with st.spinner("正在載入超輕量結構動畫..."):
-            st.subheader("PEM 電解槽單電池結構動態模擬")
-            st.caption("使用模型：`gemini-3.5-flash-lite`")
-            st.write("展示 PEM 電解槽的核心結構，包含陽極金屬極板、陰極金屬極板、中央 PEM 質子交換膜與產氣動態。")
+    if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
+        with st.spinner("Gemini 正在撰寫明亮清晰的 3D 場景程式碼..."):
+            try:
+                # 強化 System Prompt：要求繁體中文、淺色背景、合適的光源與流暢旋轉速度
+                system_prompt_3d = (
+                    "你是一個頂級 3D WebGL / Three.js 開發專家。"
+                    "【語言要求】title 與 description 必須完全使用繁體中文說明。"
+                    "【視覺風格】請建立風格明亮、簡潔且現代化的 3D 場景："
+                    "1. 背景設定為淺灰/白色（例如 #f5f7fa），絕對不要使用黑沉沉的背景。"
+                    "2. 增加 AmbientLight（強度 0.8）與 DirectionalLight（強度 0.8），確保所有組件顏色鮮明且層次清晰。"
+                    "3. 陽極極板（金屬灰）、陰極極板（銀灰色）與中央 PEM 質子膜（半透明天藍色）需有明顯視覺區隔。"
+                    "【效能與控制】"
+                    "1. OrbitControls 啟用 controls.autoRotate = true，並設定 autoRotateSpeed = 2.5 以保證流暢轉動。"
+                    "2. 粒子數量控制在 60 個以內（陽極氧氣泡藍色/陰極氫氣泡紅色），保持高效能與順暢度。"
+                )
+                
+                res, used_model = generate_with_fallback(
+                    contents=prompt_3d,
+                    system_instruction=system_prompt_3d,
+                    response_schema=ThreeJSOutput,
+                    temperature=0.3
+                )
 
-            # 2D HTML5 Canvas 超輕量動畫 (CPU 零負擔，老舊系統 100% 流暢)
-            ultra_light_canvas = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { margin:0; padding:0; background:#f8f9fa; display:flex; justify-content:center; align-items:center; }
-                    canvas { background:#ffffff; border:1px solid #e0e0e0; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
-                </style>
-            </head>
-            <body>
-                <canvas id="pemCanvas" width="700" height="400"></canvas>
-                <script>
-                    const cvs = document.getElementById('pemCanvas');
-                    const ctx = cvs.getContext('2d');
+                st.subheader(res.title)
+                st.caption(f"使用模型：`{used_model}`")
+                st.write(res.description)
 
-                    // 氣泡物件
-                    const bubbles = [];
-                    for(let i=0; i<25; i++) {
-                        bubbles.push({
-                            x: 230 + Math.random()*40,
-                            y: Math.random()*350,
-                            r: 3 + Math.random()*4,
-                            v: 1 + Math.random()*1.5,
-                            type: 'O2'
-                        });
-                        bubbles.push({
-                            x: 430 + Math.random()*40,
-                            y: Math.random()*350,
-                            r: 3 + Math.random()*4,
-                            v: 1 + Math.random()*1.5,
-                            type: 'H2'
-                        });
-                    }
+                # 清理代碼區塊標籤
+                raw_html = res.html_code
+                if "```html" in raw_html:
+                    raw_html = raw_html.split("```html")[1].split("```")[0]
+                elif "```" in raw_html:
+                    raw_html = raw_html.split("```")[1].split("```")[0]
 
-                    function draw() {
-                        ctx.clearRect(0, 0, 700, 400);
+                # 渲染 3D WebGL Canvas
+                import streamlit.components.v1 as components
+                components.html(raw_html, height=650)
 
-                        // 1. 陽極極板
-                        ctx.fillStyle = '#64748b';
-                        ctx.fillRect(100, 40, 80, 320);
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 16px sans-serif';
-                        ctx.fillText('陽極極板', 105, 200);
-
-                        // 2. 陽極流道 (水/氧氣)
-                        ctx.fillStyle = '#e0f2fe';
-                        ctx.fillRect(180, 40, 100, 320);
-
-                        // 3. PEM 質子交換膜
-                        ctx.fillStyle = '#0284c7';
-                        ctx.fillRect(280, 40, 140, 320);
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 18px sans-serif';
-                        ctx.fillText('PEM 質子膜', 300, 200);
-
-                        // 4. 陰極流道 (氫氣)
-                        ctx.fillStyle = '#fef2f2';
-                        ctx.fillRect(420, 40, 100, 320);
-
-                        // 5. 陰極極板
-                        ctx.fillStyle = '#94a3b8';
-                        ctx.fillRect(520, 40, 80, 320);
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 16px sans-serif';
-                        ctx.fillText('陰極極板', 525, 200);
-
-                        // 繪製與更新氣泡
-                        bubbles.forEach(b => {
-                            ctx.beginPath();
-                            ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
-                            if(b.type === 'O2') {
-                                ctx.fillStyle = '#0284c7'; // 氧氣藍
-                            } else {
-                                ctx.fillStyle = '#ef4444'; // 氫氣紅
-                            }
-                            ctx.fill();
-
-                            b.y -= b.v;
-                            if(b.y < 40) b.y = 360;
-                        });
-
-                        requestAnimationFrame(draw);
-                    }
-                    draw();
-                </script>
-            </body>
-            </html>
-            """
-
-            import streamlit.components.v1 as components
-            components.html(ultra_light_canvas, height=450)
+            except Exception as e:
+                st.error(f"3D 場景生成失敗：{e}")
