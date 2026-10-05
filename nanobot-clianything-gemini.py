@@ -211,9 +211,9 @@ with tab1:
         if "nano_bot" in st.session_state:
             with st.spinner("🤖 Nano Bot 正進行電解槽物理邊界與安全性診斷..."):
                 diag_result = st.session_state.nano_bot.diagnose_pem_physics(
-                    cell_voltage=2.1 if "高負載" in prompt_harness else (2.5 if "緊急" in prompt_harness else 1.8),
-                    current_density=2.8 if "高負載" in prompt_harness else 1.8,
-                    temp=82.0 if "高負載" in prompt_harness else 75.0
+                    cell_voltage=2.1 if selected_tpl_key == "高電流密度熱保護測試" else (2.5 if selected_tpl_key == "緊急停機控制流程" else 1.8),
+                    current_density=2.8 if selected_tpl_key == "高電流密度熱保護測試" else 1.8,
+                    temp=82.0 if selected_tpl_key == "高電流密度熱保護測試" else 75.0
                 )
                 
                 with st.expander("🤖 Nano Bot 系統物理診斷報告", expanded=True):
@@ -243,22 +243,49 @@ with tab1:
             except Exception as e:
                 st.error(f"Harness 測試規劃失敗：{e}")
 
-    # 滿版極化曲線圖表 (使用原生 st.line_chart，零第三方依賴)
-    st.markdown("### 📊 PEM 電解槽極化曲線圖表 ($I-V$ Polarization Curve)")
-    max_cd = 3.0 if selected_tpl_key == "高電流密度熱保護測試" else 2.0
-    current_density = np.linspace(0.01, max_cd, 100)
-    E_rev = 1.23
-    R_ohm = 0.22 if selected_tpl_key == "高電流密度熱保護測試" else 0.18
-    a_m = 0.06
-    b_m = 0.08
-    voltage = E_rev + current_density * R_ohm + a_m * np.log10(current_density / 0.01 + 1) + b_m * (current_density**1.2)
+    # 📊 滿版極化曲線與動態響應圖表
+    st.markdown(f"### 📊 PEM 電解槽模擬圖表（當前場景：`{selected_tpl_key}`）")
 
-    df_polarization = pd.DataFrame({
-        "電流密度 Current Density (A/cm²)": np.round(current_density, 2),
-        "單電池電壓 Cell Voltage (V)": np.round(voltage, 3)
-    }).set_index("電流密度 Current Density (A/cm²)")
+    if selected_tpl_key == "預設單電池場景":
+        # 標準 Butler-Volmer 伏安曲線
+        cd = np.linspace(0.01, 2.0, 100)
+        voltage = 1.23 + cd * 0.18 + 0.06 * np.log10(cd / 0.01 + 1) + 0.05 * (cd ** 1.1)
+        df_chart = pd.DataFrame({
+            "電流密度 Current Density (A/cm²)": np.round(cd, 2),
+            "標準運作電壓 Normal Cell Voltage (V)": np.round(voltage, 3)
+        }).set_index("電流密度 Current Density (A/cm²)")
+        st.caption("📈 圖形特徵：展示 0 ~ 2.0 A/cm² 範圍內標準的活化過電位與歐姆損耗曲線。")
 
-    st.line_chart(df_polarization)
+    elif selected_tpl_key == "高電流密度熱保護測試":
+        # 包含高阻抗與極限傳質陡升的過熱曲線
+        cd = np.linspace(0.01, 3.0, 100)
+        base_v = 1.23 + cd * 0.28 + 0.08 * np.log10(cd / 0.01 + 1)
+        # 加上高電流密度氣泡阻抗陡升區
+        mass_transport_loss = np.where(cd > 2.0, (cd - 2.0) ** 2.2 * 0.4, 0)
+        voltage = base_v + mass_transport_loss
+        
+        df_chart = pd.DataFrame({
+            "電流密度 Current Density (A/cm²)": np.round(cd, 2),
+            "高負載熱阻抗電壓 High-Load Voltage (V)": np.round(voltage, 3),
+            "熱保護警戒門檻 Limit Warning (2.2V)": 2.2
+        }).set_index("電流密度 Current Density (A/cm²)")
+        st.warning("⚠️ 圖形特徵：電流密度超過 2.0 A/cm² 後，因氣泡滯留與極化阻抗上升，電壓呈現二次方急遽陡升，突破 2.2V 熱保護門檻。")
+
+    else:  # 緊急停機控制流程
+        # 模擬急停驗證：時間序列中的電壓突波與斷電歸零
+        time_steps = np.linspace(0, 60, 100)  # 60秒測試時間
+        # 前 30 秒正常，35 秒電壓異常突波，40 秒觸發 ESD 斷電歸零
+        voltage = np.where(
+            time_steps < 30, 1.85,
+            np.where(time_steps < 38, 1.85 + (time_steps - 30) * 0.12, 0.0)
+        )
+        df_chart = pd.DataFrame({
+            "測試時間 Time (s)": np.round(time_steps, 1),
+            "實時單電池電壓 Real-time Voltage (V)": np.round(voltage, 3)
+        }).set_index("測試時間 Time (s)")
+        st.error("🚨 圖形特徵：模擬第 30 秒觸發電壓驟升，第 38 秒連鎖觸發 ESD 緊急停機，系統瞬間切斷電源降至 0V。")
+
+    st.line_chart(df_chart)
 
 # ------------------------------------------------------------------------------
 # Tab 2: Mermaid 流程圖生成器
