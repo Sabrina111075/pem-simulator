@@ -398,52 +398,57 @@ with tab3:
     if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
         final_prompt_3d = prompt_3d
 
+        # 🤖 1. Nano Bot 前置提示詞精煉與效能預審
         if enable_nano_optimizer and "nano_bot" in st.session_state:
             with st.spinner("🤖 Nano Bot 正進行 3D 場景精煉與效能預審..."):
                 final_prompt_3d = st.session_state.nano_bot.optimize_3d_prompt(prompt_3d)
                 perf_info = st.session_state.nano_bot.estimate_3d_performance(final_prompt_3d)
 
+                # 展示 Nano Bot 智慧預審卡片
                 with st.expander("🤖 Nano Bot 預審與場景結構報告", expanded=True):
                     st.write(f"💡 **精煉描述：** {final_prompt_3d}")
                     col_a, col_b = st.columns(2)
                     col_a.metric("預估核心組件", perf_info["components"])
                     col_b.metric("粒子動畫負載", perf_info["particles"], delta=perf_info["fps_target"])
 
-        with st.spinner("Gemini 正在撰寫 3D 場景程式碼..."):
+        # ⚡ 2. 呼叫 Gemini 生成 Three.js HTML 程式碼
+        with st.spinner("Gemini 正在建構 3D WebGL 互動場景..."):
             try:
                 system_prompt_3d = (
                     "你是個頂級 3D WebGL / Three.js 開發專家。"
-                    "【語言要求】title 與 description 必須完全使用繁體中文說明。"
-                    "【視覺風格】請建立風格明亮、簡潔且現代化的 3D 場景："
-                    "1. 背景設定為淺灰/白色（例如 #f5f7fa），絕不使用黑色背景。"
-                    "2. 增加 AmbientLight（強度 0.8）與 DirectionalLight（強度 0.8）。"
-                    "3. 陽極極板（金屬灰）、陰極極板（銀灰色）與中央 PEM 質子膜（半透明天藍色）需有明顯視覺區隔。"
-                    "【語法禁忌】嚴禁包含 EffectComposer、UnrealBloomPass 或任何第三方 postprocessing 庫，必須只使用標準 THREE 命名空間！"
-                    "【控制】OrbitControls 啟用 controls.autoRotate = true，autoRotateSpeed = 2.5。"
+                    "【視覺風格與極致相容性要求】"
+                    "1. 背景設定為淺灰/白色 (#f5f7fa)，絕不使用黑色背景。"
+                    "2. 包含 AmbientLight (強度 0.8) 與 DirectionalLight (強度 0.8)。"
+                    "3. 陽極極板、陰極極板與中央 PEM 質子膜（半透明淡藍色）需有明顯區隔。"
+                    "4. OrbitControls 啟用 controls.autoRotate = true。"
+                    "【語法禁忌】嚴禁使用 EffectComposer 或任何第三方 Postprocessing 庫！"
+                    "【輸出格式】請直接輸出包含 <!DOCTYPE html> 的完整 HTML 程式碼，並將其包覆在 ```html 與 ``` 區塊中。"
                 )
 
-                res_3d, used_model = generate_with_fallback(
+                response_3d = st.session_state.nano_bot.client.models.generate_content(
+                    model=selected_model_name,
                     contents=final_prompt_3d,
-                    system_instruction=system_prompt_3d,
-                    response_schema=ThreeJSOutput,
-                    temperature=0.3
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt_3d,
+                        temperature=0.3
+                    )
                 )
 
-                if res_3d and hasattr(res_3d, 'title'):
-                    st.subheader(res_3d.title)
-                    st.caption(f"使用模型：`{used_model}`")
-                    st.write(res_3d.description)
+                res_text = response_3d.text if response_3d.text else ""
 
-                    raw_html = res_3d.html_code
-                    if "```html" in raw_html:
-                        raw_html = raw_html.split("```html")[1].split("```")[0]
-                    elif "```" in raw_html:
-                        raw_html = raw_html.split("```")[1].split("```")[0]
-
-                    import streamlit.components.v1 as components
-                    components.html(raw_html, height=650)
+                # 清理與提取 HTML 內容
+                if "```html" in res_text:
+                    raw_html = res_text.split("```html")[1].split("```")[0].strip()
+                elif "```" in res_text:
+                    raw_html = res_text.split("```")[1].split("```")[0].strip()
                 else:
-                    st.error("3D 結構生成傳回無效回應，請再點擊一次『生成 3D 場景』。")
+                    raw_html = res_text.strip()
+
+                st.caption(f"使用模型：`{selected_model_name}`")
+
+                # 渲染 3D Canvas
+                import streamlit.components.v1 as components
+                components.html(raw_html, height=650, scrolling=False)
 
             except Exception as e:
                 st.error(f"3D 場景生成失敗：{e}")
