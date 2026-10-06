@@ -430,23 +430,23 @@ with tab2:
                 "請生成符合需求的 Mermaid 流程圖（使用 graph TD 或 sequenceDiagram）"
                 "以及詳細的架構說明。所有文字必須嚴格使用台灣繁體中文。"
             ),
-            response_schema=FlowchartOutput,  # 👈 修正為頂部已定義的類別名稱
+            response_schema=FlowchartOutput,
             temperature=0.2,
         )
 
         st.subheader(f"📌 {res_flow.title}")
 
-        # 1. 顯示圖形 (使用 Mermaid.js CDN 渲染)
+        # 1. 顯示視覺化圖形 (Mermaid.js CDN)
         st.markdown("### 🎨 流程圖視覺化")
         mermaid_html = f"""
-        <div class="mermaid" style="background-color: white; padding: 10px; border-radius: 5px;">
-            {res_flow.mermaid_code}
-        </div>
-        <script type="module">
-            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.mjs';
-            mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
-        </script>
-        """
+                <div class="mermaid" style="background-color: white; padding: 10px; border-radius: 5px;">
+                    {res_flow.mermaid_code}
+                </div>
+                <script type="module">
+                    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.mjs';
+                    mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
+                </script>
+                """
         components.html(mermaid_html, height=450, scrolling=True)
 
         # 2. 顯示純文字語法區塊
@@ -456,6 +456,10 @@ with tab2:
         st.markdown("### 📝 流程說明")
         st.write(res_flow.description)
         st.success(f"✅ 流程圖生成完成！（調用模型：`{used_model}`）")
+
+      except Exception as e:
+        st.error(f"流程圖生成失敗：{e}")
+
 
 # ------------------------------------------------------------------------------
 # Tab 3: Three.js 3D 模擬生成
@@ -489,11 +493,11 @@ with tab3:
                 "請生成 HTML/Three.js 程式碼以視覺化 PEM 電解槽物理場景與動態效果。"
                 "所有文字說明必須嚴格使用台灣繁體中文。"
             ),
-            response_schema=ThreeJSOutput,  # 👈 修正為頂部已定義的類別名稱 (JS 大寫)
+            response_schema=ThreeJSOutput,
             temperature=0.2,
         )
 
-        st.subheader(f"🌐 {res_three.title}")  # 👈 修正欄位為 title
+        st.subheader(f"🌐 {res_three.title}")
         st.markdown("### 💻 HTML / Three.js 程式碼")
         st.code(res_three.html_code, language="html")
 
