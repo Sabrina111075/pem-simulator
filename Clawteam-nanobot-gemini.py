@@ -14,8 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 主標題與副標題渲染
-st.title("⚡ OpenHarness x ClawTeam 數位雙生與群體智能協作平台")
+# 副標題渲染
 st.caption("結合 HKUDS ClawTeam 群智協作、Gemini LLM 與 Nano Bot 微型診斷引擎之多 Agent 協同、極化曲線數據模擬與 3D 視覺化平台")
 
 # ==============================================================================
