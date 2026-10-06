@@ -324,32 +324,34 @@ with tab1:
             else:
               st.success(msg)
 
-# --------------------------------------------------------------------------
-    # 呼叫 Gemini 模型生成 Harness 測試腳本與數據（在 if st.button 內部）
-    # --------------------------------------------------------------------------
-    with st.spinner("OpenHarness 引擎正在規劃測試腳本與電化學模擬計算..."):
-      try:  # 👈 1. 這裡有 12 個空白
-        res_harness, used_model = generate_with_fallback(
-            contents=prompt_harness,
-            system_instruction=(
-                "你是一個 PEM 電解槽與 OpenHarness 測試專家。"
-                "請撰寫包含 Butler-Volmer、歐姆過電位與極化曲線驗證的 Harness"
-                " 測試說明。"
-                "所有輸出的說明文字、執行步驟與預期結果必須嚴格使用台灣繁體中文。"
-            ),
-            response_schema=HarnessTestOutput,
-            temperature=0.2,
-        )
+        # --------------------------------------------------------------------------
+        # 呼叫 Gemini 模型生成 Harness 測試腳本與數據（包在 if st.button 內）
+        # --------------------------------------------------------------------------
+        with st.spinner(
+            "OpenHarness 引擎正在規劃測試腳本與電化學模擬計算..."
+        ):
+          try:
+            res_harness, used_model = generate_with_fallback(
+                contents=prompt_harness,
+                system_instruction=(
+                    "你是一個 PEM 電解槽與 OpenHarness 測試專家。"
+                    "請撰寫包含 Butler-Volmer、歐姆過電位與極化曲線驗證的"
+                    " Harness 測試說明。"
+                    "所有輸出的說明文字、執行步驟與預期結果必須嚴格使用台灣繁體中文。"
+                ),
+                response_schema=HarnessTestOutput,
+                temperature=0.2,
+            )
 
-        st.subheader(f"📋 {res_harness.test_title}")
-        st.success(
-            "⚡ PEM 模擬測試規劃與極化曲線數據生成完成！"
-            f"（調用模型：`{used_model}`）"
-        )
-        st.divider()
+            st.subheader(f"📋 {res_harness.test_title}")
+            st.success(
+                "⚡ PEM 模擬測試規劃與極化曲線數據生成完成！"
+                f"（調用模型：`{used_model}`）"
+            )
+            st.divider()
 
-      except Exception as e:  # 👈 2. 必須跟 try 貼在同一垂直線（同樣 12 個空白，不能多空！）
-        st.error(f"Harness 測試規劃失敗：{e}")
+          except Exception as e:
+            st.error(f"Harness 測試規劃失敗：{e}")
 
     # 📊 滿版極化曲線與動態響應圖表
     st.markdown(f"### 📊 PEM 電解槽模擬圖表（當前場景：`{selected_tpl_key}`）")
