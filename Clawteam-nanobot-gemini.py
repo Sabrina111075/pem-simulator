@@ -462,61 +462,72 @@ with tab2:
 
 
 # ------------------------------------------------------------------------------
-# Tab 3: Three.js 3D 模擬生成
+# Tab 3: Three.js 3D 模擬生成器
 # ------------------------------------------------------------------------------
 with tab3:
-  st.header("🎲 Three.js 3D 模擬生成")
-  prompt_three = st.text_area(
-      "輸入 3D 模擬需求描述：",
-      value=TEMPLATES[selected_tpl_key]["tab3"],
-      height=100,
-      key=f"prompt_three_{selected_tpl_key}",
-  )
+    st.header("🎨 Three.js 3D 互動模擬生成")
 
-  if st.button("生成 3D 模擬腳本", type="primary"):
-    final_prompt_three = prompt_three
+    prompt_3d = st.text_area(
+        "輸入 3D 場景需求描述：",
+        value=TEMPLATES[selected_tpl_key]["tab3"],
+        height=100,
+        key=f"prompt_3d_{selected_tpl_key}"
+    )
 
-    if enable_nano_optimizer and "nano_bot" in st.session_state:
-      if hasattr(st.session_state.nano_bot, "optimize_three_prompt"):
-        with st.spinner("🤖 Nano Bot 正在優化 3D 模擬 Prompt..."):
-          final_prompt_three = st.session_state.nano_bot.optimize_three_prompt(
-              prompt_three
-          )
-          st.info("💡 **Nano Bot 已補充 Three.js 物理參數防護！**")
+    if st.button("生成 3D 場景", type="primary"):
+        final_prompt_3d = prompt_3d
+      
+        # 🤖 1. Nano Bot 前置提示詞精煉與效能預審
+        if enable_nano_optimizer and "nano_bot" in st.session_state:
+            with st.spinner("🤖 Nano Bot 正進行 3D 場景精煉與效能預審..."):
+                final_prompt_3d = st.session_state.nano_bot.optimize_3d_prompt(prompt_3d)
+                perf_info = st.session_state.nano_bot.estimate_3d_performance(final_prompt_3d)
 
-    with st.spinner("正在生成 Three.js 3D 場景程式碼..."):
-      try:
-        res_three, used_model = generate_with_fallback(
-            contents=final_prompt_three,
-            system_instruction=(
-                "你是一個 WebGL 與 Three.js 專家。"
-                "請生成包含 <!DOCTYPE html> 完整獨立的 HTML/Three.js 程式碼以視覺化 PEM 電解槽物理場景與動態氣泡效果。"
-                "請務必引入 [https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.min.js](https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.min.js) 與 OrbitControls。"
-                "所有文字說明必須嚴格使用台灣繁體中文。"
-            ),
-            response_schema=ThreeJSOutput,
-            temperature=0.2,
-        )
+                # 展示 Nano Bot 智慧預審卡片
+                with st.expander("🤖 Nano Bot 預審與場景結構報告", expanded=True):
+                    st.write(f"💡 **精煉描述：** {final_prompt_3d}")
+                    col_a, col_b = st.columns(2)
+                    col_a.metric("預估核心組件", perf_info["components"])
+                    col_b.metric("粒子動畫負載", perf_info["particles"], delta=perf_info["fps_target"])
 
-        st.subheader(f"🌐 {res_three.title}")
+        # ⚡ 2. 呼叫 Gemini 生成 Three.js HTML 程式碼
+        with st.spinner("Gemini 正在建構 3D WebGL 互動場景..."):
+            try:
+                system_prompt_3d = (
+                    "你是個頂級 3D WebGL / Three.js 開發專家。"
+                    "【視覺風格與極致相容性要求】"
+                    "1. 背景設定為淺灰/白色 (#f5f7fa)，絕不使用黑色背景。"
+                    "2. 包含 AmbientLight (強度 0.8) 與 DirectionalLight (強度 0.8)。"
+                    "3. 陽極極板、陰極極板與中央 PEM 質子膜（半透明淡藍色）需有明顯區隔。"
+                    "4. OrbitControls 啟用 controls.autoRotate = true。"
+                    "【語法禁忌】嚴禁使用 EffectComposer 或任何第三方 Postprocessing 庫！"
+                    "【輸出格式】請直接輸出包含 <!DOCTYPE html> 的完整 HTML 程式碼，並將其包覆在 ```html 與 ``` 區塊中。"
+                )
 
-        # 清理 HTML 原始碼 (移除 Markdown ```html 標記)
-        clean_html = res_three.html_code.replace("```html", "").replace(
-            "```", ""
-        )
+                response_3d = st.session_state.nano_bot.client.models.generate_content(
+                    model=selected_model_name,
+                    contents=final_prompt_3d,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt_3d,
+                        temperature=0.3
+                    )
+                )
 
-        # 1. 直接在 Streamlit 內嵌入渲染 WebGL 3D 場景
-        st.markdown("### 🎨 3D 動態模擬渲染")
-        components.html(clean_html, height=500, scrolling=False)
+                res_text = response_3d.text if response_3d.text else ""
 
-        # 2. 顯示 HTML / Three.js 原始程式碼
-        st.markdown("### 💻 HTML / Three.js 程式碼")
-        st.code(clean_html, language="html")
+                # 清理與提取 HTML 內容
+                if "```html" in res_text:
+                    raw_html = res_text.split("```html")[1].split("```")[0].strip()
+                elif "```" in res_text:
+                    raw_html = res_text.split("```")[1].split("```")[0].strip()
+                else:
+                    raw_html = res_text.strip()
 
-        # 3. 畫面與物理邏輯說明
-        st.markdown("### 📋 畫面與物理說明")
-        st.write(res_three.description)
-        st.success(f"✅ 3D 模擬腳本生成完成！（調用模型：`{used_model}`）")
+                st.caption(f"使用模型：`{selected_model_name}`")
 
-      except Exception as e:
-        st.error(f"3D 模擬生成失敗：{e}")
+                # 渲染 3D Canvas
+                import streamlit.components.v1 as components
+                components.html(raw_html, height=650, scrolling=False)
+
+            except Exception as e:
+                st.error(f"3D 場景生成失敗：{e}")
