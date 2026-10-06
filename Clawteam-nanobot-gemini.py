@@ -225,8 +225,8 @@ st.sidebar.info("🟢 **Nano Bot 運作狀態：** 微型診斷引擎已就緒")
 # ==============================================================================
 # 5. 主介面 Header 與 Tabs 佈局
 # ==============================================================================
-st.title("⚡ OpenHarness & CLI-Anything + Gemini AI 整合工作台")
-st.caption("結合 PEM 電解槽自動化測試、極化曲線數據模擬、Mermaid 流程圖與 3D 互動場景")
+st.title("⚡ OpenHarness x ClawTeam 數位雙生與群體智能協作平台")
+st.caption("結合 HKUDS ClawTeam 群智協作、Gemini LLM 與 Nano Bot 微型診斷引擎之多 Agent 協同、極化曲線數據模擬與 3D 視覺化平台")
 
 tab1, tab2, tab3 = st.tabs([
     "⚡ OpenHarness 自動化引擎模擬與測試",
