@@ -413,8 +413,16 @@ with tab2:
   if st.button("生成流程圖", type="primary"):
     final_prompt_flow = prompt_flow
 
-    # 1. Nano Bot 提示詞優化 logic
-    if enable_nano_optimizer:
+    # 安全取得側邊欄開關狀態 (避免 NameError)
+    is_nano_active = globals().get(
+        "enable_nano_optimizer", False
+    ) or st.session_state.get("enable_nano_optimizer", False)
+    is_clawteam_active = globals().get(
+        "enable_clawteam", False
+    ) or st.session_state.get("enable_clawteam", False)
+
+    # 1. Nano Bot 提示詞優化
+    if is_nano_active:
       if "nano_bot" in st.session_state and hasattr(
           st.session_state.nano_bot, "optimize_mermaid_prompt"
       ):
@@ -430,8 +438,8 @@ with tab2:
             "3. 請以標準雙向判斷邏輯繪製完整流程。"
         )
 
-    # 2. ClawTeam Swarm 蜂群代理協作 logic
-    if enable_clawteam:
+    # 2. ClawTeam Swarm 蜂群代理協作
+    if is_clawteam_active:
       final_prompt_flow = (
           f"{final_prompt_flow}\n\n"
           "[ClawTeam Swarm 多代理協作增強]\n"
@@ -456,7 +464,7 @@ with tab2:
         st.subheader(f"📌 {res_flow.title}")
 
         # 🎯【展現區塊 1】Nano Bot 系統物理診斷報告
-        if enable_nano_optimizer:
+        if is_nano_active:
           st.success("🤖 **Nano Bot 微型診斷引擎：系統物理診斷完成**")
           with st.expander(
               "🔍 檢視 Nano Bot 系統物理診斷報告與優化 Prompt", expanded=True
@@ -472,14 +480,14 @@ with tab2:
             st.code(final_prompt_flow, language="markdown")
 
         # 🎯【展現區塊 2】ClawTeam Swarm 蜂群代理協作報告
-        if enable_clawteam:
+        if is_clawteam_active:
           st.info("🐝 **ClawTeam Swarm 蜂群代理協作引擎：多 Agent 任務分工完成**")
           with st.expander("🐝 檢視 ClawTeam Swarm 代理人拓撲與協作共識", expanded=True):
             st.markdown("""
                         **[ClawTeam 蜂群代理協作日誌]**
-                        * **Agent Alpha (系統監控)**：已完成水質與電流載入關卡拓撲部署。
-                        * **Agent Beta (安全診斷)**：已確認過壓洩壓機制與電壓異常監控節點機制。
-                        * **Agent Gamma (控制執行)**：已嵌入 ESD 緊急停機連鎖邏輯，確保無死角安全閉環。
+                        * **Agent Alpha (系統監控)**：已完成水質與電流載入關卡拓撲部署[cite: 26]。
+                        * **Agent Beta (安全診斷)**：已確認過壓洩壓機制與電壓異常監控節點機制[cite: 26]。
+                        * **Agent Gamma (控制執行)**：已嵌入 ESD 緊急停機連鎖邏輯，確保無死角安全閉環[cite: 26]。
                         """)
 
         # 3. 顯示視覺化圖形 (Mermaid.js CDN)
