@@ -412,14 +412,16 @@ with tab2:
 
   if st.button("生成流程圖", type="primary"):
     final_prompt_flow = prompt_flow
+    optimized_by_nano = False
 
+    # 1. Nano Bot 前置提示詞優化處理
     if enable_nano_optimizer and "nano_bot" in st.session_state:
       if hasattr(st.session_state.nano_bot, "optimize_mermaid_prompt"):
         with st.spinner("🤖 Nano Bot 正在優化流程圖 Prompt..."):
           final_prompt_flow = (
               st.session_state.nano_bot.optimize_mermaid_prompt(prompt_flow)
           )
-          st.info("💡 **Nano Bot 已注入 PEM 電解槽邏輯驗證防護！**")
+          optimized_by_nano = True
 
     with st.spinner("正在生成 Mermaid 流程圖與架構步驟..."):
       try:
@@ -434,9 +436,20 @@ with tab2:
             temperature=0.2,
         )
 
+        # 📌 補回：Nano Bot 優化細節展現區塊
+        if optimized_by_nano:
+          st.info("💡 **Nano Bot 微型診斷引擎已完成前置提示詞優化**")
+          with st.expander(
+              "🔍 檢視 Nano Bot 最佳化後的 Prompt 與診斷語法", expanded=False
+          ):
+            st.markdown("**原始輸入：**")
+            st.caption(prompt_flow)
+            st.markdown("**Nano Bot 注入 PEM 邏輯防護後：**")
+            st.code(final_prompt_flow, language="markdown")
+
         st.subheader(f"📌 {res_flow.title}")
 
-        # 1. 顯示視覺化圖形 (Mermaid.js CDN)
+        # 2. 顯示視覺化圖形 (使用元件渲染)
         st.markdown("### 🎨 流程圖視覺化")
         mermaid_html = f"""
                 <div class="mermaid" style="background-color: white; padding: 10px; border-radius: 5px;">
@@ -449,17 +462,17 @@ with tab2:
                 """
         components.html(mermaid_html, height=450, scrolling=True)
 
-        # 2. 顯示純文字語法區塊
+        # 3. 顯示純文字語法區塊
         st.markdown("### 🧬 Mermaid 流程圖語法")
         st.code(res_flow.mermaid_code, language="mermaid")
 
+        # 4. 流程說明
         st.markdown("### 📝 流程說明")
         st.write(res_flow.description)
         st.success(f"✅ 流程圖生成完成！（調用模型：`{used_model}`）")
 
       except Exception as e:
         st.error(f"流程圖生成失敗：{e}")
-
 
 # ------------------------------------------------------------------------------
 # Tab 3: Three.js 3D 模擬生成器
