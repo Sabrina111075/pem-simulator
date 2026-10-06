@@ -238,8 +238,8 @@ tab1, tab2, tab3 = st.tabs([
 with tab1:
   st.header("⚡ OpenHarness 自動化引擎模擬與測試")
 
-    if enable_crew_team:
-        st.caption("🐝 **當前運作模式**：`ClawTeam Swarm Intelligence (4-Agent 蜂群協同診斷)`")
+if enable_crew_team:
+        st.info("🐝 **ClawTeam 蜂群協作模式已啟用**：包含 Swarm Leader、Physics Agent、Builder 與 QA Reviewer 多 Agent 協同診斷中")
 
     prompt_harness = st.text_area(
         "輸入欲進行測試的 PEM 電解槽需求：",
