@@ -490,7 +490,8 @@ with tab3:
             contents=final_prompt_three,
             system_instruction=(
                 "你是一個 WebGL 與 Three.js 專家。"
-                "請生成 HTML/Three.js 程式碼以視覺化 PEM 電解槽物理場景與動態效果。"
+                "請生成包含 <!DOCTYPE html> 完整獨立的 HTML/Three.js 程式碼以視覺化 PEM 電解槽物理場景與動態氣泡效果。"
+                "請務必引入 [https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.min.js](https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.min.js) 與 OrbitControls。"
                 "所有文字說明必須嚴格使用台灣繁體中文。"
             ),
             response_schema=ThreeJSOutput,
@@ -498,9 +499,21 @@ with tab3:
         )
 
         st.subheader(f"🌐 {res_three.title}")
-        st.markdown("### 💻 HTML / Three.js 程式碼")
-        st.code(res_three.html_code, language="html")
 
+        # 清理 HTML 原始碼 (移除 Markdown ```html 標記)
+        clean_html = res_three.html_code.replace("```html", "").replace(
+            "```", ""
+        )
+
+        # 1. 直接在 Streamlit 內嵌入渲染 WebGL 3D 場景
+        st.markdown("### 🎨 3D 動態模擬渲染")
+        components.html(clean_html, height=500, scrolling=False)
+
+        # 2. 顯示 HTML / Three.js 原始程式碼
+        st.markdown("### 💻 HTML / Three.js 程式碼")
+        st.code(clean_html, language="html")
+
+        # 3. 畫面與物理邏輯說明
         st.markdown("### 📋 畫面與物理說明")
         st.write(res_three.description)
         st.success(f"✅ 3D 模擬腳本生成完成！（調用模型：`{used_model}`）")
