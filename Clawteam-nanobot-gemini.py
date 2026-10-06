@@ -363,6 +363,7 @@ with tab2:
     )
 
     if st.button("生成流程圖", type="primary"):
+        final_prompt_flow = prompt_flow
         
         # 🤖 1. Nano Bot 專屬流程圖邏輯結構化（不帶 3D 描述）
         if enable_nano_optimizer and "nano_bot" in st.session_state:
@@ -457,6 +458,7 @@ with tab3:
     )
 
     if st.button("生成 3D 場景", type="primary"):
+        final_prompt_flow = prompt_flow
       
         # 🤖 1. Nano Bot 前置提示詞精煉與效能預審
         if enable_nano_optimizer and "nano_bot" in st.session_state:
