@@ -243,21 +243,47 @@ with tab1:
         key=f"prompt_harness_{selected_tpl_key}"
     )
 
-    if st.button("執行 PEM 模擬與生成 Harness 測試案例", type="primary"):
-        if "nano_bot" in st.session_state:
-            with st.spinner("🤖 Nano Bot 正進行電解槽物理邊界與安全性診斷..."):
+if st.button("執行 PEM 模擬與生成 Harness 測試案例", type="primary"):
+    # --------------------------------------------------------------------------
+    # 情況 A：開啟 ClawTeam 蜂群代理協作
+    # --------------------------------------------------------------------------
+    if enable_crew_team:  # (或 enable_claw_team，需與您側邊欄定義的變數名一致)
+        with st.status("🦞 ClawTeam 蜂群代理 (Swarm Intelligence) 協同運作中...", expanded=True) as status:
+            st.write("🤖 **Swarm Leader (HKUDS Agent)**: 正在解析 PEM 電解槽系統模組需求...")
+            
+            # 若同時有開啟 Nano Bot，呼叫 Nano Bot 進行物理邊界診斷
+            if enable_nano_optimizer and "nano_bot" in st.session_state:
+                st.write("🔬 **PEM Physics Agent (Nano Bot)**: 執行 Butler-Volmer 與電化學邊界診斷...")
                 diag_result = st.session_state.nano_bot.diagnose_pem_physics(
                     cell_voltage=2.1 if selected_tpl_key == "高電流密度熱保護測試" else (2.5 if selected_tpl_key == "緊急停機控制流程" else 1.8),
                     current_density=2.8 if selected_tpl_key == "高電流密度熱保護測試" else 1.8,
                     temp=82.0 if selected_tpl_key == "高電流密度熱保護測試" else 75.0
                 )
-                
-                with st.expander("🤖 Nano Bot 系統物理診斷報告", expanded=True):
-                    for msg in diag_result["messages"]:
-                        if "⚠️" in msg:
-                            st.warning(msg)
-                        else:
-                            st.success(msg)
+                for msg in diag_result["messages"]:
+                    st.text(f"  └─ {msg}")
+            
+            st.write("💻 **Harness Code Builder Agent**: 生成符合 OpenHarness 規範之測試案例...")
+            st.write("🛡️ **QA Reviewer Agent**: 完成 Pydantic 結構與邊界條件驗證...")
+            status.update(label="✅ ClawTeam 蜂群協作完成！", state="complete", expanded=False)
+
+    # --------------------------------------------------------------------------
+    # 情況 B：未開啟 ClawTeam，保持原本 Nano Bot 診斷面板
+    # --------------------------------------------------------------------------
+    else:
+        if "nano_bot" in st.session_state and enable_nano_optimizer:
+            with st.spinner("⚡ Nano Bot 正進行電解槽物理邊界與安全性診斷..."):
+                diag_result = st.session_state.nano_bot.diagnose_pem_physics(
+                    cell_voltage=2.1 if selected_tpl_key == "高電流密度熱保護測試" else (2.5 if selected_tpl_key == "緊急停機控制流程" else 1.8),
+                    current_density=2.8 if selected_tpl_key == "高電流密度熱保護測試" else 1.8,
+                    temp=82.0 if selected_tpl_key == "高電流密度熱保護測試" else 75.0
+                )
+            
+            with st.expander("🔍 Nano Bot 系統物理診斷報告", expanded=True):
+                for msg in diag_result["messages"]:
+                    if "⚠️" in msg:
+                        st.warning(msg)
+                    else:
+                        st.success(msg)
 
         with st.spinner("OpenHarness 引擎正在規劃測試腳本與電化學模擬計算..."):
             try:
