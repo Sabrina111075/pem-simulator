@@ -235,72 +235,120 @@ tab1, tab2, tab3 = st.tabs([
 # Tab 1: OpenHarness 測試與極化曲線模擬引擎
 # ------------------------------------------------------------------------------
 with tab1:
-    st.header("⚡ PEM 電解槽模擬、極化曲線與自動化測試")
-    prompt_harness = st.text_area(
-        "輸入欲進行測試的 PEM 電解槽系統模組與計算需求：",
-        value=TEMPLATES[selected_tpl_key]["tab1"],
-        height=100,
-        key=f"prompt_harness_{selected_tpl_key}"
-    )
+  st.header("⚡ OpenHarness 自動化引擎模擬與測試")
+  prompt_harness = st.text_area(
+      "輸入欲進行測試的 PEM 電解槽需求：",
+      value=TEMPLATES[selected_tpl_key]["tab1"],
+      height=100,
+      key=f"prompt_harness_{selected_tpl_key}",
+  )
 
-if st.button("執行 PEM 模擬與生成 Harness 測試案例", type="primary"):
+  # 主按鈕：點擊後觸發後續的診斷與 Harness 生成流程
+  if st.button("執行 PEM 模擬與生成 Harness 測試案例", type="primary"):
     # --------------------------------------------------------------------------
     # 情況 A：開啟 ClawTeam 蜂群代理協作
     # --------------------------------------------------------------------------
-    if enable_crew_team:  # (或 enable_claw_team，需與您側邊欄定義的變數名一致)
-        with st.status("🦞 ClawTeam 蜂群代理 (Swarm Intelligence) 協同運作中...", expanded=True) as status:
-            st.write("🤖 **Swarm Leader (HKUDS Agent)**: 正在解析 PEM 電解槽系統模組需求...")
-            
-            # 若同時有開啟 Nano Bot，呼叫 Nano Bot 進行物理邊界診斷
-            if enable_nano_optimizer and "nano_bot" in st.session_state:
-                st.write("🔬 **PEM Physics Agent (Nano Bot)**: 執行 Butler-Volmer 與電化學邊界診斷...")
-                diag_result = st.session_state.nano_bot.diagnose_pem_physics(
-                    cell_voltage=2.1 if selected_tpl_key == "高電流密度熱保護測試" else (2.5 if selected_tpl_key == "緊急停機控制流程" else 1.8),
-                    current_density=2.8 if selected_tpl_key == "高電流密度熱保護測試" else 1.8,
-                    temp=82.0 if selected_tpl_key == "高電流密度熱保護測試" else 75.0
-                )
-                for msg in diag_result["messages"]:
-                    st.text(f"  └─ {msg}")
-            
-            st.write("💻 **Harness Code Builder Agent**: 生成符合 OpenHarness 規範之測試案例...")
-            st.write("🛡️ **QA Reviewer Agent**: 完成 Pydantic 結構與邊界條件驗證...")
-            status.update(label="✅ ClawTeam 蜂群協作完成！", state="complete", expanded=False)
+    if enable_crew_team:
+      with st.status(
+          "🦞 ClawTeam 蜂群代理 (Swarm Intelligence) 協同運作中...",
+          expanded=True,
+      ) as status:
+        st.write(
+            "🤖 **Swarm Leader (HKUDS Agent)**: 正在解析 PEM"
+            " 電解槽系統模組需求..."
+        )
+
+        # 若同時開啟 Nano Bot，讓 Nano Bot 擔任 Swarm 裡面的物理診斷專家
+        if enable_nano_optimizer and "nano_bot" in st.session_state:
+          st.write(
+              "🔬 **PEM Physics Agent (Nano Bot)**: 執行 Butler-Volmer"
+              " 與電化學邊界診斷..."
+          )
+          diag_result = st.session_state.nano_bot.diagnose_pem_physics(
+              cell_voltage=(
+                  2.1
+                  if selected_tpl_key == "高電流密度熱保護測試"
+                  else (
+                      2.5 if selected_tpl_key == "緊急停機控制流程" else 1.8
+                  )
+              ),
+              current_density=(
+                  2.8 if selected_tpl_key == "高電流密度熱保護測試" else 1.8
+              ),
+              temp=(
+                  82.0 if selected_tpl_key == "高電流密度熱保護測試" else 75.0
+              ),
+          )
+          for msg in diag_result["messages"]:
+            st.text(f"  └─ {msg}")
+
+        st.write(
+            "💻 **Harness Code Builder Agent**: 生成符合 OpenHarness"
+            " 規範之測試案例..."
+        )
+        st.write(
+            "🛡️️ **QA Reviewer Agent**: 完成 Pydantic 結構與邊界條件驗證..."
+        )
+        status.update(
+            label="✅ ClawTeam 蜂群協作完成！",
+            state="complete",
+            expanded=False,
+        )
 
     # --------------------------------------------------------------------------
     # 情況 B：未開啟 ClawTeam，保持原本 Nano Bot 診斷面板
     # --------------------------------------------------------------------------
     else:
-        if "nano_bot" in st.session_state and enable_nano_optimizer:
-            with st.spinner("⚡ Nano Bot 正進行電解槽物理邊界與安全性診斷..."):
-                diag_result = st.session_state.nano_bot.diagnose_pem_physics(
-                    cell_voltage=2.1 if selected_tpl_key == "高電流密度熱保護測試" else (2.5 if selected_tpl_key == "緊急停機控制流程" else 1.8),
-                    current_density=2.8 if selected_tpl_key == "高電流密度熱保護測試" else 1.8,
-                    temp=82.0 if selected_tpl_key == "高電流密度熱保護測試" else 75.0
-                )
-            
-            with st.expander("🔍 Nano Bot 系統物理診斷報告", expanded=True):
-                for msg in diag_result["messages"]:
-                    if "⚠️" in msg:
-                        st.warning(msg)
-                    else:
-                        st.success(msg)
+      if "nano_bot" in st.session_state and enable_nano_optimizer:
+        with st.spinner("⚡ Nano Bot 正進行電解槽物理邊界與安全性診斷..."):
+          diag_result = st.session_state.nano_bot.diagnose_pem_physics(
+              cell_voltage=(
+                  2.1
+                  if selected_tpl_key == "高電流密度熱保護測試"
+                  else (
+                      2.5 if selected_tpl_key == "緊急停機控制流程" else 1.8
+                  )
+              ),
+              current_density=(
+                  2.8 if selected_tpl_key == "高電流密度熱保護測試" else 1.8
+              ),
+              temp=(
+                  82.0 if selected_tpl_key == "高電流密度熱保護測試" else 75.0
+              ),
+          )
 
-        with st.spinner("OpenHarness 引擎正在規劃測試腳本與電化學模擬計算..."):
-            try:
-                res_harness, used_model = generate_with_fallback(
-                    contents=prompt_harness,
-                    system_instruction=(
-                        "你是一個 PEM 電解槽與 OpenHarness 測試專家。"
-                        "請撰寫包含 Butler-Volmer、歐姆過電位與極化曲線驗證的 Harness 測試說明。"
-                        "所有輸出的說明文字、執行步驟與預期結果必須嚴格使用台灣繁體中文。"
-                    ),
-                    response_schema=HarnessTestOutput,
-                    temperature=0.2
-                )
+        with st.expander("🔍 Nano Bot 系統物理診斷報告", expanded=True):
+          for msg in diag_result["messages"]:
+            if "⚠️" in msg:
+              st.warning(msg)
+            else:
+              st.success(msg)
 
-                st.subheader(f"⚡ {res_harness.test_title}")
-                st.success(f"⚡ PEM 模擬測試規劃與極化曲線數據生成完成！（調用模型：`{used_model}`）")
-                st.divider()
+    # --------------------------------------------------------------------------
+    # 呼叫 Gemini 模型生成 Harness 測試腳本與數據（包在 if st.button 內）
+    # --------------------------------------------------------------------------
+    with st.spinner(
+        "OpenHarness 引擎正在規劃測試腳本與電化學模擬計算..."
+    ):
+      try:
+        res_harness, used_model = generate_with_fallback(
+            contents=prompt_harness,
+            system_instruction=(
+                "你是一個 PEM 電解槽與 OpenHarness 測試專家。"
+                "請撰寫包含 Butler-Volmer、歐姆過電位與極化曲線驗證的 Harness"
+                " 測試說明。"
+                "所有輸出的說明文字、執行步驟與預期結果必須嚴格使用台灣繁體中文。"
+            ),
+            response_schema=HarnessTestOutput,
+            temperature=0.2,
+        )
+
+        st.subheader(f"📋 {res_harness.test_title}")
+        st.success(
+            "⚡ PEM 模擬測試規劃與極化曲線數據生成完成！"
+            f"（調用模型：`{used_model}`）"
+        )
+        st.divider()
 
             except Exception as e:
                 st.error(f"Harness 測試規劃失敗：{e}")
@@ -354,14 +402,8 @@ if st.button("執行 PEM 模擬與生成 Harness 測試案例", type="primary"):
 # ------------------------------------------------------------------------------
 with tab2:
     st.header("📊 Mermaid 流程圖自動生成")
-
-    prompt_flow = st.text_area(
-        "輸入流程圖需求描述：",
-        value=TEMPLATES[selected_tpl_key]["tab2"],
-        height=100,
-        key=f"prompt_flow_{selected_tpl_key}"
-    )
-
+    prompt_flowchart = st.text_area("輸入流程圖需求描述：", ...)
+   
     if st.button("生成流程圖", type="primary"):
         final_prompt_flow = prompt_flow
         
@@ -449,14 +491,8 @@ with tab2:
 # ------------------------------------------------------------------------------
 with tab3:
     st.header("🎨 Three.js 3D 互動模擬生成")
-
-    prompt_3d = st.text_area(
-        "輸入 3D 場景需求描述：",
-        value=TEMPLATES[selected_tpl_key]["tab3"],
-        height=100,
-        key=f"prompt_3d_{selected_tpl_key}"
-    )
-
+    prompt_threejs = st.text_area("輸入 3D 場景需求描述：", ...)
+   
     if st.button("生成 3D 場景", type="primary"):
         final_prompt_3d = prompt_3d
       
