@@ -246,9 +246,6 @@ with tab1:
 
   # 主按鈕：點擊後觸發後續的診斷與 Harness 生成流程
   if st.button("執行 PEM 模擬與生成 Harness 測試案例", type="primary"):
-    # --------------------------------------------------------------------------
-    # 情況 A：開啟 ClawTeam 蜂群代理協作
-    # --------------------------------------------------------------------------
     if enable_crew_team:
       with st.status(
           "🦞 ClawTeam 蜂群代理 (Swarm Intelligence) 協同運作中...",
@@ -293,13 +290,15 @@ with tab1:
         status.update(
             label="✅ ClawTeam 蜂群協作完成！",
             state="complete",
-            expanded=False,
+            expanded=False,            
         )
+        st.session_state['clawteam_done'] = True
 
     # --------------------------------------------------------------------------
     # 情況 B：未開啟 ClawTeam，保持原本 Nano Bot 診斷面板
     # --------------------------------------------------------------------------
     else:
+      st.session_state['clawteam_done'] = False
       if "nano_bot" in st.session_state and enable_nano_optimizer:
         with st.spinner("⚡ Nano Bot 正進行電解槽物理邊界與安全性診斷..."):
           diag_result = st.session_state.nano_bot.diagnose_pem_physics(
@@ -402,7 +401,11 @@ with tab1:
 # Tab 2: Mermaid 流程圖自動生成
 # ------------------------------------------------------------------------------
 with tab2:
-  st.header("📊 Mermaid 流程圖自動生成")
+    st.header("📊 Mermaid 流程圖生成")
+    
+    if enable_crew_team and st.session_state.get('clawteam_done'):
+        st.success("✅ ClawTeam 蜂群協作完成！")
+        
   prompt_flow = st.text_area(
       "輸入流程圖需求描述：",
       value=TEMPLATES[selected_tpl_key]["tab2"],
@@ -519,8 +522,11 @@ with tab2:
 # Tab 3: Three.js 3D 模擬生成器
 # ------------------------------------------------------------------------------
 with tab3:
-    st.header("🎨 Three.js 3D 互動模擬生成")
-
+    st.header("🎭 Three.js 3D 模擬生成")
+    
+    if enable_crew_team and st.session_state.get('clawteam_done'):
+        st.success("✅ ClawTeam 蜂群協作完成！")
+        
     prompt_3d = st.text_area(
         "輸入 3D 場景需求描述：",
         value=TEMPLATES[selected_tpl_key]["tab3"],
