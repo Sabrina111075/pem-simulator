@@ -406,14 +406,14 @@ with tab2:
     if enable_crew_team and st.session_state.get('clawteam_done'):
         st.success("✅ ClawTeam 蜂群協作完成！")
         
-  prompt_flow = st.text_area(
+    prompt_flow = st.text_area(
       "輸入流程圖需求描述：",
-      value=TEMPLATES[selected_tpl_key]["tab2"],
-      height=100,
-      key=f"prompt_flow_{selected_tpl_key}",
-  )
+    value=TEMPLATES[selected_tpl_key]["tab2"],
+    height=100,
+    key=f"prompt_flow_{selected_tpl_key}",
+    )
 
-  if st.button("生成流程圖", type="primary"):
+    if st.button("生成流程圖", type="primary"):
     final_prompt_flow = prompt_flow
 
     # 安全取得側邊欄開關狀態 (避免 NameError)
