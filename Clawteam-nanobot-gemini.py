@@ -412,7 +412,6 @@ with tab2:
   if st.button("生成流程圖", type="primary"):
     final_prompt_flow = prompt_flow
 
-    # 若開啟 Nano Bot，且該物件具備 Prompt 優化方法才呼叫
     if enable_nano_optimizer and "nano_bot" in st.session_state:
       if hasattr(st.session_state.nano_bot, "optimize_mermaid_prompt"):
         with st.spinner("🤖 Nano Bot 正在優化流程圖 Prompt..."):
@@ -421,7 +420,6 @@ with tab2:
           )
           st.info("💡 **Nano Bot 已注入 PEM 電解槽邏輯驗證防護！**")
 
-    # 呼叫 Gemini 生成 Mermaid 語法
     with st.spinner("正在生成 Mermaid 流程圖與架構步驟..."):
       try:
         res_flow, used_model = generate_with_fallback(
@@ -431,11 +429,11 @@ with tab2:
                 "請生成符合需求的 Mermaid 流程圖（使用 graph TD 或 sequenceDiagram）"
                 "以及詳細的架構說明。所有文字必須嚴格使用台灣繁體中文。"
             ),
-            response_schema=MermaidFlowOutput,
+            response_schema=FlowchartOutput,  # 👈 修正為頂部已定義的類別名稱
             temperature=0.2,
         )
 
-        st.subheader(f"📌 {res_flow.flow_title}")
+        st.subheader(f"📌 {res_flow.title}")  # 👈 修正欄位為 title
         st.markdown("### 🧬 Mermaid 流程圖語法")
         st.code(res_flow.mermaid_code, language="mermaid")
 
@@ -445,7 +443,6 @@ with tab2:
 
       except Exception as e:
         st.error(f"流程圖生成失敗：{e}")
-
 
 # ------------------------------------------------------------------------------
 # Tab 3: Three.js 3D 模擬生成
@@ -479,11 +476,11 @@ with tab3:
                 "請生成 HTML/Three.js 程式碼以視覺化 PEM 電解槽物理場景與動態效果。"
                 "所有文字說明必須嚴格使用台灣繁體中文。"
             ),
-            response_schema=ThreeJsOutput,
+            response_schema=ThreeJSOutput,  # 👈 修正為頂部已定義的類別名稱 (JS 大寫)
             temperature=0.2,
         )
 
-        st.subheader(f"🌐 {res_three.scene_title}")
+        st.subheader(f"🌐 {res_three.title}")  # 👈 修正欄位為 title
         st.markdown("### 💻 HTML / Three.js 程式碼")
         st.code(res_three.html_code, language="html")
 
