@@ -235,8 +235,7 @@ tab1, tab2, tab3 = st.tabs([
 # Tab 1: OpenHarness 測試與極化曲線模擬引擎
 # ------------------------------------------------------------------------------
 with tab1:
-    st.header("⚡ OpenHarness PEM 電解槽模擬、極化曲線與自動化測試")
-
+    st.header("⚡ PEM 電解槽模擬、極化曲線與自動化測試")
     prompt_harness = st.text_area(
         "輸入欲進行測試的 PEM 電解槽系統模組與計算需求：",
         value=TEMPLATES[selected_tpl_key]["tab1"],
