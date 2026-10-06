@@ -362,9 +362,8 @@ with tab2:
         key=f"prompt_flow_{selected_tpl_key}"
     )
 
-    if st.button("生成流程圖", type="primary", key="btn_gen_flow"):
-        final_prompt_flow = prompt_flow
-
+    if st.button("生成流程圖", type="primary"):
+        
         # 🤖 1. Nano Bot 專屬流程圖邏輯結構化（不帶 3D 描述）
         if enable_nano_optimizer and "nano_bot" in st.session_state:
             with st.spinner("🤖 Nano Bot 正分析與結構化流程圖邏輯..."):
@@ -457,9 +456,8 @@ with tab3:
         key=f"prompt_3d_{selected_tpl_key}"
     )
 
-    if st.button("生成 3D 場景", type="primary", key="btn_gen_3d"):
-        final_prompt_3d = prompt_3d
-
+    if st.button("生成 3D 場景", type="primary"):
+      
         # 🤖 1. Nano Bot 前置提示詞精煉與效能預審
         if enable_nano_optimizer and "nano_bot" in st.session_state:
             with st.spinner("🤖 Nano Bot 正進行 3D 場景精煉與效能預審..."):
