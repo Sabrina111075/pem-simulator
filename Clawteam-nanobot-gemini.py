@@ -398,93 +398,52 @@ with tab1:
     st.line_chart(df_chart)
 
 # ------------------------------------------------------------------------------
-# Tab 2: Mermaid 流程圖生成器
+# Tab 2: Mermaid 流程圖自動生成
 # ------------------------------------------------------------------------------
 with tab2:
-    st.header("📊 Mermaid 流程圖自動生成")
-    prompt_flowchart = st.text_area("輸入流程圖需求描述：", ...)
-   
-    if st.button("生成流程圖", type="primary"):
-        final_prompt_flow = prompt_flow
-        
-        # 🤖 1. Nano Bot 專屬流程圖邏輯結構化（不帶 3D 描述）
-        if enable_nano_optimizer and "nano_bot" in st.session_state:
-            with st.spinner("🤖 Nano Bot 正分析與結構化流程圖邏輯..."):
-                try:
-                    flow_nano_sys = (
-                        "你是一個流程圖邏輯專家。請將使用者需求整理為乾淨、層次分明的中文流程步驟。"
-                        "【禁忌】絕對不要提及 3D、光影或視覺場景，只關注『啟動->監控->判斷->處置』邏輯！"
-                    )
-                    nano_res = st.session_state.nano_bot.client.models.generate_content(
-                        model=st.session_state.nano_bot.model_name,
-                        contents=f"請整理以下流程邏輯：\n{prompt_flow}",
-                        config=types.GenerateContentConfig(
-                            system_instruction=flow_nano_sys,
-                            temperature=0.2
-                        )
-                    )
-                    final_prompt_flow = nano_res.text if nano_res.text else prompt_flow
-                    st.info(f"💡 **Nano Bot 結構化流程邏輯：**\n\n{final_prompt_flow}")
-                except Exception:
-                    final_prompt_flow = prompt_flow
+  st.header("📊 Mermaid 流程圖自動生成")
+  prompt_flow = st.text_area(
+      "輸入流程圖需求描述：",
+      value=TEMPLATES[selected_tpl_key]["tab2"],
+      height=100,
+      key=f"prompt_flow_{selected_tpl_key}",
+  )
 
-        # ⚡ 2. 呼叫 Gemini 生成乾淨標準的 Mermaid 程式碼
-        with st.spinner("Gemini 正在繪製 Mermaid 流程圖..."):
-            try:
-                system_prompt_flow = (
-                    "你是個頂級系統流程圖專家。"
-                    "【語言要求】title、description 及 flowchart 節點內的文字，必須完全使用繁體中文。"
-                    "【Mermaid 語法嚴格要求】"
-                    "1. 必須輸出合法的標準 flowchart TD 語法。"
-                    "2. 節點標籤若包含中文，請務必使用雙引號包覆，例如：A[\"系統啟動\"] --> B{\"溫度過高?\"}。"
-                    "3. 嚴禁使用 :::red, :::blue 等任何自訂類別樣式標籤！保持最純粹的 Mermaid 標準節點語法！"
-                )
+  if st.button("生成流程圖", type="primary"):
+    final_prompt_flow = prompt_flow  # 👈 將變數指派收納進按鈕觸發區塊內
 
-                res_flow, used_model = generate_with_fallback(
-                    contents=final_prompt_flow,
-                    system_instruction=system_prompt_flow,
-                    response_schema=FlowchartOutput,
-                    temperature=0.2
-                )
+    # 若開啟 Nano Bot，先進行 Prompt 優化
+    if enable_nano_optimizer and "nano_bot" in st.session_state:
+      with st.spinner("🤖 Nano Bot 正在優化流程圖 Prompt..."):
+        final_prompt_flow = (
+            st.session_state.nano_bot.optimize_mermaid_prompt(prompt_flow)
+        )
+        st.info("💡 **Nano Bot 已注入 PEM 電解槽邏輯驗證防護！**")
 
-                if res_flow and hasattr(res_flow, 'title'):
-                    st.subheader(res_flow.title)
-                    st.caption(f"使用模型：`{used_model}`")
-                    st.write(res_flow.description)
+    # 呼叫 Gemini 生成 Mermaid 語法
+    with st.spinner("正在生成 Mermaid 流程圖與架構步驟..."):
+      try:
+        res_flow, used_model = generate_with_fallback(
+            contents=final_prompt_flow,
+            system_instruction=(
+                "你是一個專業的系統架構師。"
+                "請生成符合需求的 Mermaid 流程圖（使用 graph TD 或 sequenceDiagram）"
+                "以及詳細的架構說明。所有文字必須嚴格使用台灣繁體中文。"
+            ),
+            response_schema=MermaidFlowOutput,
+            temperature=0.2,
+        )
 
-                    # 清理程式碼標籤
-                    clean_mermaid = res_flow.mermaid_code
-                    if "```mermaid" in clean_mermaid:
-                        clean_mermaid = clean_mermaid.split("```mermaid")[1].split("```")[0].strip()
-                    elif "```" in clean_mermaid:
-                        clean_mermaid = clean_mermaid.split("```")[1].split("```")[0].strip()
+        st.subheader(f"📌 {res_flow.flow_title}")
+        st.markdown("### 🧬 Mermaid 流程圖語法")
+        st.code(res_flow.mermaid_code, language="mermaid")
 
-                    # 展開檢視語法
-                    with st.expander("檢視 Mermaid 原始程式碼", expanded=False):
-                        st.code(clean_mermaid, language="mermaid")
+        st.markdown("### 📝 流程說明")
+        st.write(res_flow.description)
+        st.success(f"✅ 流程圖生成完成！（調用模型：`{used_model}`）")
 
-                    # 渲染圖形 Canvas (修正 script 載入)
-                    mermaid_html = f"""
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                      <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-                    </head>
-                    <body style="background-color: transparent; margin: 0; padding: 10px;">
-                      <pre class="mermaid" style="background-color: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
-                      {clean_mermaid}
-                      </pre>
-                      <script>
-                        mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
-                      </script>
-                    </body>
-                    </html>
-                    """
-                    import streamlit.components.v1 as components
-                    components.html(mermaid_html, height=480, scrolling=True)
-
-            except Exception as e:
-                st.error(f"流程圖生成失敗：{e}")
+      except Exception as e:
+        st.error(f"流程圖生成失敗：{e}")
 
 # ------------------------------------------------------------------------------
 # Tab 3: Three.js 3D 模擬生成器
