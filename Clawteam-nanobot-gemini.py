@@ -9,10 +9,14 @@ import pandas as pd
 # 1. 頁面組態設定
 # ==============================================================================
 st.set_page_config(
-    page_title="OpenHarness & CLI + Gemini AI 整合工作台",
+    page_title="OpenHarness x ClawTeam 數位雙生與群體智能協作平台",
     page_icon="⚡",
     layout="wide"
 )
+
+# 主標題與副標題渲染
+st.title("⚡ OpenHarness x ClawTeam 數位雙生與群體智能協作平台")
+st.caption("結合 HKUDS ClawTeam 群智協作、Gemini LLM 與 Nano Bot 微型診斷引擎之多 Agent 協同、極化曲線數據模擬與 3D 視覺化平台")
 
 # ==============================================================================
 # 2. Pydantic 結構化輸出定義
