@@ -525,7 +525,6 @@ with tab3:
     st.header("🎭 Three.js 3D 模擬生成")
     
     if enable_crew_team and st.session_state.get('clawteam_done'):
-
         st.success("✅ ClawTeam 蜂群協作完成！")
         
     prompt_3d = st.text_area(
