@@ -175,9 +175,6 @@ if "nano_bot" not in st.session_state or st.session_state.get("current_key") != 
 # ------------------------------------------------------------------
 # 側邊欄控制項 (綁定 session_state)
 # ------------------------------------------------------------------
-st.sidebar.markdown("---")
-st.sidebar.subheader("🤖 ClawTeam 蜂群代理協作")
-
 enable_clawteam = st.sidebar.checkbox(
     "啟用 ClawTeam 群體智能 (Swarm)",
     value=st.session_state.get("enable_clawteam", False),
