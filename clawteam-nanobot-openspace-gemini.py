@@ -331,7 +331,7 @@ st.sidebar.info("🟢 **Nano Bot 運作狀態：** 微型診斷引擎已就緒")
 st.title("⚡ OpenHarness x ClawTeam 數位雙生與群體智能協作平台")
 st.caption("結合 HKUDS ClawTeam 群智協作、Gemini LLM 與 Nano Bot 微型診斷引擎之多 Agent 協同、極化曲線數據模擬與 3D 視覺化平台")
 
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "⚡ OpenHarness 自動化引擎模擬與測試",
     "📊 Mermaid 流程圖生成",
     "🎨 Three.js 3D 模擬生成",
@@ -605,7 +605,7 @@ with tab3:
 # ---------------------------------------------------------
 # Tab 4: OpenSpace 空間雙生場域
 # ---------------------------------------------------------
-with tab_openspace:
+with tab4:
     st.subheader("🌌 OpenSpace 空間數位雙生與環境網格 (Spatial Digital Twin)")
     st.markdown("將 OpenSpace 場域感知、幾何座標與空間數據點雲無縫導入 ClawTeam 蜂群節點。")
     
