@@ -555,10 +555,9 @@ with tab3:
                 # generate_with_fallback 會回傳 (內容, 模型名稱)
 
                 res_text, used_model = generate_with_fallback(
-                    contents=final_prompt_3d,
-                    system_instruction=system_prompt_3d
+                contents=final_prompt_3d,
+                system_instruction=system_prompt_3d
                 )
-                html_code = response_3d  # response_3d 本身就是產出的字串了
 
                 # 清理與提取 HTML 內容
                 if "```html" in res_text:
@@ -568,7 +567,7 @@ with tab3:
                 else:
                     raw_html = res_text.strip()
 
-                st.caption(f"使用模型：`{selected_model_name}`")
+                st.caption(f"使用模型：`{used_model}`")
 
                 # 渲染 3D Canvas
                 import streamlit.components.v1 as components
