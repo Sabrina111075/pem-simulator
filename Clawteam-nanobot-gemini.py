@@ -33,58 +33,66 @@ class NanoBotOptimizer:
         return f"{prompt}\n\n[Nano Bot 優化驗證：流程圖邊界保護機制已鎖定]"
 
 # ------------------------------------------------------------------
-# Gemini LLM 自動降級/容錯呼叫函式 (generate_with_fallback)
+# Gemini LLM 自動降級/容錯呼叫函式 (支援新版 google-genai SDK)
 # ------------------------------------------------------------------
 def generate_with_fallback(contents, system_instruction="", response_schema=None, temperature=0.2):
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
 
-    # 1. 安全取得 API Key 並設定
+    # 1. 安全取得 API Key
     api_key = (
         os.environ.get("GEMINI_API_KEY")
         or st.secrets.get("GEMINI_API_KEY", "")
         or st.session_state.get("api_key", "")
     )
-    if api_key:
-        genai.configure(api_key=api_key)
+    
+    if not api_key:
+        raise ValueError("未檢測到 GEMINI_API_KEY，請確認系統設定或環境變數。")
+
+    client = genai.Client(api_key=api_key)
 
     # 2. 優先嘗試模型列表 (由新至舊自動 Fallback)
-    preferred_model = st.session_state.get("selected_model", "gemini-1.5-flash")
+    preferred_model = st.session_state.get("selected_model", "gemini-2.5-flash")
     models_to_try = [
         preferred_model,
+        "gemini-2.5-flash",
         "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-1.0-pro"
+        "gemini-1.5-pro"
     ]
-    
-    # 移除重複的模型名稱
     models_to_try = list(dict.fromkeys(models_to_try))
 
     last_error = None
     for model_name in models_to_try:
         try:
-            config = {"temperature": temperature}
+            config_args = {"temperature": temperature}
+            if system_instruction:
+                config_args["system_instruction"] = system_instruction
             if response_schema:
-                config["response_mime_type"] = "application/json"
-                config["response_schema"] = response_schema
+                config_args["response_mime_type"] = "application/json"
+                config_args["response_schema"] = response_schema
 
-            model = genai.GenerativeModel(
-                model_name=model_name,
-                system_instruction=system_instruction if system_instruction else None
+            config = types.GenerateContentConfig(**config_args)
+
+            # 判斷輸入內容格式
+            prompt_input = contents
+            if isinstance(contents, list) and len(contents) > 0:
+                prompt_input = contents[-1]
+
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt_input,
+                config=config
             )
 
-            response = model.generate_content(contents, generation_config=config)
-            
-            # 若有 Pydantic response_schema，嘗試解析成物件回傳
+            # 若指定結構化輸出，嘗試解析為物件
             if response_schema and hasattr(response, "text"):
                 import json
                 data = json.loads(response.text)
-                # 若為 Pydantic 模型則自動實例化
                 if hasattr(response_schema, "parse_obj"):
                     return response_schema.parse_obj(data), model_name
                 elif hasattr(response_schema, "model_validate"):
                     return response_schema.model_validate(data), model_name
                 else:
-                    # 建立動態簡單物件供屬性存取 (例如 res.title, res.description, res.python_code)
                     class StructuredResult:
                         def __init__(self, d):
                             for k, v in d.items():
@@ -97,8 +105,7 @@ def generate_with_fallback(contents, system_instruction="", response_schema=None
             last_error = e
             continue
 
-    # 若所有模型皆嘗試失敗，拋出最後的錯誤
-    raise RuntimeError(f"所有 Gemini 模型調用皆失敗，最後錯誤: {last_error}")
+    raise RuntimeError(f"所有 Gemini 模型調用失敗，最後錯誤: {last_error}")
 
 # ==============================================================================
 # 1. 頁面組態設定
