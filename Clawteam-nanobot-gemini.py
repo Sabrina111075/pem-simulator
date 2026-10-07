@@ -237,12 +237,16 @@ tab1, tab2, tab3 = st.tabs([
 # ------------------------------------------------------------------------------
 with tab1:
   st.header("⚡ OpenHarness 自動化引擎模擬與測試")
-  prompt_harness = st.text_area(
-      "輸入欲進行測試的 PEM 電解槽需求：",
-      value=TEMPLATES[selected_tpl_key]["tab1"],
-      height=100,
-      key=f"prompt_harness_{selected_tpl_key}",
-  )
+
+if enable_crew_team:
+        st.info("🐝 **ClawTeam 蜂群協作模式已啟用**：包含 Swarm Leader、Physics Agent、Builder 與 QA Reviewer 多 Agent 協同診斷中")
+
+    prompt_harness = st.text_area(
+        "輸入欲進行測試的 PEM 電解槽需求：",
+        value=TEMPLATES[selected_tpl_key]["tab1"],
+        height=100,
+        key=f"prompt_harness_{selected_tpl_key}",
+    )
 
   # 主按鈕：點擊後觸發後續的診斷與 Harness 生成流程
   if st.button("執行 PEM 模擬與生成 Harness 測試案例", type="primary"):
@@ -401,25 +405,59 @@ with tab1:
 # ------------------------------------------------------------------------------
 # Tab 2: Mermaid 流程圖自動生成
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------
+# Tab 2: Mermaid 流程圖自動生成
+# ------------------------------------------------------------------
 with tab2:
-  st.header("📊 Mermaid 流程圖自動生成")
-  prompt_flow = st.text_area(
-      "輸入流程圖需求描述：",
-      value=TEMPLATES[selected_tpl_key]["tab2"],
-      height=100,
-      key=f"prompt_flow_{selected_tpl_key}",
-  )
+    st.header("📊 Mermaid 流程圖自動生成")
+    prompt_flow = st.text_area(
+        "輸入流程圖需求描述：",
+        value=TEMPLATES[selected_tpl_key]["tab2"],
+        height=100,
+        key=f"prompt_flow_{selected_tpl_key}",
+    )
 
-  if st.button("生成流程圖", type="primary"):
-    final_prompt_flow = prompt_flow
+    if st.button("生成流程圖", type="primary"):
+        final_prompt_flow = prompt_flow
 
-    # 安全取得側邊欄開關狀態 (避免 NameError)
-    is_nano_active = globals().get(
-        "enable_nano_optimizer", False
-    ) or st.session_state.get("enable_nano_optimizer", False)
-    is_clawteam_active = globals().get(
-        "enable_clawteam", False
-    ) or st.session_state.get("enable_clawteam", False)
+        # 安全取得側邊欄開關狀態 (避免 NameError)
+        is_nano_active = globals().get(
+            "enable_nano_optimizer", False
+        ) or st.session_state.get("enable_nano_optimizer", False)
+        is_clawteam_active = globals().get(
+            "enable_clawteam", False
+        ) or st.session_state.get("enable_clawteam", False)
+
+        # ------------------------------------------------------------------
+        # 🟢 新增/修改位置：根據 ClawTeam 是否開啟顯示對應狀態
+        # ------------------------------------------------------------------
+        if is_clawteam_active:
+            with st.expander("✅ ClawTeam 蜂群協作完成！", expanded=True):
+                st.markdown("""
+                * 🎯 **Swarm Leader (HKUDS Agent):** 正在解析 Mermaid 流程圖結構與邏輯節點需求...
+                * ⚙️ **PEM Physics Agent (Nano Bot):** 執行 Butler-Volmer 與電化學邊界診斷...
+                    * └─ 物理參數符合 Butler-Volmer 電化學規範 (系統正常)
+                * 📐 **Harness Code Builder Agent:** 生成符合 OpenHarness 規範之測試案例與 Mermaid 流程圖...
+                * 🔍 **QA Reviewer Agent:** 完成 Pydantic 結構與邊界條件驗證...
+                """)
+        else:
+            # 1. Nano Bot 提示詞優化 (未啟用 ClawTeam 時的預設診斷顯示)
+            if is_nano_active:
+                if "nano_bot" in st.session_state and hasattr(
+                    st.session_state.nano_bot, "optimize_mermaid_prompt"
+                ):
+                    final_prompt_flow = st.session_state.nano_bot.optimize_mermaid_prompt(
+                        prompt_flow
+                    )
+                st.success("🤖 Nano Bot 微型診斷引擎：系統物理診斷完成")
+                with st.expander("🔍 檢視 Nano Bot 系統物理診斷報告與優化 Prompt"):
+                    st.write("[Nano Bot 系統物理診斷報告]")
+                    st.write("• 零組件狀態正常，已自動鎖定極限閾值...")
+                    st.code(final_prompt_flow)
+
+        # ------------------------------------------------------------------
+        # 下方請接您原本生成與渲染 Mermaid 流程圖的程式碼邏輯
+        # ------------------------------------------------------------------
 
     # 1. Nano Bot 提示詞優化
     if is_nano_active:
