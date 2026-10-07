@@ -32,6 +32,10 @@ class NanoBotOptimizer:
     def optimize_mermaid_prompt(self, prompt):
         return f"{prompt}\n\n[Nano Bot 優化驗證：流程圖邊界保護機制已鎖定]"
 
+    def optimize_3d_prompt(self, prompt):
+        
+        return f"{prompt}\n\n[Nano Bot 優化驗證：Three.js 3D 渲染幾何結構與氣泡動畫邊界已鎖定]"
+
 # ------------------------------------------------------------------
 # Gemini LLM 自動降級/容錯呼叫函式 (優先使用 Flash-Lite -> Flash -> Pro)
 # ------------------------------------------------------------------
