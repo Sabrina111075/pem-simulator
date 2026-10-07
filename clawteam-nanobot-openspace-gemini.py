@@ -619,17 +619,23 @@ with tab4:
         st.metric(label="ClawTeam 幾何映射狀態", value="Active 🟢")
         
     with col2:
-        x = np.linspace(-5, 5, space_dim)
-        y = np.linspace(-5, 5, space_dim)
-        X, Y = np.meshgrid(x, y)
-        Z = np.sin(np.sqrt(X**2 + Y**2)) * (sensor_temp / 80.0)
+        try:
+            import numpy as np
+            import plotly.graph_objects as go
+            
+            x = np.linspace(-5, 5, space_dim)
+            y = np.linspace(-5, 5, space_dim)
+            X, Y = np.meshgrid(x, y)
+            Z = np.sin(np.sqrt(X**2 + Y**2)) * (sensor_temp / 80.0)
 
-        fig_space = go.Figure(data=[go.Surface(z=Z, x=X, y=Y, colorscale='Viridis')])
-        fig_space.update_layout(
-            title='OpenSpace 空間場域熱力分散與能量拓撲圖',
-            autosize=False,
-            width=600,
-            height=400,
-            margin=dict(l=65, r=50, b=65, t=90)
-        )
-        st.plotly_chart(fig_space, use_container_width=True)
+            fig_space = go.Figure(data=[go.Surface(z=Z, x=X, y=Y, colorscale='Viridis')])
+            fig_space.update_layout(
+                title='OpenSpace 空間場域熱力分散與能量拓撲圖',
+                autosize=False,
+                width=600,
+                height=400,
+                margin=dict(l=65, r=50, b=65, t=90)
+            )
+            st.plotly_chart(fig_space, use_container_width=True)
+        except Exception as e:
+            st.error(f"OpenSpace 3D 拓撲圖渲染準備中或組件缺漏：{e}")
