@@ -552,12 +552,13 @@ with tab3:
                     "【輸出格式】請直接輸出包含 <!DOCTYPE html> 的完整 HTML 程式碼，並將其包覆在 ```html 與 ``` 區塊中。"
                 )
 
-                response_3d = generate_with_fallback(
+                # generate_with_fallback 會回傳 (內容, 模型名稱)
+
+                response_3d, used_model = generate_with_fallback(
                     contents=final_prompt_3d,
                     system_instruction=system_prompt_3d
                 )
-
-                res_text = response_3d.text if response_3d.text else ""
+                html_code = response_3d  # response_3d 本身就是產出的字串了
 
                 # 清理與提取 HTML 內容
                 if "```html" in res_text:
