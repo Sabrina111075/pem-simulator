@@ -402,9 +402,6 @@ if enable_crew_team:
 
     st.line_chart(df_chart)
 
-# ------------------------------------------------------------------------------
-# Tab 2: Mermaid 流程圖自動生成
-# ------------------------------------------------------------------------------
 # ------------------------------------------------------------------
 # Tab 2: Mermaid 流程圖自動生成
 # ------------------------------------------------------------------
@@ -429,7 +426,7 @@ with tab2:
         ) or st.session_state.get("enable_clawteam", False)
 
         # ------------------------------------------------------------------
-        # 🟢 新增/修改位置：根據 ClawTeam 是否開啟顯示對應狀態
+        # 🟢 頂部狀態顯示區塊 (按下按鈕後優先顯示協作狀態)
         # ------------------------------------------------------------------
         if is_clawteam_active:
             with st.expander("✅ ClawTeam 蜂群協作完成！", expanded=True):
@@ -440,97 +437,55 @@ with tab2:
                 * 📐 **Harness Code Builder Agent:** 生成符合 OpenHarness 規範之測試案例與 Mermaid 流程圖...
                 * 🔍 **QA Reviewer Agent:** 完成 Pydantic 結構與邊界條件驗證...
                 """)
+            # Prompt 補充
+            final_prompt_flow = (
+                f"{final_prompt_flow}\n\n"
+                "[ClawTeam Swarm 蜂群協作指導規約]\n"
+                "1. 由 Swarm Leader 統一調度，結合 PEM Physics 與 Code Builder 協同任務。\n"
+                "2. 流程圖必須精準包含啟動、監控、過壓保護與緊急停機 (ESD) 邏輯鏈。"
+            )
+        elif is_nano_active:
+            if "nano_bot" in st.session_state and hasattr(
+                st.session_state.nano_bot, "optimize_mermaid_prompt"
+            ):
+                final_prompt_flow = st.session_state.nano_bot.optimize_mermaid_prompt(
+                    prompt_flow
+                )
+            st.success("🤖 Nano Bot 微型診斷引擎：系統物理診斷完成")
+            with st.expander("🔍 檢視 Nano Bot 系統物理診斷報告與優化 Prompt", expanded=True):
+                st.write("[Nano Bot 系統物理診斷報告]")
+                st.write("• 零組件狀態正常，已自動鎖定極限閾值...")
+                st.code(final_prompt_flow)
         else:
-            # 1. Nano Bot 提示詞優化 (未啟用 ClawTeam 時的預設診斷顯示)
-            if is_nano_active:
-                if "nano_bot" in st.session_state and hasattr(
-                    st.session_state.nano_bot, "optimize_mermaid_prompt"
-                ):
-                    final_prompt_flow = st.session_state.nano_bot.optimize_mermaid_prompt(
-                        prompt_flow
-                    )
-                st.success("🤖 Nano Bot 微型診斷引擎：系統物理診斷完成")
-                with st.expander("🔍 檢視 Nano Bot 系統物理診斷報告與優化 Prompt"):
-                    st.write("[Nano Bot 系統物理診斷報告]")
-                    st.write("• 零組件狀態正常，已自動鎖定極限閾值...")
-                    st.code(final_prompt_flow)
+            final_prompt_flow = (
+                f"{final_prompt_flow}\n\n"
+                "[Nano Bot 系統防護規範]\n"
+                "1. 必須包含 PEM 電解槽陰極/陽極壓力與溫度臨界閾值診斷節點。\n"
+                "2. 必須包含過壓過溫關聯與 ESD 緊急停機安全保護機制。\n"
+                "3. 請以標準雙向判斷邏輯繪製完整流程。"
+            )
 
         # ------------------------------------------------------------------
-        # 下方請接您原本生成與渲染 Mermaid 流程圖的程式碼邏輯
+        # 🚀 呼叫 LLM 引擎生成 Mermaid 流程圖
         # ------------------------------------------------------------------
+        with st.spinner("正在生成 Mermaid 流程圖與架構步驟..."):
+            try:
+                res_flow, used_model = generate_with_fallback(
+                    contents=final_prompt_flow,
+                    system_instruction=(
+                        "你是一個專業的系統架構師與 Swarm 多代理協作專家。"
+                        "請生成符合需求的 Mermaid 流程圖 (使用 graph TD 或 sequenceDiagram)"
+                        "以及詳細的架構說明。所有文字必須嚴格使用台灣繁體中文。"
+                    ),
+                    response_schema=FlowchartOutput,
+                    temperature=0.2,
+                )
 
-    # 1. Nano Bot 提示詞優化
-    if is_nano_active:
-      if "nano_bot" in st.session_state and hasattr(
-          st.session_state.nano_bot, "optimize_mermaid_prompt"
-      ):
-        final_prompt_flow = st.session_state.nano_bot.optimize_mermaid_prompt(
-            prompt_flow
-        )
-      else:
-        final_prompt_flow = (
-            f"{final_prompt_flow}\n\n"
-            "[Nano Bot 系統防護規範]\n"
-            "1. 必須包含 PEM 電解槽陽極/陰極壓力與溫度臨界閥值診斷節點。\n"
-            "2. 必須包含過壓洩壓閥與 ESD 緊急停機安全保護機制。\n"
-            "3. 請以標準雙向判斷邏輯繪製完整流程。"
-        )
+                st.subheader(f"📌 {res_flow.title}")
 
-    # 2. ClawTeam Swarm 蜂群代理協作
-    if is_clawteam_active:
-      final_prompt_flow = (
-          f"{final_prompt_flow}\n\n"
-          "[ClawTeam Swarm 多代理協作增強]\n"
-          "- Agent Alpha (系統監控): 負責檢測流速、水質與電流載入階段。\n"
-          "- Agent Beta (安全診斷): 負責異常電壓飆升與過壓/洩壓觸發程序。\n"
-          "- Agent Gamma (控制執行): 負責 ESD 急停與系統安全連鎖覆蓋。"
-      )
-
-    with st.spinner("正在生成 Mermaid 流程圖與架構步驟..."):
-      try:
-        res_flow, used_model = generate_with_fallback(
-            contents=final_prompt_flow,
-            system_instruction=(
-                "你是一個專業的系統架構師與 Swarm 多代理協作專家。"
-                "請生成符合需求的 Mermaid 流程圖（使用 graph TD 或 sequenceDiagram）"
-                "以及詳細的架構說明。所有文字必須嚴格使用台灣繁體中文。"
-            ),
-            response_schema=FlowchartOutput,
-            temperature=0.2,
-        )
-
-        st.subheader(f"📌 {res_flow.title}")
-
-        # 🎯【展現區塊 1】Nano Bot 系統物理診斷報告
-        if is_nano_active:
-          st.success("🤖 **Nano Bot 微型診斷引擎：系統物理診斷完成**")
-          with st.expander(
-              "🔍 檢視 Nano Bot 系統物理診斷報告與優化 Prompt", expanded=True
-          ):
-            st.markdown("""
-                        **[Nano Bot 系統物理診斷報告]**
-                        * **電解槽狀態監控**：已自動補充陽極/陰極氣體純度、壓力及溫度臨界閥值鎖定[cite: 24, 25, 26]。
-                        * **安全防護機制**：已注入 ESD 緊停與過壓洩壓防禦邏輯[cite: 24, 25, 26]。
-                        * **語法優化**：擴充符合 PEM 物理邊界條件之雙向節點控制流程[cite: 24, 25, 26]。
-                        """)
-            st.markdown("---")
-            st.markdown("**Nano Bot 最佳化後之 Prompt：**")
-            st.code(final_prompt_flow, language="markdown")
-
-        # 🎯【展現區塊 2】ClawTeam Swarm 蜂群代理協作報告
-        if is_clawteam_active:
-          st.info("🐝 **ClawTeam Swarm 蜂群代理協作引擎：多 Agent 任務分工完成**")
-          with st.expander("🐝 檢視 ClawTeam Swarm 代理人拓撲與協作共識", expanded=True):
-            st.markdown("""
-                        **[ClawTeam 蜂群代理協作日誌]**
-                        * **Agent Alpha (系統監控)**：已完成水質與電流載入關卡拓撲部署[cite: 26]。
-                        * **Agent Beta (安全診斷)**：已確認過壓洩壓機制與電壓異常監控節點機制[cite: 26]。
-                        * **Agent Gamma (控制執行)**：已嵌入 ESD 緊急停機連鎖邏輯，確保無死角安全閉環[cite: 26]。
-                        """)
-
-        # 3. 顯示視覺化圖形 (Mermaid.js CDN)
-        st.markdown("### 🎨 流程圖視覺化")
-        mermaid_html = f"""
+                # # 3. 顯示視覺化圖形 (Mermaid.js CDN)
+                st.markdown("### 🗺️ 流程圖視覺化")
+                mermaid_html = f"""
                 <div class="mermaid" style="background-color: white; padding: 10px; border-radius: 5px;">
                     {res_flow.mermaid_code}
                 </div>
@@ -539,19 +494,19 @@ with tab2:
                     mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
                 </script>
                 """
-        components.html(mermaid_html, height=450, scrolling=True)
+                components.html(mermaid_html, height=450, scrolling=True)
 
-        # 4. 顯示純文字語法區塊
-        st.markdown("### 🧬 Mermaid 流程圖語法")
-        st.code(res_flow.mermaid_code, language="mermaid")
+                # # 4. 顯示純文字語法塊
+                st.markdown("### 📝 Mermaid 流程圖語法")
+                st.code(res_flow.mermaid_code, language="mermaid")
 
-        # 5. 流程說明
-        st.markdown("### 📝 流程說明")
-        st.write(res_flow.description)
-        st.success(f"✅ 流程圖生成完成！（調用模型：`{used_model}`）")
+                # # 5. 流程說明
+                st.markdown("### 📋 流程說明")
+                st.write(res_flow.description)
+                st.success(f"✅ 流程圖生成完成！（調用模型：`{used_model}`）")
 
-      except Exception as e:
-        st.error(f"流程圖生成失敗：{e}")
+            except Exception as e:
+                st.error(f"❌ 流程圖生成失敗：{e}")
 
 # ------------------------------------------------------------------------------
 # Tab 3: Three.js 3D 模擬生成器
