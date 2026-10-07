@@ -33,7 +33,7 @@ class NanoBotOptimizer:
         return f"{prompt}\n\n[Nano Bot 優化驗證：流程圖邊界保護機制已鎖定]"
 
 # ------------------------------------------------------------------
-# Gemini LLM 自動降級/容錯呼叫函式 (支援新版 google-genai SDK)
+# Gemini LLM 自動降級/容錯呼叫函式 (優先使用 Flash-Lite -> Flash -> Pro)
 # ------------------------------------------------------------------
 def generate_with_fallback(contents, system_instruction="", response_schema=None, temperature=0.2):
     from google import genai
@@ -47,18 +47,22 @@ def generate_with_fallback(contents, system_instruction="", response_schema=None
     )
     
     if not api_key:
-        raise ValueError("未檢測到 GEMINI_API_KEY，請確認系統設定或環境變數。")
+        raise ValueError("未檢測到 GEMINI_API_KEY，請確認系統設定或 sidebar API key。")
 
     client = genai.Client(api_key=api_key)
 
-    # 2. 優先嘗試模型列表 (由新至舊自動 Fallback)
-    preferred_model = st.session_state.get("selected_model", "gemini-2.5-flash")
+    # 2. 依照您的模型優先順序排列 (Flash-Lite 主力 -> Flash 第二 -> Pro 第三 -> 舊版備用)
+    preferred_model = st.session_state.get("selected_model", "gemini-2.5-flash-lite")
     models_to_try = [
         preferred_model,
+        "gemini-2.5-flash-lite",
+        "gemini-1.5-flash-8b",
         "gemini-2.5-flash",
         "gemini-1.5-flash",
+        "gemini-2.5-pro",
         "gemini-1.5-pro"
     ]
+    # 自動去除重複項目且維持權重順序
     models_to_try = list(dict.fromkeys(models_to_try))
 
     last_error = None
@@ -73,21 +77,23 @@ def generate_with_fallback(contents, system_instruction="", response_schema=None
 
             config = types.GenerateContentConfig(**config_args)
 
-            # 判斷輸入內容格式
+            # 確保輸入內容為字串格式
             prompt_input = contents
             if isinstance(contents, list) and len(contents) > 0:
                 prompt_input = contents[-1]
 
             response = client.models.generate_content(
                 model=model_name,
-                contents=prompt_input,
+                contents=str(prompt_input),
                 config=config
             )
 
-            # 若指定結構化輸出，嘗試解析為物件
-            if response_schema and hasattr(response, "text"):
+            # 解析結構化 json 輸出
+            if response_schema and hasattr(response, "text") and response.text:
                 import json
-                data = json.loads(response.text)
+                clean_text = response.text.replace("```json", "").replace("```", "").strip()
+                data = json.loads(clean_text)
+                
                 if hasattr(response_schema, "parse_obj"):
                     return response_schema.parse_obj(data), model_name
                 elif hasattr(response_schema, "model_validate"):
