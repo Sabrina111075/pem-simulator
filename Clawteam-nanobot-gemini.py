@@ -553,7 +553,7 @@ with tab3:
                 )
 
                 response_3d = st.session_state.nano_bot.client.models.generate_content(
-                    model=selected_model_name,
+                    model="gemini-3.5-flash-lite",
                     contents=final_prompt_3d,
                     config=types.GenerateContentConfig(
                         system_instruction=system_prompt_3d,
