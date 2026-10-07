@@ -608,33 +608,39 @@ with tab3:
 with tab4:
     st.subheader("🌌 OpenSpace 空間數位雙生與環境網格 (Spatial Digital Twin)")
     st.markdown("將 OpenSpace 場域感知、幾何座標與空間數據點雲無縫導入 ClawTeam 蜂群節點。")
+    st.write("---")
     
-    col1, col2 = st.columns([1, 2])
+    # 1. 上方區塊：OpenSpace 場域參數設定
+    st.markdown("#### 📍 OpenSpace 場域參數設定")
     
-    with col1:
-        st.markdown("#### 📍 OpenSpace 場域參數")
+    col_param1, col_param2 = st.columns(2)
+    with col_param1:
         space_dim = st.slider("空間網格解析度 (Grid Resolution)", 10, 50, 20)
         sensor_temp = st.slider("環境邊界溫度 (°C)", 20, 100, 80)
+    with col_param2:
         st.metric(label="OpenSpace 同步節點數", value=f"{space_dim * space_dim} Points")
         st.metric(label="ClawTeam 幾何映射狀態", value="Active 🟢")
         
-    with col2:
-        try:
-            import numpy as np
-            import matplotlib.pyplot as plt
-            
-            x = np.linspace(-5, 5, space_dim)
-            y = np.linspace(-5, 5, space_dim)
-            X, Y = np.meshgrid(x, y)
-            Z = np.sin(np.sqrt(X**2 + Y**2)) * (sensor_temp / 80.0)
+    st.write("---")
+    
+    # 2. 下方區塊：空間拓撲圖與數據視覺化（移至下方垂直排列）
+    st.markdown("#### 📊 OpenSpace 空間熱力與拓撲分佈圖")
+    try:
+        import numpy as np
+        import matplotlib.pyplot as plt
+        
+        x = np.linspace(-5, 5, space_dim)
+        y = np.linspace(-5, 5, space_dim)
+        X, Y = np.meshgrid(x, y)
+        Z = np.sin(np.sqrt(X**2 + Y**2)) * (sensor_temp / 80.0)
 
-            fig, ax = plt.subplots(figsize=(6, 4))
-            cs = ax.contourf(X, Y, Z, cmap='viridis')
-            fig.colorbar(cs, ax=ax, label='Temperature Field (°C)')
-            ax.set_title('OpenSpace Thermal Topology Map')
-            ax.set_xlabel('X Dimension (m)')
-            ax.set_ylabel('Y Dimension (m)')
-            
-            st.pyplot(fig)
-        except Exception as e:
-            st.error(f"OpenSpace 拓撲圖渲染中：{e}")
+        fig, ax = plt.subplots(figsize=(8, 4.5))
+        cs = ax.contourf(X, Y, Z, cmap='viridis')
+        fig.colorbar(cs, ax=ax, label='Temperature Field (°C)')
+        ax.set_title('OpenSpace Thermal Topology Map')
+        ax.set_xlabel('X Dimension (m)')
+        ax.set_ylabel('Y Dimension (m)')
+        
+        st.pyplot(fig)
+    except Exception as e:
+        st.error(f"OpenSpace 拓撲圖渲染中：{e}")
