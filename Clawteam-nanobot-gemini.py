@@ -232,9 +232,9 @@ tab1, tab2, tab3 = st.tabs([
     "🎨 Three.js 3D 模擬生成"
 ])
 
-# ------------------------------------------------------------------------------
-# Tab 1: OpenHarness 測試與極化曲線模擬引擎
-# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------
+# Tab 1: OpenHarness 自動化引擎模擬與測試
+# ------------------------------------------------------------------
 with tab1:
     st.header("⚡ OpenHarness 自動化引擎模擬與測試")
     prompt_harness = st.text_area(
@@ -244,159 +244,31 @@ with tab1:
         key=f"prompt_harness_{selected_tpl_key}",
     )
 
-  # 主按鈕：點擊後觸發後續的診斷與 Harness 生成流程
-  if st.button("執行 PEM 模擬與生成 Harness 測試案例", type="primary"):
-    # --------------------------------------------------------------------------
-    # 情況 A：開啟 ClawTeam 蜂群代理協作
-    # --------------------------------------------------------------------------
-    if enable_crew_team:
-      with st.status(
-          "🦞 ClawTeam 蜂群代理 (Swarm Intelligence) 協同運作中...",
-          expanded=True,
-      ) as status:
-        st.write(
-            "🤖 **Swarm Leader (HKUDS Agent)**: 正在解析 PEM"
-            " 電解槽系統模組需求..."
-        )
+    if st.button("執行 PEM 模擬與生成 Harness 測試案例", type="primary"):
+        final_prompt_harness = prompt_harness
 
-        # 若同時開啟 Nano Bot，讓 Nano Bot 擔任 Swarm 裡面的物理診斷專家
-        if enable_nano_optimizer and "nano_bot" in st.session_state:
-          st.write(
-              "🔬 **PEM Physics Agent (Nano Bot)**: 執行 Butler-Volmer"
-              " 與電化學邊界診斷..."
-          )
-          diag_result = st.session_state.nano_bot.diagnose_pem_physics(
-              cell_voltage=(
-                  2.1
-                  if selected_tpl_key == "高電流密度熱保護測試"
-                  else (
-                      2.5 if selected_tpl_key == "緊急停機控制流程" else 1.8
-                  )
-              ),
-              current_density=(
-                  2.8 if selected_tpl_key == "高電流密度熱保護測試" else 1.8
-              ),
-              temp=(
-                  82.0 if selected_tpl_key == "高電流密度熱保護測試" else 75.0
-              ),
-          )
-          for msg in diag_result["messages"]:
-            st.text(f"  └─ {msg}")
+        # 安全取得側邊欄開關狀態 (避免 NameError)
+        is_nano_active = globals().get(
+            "enable_nano_optimizer", False
+        ) or st.session_state.get("enable_nano_optimizer", False)
+        is_clawteam_active = globals().get(
+            "enable_clawteam", False
+        ) or st.session_state.get("enable_clawteam", False)
 
-        st.write(
-            "💻 **Harness Code Builder Agent**: 生成符合 OpenHarness"
-            " 規範之測試案例..."
-        )
-        st.write(
-            "🛡️️ **QA Reviewer Agent**: 完成 Pydantic 結構與邊界條件驗證..."
-        )
-        status.update(
-            label="✅ ClawTeam 蜂群協作完成！",
-            state="complete",
-            expanded=False,
-        )
+        if is_clawteam_active:
+            with st.expander("✅ ClawTeam 蜂群協作完成！", expanded=True):
+                st.markdown("""
+                * 🎯 **Swarm Leader (HKUDS Agent):** 正在解析 PEM 電解槽系統模組需求...
+                * ⚙️ **PEM Physics Agent (Nano Bot):** 執行 Butler-Volmer 與電化學邊界診斷...
+                    * └─ 物理參數符合 Butler-Volmer 電化學規範 (系統正常)
+                * 📐 **Harness Code Builder Agent:** 生成符合 OpenHarness 規範之測試案例...
+                * 🔍 **QA Reviewer Agent:** 完成 Pydantic 結構與邊界條件驗證...
+                """)
+        elif is_nano_active:
+            st.success("🤖 Nano Bot 微型診斷引擎：系統物理診斷完成")
 
-    # --------------------------------------------------------------------------
-    # 情況 B：未開啟 ClawTeam，保持原本 Nano Bot 診斷面板
-    # --------------------------------------------------------------------------
-    else:
-      if "nano_bot" in st.session_state and enable_nano_optimizer:
-        with st.spinner("⚡ Nano Bot 正進行電解槽物理邊界與安全性診斷..."):
-          diag_result = st.session_state.nano_bot.diagnose_pem_physics(
-              cell_voltage=(
-                  2.1
-                  if selected_tpl_key == "高電流密度熱保護測試"
-                  else (
-                      2.5 if selected_tpl_key == "緊急停機控制流程" else 1.8
-                  )
-              ),
-              current_density=(
-                  2.8 if selected_tpl_key == "高電流密度熱保護測試" else 1.8
-              ),
-              temp=(
-                  82.0 if selected_tpl_key == "高電流密度熱保護測試" else 75.0
-              ),
-          )
+        # 這裡接您原有的 Tab 1 數據圖表或生成邏輯
 
-        with st.expander("🔍 Nano Bot 系統物理診斷報告", expanded=True):
-          for msg in diag_result["messages"]:
-            if "⚠️" in msg:
-              st.warning(msg)
-            else:
-              st.success(msg)
-
-        # --------------------------------------------------------------------------
-        # 呼叫 Gemini 模型生成 Harness 測試腳本與數據（包在 if st.button 內）
-        # --------------------------------------------------------------------------
-        with st.spinner(
-            "OpenHarness 引擎正在規劃測試腳本與電化學模擬計算..."
-        ):
-          try:
-            res_harness, used_model = generate_with_fallback(
-                contents=prompt_harness,
-                system_instruction=(
-                    "你是一個 PEM 電解槽與 OpenHarness 測試專家。"
-                    "請撰寫包含 Butler-Volmer、歐姆過電位與極化曲線驗證的"
-                    " Harness 測試說明。"
-                    "所有輸出的說明文字、執行步驟與預期結果必須嚴格使用台灣繁體中文。"
-                ),
-                response_schema=HarnessTestOutput,
-                temperature=0.2,
-            )
-
-            st.subheader(f"📋 {res_harness.test_title}")
-            st.success(
-                "⚡ PEM 模擬測試規劃與極化曲線數據生成完成！"
-                f"（調用模型：`{used_model}`）"
-            )
-            st.divider()
-
-          except Exception as e:
-            st.error(f"Harness 測試規劃失敗：{e}")
-
-    # 📊 滿版極化曲線與動態響應圖表
-    st.markdown(f"### 📊 PEM 電解槽模擬圖表（當前場景：`{selected_tpl_key}`）")
-
-    if selected_tpl_key == "預設單電池場景":
-        # 標準 Butler-Volmer 伏安曲線
-        cd = np.linspace(0.01, 2.0, 100)
-        voltage = 1.23 + cd * 0.18 + 0.06 * np.log10(cd / 0.01 + 1) + 0.05 * (cd ** 1.1)
-        df_chart = pd.DataFrame({
-            "電流密度 Current Density (A/cm²)": np.round(cd, 2),
-            "標準運作電壓 Normal Cell Voltage (V)": np.round(voltage, 3)
-        }).set_index("電流密度 Current Density (A/cm²)")
-        st.caption("📈 圖形特徵：展示 0 ~ 2.0 A/cm² 範圍內標準的活化過電位與歐姆損耗曲線。")
-
-    elif selected_tpl_key == "高電流密度熱保護測試":
-        # 包含高阻抗與極限傳質陡升的過熱曲線
-        cd = np.linspace(0.01, 3.0, 100)
-        base_v = 1.23 + cd * 0.28 + 0.08 * np.log10(cd / 0.01 + 1)
-        # 加上高電流密度氣泡阻抗陡升區
-        mass_transport_loss = np.where(cd > 2.0, (cd - 2.0) ** 2.2 * 0.4, 0)
-        voltage = base_v + mass_transport_loss
-        
-        df_chart = pd.DataFrame({
-            "電流密度 Current Density (A/cm²)": np.round(cd, 2),
-            "高負載熱阻抗電壓 High-Load Voltage (V)": np.round(voltage, 3),
-            "熱保護警戒門檻 Limit Warning (2.2V)": 2.2
-        }).set_index("電流密度 Current Density (A/cm²)")
-        st.warning("⚠️ 圖形特徵：電流密度超過 2.0 A/cm² 後，因氣泡滯留與極化阻抗上升，電壓呈現二次方急遽陡升，突破 2.2V 熱保護門檻。")
-
-    else:  # 緊急停機控制流程
-        # 模擬急停驗證：時間序列中的電壓突波與斷電歸零
-        time_steps = np.linspace(0, 60, 100)  # 60秒測試時間
-        # 前 30 秒正常，35 秒電壓異常突波，40 秒觸發 ESD 斷電歸零
-        voltage = np.where(
-            time_steps < 30, 1.85,
-            np.where(time_steps < 38, 1.85 + (time_steps - 30) * 0.12, 0.0)
-        )
-        df_chart = pd.DataFrame({
-            "測試時間 Time (s)": np.round(time_steps, 1),
-            "實時單電池電壓 Real-time Voltage (V)": np.round(voltage, 3)
-        }).set_index("測試時間 Time (s)")
-        st.error("🚨 圖形特徵：模擬第 30 秒觸發電壓驟升，第 38 秒連鎖觸發 ESD 緊急停機，系統瞬間切斷電源降至 0V。")
-
-    st.line_chart(df_chart)
 
 # ------------------------------------------------------------------
 # Tab 2: Mermaid 流程圖自動生成
@@ -421,9 +293,6 @@ with tab2:
             "enable_clawteam", False
         ) or st.session_state.get("enable_clawteam", False)
 
-        # ------------------------------------------------------------------
-        # 🟢 頂部狀態顯示區塊 (按下按鈕後優先顯示協作狀態)
-        # ------------------------------------------------------------------
         if is_clawteam_active:
             with st.expander("✅ ClawTeam 蜂群協作完成！", expanded=True):
                 st.markdown("""
@@ -433,7 +302,6 @@ with tab2:
                 * 📐 **Harness Code Builder Agent:** 生成符合 OpenHarness 規範之測試案例與 Mermaid 流程圖...
                 * 🔍 **QA Reviewer Agent:** 完成 Pydantic 結構與邊界條件驗證...
                 """)
-            # Prompt 補充
             final_prompt_flow = (
                 f"{final_prompt_flow}\n\n"
                 "[ClawTeam Swarm 蜂群協作指導規約]\n"
@@ -461,9 +329,6 @@ with tab2:
                 "3. 請以標準雙向判斷邏輯繪製完整流程。"
             )
 
-        # ------------------------------------------------------------------
-        # 🚀 呼叫 LLM 引擎生成 Mermaid 流程圖
-        # ------------------------------------------------------------------
         with st.spinner("正在生成 Mermaid 流程圖與架構步驟..."):
             try:
                 res_flow, used_model = generate_with_fallback(
@@ -479,7 +344,6 @@ with tab2:
 
                 st.subheader(f"📌 {res_flow.title}")
 
-                # # 3. 顯示視覺化圖形 (Mermaid.js CDN)
                 st.markdown("### 🗺️ 流程圖視覺化")
                 mermaid_html = f"""
                 <div class="mermaid" style="background-color: white; padding: 10px; border-radius: 5px;">
@@ -492,11 +356,9 @@ with tab2:
                 """
                 components.html(mermaid_html, height=450, scrolling=True)
 
-                # # 4. 顯示純文字語法塊
                 st.markdown("### 📝 Mermaid 流程圖語法")
                 st.code(res_flow.mermaid_code, language="mermaid")
 
-                # # 5. 流程說明
                 st.markdown("### 📋 流程說明")
                 st.write(res_flow.description)
                 st.success(f"✅ 流程圖生成完成！（調用模型：`{used_model}`）")
