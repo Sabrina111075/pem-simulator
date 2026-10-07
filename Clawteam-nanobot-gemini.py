@@ -149,35 +149,48 @@ class ClawTeamManager:
     except Exception as e:
       return f"ClawTeam 執行失敗: {str(e)}"
 
+# ------------------------------------------------------------------
+# 初始化 Nano Bot (防禦型寫法，避免 NameError)
+# ------------------------------------------------------------------
+api_key = (
+    os.environ.get("GEMINI_API_KEY")
+    or st.secrets.get("GEMINI_API_KEY", "")
+    or st.session_state.get("api_key", "")
+)
 
-# ==============================================================================
+if "nano_bot" not in st.session_state or st.session_state.get("current_key") != api_key:
+    if api_key:
+        try:
+            st.session_state.nano_bot = NanoBotOptimizer(api_key=api_key)
+            st.session_state.current_key = api_key
+        except Exception as e:
+            st.warning(f"⚠️ NanoBotOptimizer 初始化提示: {e}")
+            st.session_state.nano_bot = NanoBotOptimizer()
+    else:
+        st.session_state.nano_bot = NanoBotOptimizer()
 
-# 初始化 Nano Bot
-if (
-    "nano_bot" not in st.session_state
-    or st.session_state.get("current_key") != api_key
-):
-  st.session_state.nano_bot = NanoBot(api_key=api_key)
-  st.session_state.current_key = api_key
-
-# 1. Nano Bot 原有的控制項（就是您反藍的那段，保留不刪除）
+# ------------------------------------------------------------------
+# 側邊欄控制項 (綁定 session_state)
+# ------------------------------------------------------------------
 enable_nano_optimizer = st.sidebar.checkbox(
     "啟用 Nano Bot 前置提示詞優化",
-    value=True,
+    value=st.session_state.get("enable_nano_optimizer", True),
+    key="enable_nano_optimizer",
     help="開啟後，Nano Bot 會自動精煉與擴充傳給 Gemini 的提示詞。"
 )
 
-# 2. 接續新增 ClawTeam 控制項（放在 Nano Bot 下方）
 st.sidebar.markdown("---")
-st.sidebar.subheader("🦞 ClawTeam 蜂群代理協作")
-enable_crew_team = st.sidebar.checkbox(
+st.sidebar.subheader("🤖 ClawTeam 蜂群代理協作")
+
+enable_clawteam = st.sidebar.checkbox(
     "啟用 ClawTeam 群體智能 (Swarm)",
-    value=False,
+    value=st.session_state.get("enable_clawteam", False),
+    key="enable_clawteam",
     help="開啟後，將透過 HKUDS ClawTeam 動態 spawn Leader 與 Worker 進行任務分工。"
 )
 
-if enable_crew_team:
-    st.sidebar.info("💡 已切換至 ClawTeam (Swarm Intelligence) 模式")
+if enable_clawteam:
+    st.sidebar.info("🤖 已切換至 ClawTeam (Swarm Intelligence) 模式")
 
 st.sidebar.markdown("**⚡ 快速載入工程測試範本：**")
 TEMPLATES = {
