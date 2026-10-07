@@ -334,7 +334,7 @@ st.caption("結合 HKUDS ClawTeam 群智協作、Gemini LLM 與 Nano Bot 微型�
 tab1, tab2, tab3 = st.tabs([
     "⚡ OpenHarness 自動化引擎模擬與測試",
     "📊 Mermaid 流程圖生成",
-    "🎨 Three.js 3D 模擬生成"
+    "🎨 Three.js 3D 模擬生成",
     "🌌 OpenSpace 空間雙生場域"
 ])
 
@@ -602,9 +602,9 @@ with tab3:
             except Exception as e:
                 st.error(f"3D 場景生成失敗：{e}")
 
-# ------------------------------------------------------------------------------
-# Tab 4:OpenSpace 空間雙生場域
-# ------------------------------------------------------------------------------
+# ---------------------------------------------------------
+# Tab 4: OpenSpace 空間雙生場域
+# ---------------------------------------------------------
 with tab_openspace:
     st.subheader("🌌 OpenSpace 空間數位雙生與環境網格 (Spatial Digital Twin)")
     st.markdown("將 OpenSpace 場域感知、幾何座標與空間數據點雲無縫導入 ClawTeam 蜂群節點。")
