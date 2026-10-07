@@ -265,9 +265,9 @@ api_key = (
     or st.session_state.get("api_key", "")
 )
 
-    if "NanoBotOptimizer" in globals():
+if "NanoBotOptimizer" in globals():
         st.session_state.nano_bot = NanoBotOptimizer(api_key=api_key)
-    else:
+else:
         st.session_state.nano_bot = None
 
 # ------------------------------------------------------------------
