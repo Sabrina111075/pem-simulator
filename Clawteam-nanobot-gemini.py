@@ -552,13 +552,9 @@ with tab3:
                     "【輸出格式】請直接輸出包含 <!DOCTYPE html> 的完整 HTML 程式碼，並將其包覆在 ```html 與 ``` 區塊中。"
                 )
 
-                response_3d = st.session_state.nano_bot.client.models.generate_content(
-                    model="gemini-3.5-flash-lite",
+                response_3d = generate_with_fallback(
                     contents=final_prompt_3d,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_prompt_3d,
-                        temperature=0.3
-                    )
+                    system_instruction=system_prompt_3d
                 )
 
                 res_text = response_3d.text if response_3d.text else ""
