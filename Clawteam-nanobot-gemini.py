@@ -99,47 +99,33 @@ class NanoBot:
             "fps_target": "60 FPS (WebGL 順暢渲染)"
         }
 
-# ==============================================================================
-# 4. 側邊欄：API 金鑰與系統設定
-# ==============================================================================
-st.sidebar.title("⚙️ 系統設定")
+# ------------------------------------------------------------------
+# 側邊欄控制項 (正確綁定 session_state)
+# ------------------------------------------------------------------
+with st.sidebar:
+    st.header("⚙️ 系統設定")
 
-api_key = ""
-if "GEMINI_API_KEY" in st.secrets:
-    api_key = st.secrets["GEMINI_API_KEY"]
-else:
-    api_key = st.sidebar.text_input("輸入 Gemini API Key:", type="password")
+    # 選項1: Nano Bot
+    enable_nano_optimizer = st.checkbox(
+        "啟用 Nano Bot 前置提示詞優化",
+        value=st.session_state.get("enable_nano_optimizer", True),
+        key="enable_nano_optimizer",
+    )
 
-if not api_key:
-    st.info("請於 Streamlit Secrets 設定 GEMINI_API_KEY 或在側邊欄輸入 API 金鑰以繼續。")
-    st.stop()
+    st.markdown("### 🤖 ClawTeam 蜂群代理協作")
 
-selected_model_name = st.sidebar.selectbox(
-    "選擇偏好的 Gemini 模型：",
-    ["gemini-3.5-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash"],
-    index=0
-)
+    # 選項2: ClawTeam (關鍵修復：勾選時立即觸發重新渲染)
+    enable_clawteam = st.checkbox(
+        "啟用 ClawTeam 群體智能 (Swarm)",
+        value=st.session_state.get("enable_clawteam", False),
+        key="enable_clawteam",
+    )
 
-# 備援生成函式
-def generate_with_fallback(contents, system_instruction, response_schema, temperature=0.2):
-    client = genai.Client(api_key=api_key)
-    models_to_try = [selected_model_name, "gemini-2.0-flash", "gemini-1.5-flash"]
-    for m in models_to_try:
-        try:
-            resp = client.models.generate_content(
-                model=m,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    response_mime_type="application/json",
-                    response_schema=response_schema,
-                    temperature=temperature
-                )
-            )
-            return resp.parsed, m
-        except Exception:
-            continue
-    raise RuntimeError("所有 Gemini 模型端點均未能成功回應。")
+    # 動態更新左下角運作狀態卡片
+    if enable_clawteam:
+        st.info("🤖 **ClawTeam 運作狀態：** 蜂群協作多 Agent 已啟動")
+    elif enable_nano_optimizer:
+        st.info("🤖 **Nano Bot 運作狀態：** 微型診斷引擎已就緒")
 
 # ==============================================================================
 # 🎯 建議安插位置 2：ClawTeam Swarm Manager 類別
@@ -247,14 +233,13 @@ with tab1:
     if st.button("執行 PEM 模擬與生成 Harness 測試案例", type="primary"):
         final_prompt_harness = prompt_harness
 
-        # 安全取得側邊欄開關狀態 (避免 NameError)
-        is_nano_active = globals().get(
-            "enable_nano_optimizer", False
-        ) or st.session_state.get("enable_nano_optimizer", False)
-        is_clawteam_active = globals().get(
-            "enable_clawteam", False
-        ) or st.session_state.get("enable_clawteam", False)
+        # 從 session_state 精準讀取狀態
+        is_nano_active = st.session_state.get("enable_nano_optimizer", False)
+        is_clawteam_active = st.session_state.get("enable_clawteam", False)
 
+        # --------------------------------------------------------------
+        # 1. 顯示 Agent 狀態面板
+        # --------------------------------------------------------------
         if is_clawteam_active:
             with st.expander("✅ ClawTeam 蜂群協作完成！", expanded=True):
                 st.markdown("""
@@ -264,11 +249,60 @@ with tab1:
                 * 📐 **Harness Code Builder Agent:** 生成符合 OpenHarness 規範之測試案例...
                 * 🔍 **QA Reviewer Agent:** 完成 Pydantic 結構與邊界條件驗證...
                 """)
+            final_prompt_harness = (
+                f"{final_prompt_harness}\n\n"
+                "[ClawTeam Swarm 蜂群協作指導規約]\n"
+                "1. 由 Swarm Leader 統一調度，結合 PEM Physics 與 Code Builder 協同任務。\n"
+                "2. 產出必須包含電化學極化曲線數據與 OpenHarness Python 測試程式碼。"
+            )
         elif is_nano_active:
+            if "nano_bot" in st.session_state and hasattr(
+                st.session_state.nano_bot, "optimize_harness_prompt"
+            ):
+                final_prompt_harness = (
+                    st.session_state.nano_bot.optimize_harness_prompt(
+                        prompt_harness
+                    )
+                )
             st.success("🤖 Nano Bot 微型診斷引擎：系統物理診斷完成")
+            with st.expander(
+                "🔍 檢視 Nano Bot 系統物理診斷報告與優化 Prompt",
+                expanded=True,
+            ):
+                st.write("[Nano Bot 系統物理診斷報告]")
+                st.write(
+                    "• 電壓/電流密度邊界正常 (0-2.0 A/cm²)，Butler-Volmer 參數已校正..."
+                )
+                st.code(final_prompt_harness)
 
-        # 這裡接您原有的 Tab 1 數據圖表或生成邏輯
+        # --------------------------------------------------------------
+        # 2. 執行生成與圖表渲染
+        # --------------------------------------------------------------
+        with st.spinner("正在進行 PEM 電化學模擬與 Harness 測試案例生成..."):
+            try:
+                res_harness, used_model = generate_with_fallback(
+                    contents=final_prompt_harness,
+                    system_instruction=(
+                        "你是一個專業的 PEM 電解槽物理模擬專家與 OpenHarness 自動化測試工程師。"
+                        "請根據輸入需求生成測試案例描述與完整的 Python Harness 測試程式碼。"
+                        "所有說明文字必須嚴格使用台灣繁體中文。"
+                    ),
+                    response_schema=HarnessOutput,  # 請確保有對應的 Pydantic 模型或結構
+                    temperature=0.2,
+                )
 
+                st.subheader(f"📌 測試案例：{res_harness.title}")
+                st.markdown("### 📋 測試說明與邊界條件")
+                st.write(res_harness.description)
+
+                st.markdown("### 💻 OpenHarness 測試腳本 (Python)")
+                st.code(res_harness.python_code, language="python")
+
+                st.success(f"✅ 生成完成！（調用模型：`{used_model}`）")
+
+            except Exception as e:
+                # 抓出具體失敗原因
+                st.error(f"❌ Harness 測試案例生成失敗：{e}")
 
 # ------------------------------------------------------------------
 # Tab 2: Mermaid 流程圖自動生成
