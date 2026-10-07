@@ -328,8 +328,8 @@ st.sidebar.info("🟢 **Nano Bot 運作狀態：** 微型診斷引擎已就緒")
 # ==============================================================================
 # 5. 主介面 Header 與 Tabs 佈局
 # ==============================================================================
-st.title("⚡ HKU Open-Source Swarm AI | 物理雙生與蜂群智慧模擬系統")
-st.caption("融合 OpenHarness 自動化引擎、與 Nano Bot 微型診斷、ClawTeam 蜂群代理、OpenSpace 幾何網格與 Gemini LLM 智能驅動引擎 ")
+st.title("⚡ HKU Open-Source Swarm | AI 物理雙生與蜂群智慧模擬系統")
+st.caption("融合 OpenHarness 自動化引擎、CLI 指令、 Nano Bot 微型診斷、ClawTeam 蜂群代理、OpenSpace 幾何網格與 Gemini LLM 智能驅動引擎 ")
 
 tab1, tab2, tab3, tab4 = st.tabs([
     "⚡ OpenHarness 自動化引擎模擬與測試",
