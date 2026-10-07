@@ -180,13 +180,6 @@ if "nano_bot" not in st.session_state:
 # ------------------------------------------------------------------
 # 側邊欄控制項 (綁定 session_state)
 # ------------------------------------------------------------------
-enable_clawteam = st.sidebar.checkbox(
-    "啟用 ClawTeam 群體智能 (Swarm)",
-    value=st.session_state.get("enable_clawteam", False),
-    key="enable_clawteam",
-    help="開啟後，將透過 HKUDS ClawTeam 動態 spawn Leader 與 Worker 進行任務分工。"
-)
-
 if enable_clawteam:
     st.sidebar.info("🤖 已切換至 ClawTeam (Swarm Intelligence) 模式")
 
