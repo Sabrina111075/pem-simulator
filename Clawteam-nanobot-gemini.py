@@ -33,7 +33,6 @@ class NanoBotOptimizer:
         return f"{prompt}\n\n[Nano Bot 優化驗證：流程圖邊界保護機制已鎖定]"
 
     def optimize_3d_prompt(self, prompt):
-        
         return f"{prompt}\n\n[Nano Bot 優化驗證：Three.js 3D 渲染幾何結構與氣泡動畫邊界已鎖定]"
 
 # ------------------------------------------------------------------
