@@ -554,7 +554,7 @@ with tab3:
 
                 # generate_with_fallback 會回傳 (內容, 模型名稱)
 
-                response_3d, used_model = generate_with_fallback(
+                res_text, used_model = generate_with_fallback(
                     contents=final_prompt_3d,
                     system_instruction=system_prompt_3d
                 )
