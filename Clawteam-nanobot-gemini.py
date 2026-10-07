@@ -55,12 +55,9 @@ def generate_with_fallback(contents, system_instruction="", response_schema=None
     preferred_model = st.session_state.get("selected_model", "gemini-2.5-flash-lite")
     models_to_try = [
         preferred_model,
-        "gemini-2.5-flash-lite",
-        "gemini-1.5-flash-8b",
-        "gemini-2.5-flash",
-        "gemini-1.5-flash",
-        "gemini-2.5-pro",
-        "gemini-1.5-pro"
+        "gemini-3.5-flash-lite",
+        "gemini-3.6-flash",
+        "gemini-3.1-pro"
     ]
     # 自動去除重複項目且維持權重順序
     models_to_try = list(dict.fromkeys(models_to_try))
