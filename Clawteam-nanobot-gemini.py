@@ -9,6 +9,19 @@ import numpy as np
 import pandas as pd
 import streamlit.components.v1 as components
 
+# ------------------------------------------------------------------
+# OpenHarness 與 Flowchart 的 Pydantic 結構定義
+# ------------------------------------------------------------------
+class HarnessOutput(BaseModel):
+    title: str = Field(description="測試案例標題")
+    description: str = Field(description="測試場景與驗證說明")
+    python_code: str = Field(description="可執行的 Harness Python 測試程式碼")
+
+class FlowchartOutput(BaseModel):
+    title: str = Field(description="流程圖標題")
+    mermaid_code: str = Field(description="Mermaid 語法流程圖代碼")
+    description: str = Field(description="架構與流程說明")
+
 class NanoBotOptimizer:
     def __init__(self, api_key=""):
         self.api_key = api_key
@@ -18,6 +31,74 @@ class NanoBotOptimizer:
 
     def optimize_mermaid_prompt(self, prompt):
         return f"{prompt}\n\n[Nano Bot 優化驗證：流程圖邊界保護機制已鎖定]"
+
+# ------------------------------------------------------------------
+# Gemini LLM 自動降級/容錯呼叫函式 (generate_with_fallback)
+# ------------------------------------------------------------------
+def generate_with_fallback(contents, system_instruction="", response_schema=None, temperature=0.2):
+    import google.generativeai as genai
+
+    # 1. 安全取得 API Key 並設定
+    api_key = (
+        os.environ.get("GEMINI_API_KEY")
+        or st.secrets.get("GEMINI_API_KEY", "")
+        or st.session_state.get("api_key", "")
+    )
+    if api_key:
+        genai.configure(api_key=api_key)
+
+    # 2. 優先嘗試模型列表 (由新至舊自動 Fallback)
+    preferred_model = st.session_state.get("selected_model", "gemini-1.5-flash")
+    models_to_try = [
+        preferred_model,
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-1.0-pro"
+    ]
+    
+    # 移除重複的模型名稱
+    models_to_try = list(dict.fromkeys(models_to_try))
+
+    last_error = None
+    for model_name in models_to_try:
+        try:
+            config = {"temperature": temperature}
+            if response_schema:
+                config["response_mime_type"] = "application/json"
+                config["response_schema"] = response_schema
+
+            model = genai.GenerativeModel(
+                model_name=model_name,
+                system_instruction=system_instruction if system_instruction else None
+            )
+
+            response = model.generate_content(contents, generation_config=config)
+            
+            # 若有 Pydantic response_schema，嘗試解析成物件回傳
+            if response_schema and hasattr(response, "text"):
+                import json
+                data = json.loads(response.text)
+                # 若為 Pydantic 模型則自動實例化
+                if hasattr(response_schema, "parse_obj"):
+                    return response_schema.parse_obj(data), model_name
+                elif hasattr(response_schema, "model_validate"):
+                    return response_schema.model_validate(data), model_name
+                else:
+                    # 建立動態簡單物件供屬性存取 (例如 res.title, res.description, res.python_code)
+                    class StructuredResult:
+                        def __init__(self, d):
+                            for k, v in d.items():
+                                setattr(self, k, v)
+                    return StructuredResult(data), model_name
+
+            return response.text, model_name
+
+        except Exception as e:
+            last_error = e
+            continue
+
+    # 若所有模型皆嘗試失敗，拋出最後的錯誤
+    raise RuntimeError(f"所有 Gemini 模型調用皆失敗，最後錯誤: {last_error}")
 
 # ==============================================================================
 # 1. 頁面組態設定
