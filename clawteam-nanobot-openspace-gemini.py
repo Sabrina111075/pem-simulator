@@ -623,21 +623,29 @@ with tab4:
         
     st.write("---")
     
-    # 2. 下方區塊：空間拓撲圖與數據視覺化（移至下方垂直排列）
+    # 2. 下方區塊：空間拓撲圖與數據視覺化
     st.markdown("#### 📊 OpenSpace 空間熱力與拓撲分佈圖")
     try:
         import numpy as np
         import matplotlib.pyplot as plt
         
+        # 1. 解析度連動：頻率與網格採樣同步改變
+        freq = space_dim / 10.0  # 網格數越多，熱力波動頻率越顯著
         x = np.linspace(-5, 5, space_dim)
         y = np.linspace(-5, 5, space_dim)
         X, Y = np.meshgrid(x, y)
-        Z = np.sin(np.sqrt(X**2 + Y**2)) * (sensor_temp / 80.0)
+        
+        # 2. 溫度連動：計算熱力場與中心溫升擴散
+        r = np.sqrt(X**2 + Y**2)
+        # 混合高斯熱點與波紋場，隨溫度上升直接影響熱點強度與擴散範圍
+        Z = sensor_temp * np.exp(-0.2 * r**2) + (sensor_temp * 0.2) * np.sin(freq * r)
 
         fig, ax = plt.subplots(figsize=(8, 4.5))
-        cs = ax.contourf(X, Y, Z, cmap='viridis')
-        fig.colorbar(cs, ax=ax, label='Temperature Field (°C)')
-        ax.set_title('OpenSpace Thermal Topology Map')
+        # 固定 vmin 與 vmax，讓溫度變化時顏色的亮度和熱區面積產生極為明顯的變化
+        cs = ax.contourf(X, Y, Z, levels=20, cmap='inferno', vmin=0, vmax=120)
+        cbar = fig.colorbar(cs, ax=ax, label='Temperature Field (°C)')
+        
+        ax.set_title(f'OpenSpace Thermal Topology (Temp: {sensor_temp}°C, Grid: {space_dim}x{space_dim})')
         ax.set_xlabel('X Dimension (m)')
         ax.set_ylabel('Y Dimension (m)')
         
