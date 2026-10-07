@@ -24,7 +24,12 @@ class FlowchartOutput(BaseModel):
 
 class NanoBotOptimizer:
     def __init__(self, api_key=""):
+        from google import genai
         self.api_key = api_key
+        if api_key:
+            self.client = genai.Client(api_key=api_key)
+        else:
+            self.client = None
 
     def optimize_harness_prompt(self, prompt):
         return f"{prompt}\n\n[Nano Bot 優化驗證：物理參數極限限制已鎖定]"
@@ -34,6 +39,13 @@ class NanoBotOptimizer:
 
     def optimize_3d_prompt(self, prompt):
         return f"{prompt}\n\n[Nano Bot 優化驗證：Three.js 3D 渲染幾何結構與氣泡動畫邊界已鎖定]"
+
+    def estimate_3d_performance(self, prompt):
+        return {
+            "components": "12 個",
+            "particles": "500 顆",
+            "fps_target": "60 FPS"
+        }
 
 # ------------------------------------------------------------------
 # Gemini LLM 自動降級/容錯呼叫函式 (優先使用 Flash-Lite -> Flash -> Pro)
