@@ -621,21 +621,20 @@ with tab4:
     with col2:
         try:
             import numpy as np
-            import plotly.graph_objects as go
+            import matplotlib.pyplot as plt
             
             x = np.linspace(-5, 5, space_dim)
             y = np.linspace(-5, 5, space_dim)
             X, Y = np.meshgrid(x, y)
             Z = np.sin(np.sqrt(X**2 + Y**2)) * (sensor_temp / 80.0)
 
-            fig_space = go.Figure(data=[go.Surface(z=Z, x=X, y=Y, colorscale='Viridis')])
-            fig_space.update_layout(
-                title='OpenSpace 空間場域熱力分散與能量拓撲圖',
-                autosize=False,
-                width=600,
-                height=400,
-                margin=dict(l=65, r=50, b=65, t=90)
-            )
-            st.plotly_chart(fig_space, use_container_width=True)
+            fig, ax = plt.subplots(figsize=(6, 4))
+            cs = ax.contourf(X, Y, Z, cmap='viridis')
+            fig.colorbar(cs, ax=ax, label='Temperature Field (°C)')
+            ax.set_title('OpenSpace Thermal Topology Map')
+            ax.set_xlabel('X Dimension (m)')
+            ax.set_ylabel('Y Dimension (m)')
+            
+            st.pyplot(fig)
         except Exception as e:
-            st.error(f"OpenSpace 3D 拓撲圖渲染準備中或組件缺漏：{e}")
+            st.error(f"OpenSpace 拓撲圖渲染中：{e}")
