@@ -175,13 +175,6 @@ if "nano_bot" not in st.session_state or st.session_state.get("current_key") != 
 # ------------------------------------------------------------------
 # 側邊欄控制項 (綁定 session_state)
 # ------------------------------------------------------------------
-enable_nano_optimizer = st.sidebar.checkbox(
-    "啟用 Nano Bot 前置提示詞優化",
-    value=st.session_state.get("enable_nano_optimizer", True),
-    key="enable_nano_optimizer",
-    help="開啟後，Nano Bot 會自動精煉與擴充傳給 Gemini 的提示詞。"
-)
-
 st.sidebar.markdown("---")
 st.sidebar.subheader("🤖 ClawTeam 蜂群代理協作")
 
