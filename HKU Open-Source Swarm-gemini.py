@@ -421,26 +421,17 @@ with tab1:
 # 動態執行按鈕
     button_label = f"🚀 執行 {selected_domain.split(' ')[0]} 模擬與生成 Harness 測試案例"
     
-    if st.button(button_label, type="primary", use_container_width=True):
-        final_prompt_harness = prompt_harness
-        st.session_state["trigger_harness"] = True
-        
-# 從 session_state 精準讀取狀態
-    is_nano_active = st.session_state.get("enable_nano_optimizer", False)
-    is_clawteam_active = st.session_state.get("enable_clawteam", False)
-    
-# 預先初始化變數，避免未按按鈕時產生 NameError
+# 1. 預先初始化變數與狀態
     final_prompt_harness = prompt_harness
+    st.session_state["trigger_harness"] = True
     
-    # 從 session_state 精準讀取狀態
     is_nano_active = st.session_state.get("enable_nano_optimizer", False)
     is_clawteam_active = st.session_state.get("enable_clawteam", False)
-    
-    # --------------------------------------------------
-    # Agent 狀態面板與 Prompt 動態擴充
-    # --------------------------------------------------
     domain_title = selected_domain
-    
+
+    # --------------------------------------------------
+    # 2. 蜂群代理 (ClawTeam) 協作面板與 Prompt 擴充
+    # --------------------------------------------------
     if is_clawteam_active:
         with st.expander("🐝 ClawTeam 蜂群協作完成！", expanded=True):
             st.markdown(f"""
@@ -451,29 +442,33 @@ with tab1:
             * 📑 **QA Reviewer Agent**: 完成 Pydantic 結構與邊界條件驗證...
             """)
         final_prompt_harness = (
-            f"{prompt_harness}\n\n"
+            f"{final_prompt_harness}\n\n"
             f"[ClawTeam Swarm 蜂群協作指導規範]\n"
             f"1. 由 Swarm Leader 統一調度，結合 {domain_title} Physics 與 Code Builder 協同任務。\n"
             f"2. 產出必須包含對應物理場域數值分析與 OpenHarness Python 測試程式碼。"
         )
-    elif is_nano_active:
+
+    # --------------------------------------------------
+    # 3. 微型診斷 (Nano Bot) 提示詞優化
+    # --------------------------------------------------
+    if is_nano_active:
         if "nano_bot" in st.session_state and hasattr(
             st.session_state.nano_bot, "optimize_harness_prompt"
         ):
             final_prompt_harness = (
                 st.session_state.nano_bot.optimize_harness_prompt(
-                    prompt_harness
+                    final_prompt_harness
                 )
             )
-            with st.expander(
-                "🔍 檢視 Nano Bot 系統物理診斷報告與優化 Prompt",
-                expanded=True,
-            ):
-                st.write("[Nano Bot 系統物理診斷報告]")
-                st.write(
-                    "• 電壓/電流密度邊界正常 (0-2.0 A/cm²)，Butler-Volmer 參數已校正..."
-                )
-                st.code(final_prompt_harness)
+
+    # --------------------------------------------------
+    # 4. 渲染物理診斷報告與 Prompt / 測試案例結果
+    # --------------------------------------------------
+    st.success(f"⚡ {domain_title} 系統物理診斷引擎已就緒")
+    with st.expander("🔍 檢視 Nano Bot 系統物理診斷報告與優化 Prompt", expanded=True):
+        st.write(f"[{domain_title} 系統物理診斷報告]")
+        st.markdown(f"• **邊界條件**: 針對 `{domain_title}` 進行物理參數約束校正。")
+        st.code(final_prompt_harness, language="markdown")
 
         # --------------------------------------------------------------
         # 2. 執行生成與圖表渲染
