@@ -421,16 +421,16 @@ with tab1:
 # --------------------------------------------------
 # 動態執行按鈕與渲染邏輯
 # --------------------------------------------------
-button_label = f"🚀 執行 {selected_domain.split(' ')[0]} 模擬與生成 Harness 測試案例"
+    button_label = f"🚀 執行 {selected_domain.split(' ')[0]} 模擬與生成 Harness 測試案例"
 
-# 只有在使用者「當下按下按鈕」時才啟動診斷與 LLM 生成
-if st.button(button_label, type="primary", use_container_width=True):
+    # 只有在使用者「當下按下按鈕」時才啟動診斷與 LLM 生成
+    if st.button(button_label, type="primary", use_container_width=True):
     
-    # 1. 初始化基礎提示詞
-    final_prompt_harness = prompt_harness
-    is_nano_active = st.session_state.get("enable_nano_optimizer", False)
-    is_clawteam_active = st.session_state.get("enable_clawteam", False)
-    domain_title = selected_domain
+        # 1. 初始化基礎提示詞
+        final_prompt_harness = prompt_harness
+        is_nano_active = st.session_state.get("enable_nano_optimizer", False)
+        is_clawteam_active = st.session_state.get("enable_clawteam", False)
+        domain_title = selected_domain
 
     # --------------------------------------------------
     # 2. ClawTeam 蜂群代理區塊 (有勾選才渲染)
@@ -455,14 +455,8 @@ if st.button(button_label, type="primary", use_container_width=True):
     # 3. Nano Bot 前置提示詞優化區塊 (有勾選才渲染)
     # --------------------------------------------------
     if is_nano_active:
-        if "nano_bot" in st.session_state and hasattr(
-            st.session_state.nano_bot, "optimize_harness_prompt"
-        ):
-            final_prompt_harness = (
-                st.session_state.nano_bot.optimize_harness_prompt(
-                    final_prompt_harness
-                )
-            )
+        if "nano_bot" in st.session_state and hasattr(st.session_state.nano_bot, "optimize_harness_prompt"):
+            final_prompt_harness = st.session_state.nano_bot.optimize_harness_prompt(final_prompt_harness)
         
         st.success(f"⚡ {domain_title} 系統物理診斷引擎已就緒")
         with st.expander("🔍 檢視 Nano Bot 系統物理診斷報告與優化 Prompt", expanded=True):
@@ -470,7 +464,6 @@ if st.button(button_label, type="primary", use_container_width=True):
             st.markdown(f"• **邊界條件**: 針對 `{domain_title}` 進行物理參數約束校正。")
             st.code(final_prompt_harness, language="markdown")
     elif not is_clawteam_active:
-        # 兩者皆未勾選時顯示基礎 Prompt 預覽
         with st.expander("🔍 檢視 OpenHarness 基礎測試 Prompt", expanded=False):
             st.code(final_prompt_harness, language="markdown")
 
