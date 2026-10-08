@@ -419,16 +419,12 @@ with tab1:
     st.markdown("---")
     
 # --------------------------------------------------
-# 動態執行按鈕
+# 動態執行按鈕與渲染邏輯
 # --------------------------------------------------
 button_label = f"🚀 執行 {selected_domain.split(' ')[0]} 模擬與生成 Harness 測試案例"
 
-# 點擊按鈕時觸發執行狀態
+# 只有在使用者「當下按下按鈕」時才啟動診斷與 LLM 生成
 if st.button(button_label, type="primary", use_container_width=True):
-    st.session_state["trigger_harness"] = True
-
-# 只有在使用者點擊了執行按鈕後，才啟動後續所有 Prompt 處理與 LLM 生成
-if st.session_state.get("trigger_harness", False):
     
     # 1. 初始化基礎提示詞
     final_prompt_harness = prompt_harness
@@ -437,7 +433,7 @@ if st.session_state.get("trigger_harness", False):
     domain_title = selected_domain
 
     # --------------------------------------------------
-    # 2. ClawTeam 蜂群代理協作區塊 (勾選時觸發)
+    # 2. ClawTeam 蜂群代理區塊 (有勾選才渲染)
     # --------------------------------------------------
     if is_clawteam_active:
         with st.expander("🐝 ClawTeam 蜂群協作完成！", expanded=True):
@@ -456,7 +452,7 @@ if st.session_state.get("trigger_harness", False):
         )
 
     # --------------------------------------------------
-    # 3. Nano Bot 前置提示詞優化區塊 (勾選時觸發)
+    # 3. Nano Bot 前置提示詞優化區塊 (有勾選才渲染)
     # --------------------------------------------------
     if is_nano_active:
         if "nano_bot" in st.session_state and hasattr(
@@ -474,12 +470,12 @@ if st.session_state.get("trigger_harness", False):
             st.markdown(f"• **邊界條件**: 針對 `{domain_title}` 進行物理參數約束校正。")
             st.code(final_prompt_harness, language="markdown")
     elif not is_clawteam_active:
-        # 兩者皆未勾選時顯示基礎 Prompt
+        # 兩者皆未勾選時顯示基礎 Prompt 預覽
         with st.expander("🔍 檢視 OpenHarness 基礎測試 Prompt", expanded=False):
             st.code(final_prompt_harness, language="markdown")
 
     # --------------------------------------------------
-    # 4. LLM 測試案例生成與代碼渲染 (按下按鈕才執行)
+    # 4. LLM 測試案例生成與代碼渲染
     # --------------------------------------------------
     with st.spinner(f"正在進行 {domain_title} 電化學/物理模型擬合與 Harness 測試案例生成..."):
         try:
@@ -494,7 +490,7 @@ if st.session_state.get("trigger_harness", False):
                 temperature=0.2,
             )
             
-            # 渲染測試案例與腳本結果 (加強屬性安全檢查)
+            # 渲染測試案例與腳本結果 (相容屬性讀取)
             if res_harness:
                 case_title = getattr(res_harness, 'test_case_name', getattr(res_harness, 'title', selected_domain))
                 
@@ -510,7 +506,7 @@ if st.session_state.get("trigger_harness", False):
             st.error(f"❌ 測試案例生成失敗：{str(e)}")
 
 else:
-    # 未點擊按鈕時的提示
+    # 剛進入頁面未按按鈕時顯示藍色提示卡片
     st.info("💡 **系統就緒**：請點擊上方的「🚀 執行模擬與生成 Harness 測試案例」按鈕以啟動診斷與測試腳本生成。")
 
 # ------------------------------------------------------------------
