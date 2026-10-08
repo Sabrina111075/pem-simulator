@@ -428,9 +428,11 @@ with tab1:
     
         # 1. 初始化基礎提示詞
         final_prompt_harness = prompt_harness
-        is_nano_active = st.session_state.get("enable_nano_optimizer", False)
-        is_clawteam_active = st.session_state.get("enable_clawteam", False)
         domain_title = selected_domain
+
+        is_nano_active = globals().get("enable_nano_optimizer", False) or st.session_state.get("enable_nano_optimizer", False)
+       
+is_clawteam_active = globals().get("enable_clawteam", False) or st.session_state.get("enable_clawteam", False)
 
     # --------------------------------------------------
     # 2. ClawTeam 蜂群代理區塊 (有勾選才渲染)
