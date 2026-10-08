@@ -26,7 +26,7 @@ class FlowchartOutput(BaseModel):
 # 多主題預設測試需求模組 (Domain Preset Templates)
 # --------------------------------------------------
 TEST_DOMAIN_TEMPLATES = {
-    "⚡ PEM 水電解槽 (Electrolyzer Digital Twin)": {
+    "PEM 水電解槽 (Electrolyzer Digital Twin)": {
         "description": "針對 PEM 綠氫電解槽進行動態極化曲線、Butler-Volmer 活化過電壓、內阻與老化劣化擬合測試。",
         "default_prompt": (
             "【測試目標】驗證 5 kW PEM 水電解槽在 80°C 操作條件下的 U-I 極化曲線與 5,000 小時老化趨勢。\n"
@@ -35,7 +35,7 @@ TEST_DOMAIN_TEMPLATES = {
         ),
         "metrics": ["電流密度 (A/cm²)", "槽電壓 (V)", "產氫速率 (Nm³/h)", "法拉第效率 (%)"]
     },
-    "🛵 電動機車動力系統 (EV Powertrain & Energy Loss)": {
+    "電動機車動力系統 (EV Powertrain & Energy Loss)": {
         "description": "評估電動機車動力系統在 WMTC/WLTP 行駛型態下的電機效率、傳動損耗與電池續航表現。",
         "default_prompt": (
             "【測試目標】模擬 7.0 kW 永磁同步馬達 (PMSM) 電動機車在 WMTC 行駛工況下的動態能耗。\n"
@@ -44,7 +44,7 @@ TEST_DOMAIN_TEMPLATES = {
         ),
         "metrics": ["車速 (km/h)", "電池 SOC (%)", "瞬間功率 (kW)", "綜合能效 (Wh/km)"]
     },
-    "🔊 馬達與旋轉機械聲學故障診斷 (Acoustic Diagnostics)": {
+    "馬達與旋轉機械聲學故障診斷 (Acoustic Diagnostics)": {
         "description": "基於 FFT 與聲波頻譜分析（Mel-spectrogram），進行水泵、冷卻風扇與工業馬達之異常聲學診斷與預測性維護。",
         "default_prompt": (
             "【測試目標】對 3.7 kW 工業水泵馬達進行音訊特徵提取，評估軸承損壞（Outer Race Defect）與偏心異音。\n"
@@ -53,7 +53,7 @@ TEST_DOMAIN_TEMPLATES = {
         ),
         "metrics": ["主頻峰值 (Hz)", "RMS 聲壓 (dB)", "異常信心度 (%)", "健康度指數 (HI)"]
     },
-    "🛸 蜂群無人機多體動態與路徑規劃 (Swarm Logistics)": {
+    "蜂群無人機多體動態與路徑規劃 (Swarm Logistics)": {
         "description": "模擬多無人機（Swarm UAV）在三維場域中的協同路徑規劃、防撞避障與任務負載分配。",
         "default_prompt": (
             "【測試目標】執行 5 架四軸無人機在障礙區域中的動態隊形切換與自主避障協同規劃。\n"
@@ -418,8 +418,8 @@ with tab1:
         
     st.markdown("---")
     
-    # 5. 動態執行按鈕 (名稱隨選取主題改變)
-    button_label = f"🚀 執行 {selected_domain.split(' ')[1]} 模擬與生成 Harness 測試案例"
+# 動態執行按鈕
+    button_label = f"🚀 執行 {selected_domain.split(' ')[0]} 模擬與生成 Harness 測試案例"
     
     if st.button(button_label, type="primary", use_container_width=True):
         final_prompt_harness = prompt_harness
