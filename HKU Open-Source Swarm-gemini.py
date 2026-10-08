@@ -449,7 +449,7 @@ with tab1:
         )
 
     # --------------------------------------------------
-    # 3. 微型診斷 (Nano Bot) 提示詞優化
+    # 3. 微型診斷 (Nano Bot) 提示詞優化與報告渲染 (僅在勾選時才顯示)
     # --------------------------------------------------
     if is_nano_active:
         if "nano_bot" in st.session_state and hasattr(
@@ -460,15 +460,16 @@ with tab1:
                     final_prompt_harness
                 )
             )
-
-    # --------------------------------------------------
-    # 4. 渲染物理診斷報告與 Prompt / 測試案例結果
-    # --------------------------------------------------
-    st.success(f"⚡ {domain_title} 系統物理診斷引擎已就緒")
-    with st.expander("🔍 檢視 Nano Bot 系統物理診斷報告與優化 Prompt", expanded=True):
-        st.write(f"[{domain_title} 系統物理診斷報告]")
-        st.markdown(f"• **邊界條件**: 針對 `{domain_title}` 進行物理參數約束校正。")
-        st.code(final_prompt_harness, language="markdown")
+        
+        st.success(f"⚡ {domain_title} 系統物理診斷引擎已就緒")
+        with st.expander("🔍 檢視 Nano Bot 系統物理診斷報告與優化 Prompt", expanded=True):
+            st.write(f"[{domain_title} 系統物理診斷報告]")
+            st.markdown(f"• **邊界條件**: 針對 `{domain_title}` 進行物理參數約束校正。")
+            st.code(final_prompt_harness, language="markdown")
+    elif not is_clawteam_active:
+        # 兩者皆未勾選時顯示基礎 Prompt
+        with st.expander("🔍 檢視 OpenHarness 基礎測試 Prompt", expanded=True):
+            st.code(final_prompt_harness, language="markdown")
 
         # --------------------------------------------------------------
         # 2. 執行生成與圖表渲染
