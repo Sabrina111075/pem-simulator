@@ -1,11 +1,5 @@
-﻿google-genai>=0.1.0
-pydantic>=2.0.0
-numpy
-matplotlib
+﻿streamlit
 google-genai
-streamlit
 pydantic
+numpy
 pandas
-import numpy as np
-import plotly.graph_objects as go
-plotly
