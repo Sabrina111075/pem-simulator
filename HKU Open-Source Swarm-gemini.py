@@ -429,8 +429,15 @@ with tab1:
     is_nano_active = st.session_state.get("enable_nano_optimizer", False)
     is_clawteam_active = st.session_state.get("enable_clawteam", False)
     
+# 預先初始化變數，避免未按按鈕時產生 NameError
+    final_prompt_harness = prompt_harness
+    
+    # 從 session_state 精準讀取狀態
+    is_nano_active = st.session_state.get("enable_nano_optimizer", False)
+    is_clawteam_active = st.session_state.get("enable_clawteam", False)
+    
     # --------------------------------------------------
-    # 1. 顯示 Agent 狀態面板與 Prompt 擴充
+    # Agent 狀態面板與 Prompt 動態擴充
     # --------------------------------------------------
     domain_title = selected_domain
     
@@ -444,7 +451,7 @@ with tab1:
             * 📑 **QA Reviewer Agent**: 完成 Pydantic 結構與邊界條件驗證...
             """)
         final_prompt_harness = (
-            f"{final_prompt_harness}\n\n"
+            f"{prompt_harness}\n\n"
             f"[ClawTeam Swarm 蜂群協作指導規範]\n"
             f"1. 由 Swarm Leader 統一調度，結合 {domain_title} Physics 與 Code Builder 協同任務。\n"
             f"2. 產出必須包含對應物理場域數值分析與 OpenHarness Python 測試程式碼。"
