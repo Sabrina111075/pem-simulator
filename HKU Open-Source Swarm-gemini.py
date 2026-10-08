@@ -494,14 +494,16 @@ if st.session_state.get("trigger_harness", False):
                 temperature=0.2,
             )
             
-            # 渲染測試案例與腳本結果
+            # 渲染測試案例與腳本結果 (加強屬性安全檢查)
             if res_harness:
-                st.markdown(f"### 📌 測試案例：{res_harness.test_case_name}")
+                case_title = getattr(res_harness, 'test_case_name', getattr(res_harness, 'title', selected_domain))
+                
+                st.markdown(f"### 📌 測試案例：{case_title}")
                 st.markdown("#### 📋 測試說明與邊界條件")
-                st.write(res_harness.description)
+                st.write(getattr(res_harness, 'description', ''))
                 
                 st.markdown("#### 💻 OpenHarness 測試腳本 (Python)")
-                st.code(res_harness.python_code, language="python")
+                st.code(getattr(res_harness, 'python_code', ''), language="python")
                 st.success(f"✅ 生成完成！（調用模型：{used_model}）")
                 
         except Exception as e:
