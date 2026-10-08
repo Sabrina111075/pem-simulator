@@ -484,19 +484,19 @@ with tab1:
             )
             
             # 渲染測試案例與腳本結果 (相容屬性讀取)
-            if res_harness:
-                case_title = getattr(res_harness, 'test_case_name', getattr(res_harness, 'title', selected_domain))
+                if res_harness:
+                    case_title = getattr(res_harness, 'test_case_name', getattr(res_harness, 'title', selected_domain))
                 
-                st.markdown(f"### 📌 測試案例：{case_title}")
-                st.markdown("#### 📋 測試說明與邊界條件")
-                st.write(getattr(res_harness, 'description', ''))
+                    st.markdown(f"### 📌 測試案例：{case_title}")
+                    st.markdown("#### 📋 測試說明與邊界條件")
+                    st.write(getattr(res_harness, 'description', ''))
                 
-                st.markdown("#### 💻 OpenHarness 測試腳本 (Python)")
-                st.code(getattr(res_harness, 'python_code', ''), language="python")
-                st.success(f"✅ 生成完成！（調用模型：{used_model}）")
+                    st.markdown("#### 💻 OpenHarness 測試腳本 (Python)")
+                    st.code(getattr(res_harness, 'python_code', ''), language="python")
+                    st.success(f"✅ 生成完成！（調用模型：{used_model}）")
                 
-        except Exception as e:
-            st.error(f"❌ 測試案例生成失敗：{str(e)}")
+            except Exception as e:
+                st.error(f"❌ 測試案例生成失敗：{str(e)}")
 
     else:
         # 剛進入頁面未按按鈕時顯示藍色提示卡片
