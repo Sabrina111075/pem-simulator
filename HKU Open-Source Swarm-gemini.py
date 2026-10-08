@@ -470,7 +470,7 @@ with tab1:
     # --------------------------------------------------
     # 4. LLM 測試案例生成與代碼渲染
     # --------------------------------------------------
-    with st.spinner(f"正在進行 {domain_title} 電化學/物理模型擬合與 Harness 測試案例生成..."):
+        with st.spinner(f"正在進行 {domain_title} 電化學/物理模型擬合與 Harness 測試案例生成..."):
             try:
                 res_harness, used_model = generate_with_fallback(
                     contents=final_prompt_harness,
