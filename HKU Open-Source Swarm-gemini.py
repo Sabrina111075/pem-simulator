@@ -418,19 +418,26 @@ with tab1:
         
     st.markdown("---")
     
+# --------------------------------------------------
 # 動態執行按鈕
-    button_label = f"🚀 執行 {selected_domain.split(' ')[0]} 模擬與生成 Harness 測試案例"
-    
-# 1. 預先初始化變數與狀態
-    final_prompt_harness = prompt_harness
+# --------------------------------------------------
+button_label = f"🚀 執行 {selected_domain.split(' ')[0]} 模擬與生成 Harness 測試案例"
+
+# 點擊按鈕時觸發執行狀態
+if st.button(button_label, type="primary", use_container_width=True):
     st.session_state["trigger_harness"] = True
+
+# 只有在使用者點擊了執行按鈕後，才啟動後續所有 Prompt 處理與 LLM 生成
+if st.session_state.get("trigger_harness", False):
     
+    # 1. 初始化基礎提示詞
+    final_prompt_harness = prompt_harness
     is_nano_active = st.session_state.get("enable_nano_optimizer", False)
     is_clawteam_active = st.session_state.get("enable_clawteam", False)
     domain_title = selected_domain
 
     # --------------------------------------------------
-    # 2. 蜂群代理 (ClawTeam) 協作面板與 Prompt 擴充
+    # 2. ClawTeam 蜂群代理協作區塊 (勾選時觸發)
     # --------------------------------------------------
     if is_clawteam_active:
         with st.expander("🐝 ClawTeam 蜂群協作完成！", expanded=True):
@@ -449,7 +456,7 @@ with tab1:
         )
 
     # --------------------------------------------------
-    # 3. 微型診斷 (Nano Bot) 提示詞優化與報告渲染 (僅在勾選時才顯示)
+    # 3. Nano Bot 前置提示詞優化區塊 (勾選時觸發)
     # --------------------------------------------------
     if is_nano_active:
         if "nano_bot" in st.session_state and hasattr(
@@ -468,37 +475,41 @@ with tab1:
             st.code(final_prompt_harness, language="markdown")
     elif not is_clawteam_active:
         # 兩者皆未勾選時顯示基礎 Prompt
-        with st.expander("🔍 檢視 OpenHarness 基礎測試 Prompt", expanded=True):
+        with st.expander("🔍 檢視 OpenHarness 基礎測試 Prompt", expanded=False):
             st.code(final_prompt_harness, language="markdown")
 
-        # --------------------------------------------------------------
-        # 2. 執行生成與圖表渲染
-        # --------------------------------------------------------------
-        with st.spinner("正在進行 PEM 電化學模擬與 Harness 測試案例生成..."):
-            try:
-                res_harness, used_model = generate_with_fallback(
-                    contents=final_prompt_harness,
-                    system_instruction=(
-                        "你是一個專業的 PEM 電解槽物理模擬專家與 OpenHarness 自動化測試工程師。"
-                        "請根據輸入需求生成測試案例描述與完整的 Python Harness 測試程式碼。"
-                        "所有說明文字必須嚴格使用台灣繁體中文。"
-                    ),
-                    response_schema=HarnessOutput,  # 請確保有對應的 Pydantic 模型或結構
-                    temperature=0.2,
-                )
-
-                st.subheader(f"📌 測試案例：{res_harness.title}")
-                st.markdown("### 📋 測試說明與邊界條件")
+    # --------------------------------------------------
+    # 4. LLM 測試案例生成與代碼渲染 (按下按鈕才執行)
+    # --------------------------------------------------
+    with st.spinner(f"正在進行 {domain_title} 電化學/物理模型擬合與 Harness 測試案例生成..."):
+        try:
+            res_harness, used_model = generate_with_fallback(
+                contents=final_prompt_harness,
+                system_instruction=(
+                    f"你是一個專業的 {domain_title} 物理雙生模擬專家與 OpenHarness 自動化測試工程師。"
+                    "請根據輸入需求生成測試案例描述與完整的 Python Harness 測試程式碼。"
+                    "所有說明文字必須嚴格使用台灣繁體中文。"
+                ),
+                response_schema=HarnessOutput,
+                temperature=0.2,
+            )
+            
+            # 渲染測試案例與腳本結果
+            if res_harness:
+                st.markdown(f"### 📌 測試案例：{res_harness.test_case_name}")
+                st.markdown("#### 📋 測試說明與邊界條件")
                 st.write(res_harness.description)
-
-                st.markdown("### 💻 OpenHarness 測試腳本 (Python)")
+                
+                st.markdown("#### 💻 OpenHarness 測試腳本 (Python)")
                 st.code(res_harness.python_code, language="python")
+                st.success(f"✅ 生成完成！（調用模型：{used_model}）")
+                
+        except Exception as e:
+            st.error(f"❌ 測試案例生成失敗：{str(e)}")
 
-                st.success(f"✅ 生成完成！（調用模型：`{used_model}`）")
-
-            except Exception as e:
-                # 抓出具體失敗原因
-                st.error(f"❌ Harness 測試案例生成失敗：{e}")
+else:
+    # 未點擊按鈕時的提示
+    st.info("💡 **系統就緒**：請點擊上方的「🚀 執行模擬與生成 Harness 測試案例」按鈕以啟動診斷與測試腳本生成。")
 
 # ------------------------------------------------------------------
 # Tab 2: Mermaid 流程圖自動生成
