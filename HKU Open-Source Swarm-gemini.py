@@ -424,50 +424,39 @@ with tab1:
     button_label = f"🚀 執行 {selected_domain.split(' ')[0]} 模擬與生成 Harness 測試案例"
 
     # 只有在使用者「當下按下按鈕」時才啟動診斷與 LLM 生成
-    if st.button(button_label, type="primary", use_container_width=True):
+if st.button(button_label, type="primary", use_container_width=True):
     
-        # 1. 初始化基礎提示詞
-        final_prompt_harness = prompt_harness
-        domain_title = selected_domain
+    # 1. 初始化基礎提示詞
+    final_prompt_harness = prompt_harness
+    domain_title = selected_domain
 
-        is_nano_active = globals().get("enable_nano_optimizer", False) or st.session_state.get("enable_nano_optimizer", False)
-       
-is_clawteam_active = globals().get("enable_clawteam", False) or st.session_state.get("enable_clawteam", False)
+    is_nano_active = globals().get("enable_nano_optimizer", False) or st.session_state.get("enable_nano_optimizer", False)
+    is_clawteam_active = globals().get("enable_clawteam", False) or st.session_state.get("enable_clawteam", False)
 
-    # --------------------------------------------------
-    # 2. ClawTeam 蜂群代理區塊 (有勾選才渲染)
-    # --------------------------------------------------
-if is_clawteam_active:
-    with st.expander("🐝 ClawTeam 蜂群協作完成！", expanded=True):
-        st.markdown(f"""
-        * 🤖 **Swarm Leader (HKUDS Agent)**: 正在解析 {domain_title} 系統模組需求...
-        * 🔬 **{domain_title} Physics Agent (Nano Bot)**: 執行物理參數與領域約束診斷...
-          * └── 物理參數與領域規範驗證 (系統正常)
-        * 🛠️ **Harness Code Builder Agent**: 生成符合 OpenHarness 規範之測試案例...
-        * 📑 **QA Reviewer Agent**: 完成 Pydantic 結構與邊界條件驗證...
-        """)
-        final_prompt_harness = (
-            f"{final_prompt_harness}\n\n"
-            f"[ClawTeam Swarm 蜂群協作指導規範]\n"
-            f"1. 由 Swarm Leader 統一調度，結合 {domain_title} Physics 與 Code Builder 協同任務。\n"
-            f"2. 產出必須包含對應物理場域數值分析與 OpenHarness Python 測試程式碼。"
-        )
+# # 2. ClawTeam 蜂群代理區塊 (有勾選才渲染)
+    # ------------------------------------
+    if is_clawteam_active:
+        with st.expander("🤖 ClawTeam 蜂群協作完成！", expanded=True):
+            st.markdown(f"""
+    * 🤖 **Swarm Leader (HKUDS Agent)**: 正在解析 {domain_title} 系統模組需求...
+    * 🔬 **{domain_title} Physics Agent (Nano Bot)**: 執行物理參數與領域約束診斷...
+        * └── 物理參數與領域規範驗證 (系統正常)
+    * 💻 **Harness Code Builder Agent**: 生成符合 OpenHarness 規範之測試案例...
+    * 📋 **QA Reviewer Agent**: 完成 Pydantic 結構與邊界條件驗證...
+            """)
+            final_prompt_harness = (
+                f"{final_prompt_harness}\n\n"
+                f"[ClawTeam Swarm 蜂群協作指導規範]\n"
+                f"1. 由 Swarm Leader 統一調度，結合 {domain_title} Physics 與 Code Builder 協同任務。\n"
+                f"2. 產出必須包含對應物理場域數值分析與 OpenHarness Python 測試程式碼。"
+            )
 
-    # --------------------------------------------------
+    # ------------------------------------
     # 3. Nano Bot 前置提示詞優化區塊 (有勾選才渲染)
-    # --------------------------------------------------
+    # ------------------------------------
     if is_nano_active:
         if "nano_bot" in st.session_state and hasattr(st.session_state.nano_bot, "optimize_harness_prompt"):
             final_prompt_harness = st.session_state.nano_bot.optimize_harness_prompt(final_prompt_harness)
-        
-        st.success(f"⚡ {domain_title} 系統物理診斷引擎已就緒")
-        with st.expander("🔍 檢視 Nano Bot 系統物理診斷報告與優化 Prompt", expanded=True):
-            st.write(f"[{domain_title} 系統物理診斷報告]")
-            st.markdown(f"• **邊界條件**: 針對 `{domain_title}` 進行物理參數約束校正。")
-            st.code(final_prompt_harness, language="markdown")
-    elif not is_clawteam_active:
-        with st.expander("🔍 檢視 OpenHarness 基礎測試 Prompt", expanded=False):
-            st.code(final_prompt_harness, language="markdown")
 
     # --------------------------------------------------
     # 4. LLM 測試案例生成與代碼渲染
