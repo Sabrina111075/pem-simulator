@@ -471,10 +471,10 @@ with tab1:
     # 4. LLM 測試案例生成與代碼渲染
     # --------------------------------------------------
     with st.spinner(f"正在進行 {domain_title} 電化學/物理模型擬合與 Harness 測試案例生成..."):
-        try:
-            res_harness, used_model = generate_with_fallback(
-                contents=final_prompt_harness,
-                system_instruction=(
+            try:
+                res_harness, used_model = generate_with_fallback(
+                    contents=final_prompt_harness,
+                    system_instruction=(
                     f"你是一個專業的 {domain_title} 物理雙生模擬專家與 OpenHarness 自動化測試工程師。"
                     "請根據輸入需求生成測試案例描述與完整的 Python Harness 測試程式碼。"
                     "所有說明文字必須嚴格使用台灣繁體中文。"
