@@ -380,119 +380,119 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "🌌 OpenSpace 空間雙生場域"
 ])
 
-# ------------------------------------------------------------------
+# ------------------------------------
 # Tab 1: OpenHarness 自動化引擎模擬與測試
-# ------------------------------------------------------------------
+# ------------------------------------
 with tab1:
     st.header("⚡ OpenHarness 自動化引擎模擬與測試")
-    
+
     # 1. 跨主題選單 (Dynamic Domain Selector)
     selected_domain = st.selectbox(
-        "🎯 請選擇欲進行測試的系統主題（Domain）：",
+        "🎯 請選擇欲進行測試的系統主題 (Domain) :",
         options=list(TEST_DOMAIN_TEMPLATES.keys()),
         index=0,
         key="tab1_domain_selector"
     )
-    
+
     # 2. 取得當前選取主題的設定檔與說明
     current_config = TEST_DOMAIN_TEMPLATES[selected_domain]
-    st.caption(f"💡 **主題說明**：{current_config['description']}")
-    
+    st.caption(f"💡 **主題說明** : {current_config['description']}")
+
     # 3. 動態帶入對應主題的需求預設值 (自動保留使用者修改)
     prompt_key = f"input_prompt_{selected_domain}"
     if prompt_key not in st.session_state:
         st.session_state[prompt_key] = current_config["default_prompt"]
-        
+
     prompt_harness = st.text_area(
-        "📝 輸入欲進行測試的需求與邊界條件：",
+        "📝 輸入欲進行測試的需求與邊界條件 :",
         value=st.session_state[prompt_key],
         height=130,
         key=f"prompt_harness_{selected_domain}"
     )
-    
+
     # 4. 關鍵指標提示 (Metrics Tags)
-    st.markdown("**📊 預計提取之關鍵指標 (Key Metrics)：**")
+    st.markdown("**📊 預計提取之關鍵指標 (Key Metrics) :**")
     metric_cols = st.columns(len(current_config["metrics"]))
     for idx, metric in enumerate(current_config["metrics"]):
         metric_cols[idx].info(metric)
-        
+
     st.markdown("---")
-    
-# ------------------------------------
-# 動態執行按鈕與渲染邏輯 (縮排於 Tab 1 內部)
-# ------------------------------------
-button_label = f"🚀 執行 {selected_domain.split(' ')[0]} 模擬與生成 Harness 測試案例"
-
-if st.button(button_label, type="primary", use_container_width=True):
-    # 1. 初始化基礎提示詞
-    final_prompt_harness = prompt_harness
-    domain_title = selected_domain
-
-    is_nano_active = globals().get("enable_nano_optimizer", False) or st.session_state.get("enable_nano_optimizer", False)
-    is_clawteam_active = globals().get("enable_clawteam", False) or st.session_state.get("enable_clawteam", False)
 
     # ------------------------------------
-    # 2. ClawTeam 蜂群代理區塊 (有勾選才渲染)
+    # 動態執行按鈕與渲染邏輯 (全部收納於 Tab 1 內部)
     # ------------------------------------
-    if is_clawteam_active:
-        with st.expander("🤖 ClawTeam 蜂群協作完成！", expanded=True):
-            st.markdown(f"""
+    button_label = f"🚀 執行 {selected_domain.split(' ')[0]} 模擬與生成 Harness 測試案例"
+
+    if st.button(button_label, type="primary", use_container_width=True):
+        # 1. 初始化基礎提示詞
+        final_prompt_harness = prompt_harness
+        domain_title = selected_domain
+
+        is_nano_active = globals().get("enable_nano_optimizer", False) or st.session_state.get("enable_nano_optimizer", False)
+        is_clawteam_active = globals().get("enable_clawteam", False) or st.session_state.get("enable_clawteam", False)
+
+        # ------------------------------------
+        # 2. ClawTeam 蜂群代理區塊 (有勾選才渲染)
+        # ------------------------------------
+        if is_clawteam_active:
+            with st.expander("🤖 ClawTeam 蜂群協作完成！", expanded=True):
+                st.markdown(f"""
 * 🤖 **Swarm Leader (HKUDS Agent)**: 正在解析 {domain_title} 系統模組需求...
 * 🔬 **{domain_title} Physics Agent (Nano Bot)**: 執行物理參數與領域約束診斷...
     * └── 物理參數與領域規範驗證 (系統正常)
 * 💻 **Harness Code Builder Agent**: 生成符合 OpenHarness 規範之測試案例...
 * 📋 **QA Reviewer Agent**: 完成 Pydantic 結構與邊界條件驗證...
-            """)
-            final_prompt_harness = (
-                f"{final_prompt_harness}\n\n"
-                f"[ClawTeam Swarm 蜂群協作指導規範]\n"
-                f"1. 由 Swarm Leader 統一調度，結合 {domain_title} Physics 與 Code Builder 協同任務。\n"
-                f"2. 產出必須包含對應物理場域數值分析與 OpenHarness Python 測試程式碼。"
-            )
+                """)
+                final_prompt_harness = (
+                    f"{final_prompt_harness}\n\n"
+                    f"[ClawTeam Swarm 蜂群協作指導規範]\n"
+                    f"1. 由 Swarm Leader 統一調度，結合 {domain_title} Physics 與 Code Builder 協同任務。\n"
+                    f"2. 產出必須包含對應物理場域數值分析與 OpenHarness Python 測試程式碼。"
+                )
 
-    # ------------------------------------
-    # 3. Nano Bot 前置提示詞優化區塊 (有勾選才渲染視覺面板)
-    # ------------------------------------
-    if is_nano_active:
-        with st.expander("🧬 Nano Bot 微型診斷與提示詞優化完成！", expanded=True):
-            st.info(f"⚡ Nano Bot 已對 **{domain_title}** 領域提示詞完成優化，成功注入物理邊界約束與奈米級診斷規則。")
-        if "nano_bot" in st.session_state and hasattr(st.session_state.nano_bot, "optimize_harness_prompt"):
-            final_prompt_harness = st.session_state.nano_bot.optimize_harness_prompt(final_prompt_harness)
+        # ------------------------------------
+        # 3. Nano Bot 前置提示詞優化區塊 (有勾選才渲染視覺面板)
+        # ------------------------------------
+        if is_nano_active:
+            with st.expander("🧬 Nano Bot 微型診斷與提示詞優化完成！", expanded=True):
+                st.info(f"⚡ Nano Bot 已對 **{domain_title}** 領域提示詞完成優化，成功注入物理邊界約束與奈米級診斷規則。")
+            if "nano_bot" in st.session_state and hasattr(st.session_state.nano_bot, "optimize_harness_prompt"):
+                final_prompt_harness = st.session_state.nano_bot.optimize_harness_prompt(final_prompt_harness)
 
-    # --------------------------------------------------
-    # 4. LLM 測試案例生成與代碼渲染
-    # --------------------------------------------------
+        # ------------------------------------
+        # 4. LLM 測試案例生成與代碼渲染
+        # ------------------------------------
         with st.spinner(f"正在進行 {domain_title} 電化學/物理模型擬合與 Harness 測試案例生成..."):
             try:
                 res_harness, used_model = generate_with_fallback(
                     contents=final_prompt_harness,
                     system_instruction=(
-                    f"你是一個專業的 {domain_title} 物理雙生模擬專家與 OpenHarness 自動化測試工程師。"
-                    "請根據輸入需求生成測試案例描述與完整的 Python Harness 測試程式碼。"
-                    "所有說明文字必須嚴格使用台灣繁體中文。"
-                ),
-                response_schema=HarnessOutput,
-                temperature=0.2,
-            )
-            
-            # 渲染測試案例與腳本結果 (相容屬性讀取)
+                        f"你是一個專業的 {domain_title} 物理雙生模擬專家與 OpenHarness 自動化測試工程師。"
+                        "請根據輸入需求生成測試案例描述與完整的 Python Harness 測試程式碼。"
+                        "所有說明文字必須嚴格使用台灣繁體中文。"
+                    ),
+                    response_schema=HarnessOutput,
+                    temperature=0.2,
+                )
+
+                # 渲染測試案例與腳本結果
                 if res_harness:
                     case_title = getattr(res_harness, 'test_case_name', getattr(res_harness, 'title', selected_domain))
-                
+
                     st.markdown(f"### 📌 測試案例：{case_title}")
                     st.markdown("#### 📋 測試說明與邊界條件")
                     st.write(getattr(res_harness, 'description', ''))
-                
+
                     st.markdown("#### 💻 OpenHarness 測試腳本 (Python)")
                     st.code(getattr(res_harness, 'python_code', ''), language="python")
-                    st.success(f"✅ 生成完成！（調用模型：{used_model}）")
-                
+                    st.success(f"🤖 生成完成！（調用模型：{used_model}）")
+
             except Exception as e:
-                st.error(f"❌ 測試案例生成失敗：{str(e)}")
+                st.error(f"🚨 測試案例生成失敗：{str(e)}")
 
     else:
         # 剛進入頁面未按按鈕時顯示藍色提示卡片
-        st.info("💡 **系統就緒**：請點擊上方的「🚀 執行模擬與生成 Harness 測試案例」按鈕以啟動診斷與測試腳本生成。")
+        st.info("ℹ️ **系統就緒**: 請點擊上方的「🚀 執行模擬與生成 Harness 測試案例」按鈕以啟動診斷與測試腳本生成。")
 
 # ------------------------------------------------------------------
 # Tab 2: Mermaid 流程圖自動生成
