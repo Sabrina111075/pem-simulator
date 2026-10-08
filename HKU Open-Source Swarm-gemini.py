@@ -425,15 +425,16 @@ with tab1:
         final_prompt_harness = prompt_harness
         st.session_state["trigger_harness"] = True
         
-    # 從 session_state 精準讀取狀態 (接回您原本的邏輯)
+# 從 session_state 精準讀取狀態
     is_nano_active = st.session_state.get("enable_nano_optimizer", False)
     is_clawteam_active = st.session_state.get("enable_clawteam", False)
     
     # --------------------------------------------------
-    # 1. 顯示 Agent 狀態面板 (您原本的 ClawTeam 區域完整保留)
+    # 1. 顯示 Agent 狀態面板與 Prompt 擴充
     # --------------------------------------------------
+    domain_title = selected_domain
+    
     if is_clawteam_active:
-        domain_title = selected_domain.split(' ')[1]
         with st.expander("🐝 ClawTeam 蜂群協作完成！", expanded=True):
             st.markdown(f"""
             * 🤖 **Swarm Leader (HKUDS Agent)**: 正在解析 {domain_title} 系統模組需求...
@@ -442,22 +443,21 @@ with tab1:
             * 🛠️ **Harness Code Builder Agent**: 生成符合 OpenHarness 規範之測試案例...
             * 📑 **QA Reviewer Agent**: 完成 Pydantic 結構與邊界條件驗證...
             """)
+        final_prompt_harness = (
+            f"{final_prompt_harness}\n\n"
+            f"[ClawTeam Swarm 蜂群協作指導規範]\n"
+            f"1. 由 Swarm Leader 統一調度，結合 {domain_title} Physics 與 Code Builder 協同任務。\n"
+            f"2. 產出必須包含對應物理場域數值分析與 OpenHarness Python 測試程式碼。"
+        )
+    elif is_nano_active:
+        if "nano_bot" in st.session_state and hasattr(
+            st.session_state.nano_bot, "optimize_harness_prompt"
+        ):
             final_prompt_harness = (
-                f"{final_prompt_harness}\n\n"
-                "[ClawTeam Swarm 蜂群協作指導規約]\n"
-                "1. 由 Swarm Leader 統一調度，結合 PEM Physics 與 Code Builder 協同任務。\n"
-                "2. 產出必須包含電化學極化曲線數據與 OpenHarness Python 測試程式碼。"
-            )
-        elif is_nano_active:
-            if "nano_bot" in st.session_state and hasattr(
-                st.session_state.nano_bot, "optimize_harness_prompt"
-            ):
-                final_prompt_harness = (
-                    st.session_state.nano_bot.optimize_harness_prompt(
-                        prompt_harness
-                    )
+                st.session_state.nano_bot.optimize_harness_prompt(
+                    prompt_harness
                 )
-            st.success("🤖 Nano Bot 微型診斷引擎：系統物理診斷完成")
+            )
             with st.expander(
                 "🔍 檢視 Nano Bot 系統物理診斷報告與優化 Prompt",
                 expanded=True,
