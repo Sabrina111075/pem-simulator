@@ -11,17 +11,18 @@ except ImportError:
 
 st.set_page_config(page_title="OpenMAIC x Gemini 3 智慧教育平台", layout="wide")
 
-st.title("🎓 OpenMAIC 搭配 Gemini 3 輕量化模型引擎")
-st.markdown("本系統採用 **Gemini 3 輕量化模型**，實現 AI 自動生成工業課程、即時多智能體研討與設備數位雙生互動。")
+st.title("🎓 OpenMAIC 搭配 Gemini 3 系列模型引擎")
+st.markdown("本系統採用 **Gemini 3 輕量化與高效模型**（如 `gemini-3.8-flash`），實現 AI 自動生成工業課程、即時多智能體研討與設備數位雙生互動。")
 
 # 側邊欄：API 設定與控制台
 st.sidebar.header("🔑 AI 模型與實驗設定")
 api_key = st.sidebar.text_input("輸入您的 Gemini API Key", type="password")
 
-# 嚴格鎖定 Gemini 3 系列，由最輕量型優先
+# 使用目前官方正確支援的 Gemini 3 系列模型名稱
 model_choice = st.sidebar.selectbox(
     "選擇 Gemini 3 模型 (輕量優先)", 
-    ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash", "gemini-3-pro"]
+    ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.1-pro"]
+
 )
 
 st.sidebar.markdown("---")
@@ -54,9 +55,9 @@ with tab1:
         elif not HAS_NEW_GENAI:
             st.error("⚠️ 偵測到環境尚未安裝最新的 google-genai 套件。")
         else:
-            with st.spinner(f"正在透過 Gemini 3 輕量模型 ({model_choice}) 生成課程內容中..."):
+            with st.spinner(f"正在透過 Gemini 3 模型 ({model_choice}) 生成課程內容中..."):
                 try:
-                    # 使用 Gemini 3 進行內容生成
+                    # 使用最新的標準 Gemini 呼叫方式
                     client = genai.Client(api_key=api_key)
                     prompt = f"請為高工或大學生設計一份關於「{course_topic}」的短篇實驗講義，包含核心原理、安全注意事項及一題隨堂思考題。請用繁體中文回答。"
                     
@@ -98,6 +99,6 @@ with tab3:
     st.subheader("📜 系統稽核與模型狀態")
     st.text(f"""
 [System Status] OpenMAIC Academy Engine v1.0 running on Streamlit Cloud
-[AI Model Target] Locked to: {model_choice} (Gemini 3 Lightweight Priority)
+[AI Model Target] Active: {model_choice} (Gemini 3 Series)
 [Gateway Status] Active and secured via L2 capability whitelist.
     """)
