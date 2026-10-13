@@ -21,7 +21,7 @@ api_key = st.sidebar.text_input("輸入您的 Gemini API Key", type="password")
 # 嚴格鎖定 Gemini 3 系列，由最輕量型優先
 model_choice = st.sidebar.selectbox(
     "選擇 Gemini 3 模型 (輕量優先)", 
-    ["gemini-3-flash", "gemini-3-pro"]
+    ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash", "gemini-3-pro"]
 )
 
 st.sidebar.markdown("---")
