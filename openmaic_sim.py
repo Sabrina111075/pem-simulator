@@ -2,26 +2,26 @@
 import time
 import random
 
-# 嘗試匯入 google.generativeai (若無則提示安裝)
+# 嘗試匯入 Google GenAI SDK
 try:
-    import google.generativeai as genai
-    HAS_GEMINI = True
+    from google import genai
+    HAS_NEW_GENAI = True
 except ImportError:
-    HAS_GEMINI = False
+    HAS_NEW_GENAI = False
 
-st.set_page_config(page_title="OpenMAIC x Gemini 智慧教育平台", layout="wide")
+st.set_page_config(page_title="OpenMAIC x Gemini 3 智慧教育平台", layout="wide")
 
-st.title("🎓 OpenMAIC 搭配 Gemini 輕量化模型引擎")
-st.markdown("本系統透過串接 Google Gemini 模型，實現 **AI 自動生成工業課程、即時多智能體研討與設備數位雙生互動**。")
+st.title("🎓 OpenMAIC 搭配 Gemini 3 輕量化模型引擎")
+st.markdown("本系統採用 **Gemini 3 輕量化模型**，實現 AI 自動生成工業課程、即時多智能體研討與設備數位雙生互動。")
 
 # 側邊欄：API 設定與控制台
 st.sidebar.header("🔑 AI 模型與實驗設定")
 api_key = st.sidebar.text_input("輸入您的 Gemini API Key", type="password")
 
-# 依照您的要求：從最輕量優先使用
+# 嚴格鎖定 Gemini 3 系列，由最輕量型優先
 model_choice = st.sidebar.selectbox(
-    "選擇 Gemini 模型 (優先輕量化)", 
-    ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash", "gemini-3-pro"]
+    "選擇 Gemini 3 模型 (輕量優先)", 
+    ["gemini-3-flash", "gemini-3-pro"]
 )
 
 st.sidebar.markdown("---")
@@ -42,43 +42,35 @@ else:
     sim_decision = "SAFE"
     st.sidebar.success("✅ 狀態：SAFE (通過數位雙生預演)")
 
-# 初始化 Gemini
-ai_response_text = ""
-if api_key and HAS_GEMINI:
-    try:
-        genai.configure(api_key=api_key)
-        # 這裡會使用您選擇的輕量模型
-        model = genai.GenerativeModel(model_choice)
-    except Exception as e:
-        st.sidebar.error(f"API 初始化失敗: {e}")
-
 # 主畫面分頁
-tab1, tab2, tab3 = st.tabs(["📚 Gemini AI 自動生成課程", "📊 設備數位雙生與即時監控", "📜 系統稽核日誌"])
+tab1, tab2, tab3 = st.tabs(["📚 Gemini 3 AI 自動生成課程", "📊 設備數位雙生與即時監控", "📜 系統稽核日誌"])
 
 with tab1:
     st.subheader(f"🤖 OpenMAIC 多智能體研討會：{course_topic}")
     
-    if st.button("✨ 透過 Gemini 自動生成本週實驗講義與任務", type="primary"):
+    if st.button("✨ 透過 Gemini 3 自動生成本週實驗講義與任務", type="primary"):
         if not api_key:
             st.warning("⚠️ 請先在左側欄位輸入您的 Gemini API Key！")
-        elif not HAS_GEMINI:
-            st.error("⚠️ 偵測到環境尚未安裝 google-generativeai 套件。請在命令提示字元執行：`pip install google-generativeai`")
+        elif not HAS_NEW_GENAI:
+            st.error("⚠️ 偵測到環境尚未安裝最新的 google-genai 套件。")
         else:
-            with st.spinner(f"正在呼叫輕量模型 ({model_choice}) 生成課程內容中..."):
+            with st.spinner(f"正在透過 Gemini 3 輕量模型 ({model_choice}) 生成課程內容中..."):
                 try:
-                    prompt = f"請為高工或大學生設計一份關於「{course_topic}」的短篇實驗講義，包含核心原理、安全注意事項及一題隨堂思考題。"
-                    response = model.generate_content(prompt)
-                    ai_response_text = response.text
-                    st.success("課程內容已由 Gemini 成功生成！")
+                    # 使用 Gemini 3 進行內容生成
+                    client = genai.Client(api_key=api_key)
+                    prompt = f"請為高工或大學生設計一份關於「{course_topic}」的短篇實驗講義，包含核心原理、安全注意事項及一題隨堂思考題。請用繁體中文回答。"
+                    
+                    response = client.models.generate_content(
+                        model=model_choice,
+                        contents=prompt,
+                    )
+                    st.success("課程內容已由 Gemini 3 成功生成！")
+                    st.markdown("### 📖 AI 生成講義結果")
+                    st.write(response.text)
                 except Exception as e:
-                    ai_response_text = f"生成失敗，錯誤訊息：{e}"
-    
-    # 顯示課程內容
-    if ai_response_text:
-        st.markdown("### 📖 AI 生成講義結果")
-        st.write(ai_response_text)
+                    st.error(f"生成失敗，請確認您的 API Key 是否正確或權限足夠。錯誤訊息：{e}")
     else:
-        st.info("💡 點擊上方按鈕，即可讓 Gemini 依據當前主題自動編撰客製化的教學講義。")
+        st.info("💡 點擊上方按鈕，即可讓 Gemini 3 依據當前主題自動編撰客製化的教學講義。")
 
 with tab2:
     st.subheader("即時數據監控 (Telemetry & Digital Twin)")
@@ -105,7 +97,7 @@ with tab2:
 with tab3:
     st.subheader("📜 系統稽核與模型狀態")
     st.text(f"""
-[System Status] OpenMAIC Academy Engine v1.0 running on Windows 7 Localhost
-[AI Model Target] Selected: {model_choice} (Lightweight Priority)
+[System Status] OpenMAIC Academy Engine v1.0 running on Streamlit Cloud
+[AI Model Target] Locked to: {model_choice} (Gemini 3 Lightweight Priority)
 [Gateway Status] Active and secured via L2 capability whitelist.
     """)
