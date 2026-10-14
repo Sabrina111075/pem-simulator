@@ -635,8 +635,9 @@ with tab3:
         key=f"prompt_threejs_{current_domain_key}"
     )
 
+    # 4. 按鈕點擊後只執行優化與生成邏輯
     if st.button("生成 3D 場景", type="primary"):
-        # 下方呼叫即可以順利存取 prompt_3d 變數
+        final_prompt_3d = prompt_3d
 
         if "nano_bot" in st.session_state and hasattr(st.session_state.nano_bot, "optimize_3d_prompt"):
 
