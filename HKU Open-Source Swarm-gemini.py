@@ -506,11 +506,14 @@ with tab1:
 with tab2:
     st.header("📊 Mermaid 流程圖自動生成")
     
-    # 動態取得第一頁選取的主題 (連動 selected_domain)
-    current_domain_key = st.session_state.get("selected_domain", selected_tpl_key)
+    # 1. 取得第一分頁選擇的主題 (若無則使用預設 key)
+    current_domain_key = st.session_state.get("selected_domain", list(TEST_DOMAIN_TEMPLATES.keys())[0])
     
-    # 取得該主題對應的 tab2 預設 Prompt
-    default_mermaid_val = TEMPLATES.get(current_domain_key, {}).get("tab2", "")
+    # 2. 正確讀取字典裡的 "mermaid_prompt"
+    default_mermaid_val = TEST_DOMAIN_TEMPLATES.get(current_domain_key, {}).get(
+        "mermaid_prompt", 
+        "請繪製該系統控制流程圖。"
+    )
     
     prompt_flow = st.text_area(
         "輸入流程圖需求描述：",
