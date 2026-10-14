@@ -617,30 +617,29 @@ with tab2:
 # --------------------------------------------------
 with tab3:
     st.header("🎨 Three.js 3D 互動模擬生成")
-    
-    # 🟢 1. 動態取得第一分頁選擇的主題 (若無則使用第一個主題作為預設)
+
+    # 1. 動態取得第一分頁選擇的主題 (若無則使用第一個主題作為預設)
     current_domain_key = st.session_state.get("selected_domain", list(TEST_DOMAIN_TEMPLATES.keys())[0])
-    
-    # 🟢 2. 讀取該主題對應的 threejs_prompt
+
+    # 2. 讀取該主題對應的 threejs_prompt
     default_threejs_val = TEST_DOMAIN_TEMPLATES.get(current_domain_key, {}).get(
-        "threejs_prompt", 
+        "threejs_prompt",
         "創建該主題對應之 3D 實體模型與動態物理模擬。"
     )
-    
-    # 🟢 3. 渲染輸入框（key 加上 current_domain_key 確保主題切換時自動更新文字）
-    prompt_threejs = st.text_area(
+
+    # 3. 渲染輸入框（將變數名稱設為 prompt_3d，與下方程式碼統一）
+    prompt_3d = st.text_area(
         "輸入 3D 場景需求描述：",
         value=default_threejs_val,
         height=100,
         key=f"prompt_threejs_{current_domain_key}"
     )
 
-    # 4. 按鈕點擊後只執行優化與生成邏輯
+    # 4. 按鈕點擊後執行優化與生成邏輯
     if st.button("生成 3D 場景", type="primary"):
         final_prompt_3d = prompt_3d
 
         if "nano_bot" in st.session_state and hasattr(st.session_state.nano_bot, "optimize_3d_prompt"):
-
             final_prompt_3d = st.session_state.nano_bot.optimize_3d_prompt(prompt_3d)
       
         # 🤖 1. Nano Bot 前置提示詞精煉與效能預審
