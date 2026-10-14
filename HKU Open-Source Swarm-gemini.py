@@ -34,6 +34,7 @@ TEST_DOMAIN_TEMPLATES = {
             "【驗證項目】計算活化過電壓（Activation Overpotential）、歐姆過電壓與氣體擴散層（GDL）傳質極限。"
         ),
         "metrics": ["電流密度 (A/cm²)", "槽電壓 (V)", "產氫速率 (Nm³/h)", "法拉第效率 (%)"]
+        "mermaid_prompt": "請繪製一個 PEM 電解槽系統控制流程，包含電流啟動、溫度監控、過壓保護機制與緊急停機程序。"
     },
     "電動機車動力系統 (EV Powertrain & Energy Loss)": {
         "description": "評估電動機車動力系統在 WMTC/WLTP 行駛型態下的電機效率、傳動損耗與電池續航表現。",
@@ -43,6 +44,7 @@ TEST_DOMAIN_TEMPLATES = {
             "【驗證項目】評估馬達銅損/鐵損比例、變頻器切換損耗，並繪製 100 km 能源效率分布與剩餘電量 SOC 曲線。"
         ),
         "metrics": ["車速 (km/h)", "電池 SOC (%)", "瞬間功率 (kW)", "綜合能效 (Wh/km)"]
+        "mermaid_prompt": "請繪製電動機車動力系統控制流程，包含加速踏板訊號讀取、馬達控制器 PWM 調變、電池 BMS 溫控與再生煞車（Regenerative Braking）能量回充邏輯。"
     },
     "馬達與旋轉機械聲學故障診斷 (Acoustic Diagnostics)": {
         "description": "基於 FFT 與聲波頻譜分析（Mel-spectrogram），進行水泵、冷卻風扇與工業馬達之異常聲學診斷與預測性維護。",
@@ -52,6 +54,7 @@ TEST_DOMAIN_TEMPLATES = {
             "【驗證項目】進行 1024-FFT 頻域轉換，計算 RMS 聲壓級、Spectral Centroid，並對比 DCASE/MIMII 異常基準。"
         ),
         "metrics": ["主頻峰值 (Hz)", "RMS 聲壓 (dB)", "異常信心度 (%)", "健康度指數 (HI)"]
+        "mermaid_prompt": "請繪製馬達聲學故障診斷與監測流程，包含麥克風音訊採樣、Burg 功率譜/Mel-spectrogram 特徵提取、異常聲訊特徵比對與報警推播機制。"
     },
     "蜂群無人機多體動態與路徑規劃 (Swarm Logistics)": {
         "description": "模擬多無人機（Swarm UAV）在三維場域中的協同路徑規劃、防撞避障與任務負載分配。",
@@ -61,6 +64,7 @@ TEST_DOMAIN_TEMPLATES = {
             "【驗證項目】計算 APF 人工勢場流場、碰撞風險指數、總航程能耗與隊形維持誤差。"
         ),
         "metrics": ["最小安全距離 (m)", "隊形誤差率 (%)", "任務完成時間 (s)", "通訊鏈路品質 (dBm)"]
+        "mermaid_prompt": "請繪製蜂群無人機協同路徑規劃與避障流程，包含任務目標分配、多機位置姿態傳感器同步、空間路徑重規劃與碰撞預警緊急避障機制。"
     }
 }
 
@@ -391,7 +395,7 @@ with tab1:
         "🎯 請選擇欲進行測試的系統主題 (Domain) :",
         options=list(TEST_DOMAIN_TEMPLATES.keys()),
         index=0,
-        key="tab1_domain_selector"
+        key="selected_domain"
     )
 
     # 2. 取得當前選取主題的設定檔與說明
@@ -494,16 +498,25 @@ with tab1:
         # 剛進入頁面未按按鈕時顯示藍色提示卡片
         st.info("ℹ️ **系統就緒**: 請點擊上方的「🚀 執行模擬與生成 Harness 測試案例」按鈕以啟動診斷與測試腳本生成。")
 
-# ------------------------------------------------------------------
+# --------------------------------------------------
+
 # Tab 2: Mermaid 流程圖自動生成
-# ------------------------------------------------------------------
+
+# --------------------------------------------------
 with tab2:
     st.header("📊 Mermaid 流程圖自動生成")
+    
+    # 動態取得第一頁選取的主題 (連動 selected_domain)
+    current_domain_key = st.session_state.get("selected_domain", selected_tpl_key)
+    
+    # 取得該主題對應的 tab2 預設 Prompt
+    default_mermaid_val = TEMPLATES.get(current_domain_key, {}).get("tab2", "")
+    
     prompt_flow = st.text_area(
         "輸入流程圖需求描述：",
-        value=TEMPLATES[selected_tpl_key]["tab2"],
+        value=default_mermaid_val,
         height=100,
-        key=f"prompt_flow_{selected_tpl_key}",
+        key=f"prompt_flow_{current_domain_key}"
     )
 
     if st.button("生成流程圖", type="primary"):
