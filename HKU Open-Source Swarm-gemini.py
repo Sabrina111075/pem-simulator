@@ -533,24 +533,23 @@ with tab2:
             "enable_clawteam", False
         ) or st.session_state.get("enable_clawteam", False)
 
-        if is_clawteam_active:
+if is_clawteam_active:
             # 動態取得當前主題對應的 Agent 名稱
-   
-        domain_agent_name = DOMAIN_AGENT_NAMES.get(current_domain_key, "Domain Physics Agent (Nano Bot)")
+            domain_agent_name = DOMAIN_AGENT_NAMES.get(current_domain_key, "Domain Physics Agent (Nano Bot)")
 
-            with st.expander("✅ ClawTeam 蜂群協作完成！", expanded=True):
-                st.markdown("""
-                * 🎯 **Swarm Leader (HKUDS Agent):** 正在解析 Mermaid 流程圖結構與邏輯節點需求...
-                * ⚙️ **PEM Physics Agent (Nano Bot):** 執行 Butler-Volmer 與電化學邊界診斷...
-                    * └─ 物理參數符合 Butler-Volmer 電化學規範 (系統正常)
-                * 📐 **Harness Code Builder Agent:** 生成符合 OpenHarness 規範之測試案例與 Mermaid 流程圖...
-                * 🔍 **QA Reviewer Agent:** 完成 Pydantic 結構與邊界條件驗證...
-                """)
+            with st.expander("⚙️ ClawTeam 蜂群協作完成！", expanded=True):
+                st.markdown(f"""
+* 🎯 **Swarm Leader (HKUDS Agent):** 正在解析 Mermaid 流程圖結構與邏輯節點需求...
+* ⚙️ **{domain_agent_name}:** 執行該系統之領域物理特徵與特徵提取分析...
+* 📐 **Harness Code Builder Agent:** 生成符合 OpenHarness 規範之測試案例與 Mermaid 流程圖...
+* 🔍 **QA Reviewer Agent:** 完成 Pydantic 結構與邊界條件驗證...
+""")
+
             final_prompt_flow = (
                 f"{final_prompt_flow}\n\n"
-                "[ClawTeam Swarm 蜂群協作指導規約]\n"
-                "1. 由 Swarm Leader 統一調度，結合 domain_agent_name 與 Code Builder 協同任務。\n"
-                "2. 請嚴格依據輸入的需求主題（{current_domain_key}）生成對應流程圖，切勿混入非該主題之專有名詞（如 PEM、Butler-Volmer 等）。"
+                f"[ClawTeam Swarm 蜂群協作指導規範]\n"
+                f"1. 由 Swarm Leader 統一調度，結合 {domain_agent_name} 與 Code Builder 協同任務。\n"
+                f"2. 請嚴格依據輸入的需求主題（{current_domain_key}）生成對應流程圖，切勿混入非該主題之專有名詞（如 PEM、Butler-Volmer 等）。"
             )
         elif is_nano_active:
             if "nano_bot" in st.session_state and hasattr(
