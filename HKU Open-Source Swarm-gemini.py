@@ -65,7 +65,7 @@ TEST_DOMAIN_TEMPLATES = {
         ),
         "metrics": ["最小安全距離 (m)", "隊形誤差率 (%)", "任務完成時間 (s)", "通訊鏈路品質 (dBm)"]
         "mermaid_prompt": "請繪製蜂群無人機協同路徑規劃與避障流程，包含任務目標分配、多機位置姿態傳感器同步、空間路徑重規劃與碰撞預警緊急避障機制。"
-    }
+    },
 }
 
 class NanoBotOptimizer:
