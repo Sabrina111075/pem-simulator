@@ -34,7 +34,8 @@ TEST_DOMAIN_TEMPLATES = {
             "【驗證項目】計算活化過電壓（Activation Overpotential）、歐姆過電壓與氣體擴散層（GDL）傳質極限。"
         ),
         "metrics": ["電流密度 (A/cm²)", "槽電壓 (V)", "產氫速率 (Nm³/h)", "法拉第效率 (%)"],
-        "mermaid_prompt": "請繪製一個 PEM 電解槽系統控制流程，包含電流啟動、溫度監控、過壓保護機制與緊急停機程序。"
+        "mermaid_prompt": "請繪製一個 PEM 電解槽系統控制流程，包含電流啟動、溫度監控、過壓保護機制與緊急停機程序。",
+        "threejs_prompt": "創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。"
     },
     "電動機車動力系統 (EV Powertrain & Energy Loss)": {
         "description": "評估電動機車動力系統在 WMTC/WLTP 行駛型態下的電機效率、傳動損耗與電池續航表現。",
@@ -44,7 +45,8 @@ TEST_DOMAIN_TEMPLATES = {
             "【驗證項目】評估馬達銅損/鐵損比例、變頻器切換損耗，並繪製 100 km 能源效率分布與剩餘電量 SOC 曲線。"
         ),
         "metrics": ["車速 (km/h)", "電池 SOC (%)", "瞬間功率 (kW)", "綜合能效 (Wh/km)"],
-        "mermaid_prompt": "請繪製電動機車動力系統控制流程，包含加速踏板訊號讀取、馬達控制器 PWM 調變、電池 BMS 溫控與再生煞車（Regenerative Braking）能量回充邏輯。"
+        "mermaid_prompt": "請繪製電動機車動力系統控制流程，包含加速踏板訊號讀取、馬達控制器 PWM 調變、電池 BMS 溫控與再生煞車（Regenerative Braking）能量回充邏輯。",
+        "threejs_prompt": "創建一個電動機車動力總成 3D 模型，包含永磁同步馬達定轉子、變頻器與電池包，並動態展示能量回充與旋轉動畫。"
     },
     "馬達與旋轉機械聲學故障診斷 (Acoustic Diagnostics)": {
         "description": "基於 FFT 與聲波頻譜分析（Mel-spectrogram），進行水泵、冷卻風扇與工業馬達之異常聲學診斷與預測性維護。",
@@ -54,7 +56,8 @@ TEST_DOMAIN_TEMPLATES = {
             "【驗證項目】進行 1024-FFT 頻域轉換，計算 RMS 聲壓級、Spectral Centroid，並對比 DCASE/MIMII 異常基準。"
         ),
         "metrics": ["主頻峰值 (Hz)", "RMS 聲壓 (dB)", "異常信心度 (%)", "健康度指數 (HI)"],
-        "mermaid_prompt": "請繪製馬達聲學故障診斷與監測流程，包含麥克風音訊採樣、Burg 功率譜/Mel-spectrogram 特徵提取、異常聲訊特徵比對與報警推播機制。"
+        "mermaid_prompt": "請繪製馬達聲學故障診斷與監測流程，包含麥克風音訊採樣、Burg 功率譜/Mel-spectrogram 特徵提取、異常聲訊特徵比對與報警推播機制。",
+        "threejs_prompt": "創建一個工業馬達與水幫浦 3D 實體模型，顯示麥克風陣列採樣點，並以動態熱力波紋（Ripple Pattern）視覺化異常聲波振動。"
     },
     "蜂群無人機多體動態與路徑規劃 (Swarm Logistics)": {
         "description": "模擬多無人機（Swarm UAV）在三維場域中的協同路徑規劃、防撞避障與任務負載分配。",
@@ -64,7 +67,8 @@ TEST_DOMAIN_TEMPLATES = {
             "【驗證項目】計算 APF 人工勢場流場、碰撞風險指數、總航程能耗與隊形維持誤差。"
         ),
         "metrics": ["最小安全距離 (m)", "隊形誤差率 (%)", "任務完成時間 (s)", "通訊鏈路品質 (dBm)"],
-        "mermaid_prompt": "請繪製蜂群無人機協同路徑規劃與避障流程，包含任務目標分配、多機位置姿態傳感器同步、空間路徑重規劃與碰撞預警緊急避障機制。"
+        "mermaid_prompt": "請繪製蜂群無人機協同路徑規劃與避障流程，包含任務目標分配、多機位置姿態傳感器同步、空間路徑重規劃與碰撞預警緊急避障機制。",
+        "threejs_prompt": "創建三維城市/障礙物空間場域，繪製 5 架四軸無人機（Quadcopter）隊形動態飛行軌跡與 APF 人工勢場避障邊界。"
     }
 }
 
@@ -608,21 +612,31 @@ with tab2:
             except Exception as e:
                 st.error(f"❌ 流程圖生成失敗：{e}")
 
-# ------------------------------------------------------------------------------
-# Tab 3: Three.js 3D 模擬生成器
-# ------------------------------------------------------------------------------
+# --------------------------------------------------
+# Tab 3: Three.js 3D 模擬生成
+# --------------------------------------------------
 with tab3:
     st.header("🎨 Three.js 3D 互動模擬生成")
-
-    prompt_3d = st.text_area(
+    
+    # 🟢 1. 動態取得第一分頁選擇的主題 (若無則使用第一個主題作為預設)
+    current_domain_key = st.session_state.get("selected_domain", list(TEST_DOMAIN_TEMPLATES.keys())[0])
+    
+    # 🟢 2. 讀取該主題對應的 threejs_prompt
+    default_threejs_val = TEST_DOMAIN_TEMPLATES.get(current_domain_key, {}).get(
+        "threejs_prompt", 
+        "創建該主題對應之 3D 實體模型與動態物理模擬。"
+    )
+    
+    # 🟢 3. 渲染輸入框（key 加上 current_domain_key 確保主題切換時自動更新文字）
+    prompt_threejs = st.text_area(
         "輸入 3D 場景需求描述：",
-        value=TEMPLATES[selected_tpl_key]["tab3"],
+        value=default_threejs_val,
         height=100,
-        key=f"prompt_3d_{selected_tpl_key}"
+        key=f"prompt_threejs_{current_domain_key}"
     )
 
     if st.button("生成 3D 場景", type="primary"):
-        final_prompt_3d = prompt_3d
+        # 下方維持原本的 3D HTML / Three.js 渲染與 Swarm 生成邏輯...
       
         # 🤖 1. Nano Bot 前置提示詞精煉與效能預審
         if enable_nano_optimizer and "nano_bot" in st.session_state:
