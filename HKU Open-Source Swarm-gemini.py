@@ -636,7 +636,11 @@ with tab3:
     )
 
     if st.button("生成 3D 場景", type="primary"):
-        # 下方維持原本的 3D HTML / Three.js 渲染與 Swarm 生成邏輯...
+        # 下方呼叫即可以順利存取 prompt_3d 變數
+
+        if "nano_bot" in st.session_state and hasattr(st.session_state.nano_bot, "optimize_3d_prompt"):
+
+            final_prompt_3d = st.session_state.nano_bot.optimize_3d_prompt(prompt_3d)
       
         # 🤖 1. Nano Bot 前置提示詞精煉與效能預審
         if enable_nano_optimizer and "nano_bot" in st.session_state:
