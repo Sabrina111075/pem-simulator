@@ -53,7 +53,7 @@ TEST_DOMAIN_TEMPLATES = {
             "【邊界條件】採樣率 44.1 kHz，音訊時長 10 秒，環境背景噪音 -40 dB。\n"
             "【驗證項目】進行 1024-FFT 頻域轉換，計算 RMS 聲壓級、Spectral Centroid，並對比 DCASE/MIMII 異常基準。"
         ),
-        "metrics": ["主頻峰值 (Hz)", "RMS 聲壓 (dB)", "異常信心度 (%)", "健康度指數 (HI)"]
+        "metrics": ["主頻峰值 (Hz)", "RMS 聲壓 (dB)", "異常信心度 (%)", "健康度指數 (HI)"],
         "mermaid_prompt": "請繪製馬達聲學故障診斷與監測流程，包含麥克風音訊採樣、Burg 功率譜/Mel-spectrogram 特徵提取、異常聲訊特徵比對與報警推播機制。"
     },
     "蜂群無人機多體動態與路徑規劃 (Swarm Logistics)": {
@@ -65,7 +65,7 @@ TEST_DOMAIN_TEMPLATES = {
         ),
         "metrics": ["最小安全距離 (m)", "隊形誤差率 (%)", "任務完成時間 (s)", "通訊鏈路品質 (dBm)"]
         "mermaid_prompt": "請繪製蜂群無人機協同路徑規劃與避障流程，包含任務目標分配、多機位置姿態傳感器同步、空間路徑重規劃與碰撞預警緊急避障機制。"
-    },
+    }
 }
 
 class NanoBotOptimizer:
