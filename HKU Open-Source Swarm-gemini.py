@@ -35,7 +35,14 @@ TEST_DOMAIN_TEMPLATES = {
         ),
         "metrics": ["電流密度 (A/cm²)", "槽電壓 (V)", "產氫速率 (Nm³/h)", "法拉第效率 (%)"],
         "mermaid_prompt": "請繪製一個 PEM 電解槽系統控制流程，包含電流啟動、溫度監控、過壓保護機制與緊急停機程序。",
-        "threejs_prompt": "創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。"
+        "threejs_prompt": "創建一個 PEM 電解槽單電池 3D 結構模擬，包含陽極極板、陰極極板、PEM 質子交換膜與產生的氣泡顆粒動畫。",
+        "openspace_info": {
+
+                "title": "綠氫製氫廠房空間網格雙生",
+
+                "desc": "即時監控 PEM 陽/陰極實體管道壓力場、溫場分佈網格與氣體洩漏感測節點。"
+
+        }
     },
     "電動機車動力系統 (EV Powertrain & Energy Loss)": {
         "description": "評估電動機車動力系統在 WMTC/WLTP 行駛型態下的電機效率、傳動損耗與電池續航表現。",
@@ -47,6 +54,13 @@ TEST_DOMAIN_TEMPLATES = {
         "metrics": ["車速 (km/h)", "電池 SOC (%)", "瞬間功率 (kW)", "綜合能效 (Wh/km)"],
         "mermaid_prompt": "請繪製電動機車動力系統控制流程，包含加速踏板訊號讀取、馬達控制器 PWM 調變、電池 BMS 溫控與再生煞車（Regenerative Braking）能量回充邏輯。",
         "threejs_prompt": "創建一個電動機車動力總成 3D 模型，包含永磁同步馬達定轉子、變頻器與電池包，並動態展示能量回充與旋轉動畫。"
+        "openspace_info": {
+
+                "title": "智慧行車動態與能量拓撲場域",
+
+                "desc": "動態追蹤馬達控制器熱場、電池包各 Cell 溫升分佈與底盤振動感測網格。"
+
+        }
     },
     "馬達與旋轉機械聲學故障診斷 (Acoustic Diagnostics)": {
         "description": "基於 FFT 與聲波頻譜分析（Mel-spectrogram），進行水泵、冷卻風扇與工業馬達之異常聲學診斷與預測性維護。",
@@ -58,6 +72,13 @@ TEST_DOMAIN_TEMPLATES = {
         "metrics": ["主頻峰值 (Hz)", "RMS 聲壓 (dB)", "異常信心度 (%)", "健康度指數 (HI)"],
         "mermaid_prompt": "請繪製馬達聲學故障診斷與監測流程，包含麥克風音訊採樣、Burg 功率譜/Mel-spectrogram 特徵提取、異常聲訊特徵比對與報警推播機制。",
         "threejs_prompt": "創建一個工業馬達與水幫浦 3D 實體模型，顯示麥克風陣列採樣點，並以動態熱力波紋（Ripple Pattern）視覺化異常聲波振動。"
+        "openspace_info": {
+
+                "title": "廠房機械聲波與振動場域雙生",
+
+                "desc": "即時渲染麥克風陣列空間聲壓場、軸承區域高頻振動感測與異常聲源定位網格。"
+
+        }
     },
     "蜂群無人機多體動態與路徑規劃 (Swarm Logistics)": {
         "description": "模擬多無人機（Swarm UAV）在三維場域中的協同路徑規劃、防撞避障與任務負載分配。",
@@ -69,8 +90,14 @@ TEST_DOMAIN_TEMPLATES = {
         "metrics": ["最小安全距離 (m)", "隊形誤差率 (%)", "任務完成時間 (s)", "通訊鏈路品質 (dBm)"],
         "mermaid_prompt": "請繪製蜂群無人機協同路徑規劃與避障流程，包含任務目標分配、多機位置姿態傳感器同步、空間路徑重規劃與碰撞預警緊急避障機制。",
         "threejs_prompt": "創建三維城市/障礙物空間場域，繪製 5 架四軸無人機（Quadcopter）隊形動態飛行軌跡與 APF 人工勢場避障邊界。"
+        "openspace_info": {
+
+                "title": "3D 城市空間物流與 APF 避障場域",
+
+                "desc": "追蹤 5 架四軸無人機三維座標動態網格、APF 勢場邊界感測與多機通訊鏈路品質。"
+
+        }
     }
-}
 
 class NanoBotOptimizer:
     def __init__(self, api_key=""):
@@ -708,12 +735,26 @@ with tab3:
             except Exception as e:
                 st.error(f"3D 場景生成失敗：{e}")
 
-# ---------------------------------------------------------
+# --------------------------------------------------
 # Tab 4: OpenSpace 空間雙生場域
-# ---------------------------------------------------------
+# --------------------------------------------------
 with tab4:
-    st.subheader("🌌 OpenSpace 空間數位雙生與環境網格 (Spatial Digital Twin)")
-    st.markdown("將 OpenSpace 場域感知、幾何座標與空間數據點雲無縫導入 ClawTeam 蜂群節點。")
+    st.subheader("🌌 OpenSpace 空間數位雙生環境網格 (Spatial Digital Twin)")
+    
+    # 1. 動態取得第一分頁選擇的主題
+    current_domain_key = st.session_state.get("selected_domain", list(TEST_DOMAIN_TEMPLATES.keys())[0])
+    
+    # 2. 讀取該主題對應的 openspace_info (若無則使用預設值)
+    openspace_data = TEST_DOMAIN_TEMPLATES.get(current_domain_key, {}).get(
+        "openspace_info",
+        {
+            "title": "空間實體場域與感測網格動態監控",
+            "desc": "將 OpenSpace 場域感知、幾何座標與空間數據點雲無縫導入 ClawTeam 蜂群節點。"
+        }
+    )
+    
+    # 3. 動態渲染主題專屬說明
+    st.info(f"**{openspace_data['title']}**\n\n{openspace_data['desc']}")
     st.write("---")
     
     # 1. 上方區塊：OpenSpace 場域參數設定
