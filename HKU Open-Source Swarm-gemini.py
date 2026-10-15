@@ -53,7 +53,7 @@ TEST_DOMAIN_TEMPLATES = {
         ),
         "metrics": ["車速 (km/h)", "電池 SOC (%)", "瞬間功率 (kW)", "綜合能效 (Wh/km)"],
         "mermaid_prompt": "請繪製電動機車動力系統控制流程，包含加速踏板訊號讀取、馬達控制器 PWM 調變、電池 BMS 溫控與再生煞車（Regenerative Braking）能量回充邏輯。",
-        "threejs_prompt": "創建一個電動機車動力總成 3D 模型，包含永磁同步馬達定轉子、變頻器與電池包，並動態展示能量回充與旋轉動畫。"
+        "threejs_prompt": "創建一個電動機車動力總成 3D 模型，包含永磁同步馬達定轉子、變頻器與電池包，並動態展示能量回充與旋轉動畫。",
         "openspace_info": {
 
                 "title": "智慧行車動態與能量拓撲場域",
@@ -71,7 +71,7 @@ TEST_DOMAIN_TEMPLATES = {
         ),
         "metrics": ["主頻峰值 (Hz)", "RMS 聲壓 (dB)", "異常信心度 (%)", "健康度指數 (HI)"],
         "mermaid_prompt": "請繪製馬達聲學故障診斷與監測流程，包含麥克風音訊採樣、Burg 功率譜/Mel-spectrogram 特徵提取、異常聲訊特徵比對與報警推播機制。",
-        "threejs_prompt": "創建一個工業馬達與水幫浦 3D 實體模型，顯示麥克風陣列採樣點，並以動態熱力波紋（Ripple Pattern）視覺化異常聲波振動。"
+        "threejs_prompt": "創建一個工業馬達與水幫浦 3D 實體模型，顯示麥克風陣列採樣點，並以動態熱力波紋（Ripple Pattern）視覺化異常聲波振動。",
         "openspace_info": {
 
                 "title": "廠房機械聲波與振動場域雙生",
@@ -89,7 +89,7 @@ TEST_DOMAIN_TEMPLATES = {
         ),
         "metrics": ["最小安全距離 (m)", "隊形誤差率 (%)", "任務完成時間 (s)", "通訊鏈路品質 (dBm)"],
         "mermaid_prompt": "請繪製蜂群無人機協同路徑規劃與避障流程，包含任務目標分配、多機位置姿態傳感器同步、空間路徑重規劃與碰撞預警緊急避障機制。",
-        "threejs_prompt": "創建三維城市/障礙物空間場域，繪製 5 架四軸無人機（Quadcopter）隊形動態飛行軌跡與 APF 人工勢場避障邊界。"
+        "threejs_prompt": "創建三維城市/障礙物空間場域，繪製 5 架四軸無人機（Quadcopter）隊形動態飛行軌跡與 APF 人工勢場避障邊界。",
         "openspace_info": {
 
                 "title": "3D 城市空間物流與 APF 避障場域",
@@ -98,6 +98,7 @@ TEST_DOMAIN_TEMPLATES = {
 
         }
     }
+}
 
 class NanoBotOptimizer:
     def __init__(self, api_key=""):
