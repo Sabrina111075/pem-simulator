@@ -1,10 +1,12 @@
 ﻿import time
 import random
+import io
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+from gtts import gTTS
 
 # 頁面基本設定
 st.set_page_config(
@@ -49,23 +51,52 @@ with tab1:
     with col3:
         st.metric(label="運算核心 (Edge Compute)", value="HarmonyOS NEXT Kernel", delta="穩定 (5ms)")
 
-    st.markdown("#### 📍 無人機 3D 飛行軌跡模擬")
+    st.markdown("#### 📍 無人機 3D 動態飛行軌跡模擬")
     
-    # 產生模擬飛行軌跡數據
-    np.random.seed(42)
-    t = np.linspace(0, 10, 50)
-    x = np.sin(t) * 10
-    y = np.cos(t) * 10
-    z = np.linspace(1, 20, 50) + np.random.normal(0, 0.2, 50)
+    # 產生具備時間序列 (Frame) 的 3D 動態軌跡數據
+    frames_count = 40
+    t_vals = np.linspace(0, 10, frames_count)
     
-    df_flight = pd.DataFrame({"X": x, "Y": y, "Z": z, "Time": t})
+    records = []
+    for frame_idx, t in enumerate(t_vals):
+        # 繪製歷史累積軌跡
+        t_sub = t_vals[:frame_idx+1]
+        x_sub = np.sin(t_sub) * 10
+        y_sub = np.cos(t_sub) * 10
+        z_sub = np.linspace(1, 20, len(t_sub))
+        
+        for i in range(len(t_sub)):
+            records.append({
+                "Frame": frame_idx,
+                "Time": round(t_sub[i], 2),
+                "X": x_sub[i],
+                "Y": y_sub[i],
+                "Z": z_sub[i]
+            })
+            
+    df_anim = pd.DataFrame(records)
     
-    fig = px.scatter_3d(
-        df_flight, x='X', y='Y', z='Z',
-        color='Z', size_max=5,
-        title="HarmonyDrone 3D Flight Path (Distributed Soft Bus Sync)"
+    # 建立具有動態 Play 按鈕的 Plotly 3D 動畫圖表
+    fig_anim = px.scatter_3d(
+        df_anim,
+        x="X", y="Y", z="Z",
+        animation_frame="Frame",
+        color="Z",
+        range_x=[-12, 12], range_y=[-12, 12], range_z=[0, 25],
+        title="HarmonyDrone 3D Dynamic Flight Trajectory (Play/Pause Support)"
     )
-    st.plotly_chart(fig, use_container_width=True)
+    
+    # 調整動畫流暢度
+    fig_anim.update_layout(
+        scene=dict(
+            xaxis_title="X (m)",
+            yaxis_title="Y (m)",
+            zaxis_title="高度 Z (m)"
+        ),
+        margin=dict(l=0, r=0, b=0, t=40)
+    )
+    
+    st.plotly_chart(fig_anim, use_container_width=True)
 
 with tab2:
     st.subheader("🔍 REA (Reverse Engineering Agent) 逆向分析控制台")
@@ -78,11 +109,10 @@ with tab2:
     
     if st.button("🚀 啟動 REA 自動逆向分析"):
         with st.spinner(f"正在調用 {ai_model_choice} 與 REA 代理分析 {target_module}..."):
-            time.sleep(2)
+            time.sleep(1.5)
         
         st.success("✅ 分析完成！以下為 REA 產出的安全與架構報告：")
         
-        # 顯示假想的分析報告
         col_a, col_b = st.columns(2)
         with col_a:
             st.markdown("##### 📌 代碼結構摘要")
@@ -105,15 +135,28 @@ public class DroneController {
 
 with tab3:
     st.subheader("🎓 鴻蒙與 REA 互動小學堂")
-    st.markdown("在這裡您可以隨時詢問關於鴻蒙系統或 AI 逆向工程的問題，系統將由溫和清晰的台灣男性語調 AI 講師為您解答。")
+    st.markdown("在這裡您可以隨時詢問關於鴻蒙系統或 AI 逆向工程的問題，系統將為您生成文字解答並同步進行**語音朗讀**。")
     
     user_query = st.text_input("請輸入您的問題（例如：「什麼是分散式軟匯流排？」或「REA 是怎麼運作的？」）")
     if user_query:
-        st.info(f"💡 【AI 講師回答】針對您的問題「{user_query}」：")
-        st.write(
-            "這是一個非常好的問題！在鴻蒙系統中，分散式軟匯流排就像是一條無形的連接線，讓不同硬體（如手機與無人機）能夠像使用同一個硬體般流暢溝通。"
-            "而 REA（Reverse Engineering Agent）則像是一個聰明的 AI 偵探，能自動幫我們把這些分散式程式碼與 `.hap` 套件拆解並讀懂，確保系統安全無虞。"
+        answer_text = (
+            f"這是一個非常好的問題！在鴻蒙系統中，分散式軟匯流排就像是一條無形的連接線，讓不同硬體（如手機與無人機）能夠像使用同一個硬體般流暢溝通。"
+            f"而 REA（Reverse Engineering Agent）則像是一個聰明的 AI 偵探，能自動幫我們把這些分散式程式碼與 .hap 套件拆解並讀懂，確保系統安全無虞。"
         )
+        
+        st.info(f"💡 【AI 講師回答】針對您的問題「{user_query}」：")
+        st.write(answer_text)
+        
+        # 產生語音 TTS 音訊
+        try:
+            with st.spinner("🔊 正在合成 AI 講師語音..."):
+                tts = gTTS(text=answer_text, lang='zh-tw')
+                fp = io.BytesIO()
+                tts.write_to_fp(fp)
+                fp.seek(0)
+                st.audio(fp, format='audio/mp3', start_time=0)
+        except Exception as e:
+            st.warning("⚠️ 語音合成失敗，請檢查網路連線。")
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: gray;'>HarmonyDrone REA Studio v1.0 | Built with Streamlit & Gemini API</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: gray;'>HarmonyDrone REA Studio v1.1 | Built with Streamlit & Gemini API</p>", unsafe_allow_html=True)
